@@ -11,7 +11,8 @@ import asyncio
 import re
 from shiboken6 import wrapInstance, getCppPointer
 from PySide6 import QtCore, QtWidgets, QtGui, QtTest
-from PySide6.QtWidgets import QAction, QWidget
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 import traceback
@@ -340,7 +341,9 @@ def _match_pattern(obj, pattern):
             return re.search(value2, value1)
         return value1 == value2
 
-    item_roles = Qt.ItemDataRole.values.values()
+    # Qt.ItemDataRole is a PySide6 IntEnum; iterate it directly. The PySide2
+    # equivalent (.values dict) no longer exists.
+    item_roles = list(Qt.ItemDataRole)
     for key, value in pattern.items():
         if key == "type":  # Class type
             if not isinstance(obj, value):

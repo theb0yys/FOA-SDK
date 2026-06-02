@@ -79,5 +79,6 @@ namespace OpenParticle
         ParticleFeatureProcessorInterface* m_featureProcessor = nullptr;
         ParticleFeatureProcessorInterface::ParticleHandle m_particleHandle;
         bool m_isVisible = true;
+        bool m_bNeedsReRegister = false;
     };
 }

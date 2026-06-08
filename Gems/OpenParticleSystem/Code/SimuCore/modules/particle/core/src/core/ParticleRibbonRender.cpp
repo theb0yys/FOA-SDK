@@ -10,6 +10,7 @@
 #include "particle/core/ParticlePool.h"
 #include "particle/core/ParticleDriver.h"
 #include "particle/core/ParticleHelper.h"
+#include "core/math/Constants.h"
 #include "core/math/Math.h"
 
 namespace SimuCore::ParticleCore {
@@ -175,7 +176,9 @@ namespace SimuCore::ParticleCore {
             segment.segmentLength = localDistance;
             segment.tangent0 = segments.empty() ? curDir.GetNormalized() : segments[segments.size() - 1].tangent1;
             segment.tangent1 = (1.f - config.curveTension) * (dir.GetNormalized());
-            segment.interpCount = static_cast<AZ::u32>(std::ceil(localDistance / config.tesselationFactor));
+
+            const float tesselationFactor = AZStd::GetMax(config.tesselationFactor, 1.f - SimuCore::ALMOST_ONE);
+            segment.interpCount = static_cast<AZ::u32>(std::ceil(localDistance / tesselationFactor));
 
             // each segment added to this map causes at least one quad to be generated even if there is 0 interp.
             // and segmentCount is used to calculate the total vertex and index count.

@@ -139,10 +139,9 @@ namespace OpenParticle
 
     void ParticleComponentController::Play()
     {
-        if (m_bNeedsReRegister)
+        if (!m_particleHandle.IsValid())
         {
-            m_bNeedsReRegister = false;
-            Register(); // restart it in case of play().
+            Register(); // restart it in case of play() after stop().
         }
 
         if (!m_particleHandle.IsValid())
@@ -175,7 +174,6 @@ namespace OpenParticle
         }
         AZ_TracePrintf("Particle", "Particle Stop %s", m_particleHandle->m_particleAsset.GetHint().data());
         Deregister();
-        m_bNeedsReRegister = true;
     }
 
     void ParticleComponentController::SetVisibility(bool visible)
@@ -265,6 +263,7 @@ namespace OpenParticle
         if (m_featureProcessor != nullptr && m_particleHandle.IsValid())
         {
             m_featureProcessor->ReleaseParticle(m_particleHandle);
+            m_particleHandle = {};
         }
     }
 

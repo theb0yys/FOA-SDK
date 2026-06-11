@@ -136,7 +136,7 @@ namespace AssetProcessor
         m_RCJobListModel.markAsStarted(rcJob);
         Q_EMIT JobStatusChanged(rcJob->GetJobEntry(), AzToolsFramework::AssetSystem::JobStatus::InProgress);
         rcJob->Start();
-        Q_EMIT JobStarted(rcJob->GetJobEntry().m_sourceAssetReference.RelativePath().c_str(), QString::fromUtf8(rcJob->GetPlatformInfo().m_identifier.c_str()));
+        Q_EMIT JobStarted(rcJob->GetJobEntry().m_sourceAssetReference.RelativePath().c_str(), rcJob->GetJobEntry().m_jobKey, QString::fromUtf8(rcJob->GetPlatformInfo().m_identifier.c_str()));
     }
 
     void RCController::QuitRequested()

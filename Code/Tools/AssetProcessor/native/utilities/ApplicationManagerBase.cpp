@@ -608,9 +608,9 @@ void ApplicationManagerBase::InitConnectionManager()
     AZ_Assert(result, "Failed to connect to RCController signal");
 
     result = QObject::connect(GetRCController(), &AssetProcessor::RCController::JobStarted, this,
-            [](QString inputFile, QString platform)
+            [](QString inputFile, QString jobKey, QString platform)
             {
-                QString msg = QCoreApplication::translate("O3DE Asset Processor", "Processing %1 (%2)...\n", "%1 is the name of the file, and %2 is the platform to process it for").arg(inputFile, platform);
+                QString msg = QCoreApplication::translate("O3DE Asset Processor", "Processing %1 \"%2\" (%3)...\n", "%1 is the name of the file, %2 is the job type, %3 is the platform to process it for").arg(inputFile, jobKey, platform);
                 AZ_Printf(AssetProcessor::ConsoleChannel, "%s", msg.toUtf8().constData());
                 AssetNotificationMessage message(inputFile.toUtf8().constData(), AssetNotificationMessage::JobStarted, AZ::Data::s_invalidAssetType, platform.toUtf8().constData());
                 AssetProcessor::ConnectionBus::Broadcast(&AssetProcessor::ConnectionBus::Events::SendPerPlatform, 0, message, platform);

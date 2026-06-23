@@ -21,6 +21,7 @@
 
 class EditorWindow;
 class PropertiesWidget;
+class UiComponentPaletteWidget;
 class QAction;
 class QCheckbox;
 class QLineEdit;
@@ -56,6 +57,9 @@ public:
 
     void SetSelectedEntityDisplayNameWidget(QLineEdit* selectedEntityDisplayNameWidget);
     void SetEditorOnlyCheckbox(QCheckBox* editorOnlyCheckbox);
+
+    //! Show the component palette popup for adding components to selected entities
+    void ShowComponentPalette();
 
 private:
     // A SharedComponentInfo represents one component
@@ -171,4 +175,6 @@ private:
 
     // Global app serialization context, cached for internal usage during the life of the control.
     AZ::SerializeContext* m_serializeContext;
+
+    UiComponentPaletteWidget* m_componentPalette;
 };

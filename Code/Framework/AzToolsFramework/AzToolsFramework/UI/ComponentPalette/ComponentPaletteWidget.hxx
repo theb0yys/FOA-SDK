@@ -63,12 +63,16 @@ namespace AzToolsFramework
     protected:
         void focusOutEvent(QFocusEvent* event) override;
 
+    protected slots:
+        virtual void ActivateSelection(const QModelIndex& index);
+        //! Clears the search box and refreshes the filtered results.
+        //! Exposed so subclasses can dismiss through the same codepath as the base tree.
+        void ClearSearch();
+
     private slots:
         void UpdateContent();
         void QueueUpdateSearch();
         void UpdateSearch();
-        void ClearSearch();
-        void ActivateSelection(const QModelIndex& index);
         void ExpandCategory(const QModelIndex& index);
         void CollapseCategory(const QModelIndex& index);
         void FocusSearchBox();

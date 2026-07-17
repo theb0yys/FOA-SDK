@@ -186,6 +186,33 @@ namespace TaintedGrailModdingSDK
         for (const CatalogValidationEvent& validation : catalog.GetValidationHistory())
         {
             const AZStd::string subjectId = validation.GetSubjectId();
+            if (validation.m_validator.empty())
+            {
+                blockers.push_back(MakeBlocker(
+                    "governance.validation-reviewer." + validation.m_validationId,
+                    "error",
+                    subjectId,
+                    "Validation history has no named validator."));
+            }
+            if (validation.m_evidenceIds.empty())
+            {
+                blockers.push_back(MakeBlocker(
+                    "governance.validation-evidence-empty." + validation.m_validationId,
+                    "error",
+                    subjectId,
+                    "Validation history has no evidence IDs."));
+            }
+            for (const AZStd::string& evidenceId : validation.m_evidenceIds)
+            {
+                if (!sourceRegistry.FindEvidence(evidenceId))
+                {
+                    blockers.push_back(MakeBlocker(
+                        "governance.validation-evidence." + validation.m_validationId + "." + evidenceId,
+                        "error",
+                        subjectId,
+                        "Validation history references missing evidence: " + evidenceId));
+                }
+            }
             if (profile && (validation.m_profileId != profile->m_profileId
                 || validation.m_gameVersion != profile->m_gameVersion
                 || (!validation.m_branch.empty() && validation.m_branch != profile->m_branch)))
@@ -200,6 +227,14 @@ namespace TaintedGrailModdingSDK
 
         for (const CatalogGovernanceEvent& event : catalog.GetGovernanceHistory())
         {
+            if (event.m_reviewer.empty())
+            {
+                blockers.push_back(MakeBlocker(
+                    "governance.event-reviewer." + event.m_eventId,
+                    "error",
+                    event.m_subjectId,
+                    "Governance history has no named reviewer."));
+            }
             for (const AZStd::string& evidenceId : event.m_evidenceIds)
             {
                 if (!sourceRegistry.FindEvidence(evidenceId))

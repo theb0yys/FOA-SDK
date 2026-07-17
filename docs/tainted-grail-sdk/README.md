@@ -8,7 +8,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
-- [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, and canonical catalog contracts.
+- [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
+- [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, and governance-history contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
 - [Privacy](PRIVACY.md) — local data handling and telemetry requirements.
@@ -55,9 +56,11 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - mod and content-pack projects;
 - source and evidence intake;
 - canonical catalog browser, record inspector, first-class relationships, validation history, and reviewed claim promotion;
-- foundation status, coverage, import issues, and blockers.
+- independent maturity, confidence, operational-risk, validation, staleness, permission, prohibition, and supersession authoring;
+- durable governance history and proof-linked permission decisions;
+- foundation status, coverage, import issues, governance blockers, and usage totals.
 
-The next active slice expands the independent maturity, confidence, operational-risk, validation, permission, and prohibition engine. Domain authoring tools, runtime adapters, and production deployment are not complete.
+Domain authoring tools, runtime adapters, and production deployment are not complete.
 
 ## Documentation contribution rules
 

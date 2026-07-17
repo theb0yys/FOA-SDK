@@ -30,11 +30,13 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_installPath;
         AZStd::string m_gameVersion;
         AZStd::string m_branch;
+        AZStd::string m_runtimeTarget;
         AZStd::string m_unityVersion;
         AZStd::string m_bepInExVersion;
         AZStd::string m_managedAssembliesPath;
         AZStd::string m_pluginPath;
         AZStd::string m_diagnosticsPath;
+        AZStd::string m_extractedDataPath;
         AZStd::vector<AZStd::string> m_dlcScopes;
     };
 
@@ -48,6 +50,9 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_workspaceId;
         AZStd::string m_displayName;
         AZStd::string m_rootPath;
+        AZStd::string m_outputPath;
+        AZStd::string m_stagingPath;
+        AZStd::string m_deploymentPath;
         AZStd::string m_activeGameProfileId;
         AZStd::vector<GameProfile> m_gameProfiles;
     };
@@ -170,9 +175,13 @@ namespace TaintedGrailModdingSDK
         static void Reflect(AZ::ReflectContext* context);
 
         AZStd::string m_workspaceName;
+        AZStd::string m_workspaceFilePath;
         AZStd::string m_activeGameProfile;
         AZStd::string m_gameVersion;
         AZStd::string m_branch;
+        AZStd::string m_runtimeTarget;
+        AZStd::string m_unityVersion;
+        AZStd::string m_bepInExVersion;
         AZ::u64 m_gameProfileCount = 0;
         AZ::u64 m_packCount = 0;
         AZ::u64 m_sourceCount = 0;

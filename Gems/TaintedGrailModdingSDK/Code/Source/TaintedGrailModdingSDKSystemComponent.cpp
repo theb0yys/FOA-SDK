@@ -10,6 +10,7 @@
 #include "FoundationModels.h"
 #include "FoundationService.h"
 #include "FoundationStatusWidget.h"
+#include "PackManagerWidget.h"
 
 #include <AzCore/Debug/Trace.h>
 #include <AzCore/Math/Crc.h>
@@ -21,6 +22,7 @@ namespace TaintedGrailModdingSDK
     namespace
     {
         constexpr const char* FoundationStatusViewPaneName = "Tainted Grail SDK Status";
+        constexpr const char* PackManagerViewPaneName = "Tainted Grail Pack Manager";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -38,7 +40,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<TaintedGrailModdingSDKSystemComponent, AZ::Component>()
-                ->Version(2);
+                ->Version(3);
         }
     }
 
@@ -69,6 +71,7 @@ namespace TaintedGrailModdingSDK
         if (m_viewRegistered)
         {
             AzToolsFramework::UnregisterViewPane(FoundationStatusViewPaneName);
+            AzToolsFramework::UnregisterViewPane(PackManagerViewPaneName);
             m_viewRegistered = false;
         }
 
@@ -84,17 +87,30 @@ namespace TaintedGrailModdingSDK
             return;
         }
 
-        AzToolsFramework::ViewPaneOptions options;
-        options.paneRect = QRect(100, 100, 760, 900);
-        options.preferedDockingArea = Qt::RightDockWidgetArea;
-        options.isDeletable = true;
-        options.isPreview = true;
-        options.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.FoundationStatus");
+        AzToolsFramework::ViewPaneOptions statusOptions;
+        statusOptions.paneRect = QRect(100, 100, 760, 900);
+        statusOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        statusOptions.isDeletable = true;
+        statusOptions.isPreview = true;
+        statusOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.FoundationStatus");
 
         AzToolsFramework::RegisterViewPane<FoundationStatusWidget>(
             FoundationStatusViewPaneName,
             "Tainted Grail SDK",
-            options);
+            statusOptions);
+
+        AzToolsFramework::ViewPaneOptions packOptions;
+        packOptions.paneRect = QRect(120, 120, 820, 920);
+        packOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
+        packOptions.isDeletable = true;
+        packOptions.isPreview = true;
+        packOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.PackManager");
+
+        AzToolsFramework::RegisterViewPane<PackManagerWidget>(
+            PackManagerViewPaneName,
+            "Tainted Grail SDK",
+            packOptions);
+
         m_viewRegistered = true;
     }
 } // namespace TaintedGrailModdingSDK

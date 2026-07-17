@@ -79,12 +79,17 @@ namespace TaintedGrailModdingSDK
 
     void TaintedGrailModdingSDKSystemComponent::NotifyRegisterViews()
     {
+        if (m_viewRegistered)
+        {
+            return;
+        }
+
         AzToolsFramework::ViewPaneOptions options;
         options.paneRect = QRect(100, 100, 760, 900);
         options.preferedDockingArea = Qt::RightDockWidgetArea;
-        options.isDeletable = false;
+        options.isDeletable = true;
         options.isPreview = true;
-        options.saveKeyName = "TaintedGrailModdingSDK.FoundationStatus";
+        options.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.FoundationStatus");
 
         AzToolsFramework::RegisterViewPane<FoundationStatusWidget>(
             FoundationStatusViewPaneName,

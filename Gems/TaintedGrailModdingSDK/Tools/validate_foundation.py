@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Validate the Tainted Grail Modding SDK foundation without building O3DE.
+"""Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
 
-This check deliberately validates only repository structure and the editor-only
-product boundary. It is not a substitute for an O3DE configure or compile.
+The check verifies repository structure, the six-piece first milestone, and the
+editor-only product boundary. It does not replace an O3DE configure or compile.
 """
 
 from __future__ import annotations
@@ -49,9 +49,7 @@ def validate_engine_registration(repo_root: Path) -> None:
 
     default_gems = engine.get("gem_names", [])
     if GEM_NAME in default_gems:
-        fail(
-            f"{GEM_NAME} must not be an engine-wide default Gem; it is an editor-only SDK extension"
-        )
+        fail(f"{GEM_NAME} must not be an engine-wide default Gem")
 
 
 def validate_gem_metadata(gem_root: Path) -> None:
@@ -71,9 +69,8 @@ def validate_gem_metadata(gem_root: Path) -> None:
     if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
         fail("gem.json version must use MAJOR.MINOR.PATCH")
 
-    dependencies = gem.get("dependencies")
-    if dependencies != []:
-        fail("The foundation slice must not add Gem dependencies yet")
+    if gem.get("dependencies") != []:
+        fail("The first editor milestone must not add Gem dependencies yet")
 
 
 def validate_cmake(gem_root: Path) -> None:
@@ -84,6 +81,7 @@ def validate_cmake(gem_root: Path) -> None:
         "if(NOT PAL_TRAIT_BUILD_HOST_TOOLS)",
         "NAME ${gem_name}.Editor GEM_MODULE",
         "taintedgrailmoddingsdk_editor_files.cmake",
+        "AZ::AzToolsFramework",
         "ly_create_alias(NAME ${gem_name}.Tools",
         "ly_create_alias(NAME ${gem_name}.Builders",
         "VARIANTS Tools Builders",
@@ -91,12 +89,7 @@ def validate_cmake(gem_root: Path) -> None:
     for fragment in required_fragments:
         require_contains(cmake, fragment, cmake_path)
 
-    forbidden_fragments = (
-        "${gem_name}.Clients",
-        "${gem_name}.Servers",
-        "${gem_name}.Unified",
-    )
-    for fragment in forbidden_fragments:
+    for fragment in ("${gem_name}.Clients", "${gem_name}.Servers", "${gem_name}.Unified"):
         if fragment in cmake:
             fail(f"Editor-only foundation must not expose runtime alias {fragment}")
 
@@ -108,6 +101,18 @@ def validate_source_manifest(gem_root: Path) -> None:
     entries = set(re.findall(r"^\s+(Source/[^\s\)]+)\s*$", manifest, re.MULTILINE))
 
     required_entries = {
+        "Source/CatalogDatabase.cpp",
+        "Source/CatalogDatabase.h",
+        "Source/FoundationModels.cpp",
+        "Source/FoundationModels.h",
+        "Source/FoundationService.cpp",
+        "Source/FoundationService.h",
+        "Source/FoundationStatusWidget.cpp",
+        "Source/FoundationStatusWidget.h",
+        "Source/FoundationValidationService.cpp",
+        "Source/FoundationValidationService.h",
+        "Source/SourceEvidenceRegistry.cpp",
+        "Source/SourceEvidenceRegistry.h",
         "Source/TaintedGrailModdingSDKEditorModule.cpp",
         "Source/TaintedGrailModdingSDKSystemComponent.cpp",
         "Source/TaintedGrailModdingSDKSystemComponent.h",
@@ -123,23 +128,30 @@ def validate_source_manifest(gem_root: Path) -> None:
             fail(f"Manifest entry does not exist: {relative_path}")
 
 
-def validate_editor_boundary(gem_root: Path) -> None:
+def validate_first_milestone(gem_root: Path) -> None:
     source_root = gem_root / "Code" / "Source"
     source_files = sorted(source_root.glob("*.[ch]pp")) + sorted(source_root.glob("*.h"))
     combined = "\n".join(path.read_text(encoding="utf-8") for path in source_files)
 
     required_fragments = (
-        "AZ_DECLARE_MODULE_CLASS",
-        "AZ_COMPONENT(",
+        "WorkspaceModel",
+        "GameProfile",
+        "PackManifest",
+        "class SourceEvidenceRegistry",
+        "class CatalogDatabase",
+        "class FoundationValidationService",
+        "class FoundationService",
+        "class FoundationStatusWidget",
+        "RegisterViewPane<FoundationStatusWidget>",
         "TaintedGrailModdingSDKService",
         "FoA runtime execution remains disabled",
     )
     for fragment in required_fragments:
         if fragment not in combined:
-            fail(f"Editor foundation source is missing {fragment!r}")
+            fail(f"First editor milestone is missing {fragment!r}")
 
     forbidden_runtime_tokens = (
-        "BepInEx",
+        "#include <BepInEx",
         "HarmonyLib",
         "TG.Main",
         "LocationTemplate",
@@ -149,7 +161,7 @@ def validate_editor_boundary(gem_root: Path) -> None:
     )
     for token in forbidden_runtime_tokens:
         if token in combined:
-            fail(f"Editor-only foundation contains forbidden runtime token {token!r}")
+            fail(f"Editor-only foundation contains forbidden runtime integration {token!r}")
 
 
 def main() -> int:
@@ -161,13 +173,16 @@ def main() -> int:
         validate_gem_metadata(gem_root)
         validate_cmake(gem_root)
         validate_source_manifest(gem_root)
-        validate_editor_boundary(gem_root)
+        validate_first_milestone(gem_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
         return 1
 
     print("Tainted Grail SDK foundation validation passed.")
-    print("Validated: metadata, engine registration, tool variants, source manifest, editor-only boundary.")
+    print(
+        "Validated: workspace/profile model, pack manifest, source/evidence registry, "
+        "catalog/query service, blockers, status dock, and editor-only boundary."
+    )
     return 0
 
 

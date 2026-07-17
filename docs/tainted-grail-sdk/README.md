@@ -10,6 +10,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
 - [Item and Recipe Editor Guide](ITEM_RECIPE_EDITOR_GUIDE.md) — typed item and recipe profiles, ingredients, outputs, stations, acquisition relationships, and governed action lanes.
+- [Recipe Station Evidence View](RECIPE_STATION_EVIDENCE_VIEW.md) — read-only station visibility and learnability research, evidence health, governance, and blockers.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -64,6 +65,7 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - durable governance history and proof-linked permission decisions;
 - typed item and recipe profiles, ingredient/output joins, station references, and acquisition relationships;
 - read-only item/recipe action-lane matrices backed by catalog governance;
+- read-only recipe station visibility and learnability evidence rows derived from exact identities, relationships, evidence, governance, and blockers;
 - foundation status, coverage, import issues, governance and economy blockers, and usage totals.
 
 Runtime adapters, production deployment, and the remaining specialised domain tools are not complete.

@@ -97,6 +97,7 @@ namespace TaintedGrailModdingSDK
         record.m_confidence = request.m_confidence.empty() ? evidence->m_confidence : request.m_confidence;
         record.m_operationalRisk = request.m_operationalRisk.empty() ? "unknown" : request.m_operationalRisk;
         record.m_validationState = "unvalidated";
+        record.m_stalenessState = "unknown";
         record.m_forbiddenUsages = request.m_forbiddenUsages;
         if (AZStd::find(record.m_forbiddenUsages.begin(), record.m_forbiddenUsages.end(), "no_unvalidated_runtime_use")
             == record.m_forbiddenUsages.end())

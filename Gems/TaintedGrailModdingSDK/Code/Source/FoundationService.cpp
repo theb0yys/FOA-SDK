@@ -7,6 +7,8 @@
 
 #include "FoundationService.h"
 
+#include "FoundationNotificationBus.h"
+
 namespace TaintedGrailModdingSDK
 {
     FoundationService& FoundationService::Get()
@@ -31,6 +33,7 @@ namespace TaintedGrailModdingSDK
     void FoundationService::Shutdown()
     {
         m_workspace = {};
+        m_workspaceFilePath.clear();
         m_packs.clear();
         m_sourceRegistry.Clear();
         m_catalog.Clear();
@@ -47,6 +50,55 @@ namespace TaintedGrailModdingSDK
     {
         m_workspace = workspace;
         RefreshSnapshot();
+    }
+
+    bool FoundationService::SaveWorkspace(const AZStd::string& filePath, AZStd::string* error)
+    {
+        const AZ::Outcome<void, AZStd::string> result = m_workspacePersistence.Save(m_workspace, filePath);
+        if (!result.IsSuccess())
+        {
+            if (error)
+            {
+                *error = result.GetError();
+            }
+            return false;
+        }
+
+        m_workspaceFilePath = filePath;
+        RefreshSnapshot();
+        return true;
+    }
+
+    bool FoundationService::SaveWorkspace(AZStd::string* error)
+    {
+        if (m_workspaceFilePath.empty())
+        {
+            if (error)
+            {
+                *error = "Use Save Workspace As before saving this workspace.";
+            }
+            return false;
+        }
+
+        return SaveWorkspace(m_workspaceFilePath, error);
+    }
+
+    bool FoundationService::LoadWorkspace(const AZStd::string& filePath, AZStd::string* error)
+    {
+        AZ::Outcome<WorkspaceModel, AZStd::string> result = m_workspacePersistence.Load(filePath);
+        if (!result.IsSuccess())
+        {
+            if (error)
+            {
+                *error = result.GetError();
+            }
+            return false;
+        }
+
+        m_workspace = result.TakeValue();
+        m_workspaceFilePath = filePath;
+        RefreshSnapshot();
+        return true;
     }
 
     bool FoundationService::UpsertPack(const PackManifest& pack, AZStd::string* error)
@@ -110,6 +162,11 @@ namespace TaintedGrailModdingSDK
         return m_workspace;
     }
 
+    const AZStd::string& FoundationService::GetWorkspaceFilePath() const
+    {
+        return m_workspaceFilePath;
+    }
+
     const AZStd::vector<PackManifest>& FoundationService::GetPacks() const
     {
         return m_packs;
@@ -134,6 +191,7 @@ namespace TaintedGrailModdingSDK
     {
         m_snapshot = {};
         m_snapshot.m_workspaceName = m_workspace.m_displayName;
+        m_snapshot.m_workspaceFilePath = m_workspaceFilePath;
         m_snapshot.m_gameProfileCount = static_cast<AZ::u64>(m_workspace.m_gameProfiles.size());
         m_snapshot.m_packCount = static_cast<AZ::u64>(m_packs.size());
         m_snapshot.m_sourceCount = static_cast<AZ::u64>(m_sourceRegistry.GetSources().size());
@@ -148,12 +206,20 @@ namespace TaintedGrailModdingSDK
             m_snapshot.m_activeGameProfile = profile->m_displayName;
             m_snapshot.m_gameVersion = profile->m_gameVersion;
             m_snapshot.m_branch = profile->m_branch;
+            m_snapshot.m_runtimeTarget = profile->m_runtimeTarget;
+            m_snapshot.m_unityVersion = profile->m_unityVersion;
+            m_snapshot.m_bepInExVersion = profile->m_bepInExVersion;
         }
         else
         {
             m_snapshot.m_activeGameProfile = "Not configured";
             m_snapshot.m_gameVersion = "Unknown";
             m_snapshot.m_branch = "Unknown";
+            m_snapshot.m_runtimeTarget = "Unknown";
+            m_snapshot.m_unityVersion = "Unknown";
+            m_snapshot.m_bepInExVersion = "Unknown";
         }
+
+        FoundationNotificationBus::Broadcast(&FoundationNotifications::OnFoundationChanged);
     }
 } // namespace TaintedGrailModdingSDK

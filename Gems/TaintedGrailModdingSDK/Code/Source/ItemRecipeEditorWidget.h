@@ -47,6 +47,7 @@ namespace TaintedGrailModdingSDK
         void SaveAcquisitionRelationship();
         void RefreshItemLaneTable();
         void RefreshRecipeLaneTable();
+        void RefreshRecipeEvidence();
         void RefreshRecipeJoins();
         void RefreshAcquisitionRelationships();
         void SetStatus(const QString& message, bool error = false);
@@ -86,6 +87,7 @@ namespace TaintedGrailModdingSDK
         QCheckBox* m_recipeHidden = nullptr;
         QLineEdit* m_recipeEvidence = nullptr;
         QTableWidget* m_recipeLaneTable = nullptr;
+        QTableWidget* m_recipeEvidenceTable = nullptr;
 
         QTableWidget* m_ingredientTable = nullptr;
         QLineEdit* m_ingredientLinkId = nullptr;

@@ -10,6 +10,10 @@ set(FILES
     Source/CatalogDatabase.h
     Source/CatalogGovernanceService.cpp
     Source/CatalogGovernanceService.h
+    Source/CatalogGovernanceTypes.cpp
+    Source/CatalogGovernanceTypes.h
+    Source/CatalogTransactionService.cpp
+    Source/CatalogTransactionService.h
     Source/EconomyAuthoringService.cpp
     Source/EconomyAuthoringService.h
     Source/EconomyModels.cpp
@@ -19,6 +23,8 @@ set(FILES
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
     Tests/CatalogDatabaseTests.cpp
+    Tests/CatalogGovernanceHardeningTests.cpp
     Tests/CatalogGovernanceServiceTests.cpp
+    Tests/CatalogGovernanceTypesTests.cpp
     Tests/EconomyAuthoringTests.cpp
 )

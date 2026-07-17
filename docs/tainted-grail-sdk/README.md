@@ -22,6 +22,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Contributing](../../CONTRIBUTING.md) — contribution lifecycle and DCO requirements.
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
+- [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
 - [Review and Merge Policy](REVIEW_AND_MERGE_POLICY.md) — design review, self-review, pull-request review, and merge gates.
 - [Data Formats](DATA_FORMATS.md) — versioned durable-document requirements.
@@ -58,6 +59,8 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - source and evidence intake;
 - canonical catalog browser, record inspector, first-class relationships, validation history, and reviewed claim promotion;
 - independent maturity, confidence, operational-risk, validation, staleness, permission, prohibition, and supersession authoring;
+- typed and intrinsically atomic governance transitions shared by records and relationships;
+- publish-after-save catalog transactions and rollback-focused governance tests;
 - durable governance history and proof-linked permission decisions;
 - typed item and recipe profiles, ingredient/output joins, station references, and acquisition relationships;
 - read-only item/recipe action-lane matrices backed by catalog governance;

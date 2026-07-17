@@ -12,6 +12,7 @@
 #include "CatalogGovernanceService.h"
 #include "CatalogPersistenceService.h"
 #include "CatalogPromotionService.h"
+#include "CatalogTransactionService.h"
 #include "EconomyBlockerService.h"
 #include "FoundationValidationService.h"
 #include "PackPersistenceService.h"
@@ -115,6 +116,7 @@ namespace TaintedGrailModdingSDK
         SourceImportService m_sourceImportService;
         SourceEvidencePersistenceService m_sourceEvidencePersistence;
         CatalogPersistenceService m_catalogPersistence;
+        CatalogTransactionService m_catalogTransaction;
         CatalogPromotionService m_catalogPromotion;
         CatalogGovernanceService m_catalogGovernance;
         FoundationSnapshot m_snapshot;

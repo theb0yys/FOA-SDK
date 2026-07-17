@@ -27,7 +27,12 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Automatic permission revocation for stale, failed, blocked, and superseded subjects.
 - Durable governance events containing previous/new values, evidence, validation proof IDs, reviewer, time, and notes.
 - Governance blockers for unknown assessments, stale state, missing permission proof, missing history references, and profile mismatch.
-- Governance transition unit tests covering validation/permission separation, proof requirements, stale-state revocation, relationship governance, and supersession.
+- Strong internal governance types for subject kind, axis, maturity, confidence, risk, validation, staleness, and permission decisions while retaining schema-1 string compatibility.
+- Shared `GovernedSubjectState` transition handling for records and relationships.
+- Intrinsically atomic governance and validation services that return complete candidates without mutating caller-owned catalogs.
+- Testable publish-after-save catalog transaction coordination.
+- Governance hardening tests for malformed or mismatched evidence, wrong profiles, duplicate audit IDs, persistence failure, rollback, corrupted documents, and typed-value misspellings.
+- Governance Reliability Baseline contributor documentation.
 - **Tainted Grail Item and Recipe Editor** editor pane.
 - Typed economy item profiles keyed to canonical `economy/item` records.
 - Typed recipe profiles keyed to canonical `economy/recipe` records.
@@ -46,6 +51,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 - Catalog records now carry an explicit staleness state.
 - Catalog relationships now use the same independent maturity, confidence, risk, validation, staleness, permission, prohibition, conflict, missing-reference, and supersession model as records.
+- Record and relationship governance transitions now execute through one typed state machine instead of duplicated branches.
+- Governance and validation APIs now accept immutable catalog inputs and return complete state-plus-history candidates only after all in-memory checks succeed.
+- Catalog publication now occurs only from a successful `CatalogTransactionService` result after persistence completes.
 - Validation events can target records or relationships while retaining the legacy record-only binding for schema-1 compatibility.
 - Canonical catalog schema 1 accepts optional governance-history, typed economy arrays, and extended state fields without reinterpreting existing identity data.
 - Foundation status snapshots now count relationships, validation events, governance decisions, typed item/recipe profiles, recipe joins, stale subjects, allowed usages, and prohibitions.
@@ -61,18 +69,19 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Validation never grants permission automatically.
 - Allowed usage requires a separate reviewed permission event backed by validated proof for the same subject.
 - Stale, failed, blocked, and superseded transitions remove existing allowed usages.
+- A failed governance-history append cannot leave changed state in a caller-owned catalog.
+- A failed catalog save cannot publish a candidate into the live editor state.
 - Item/recipe profile and join writes reject missing or unrelated evidence before persistence.
 - Native and synthetic item/recipe lanes are checked independently.
 - Quest-sensitive and unique item distribution lanes receive explicit blockers.
 - The Item and Recipe Editor exposes governance lanes as read-only status and cannot grant permission.
-- Catalog persistence publishes in-memory changes only after a successful workspace-contained document write.
 - Public contribution rules require design review, pre-commit self-review, required CI, resolved review threads, and maintainer approval before merge.
 
 ### Known limitations
 
 - The Item and Recipe Editor does not yet generate adapter work orders.
 - Station visibility, recipe learnability, runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.
-- Permission vocabulary is currently free-form and will become adapter-capability aware in later slices.
+- Permission usage names remain free-form pending typed adapter-capability contracts; the decision operation itself is strongly typed.
 - Remaining actor, spawn, world, faction, quest/state, asset, and localisation authoring tools are not implemented.
 - FoA runtime adapters and production deployment are not implemented.
 - The project has not published a supported binary release.

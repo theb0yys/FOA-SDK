@@ -13,12 +13,11 @@ namespace TaintedGrailModdingSDK
         const CatalogGovernanceRequest& request,
         AZStd::string* error)
     {
-        CatalogDatabase candidate = m_catalog;
-        AZ::Outcome<CatalogGovernanceEvent, AZStd::string> result = m_catalogGovernance.ApplyDecision(
+        AZ::Outcome<CatalogGovernanceApplyResult, AZStd::string> result = m_catalogGovernance.ApplyDecision(
             request,
             m_workspace,
             m_sourceRegistry,
-            candidate);
+            m_catalog);
         if (!result.IsSuccess())
         {
             if (error)
@@ -27,19 +26,18 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
-        return PersistCatalogCandidate(candidate, error);
+        return PersistCatalogCandidate(result.GetValue().m_catalog, error);
     }
 
     bool FoundationService::ApplyCatalogValidationDecision(
         const CatalogValidationRequest& request,
         AZStd::string* error)
     {
-        CatalogDatabase candidate = m_catalog;
-        AZ::Outcome<CatalogValidationEvent, AZStd::string> result = m_catalogGovernance.ApplyValidation(
+        AZ::Outcome<CatalogValidationApplyResult, AZStd::string> result = m_catalogGovernance.ApplyValidation(
             request,
             m_workspace,
             m_sourceRegistry,
-            candidate);
+            m_catalog);
         if (!result.IsSuccess())
         {
             if (error)
@@ -48,6 +46,6 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
-        return PersistCatalogCandidate(candidate, error);
+        return PersistCatalogCandidate(result.GetValue().m_catalog, error);
     }
 } // namespace TaintedGrailModdingSDK

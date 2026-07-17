@@ -103,9 +103,11 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/CatalogDatabase.cpp", "Source/CatalogDatabase.h",
         "Source/CatalogGovernanceBlockerService.cpp", "Source/CatalogGovernanceBlockerService.h",
         "Source/CatalogGovernanceService.cpp", "Source/CatalogGovernanceService.h",
+        "Source/CatalogGovernanceTypes.cpp", "Source/CatalogGovernanceTypes.h",
         "Source/CatalogGovernanceWidget.cpp", "Source/CatalogGovernanceWidget.h",
         "Source/CatalogPersistenceService.cpp", "Source/CatalogPersistenceService.h",
         "Source/CatalogPromotionService.cpp", "Source/CatalogPromotionService.h",
+        "Source/CatalogTransactionService.cpp", "Source/CatalogTransactionService.h",
         "Source/EconomyAuthoringService.cpp", "Source/EconomyAuthoringService.h",
         "Source/EconomyBlockerService.cpp", "Source/EconomyBlockerService.h",
         "Source/EconomyModels.cpp", "Source/EconomyModels.h",
@@ -214,12 +216,19 @@ def validate_catalog(gem_root: Path) -> None:
         fail("Evidence promotion must not assign allowed usages")
     require_contains(promotion, 'record.m_stalenessState = "unknown"', promotion_path)
 
+    transaction_path = source_root / "CatalogTransactionService.cpp"
+    transaction = transaction_path.read_text(encoding="utf-8")
+    save_position = transaction.find("save(document, workspace.m_rootPath)")
+    result_position = transaction.find("result.m_catalog = candidate")
+    if save_position < 0 or result_position < 0 or save_position > result_position:
+        fail("Catalog transaction service must save before returning a publishable candidate")
+
     catalog_service_path = source_root / "FoundationCatalogService.cpp"
     catalog_service = catalog_service_path.read_text(encoding="utf-8")
-    save_position = catalog_service.find("m_catalogPersistence.Save(")
-    publish_position = catalog_service.find("m_catalog = candidate")
-    if save_position < 0 or publish_position < 0 or save_position > publish_position:
-        fail("Canonical catalog must persist the candidate document before publishing in-memory state")
+    commit_position = catalog_service.find("m_catalogTransaction.Commit(")
+    publish_position = catalog_service.find("m_catalog = AZStd::move(committed.m_catalog)")
+    if commit_position < 0 or publish_position < 0 or commit_position > publish_position:
+        fail("Foundation catalog service must complete the transaction before publishing catalog state")
 
     database_path = source_root / "CatalogDatabase.cpp"
     database = database_path.read_text(encoding="utf-8")
@@ -238,24 +247,46 @@ def validate_governance_engine(gem_root: Path) -> None:
         "GovernanceHistory", "stale_or_unverified", "validation_failed", "superseded",
         "Allowed usage requires at least one validated proof event",
         "Permission never follows automatically from evidence or validation",
-        "Usage permission requires a validated, current, unresolved-free, non-superseded record",
+        "Usage permission requires a validated, current, unresolved-free, non-superseded subject",
+        "enum class CatalogSubjectKind", "enum class GovernanceAxis", "enum class ResearchStage",
+        "enum class ConfidenceLevel", "enum class OperationalRisk", "enum class ValidationState",
+        "enum class StalenessState", "enum class PermissionDecision", "GovernedSubjectState",
+        "class CatalogTransactionService", "CatalogGovernanceApplyResult", "CatalogValidationApplyResult",
     ):
         if fragment not in combined:
             fail(f"Catalog governance engine is missing {fragment!r}")
 
-    path = source_root / "CatalogGovernanceService.cpp"
-    text = path.read_text(encoding="utf-8")
-    if "updated.m_allowedUsages.push_back" in text:
-        fail("Governance permissions must use duplicate-safe reviewed transitions")
-    for fragment in ("catalog.AddValidationEvent(validation", "updated.m_allowedUsages.clear();", "ValidatePermissionBasis"):
-        require_contains(text, fragment, path)
+    header_path = source_root / "CatalogGovernanceService.h"
+    header = header_path.read_text(encoding="utf-8")
+    for fragment in (
+        "const CatalogDatabase& catalog) const;",
+        "ReadSubjectState", "WriteSubjectState", "ApplyTypedTransition", "ApplyValidationState",
+    ):
+        require_contains(header, fragment, header_path)
+    if re.search(r"SourceEvidenceRegistry& sourceRegistry,\s*CatalogDatabase& catalog", header):
+        fail("Governance service must not accept a mutable caller-owned catalog")
+
+    service_path = source_root / "CatalogGovernanceService.cpp"
+    service = service_path.read_text(encoding="utf-8")
+    for fragment in (
+        "CatalogDatabase candidate = catalog", "candidate.AddGovernanceEvent", "candidate.AddValidationEvent",
+        "WriteSubjectState(state, candidate", "ApplyTypedTransition", "ParseGovernanceAxis",
+        "ParseValidationState", "result.m_catalog = AZStd::move(candidate)",
+    ):
+        require_contains(service, fragment, service_path)
+    for case_fragment in (
+        "case GovernanceAxis::Maturity:", "case GovernanceAxis::Confidence:",
+        "case GovernanceAxis::OperationalRisk:", "case GovernanceAxis::Staleness:",
+        "case GovernanceAxis::Permission:", "case GovernanceAxis::Supersession:",
+    ):
+        if service.count(case_fragment) != 1:
+            fail(f"Governance axis must have exactly one shared transition implementation: {case_fragment}")
 
     foundation_path = source_root / "FoundationGovernanceService.cpp"
-    require_contains(
-        foundation_path.read_text(encoding="utf-8"),
-        "PersistCatalogCandidate(candidate, error)",
-        foundation_path,
-    )
+    foundation = foundation_path.read_text(encoding="utf-8")
+    require_contains(foundation, "PersistCatalogCandidate(result.GetValue().m_catalog, error)", foundation_path)
+    if "CatalogDatabase candidate = m_catalog" in foundation:
+        fail("Foundation governance wrapper must not recreate a second mutable transaction path")
 
 
 def validate_economy_authoring(gem_root: Path) -> None:
@@ -374,8 +405,8 @@ def main() -> int:
     print("Tainted Grail SDK foundation validation passed.")
     print(
         "Validated: public governance, workspace and pack editing, source/evidence intake, canonical catalog, "
-        "independent governance and proof-backed permissions, typed item/recipe profiles and joins, economy "
-        "blockers and lanes, transactional persistence, six editor panes, tests, and editor-only runtime separation."
+        "typed atomic governance and proof-backed permissions, typed item/recipe profiles and joins, economy "
+        "blockers and lanes, publish-after-save transactions, six editor panes, tests, and runtime separation."
     )
     return 0
 

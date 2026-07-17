@@ -20,7 +20,6 @@ on:
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   push:
     branches:
-      - foa-development
       - main
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
@@ -39,6 +38,10 @@ on:
       - "engine.json"
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   workflow_dispatch:
+
+concurrency:
+  group: tg-sdk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -60,6 +63,9 @@ jobs:
 
       - name: Validate foundation and governance contracts
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+
+      - name: Validate governance hardening contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_governance_hardening.py
 
       - name: Validate catalog test contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py

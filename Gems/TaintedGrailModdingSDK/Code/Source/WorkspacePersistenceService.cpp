@@ -37,7 +37,7 @@ namespace TaintedGrailModdingSDK
             AZ::JsonSerializationUtils::LoadObjectFromFile(workspace, filePath);
         if (!loadResult.IsSuccess())
         {
-            return AZ::Failure(loadResult.GetError());
+            return AZ::Failure(AZStd::string(loadResult.GetError()));
         }
 
         return AZ::Success(AZStd::move(workspace));

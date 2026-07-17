@@ -85,6 +85,7 @@ namespace TaintedGrailModdingSDK
         // Internal compatibility path only. Public/editor record creation must use governed promotion.
         bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
         bool PersistCatalogCandidate(const CatalogDatabase& candidate, AZStd::string* error);
+        void AppendGovernanceBlockersToSnapshot();
         PackManifest* FindPackById(const AZStd::string& packId);
         const PackManifest* FindPackById(const AZStd::string& packId) const;
         static ImportIssue MakeRegistryIssue(

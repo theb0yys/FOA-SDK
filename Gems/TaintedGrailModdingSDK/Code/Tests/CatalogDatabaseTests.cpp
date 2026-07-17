@@ -23,7 +23,8 @@ namespace TaintedGrailModdingSDK
             record.m_recordId = AZStd::move(recordId);
             record.m_domain = "test";
             record.m_recordKind = "test-record";
-            record.m_subjectRef = "subject:" + record.m_recordId;
+            record.m_subjectRef = "subject:";
+            record.m_subjectRef += record.m_recordId;
             record.m_nativeRefExact = AZStd::move(nativeRef);
             record.m_identityKind = "native";
             record.m_displayName = AZStd::move(displayName);

@@ -11,6 +11,7 @@
 
 #include <AzCore/Outcome/Outcome.h>
 #include <AzCore/std/string/conversions.h>
+#include <AzCore/std/utility/move.h>
 
 class QByteArray;
 

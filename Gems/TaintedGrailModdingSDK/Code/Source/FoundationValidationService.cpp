@@ -11,6 +11,27 @@
 
 namespace TaintedGrailModdingSDK
 {
+    namespace
+    {
+        bool Contains(const AZStd::vector<AZStd::string>& values, const AZStd::string& value)
+        {
+            for (const AZStd::string& candidate : values)
+            {
+                if (candidate == value)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool IsKnownSaveImpact(const AZStd::string& value)
+        {
+            return value == "none" || value == "compatible" || value == "migration"
+                || value == "destructive" || value == "unknown";
+        }
+    } // namespace
+
     AZStd::vector<BlockerRecord> FoundationValidationService::Evaluate(
         const WorkspaceModel& workspace,
         const AZStd::vector<PackManifest>& packs,
@@ -111,31 +132,133 @@ namespace TaintedGrailModdingSDK
         {
             for (const PackManifest& pack : packs)
             {
+                const AZStd::string subject = pack.m_packId.empty() ? AZStd::string("pack:unnamed") : pack.m_packId;
                 if (!pack.HasStableIdentity())
                 {
-                    AZStd::string blockerId = "foundation.pack.identity.";
-                    if (pack.m_displayName.empty())
-                    {
-                        blockerId += "unnamed";
-                    }
-                    else
-                    {
-                        blockerId += pack.m_displayName;
-                    }
                     blockers.push_back(MakeBlocker(
-                        AZStd::move(blockerId),
+                        "foundation.pack.identity." + subject,
                         "error",
                         "pack-manifest",
-                        pack.m_packId,
-                        "Pack ID, owner ID, and semantic version are required before records can be promoted."));
+                        subject,
+                        "Pack ID must be namespaced and lowercase, owner ID is required, and version must use semantic versioning."));
+                }
+
+                if (pack.m_targetGameVersion.empty() || pack.m_targetBranch.empty())
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.game-target." + subject,
+                        "error",
+                        "pack-manifest",
+                        subject,
+                        "Declare the exact primary FoA game version and branch targeted by the pack.",
+                        { "build", "package", "deploy" }));
+                }
+                else if (activeProfile)
+                {
+                    const bool versionCompatible = pack.m_targetGameVersion == activeProfile->m_gameVersion
+                        || Contains(pack.m_compatibleGameVersions, activeProfile->m_gameVersion);
+                    if (!versionCompatible || pack.m_targetBranch != activeProfile->m_branch)
+                    {
+                        blockers.push_back(MakeBlocker(
+                            "foundation.pack.profile-mismatch." + subject,
+                            "error",
+                            "compatibility",
+                            subject,
+                            "The active game profile is outside the pack's declared game-version or branch compatibility.",
+                            { "build", "package", "deploy", "runtime_handoff" }));
+                    }
+                }
+
+                if (pack.m_requiredCoreVersion.empty() || pack.m_requiredAdapterVersion.empty())
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.sdk-compatibility." + subject,
+                        "error",
+                        "compatibility",
+                        subject,
+                        "Declare compatible Avalon Core and FoA adapter versions before release packaging.",
+                        { "package", "release", "runtime_handoff" }));
+                }
+
+                if (!IsKnownSaveImpact(pack.m_saveImpact))
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.save-impact." + subject,
+                        "error",
+                        "save-impact",
+                        subject,
+                        "Save impact must be one of: none, compatible, migration, destructive, or unknown."));
+                }
+                else if (pack.m_saveImpact == "unknown")
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.save-impact-unknown." + subject,
+                        "warning",
+                        "save-impact",
+                        subject,
+                        "Save impact is explicitly unknown and must be resolved before a release is approved.",
+                        { "release" }));
+                }
+
+                for (const AZStd::string& dependency : pack.m_dependencies)
+                {
+                    if (Contains(pack.m_incompatibilities, dependency))
+                    {
+                        blockers.push_back(MakeBlocker(
+                            "foundation.pack.dependency-conflict." + subject + "." + dependency,
+                            "error",
+                            "dependencies",
+                            subject,
+                            "The same pack is declared as both a dependency and an incompatibility: " + dependency));
+                    }
+                }
+                for (const AZStd::string& requiredMod : pack.m_requiredMods)
+                {
+                    if (Contains(pack.m_incompatibilities, requiredMod))
+                    {
+                        blockers.push_back(MakeBlocker(
+                            "foundation.pack.required-mod-conflict." + subject + "." + requiredMod,
+                            "error",
+                            "dependencies",
+                            subject,
+                            "The same mod is declared as both required and incompatible: " + requiredMod));
+                    }
+                }
+
+                if (pack.m_contentDefinitionPaths.empty())
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.content-empty." + subject,
+                        "warning",
+                        "content",
+                        subject,
+                        "No content-definition documents are declared for this pack."));
+                }
+                if (pack.m_assetPaths.empty() && pack.m_localisationPaths.empty())
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.resources-empty." + subject,
+                        "warning",
+                        "resources",
+                        subject,
+                        "The pack declares no asset or localisation resources."));
+                }
+                if (pack.m_buildConfiguration.empty() || pack.m_releaseChannel.empty())
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.release-config." + subject,
+                        "warning",
+                        "release",
+                        subject,
+                        "Declare a build configuration and release channel before packaging."));
                 }
                 if (pack.m_runtimeActionsEnabled)
                 {
                     blockers.push_back(MakeBlocker(
-                        "foundation.pack.runtime-disabled",
+                        "foundation.pack.runtime-disabled." + subject,
                         "error",
                         "runtime-boundary",
-                        pack.m_packId,
+                        subject,
                         "Runtime actions are not available in the editor foundation milestone.",
                         { "all_runtime_actions" }));
                 }

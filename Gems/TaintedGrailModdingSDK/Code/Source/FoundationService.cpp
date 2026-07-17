@@ -35,6 +35,8 @@ namespace TaintedGrailModdingSDK
         m_workspace = {};
         m_workspaceFilePath.clear();
         m_packs.clear();
+        m_activePackId.clear();
+        m_activePackFilePath.clear();
         m_sourceRegistry.Clear();
         m_catalog.Clear();
         m_snapshot = {};
@@ -103,28 +105,121 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationService::UpsertPack(const PackManifest& pack, AZStd::string* error)
     {
-        if (pack.m_packId.empty())
+        if (!pack.HasStableIdentity())
         {
             if (error)
             {
-                *error = "Pack ID is required.";
+                *error = "Pack ID must be namespaced and lowercase, owner ID is required, and version must be semantic.";
+            }
+            return false;
+        }
+        if (pack.m_runtimeActionsEnabled)
+        {
+            if (error)
+            {
+                *error = "Runtime actions cannot be enabled in an editor-owned pack manifest.";
             }
             return false;
         }
 
-        for (PackManifest& existing : m_packs)
+        if (PackManifest* existing = FindPackById(pack.m_packId))
         {
-            if (existing.m_packId == pack.m_packId)
-            {
-                existing = pack;
-                RefreshSnapshot();
-                return true;
-            }
+            *existing = pack;
         }
-
-        m_packs.push_back(pack);
+        else
+        {
+            m_packs.push_back(pack);
+        }
         RefreshSnapshot();
         return true;
+    }
+
+    bool FoundationService::SetActivePack(const PackManifest& pack, AZStd::string* error)
+    {
+        const AZStd::string previousActiveId = m_activePackId;
+        if (!UpsertPack(pack, error))
+        {
+            return false;
+        }
+
+        m_activePackId = pack.m_packId;
+        if (m_activePackId != previousActiveId)
+        {
+            m_activePackFilePath.clear();
+        }
+        RefreshSnapshot();
+        return true;
+    }
+
+    bool FoundationService::SaveActivePack(const AZStd::string& filePath, AZStd::string* error)
+    {
+        const PackManifest* pack = GetActivePack();
+        if (!pack)
+        {
+            if (error)
+            {
+                *error = "Apply or open a pack before saving a manifest.";
+            }
+            return false;
+        }
+
+        const AZ::Outcome<void, AZStd::string> result = m_packPersistence.Save(*pack, filePath);
+        if (!result.IsSuccess())
+        {
+            if (error)
+            {
+                *error = result.GetError();
+            }
+            return false;
+        }
+
+        m_activePackFilePath = filePath;
+        RefreshSnapshot();
+        return true;
+    }
+
+    bool FoundationService::SaveActivePack(AZStd::string* error)
+    {
+        if (m_activePackFilePath.empty())
+        {
+            if (error)
+            {
+                *error = "Use Save Pack As before saving this pack manifest.";
+            }
+            return false;
+        }
+        return SaveActivePack(m_activePackFilePath, error);
+    }
+
+    bool FoundationService::LoadPack(const AZStd::string& filePath, AZStd::string* error)
+    {
+        AZ::Outcome<PackManifest, AZStd::string> result = m_packPersistence.Load(filePath);
+        if (!result.IsSuccess())
+        {
+            if (error)
+            {
+                *error = result.GetError();
+            }
+            return false;
+        }
+
+        PackManifest pack = result.TakeValue();
+        if (!UpsertPack(pack, error))
+        {
+            return false;
+        }
+
+        m_activePackId = pack.m_packId;
+        m_activePackFilePath = filePath;
+        RefreshSnapshot();
+        return true;
+    }
+
+    void FoundationService::ClearActivePack()
+    {
+        m_activePackId.clear();
+        m_activePackFilePath.clear();
+        RefreshSnapshot();
     }
 
     bool FoundationService::RegisterSource(const SourceRecord& source, AZStd::string* error)
@@ -170,6 +265,16 @@ namespace TaintedGrailModdingSDK
     const AZStd::vector<PackManifest>& FoundationService::GetPacks() const
     {
         return m_packs;
+    }
+
+    const PackManifest* FoundationService::GetActivePack() const
+    {
+        return FindPackById(m_activePackId);
+    }
+
+    const AZStd::string& FoundationService::GetActivePackFilePath() const
+    {
+        return m_activePackFilePath;
     }
 
     const SourceEvidenceRegistry& FoundationService::GetSourceRegistry() const
@@ -220,6 +325,45 @@ namespace TaintedGrailModdingSDK
             m_snapshot.m_bepInExVersion = "Unknown";
         }
 
+        if (const PackManifest* pack = GetActivePack())
+        {
+            m_snapshot.m_activePackId = pack->m_packId;
+            m_snapshot.m_activePackName = pack->m_displayName;
+            m_snapshot.m_activePackVersion = pack->m_version;
+            m_snapshot.m_activePackFilePath = m_activePackFilePath;
+        }
+        else
+        {
+            m_snapshot.m_activePackId = "Not configured";
+            m_snapshot.m_activePackName = "Not configured";
+            m_snapshot.m_activePackVersion = "Unknown";
+            m_snapshot.m_activePackFilePath = "Not saved";
+        }
+
         FoundationNotificationBus::Broadcast(&FoundationNotifications::OnFoundationChanged);
+    }
+
+    PackManifest* FoundationService::FindPackById(const AZStd::string& packId)
+    {
+        for (PackManifest& pack : m_packs)
+        {
+            if (pack.m_packId == packId)
+            {
+                return &pack;
+            }
+        }
+        return nullptr;
+    }
+
+    const PackManifest* FoundationService::FindPackById(const AZStd::string& packId) const
+    {
+        for (const PackManifest& pack : m_packs)
+        {
+            if (pack.m_packId == packId)
+            {
+                return &pack;
+            }
+        }
+        return nullptr;
     }
 } // namespace TaintedGrailModdingSDK

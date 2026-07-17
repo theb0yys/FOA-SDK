@@ -17,6 +17,10 @@ set(FILES
     Source/FoundationStatusWidget.h
     Source/FoundationValidationService.cpp
     Source/FoundationValidationService.h
+    Source/PackManagerWidget.cpp
+    Source/PackManagerWidget.h
+    Source/PackPersistenceService.cpp
+    Source/PackPersistenceService.h
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
     Source/TaintedGrailModdingSDKEditorModule.cpp

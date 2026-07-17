@@ -63,17 +63,29 @@ namespace TaintedGrailModdingSDK
 
         static void Reflect(AZ::ReflectContext* context);
         bool HasStableIdentity() const;
+        bool HasValidPackId() const;
+        bool HasValidSemanticVersion() const;
 
+        AZ::u32 m_schemaVersion = 1;
         AZStd::string m_packId;
         AZStd::string m_displayName;
         AZStd::string m_ownerId;
         AZStd::string m_version;
         AZStd::string m_targetGameVersion;
         AZStd::string m_targetBranch;
+        AZStd::vector<AZStd::string> m_compatibleGameVersions;
+        AZStd::string m_requiredCoreVersion;
+        AZStd::string m_requiredAdapterVersion;
         AZStd::string m_saveImpact;
         AZStd::vector<AZStd::string> m_dlcScopes;
         AZStd::vector<AZStd::string> m_dependencies;
+        AZStd::vector<AZStd::string> m_requiredMods;
         AZStd::vector<AZStd::string> m_incompatibilities;
+        AZStd::vector<AZStd::string> m_contentDefinitionPaths;
+        AZStd::vector<AZStd::string> m_assetPaths;
+        AZStd::vector<AZStd::string> m_localisationPaths;
+        AZStd::string m_buildConfiguration;
+        AZStd::string m_releaseChannel;
         bool m_runtimeActionsEnabled = false;
     };
 
@@ -182,6 +194,10 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_runtimeTarget;
         AZStd::string m_unityVersion;
         AZStd::string m_bepInExVersion;
+        AZStd::string m_activePackId;
+        AZStd::string m_activePackName;
+        AZStd::string m_activePackVersion;
+        AZStd::string m_activePackFilePath;
         AZ::u64 m_gameProfileCount = 0;
         AZ::u64 m_packCount = 0;
         AZ::u64 m_sourceCount = 0;

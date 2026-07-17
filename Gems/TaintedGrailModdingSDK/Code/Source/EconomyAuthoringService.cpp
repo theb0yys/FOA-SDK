@@ -260,6 +260,7 @@ namespace TaintedGrailModdingSDK
 
         AZStd::vector<AZStd::string> learnedFromRelationshipIds;
         AZStd::vector<AZStd::string> learnedFromEvidenceIds;
+        AZStd::vector<AZStd::string> learnedFromBlockReasons;
         AZStd::vector<AZStd::string> learnabilitySubjects = profile->m_unlockSubjectRefs;
         for (const CatalogRelationship& relationship : catalog.FindRelationshipsForRecord(recipeRecordId))
         {
@@ -289,16 +290,33 @@ namespace TaintedGrailModdingSDK
             {
                 AddUnique(learnedFromRelationshipIds, relationship.m_relationshipId);
                 AddAllUnique(learnedFromEvidenceIds, relationship.m_evidenceIds);
+                if (!IsCurrentValidated(relationship))
+                {
+                    AddUnique(
+                        learnedFromBlockReasons,
+                        "The learned_from relationship is not validated, current, reference-complete, conflict-free, and non-superseded: "
+                            + relationship.m_relationshipId);
+                }
                 if (!relationship.m_toRecordId.empty())
                 {
                     if (const CatalogRecord* target = catalog.FindByRecordId(relationship.m_toRecordId))
                     {
                         AddUnique(learnabilitySubjects, target->m_subjectRef);
+                        if (!IsCurrentValidated(*target))
+                        {
+                            AddUnique(
+                                learnedFromBlockReasons,
+                                "The learned_from target is not validated, current, reference-complete, conflict-free, and non-superseded: "
+                                    + relationship.m_toRecordId);
+                        }
                     }
                 }
                 else
                 {
                     AddUnique(learnabilitySubjects, relationship.m_targetSubjectRef);
+                    AddUnique(
+                        learnedFromBlockReasons,
+                        "The learned_from target remains unresolved: " + relationship.m_targetSubjectRef);
                 }
             }
         }
@@ -321,6 +339,10 @@ namespace TaintedGrailModdingSDK
             row.m_stalenessState = recipe->m_stalenessState;
             row.m_actionLanes = BuildActionLaneMatrix(*recipe);
             AddAllUnique(row.m_evidenceIds, learnedFromEvidenceIds);
+            for (const AZStd::string& reason : learnedFromBlockReasons)
+            {
+                MarkBlocked(row, reason);
+            }
 
             if (!IsCurrentValidated(*recipe))
             {
@@ -330,10 +352,9 @@ namespace TaintedGrailModdingSDK
             }
 
             bool unresolved = false;
-            const CatalogRecord* station = nullptr;
             if (!row.m_stationRecordId.empty())
             {
-                station = catalog.FindByRecordId(row.m_stationRecordId);
+                const CatalogRecord* station = catalog.FindByRecordId(row.m_stationRecordId);
                 if (!station)
                 {
                     unresolved = true;

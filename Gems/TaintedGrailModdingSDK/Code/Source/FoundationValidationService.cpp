@@ -29,6 +29,17 @@ namespace TaintedGrailModdingSDK
                 "Configure a stable workspace ID and writable workspace root before importing or authoring data."));
         }
 
+        if (workspace.m_outputPath.empty() || workspace.m_stagingPath.empty() || workspace.m_deploymentPath.empty())
+        {
+            blockers.push_back(MakeBlocker(
+                "foundation.workspace.pipeline-paths",
+                "error",
+                "workspace",
+                "workspace:active",
+                "Configure separate output, staging, and deployment directories before generating mod packages.",
+                { "generate", "package", "deploy" }));
+        }
+
         const GameProfile* activeProfile = workspace.FindActiveGameProfile();
         if (!activeProfile || !activeProfile->IsConfigured())
         {
@@ -37,8 +48,54 @@ namespace TaintedGrailModdingSDK
                 "error",
                 "game-profile",
                 "game-profile:active",
-                "Configure an active FoA installation, exact game version, and branch before accepting evidence.",
+                "Configure an active FoA installation, exact game version, branch, runtime target, and managed assembly path before accepting evidence.",
                 { "source_intake", "catalog_promotion", "runtime_handoff" }));
+        }
+        else
+        {
+            if (activeProfile->m_runtimeTarget != "Mono" && activeProfile->m_runtimeTarget != "IL2CPP")
+            {
+                blockers.push_back(MakeBlocker(
+                    "foundation.workspace.runtime-target",
+                    "error",
+                    "game-profile",
+                    activeProfile->m_profileId,
+                    "Runtime target must be exactly Mono or IL2CPP.",
+                    { "source_intake", "build", "runtime_handoff" }));
+            }
+
+            if (activeProfile->m_unityVersion.empty())
+            {
+                blockers.push_back(MakeBlocker(
+                    "foundation.workspace.unity-version",
+                    "error",
+                    "game-profile",
+                    activeProfile->m_profileId,
+                    "Record the exact Unity version for asset and compatibility validation."));
+            }
+
+            if (activeProfile->m_runtimeTarget == "Mono"
+                && (activeProfile->m_bepInExVersion.empty() || activeProfile->m_pluginPath.empty()))
+            {
+                blockers.push_back(MakeBlocker(
+                    "foundation.workspace.mono-loader",
+                    "error",
+                    "game-profile",
+                    activeProfile->m_profileId,
+                    "Mono profiles require an exact BepInEx version and plugin path.",
+                    { "build", "deploy", "runtime_handoff" }));
+            }
+
+            if (activeProfile->m_diagnosticsPath.empty() || activeProfile->m_extractedDataPath.empty())
+            {
+                blockers.push_back(MakeBlocker(
+                    "foundation.workspace.research-paths",
+                    "warning",
+                    "game-profile",
+                    activeProfile->m_profileId,
+                    "Configure diagnostic and extracted-data locations before source intake.",
+                    { "source_intake" }));
+            }
         }
 
         if (packs.empty())

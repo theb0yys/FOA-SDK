@@ -73,7 +73,8 @@ namespace TaintedGrailModdingSDK
             record.m_domain = "test";
             record.m_recordKind = "test-record";
             record.m_subjectRef = subjectRef;
-            record.m_nativeRefExact = "native:" + recordId;
+            record.m_nativeRefExact = "native:";
+            record.m_nativeRefExact += recordId;
             record.m_identityKind = "native";
             record.m_researchStage = "S5";
             record.m_confidence = "documented";
@@ -236,7 +237,7 @@ namespace TaintedGrailModdingSDK
         const CatalogTransactionService transaction;
         const CatalogTransactionService::SaveCallback failSave = [](
             const CatalogDocument&,
-            const AZStd::string&)
+            const AZStd::string&) -> AZ::Outcome<AZStd::string, AZStd::string>
         {
             return AZ::Failure(AZStd::string("injected persistence failure"));
         };
@@ -263,18 +264,20 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(catalog.GetValidationHistory().empty());
     }
 
-    TEST(TaintedGrailCatalogGovernanceHardeningTests, InvalidTypedStateIsRejectedBeforeTransition)
+    TEST(TaintedGrailCatalogGovernanceHardeningTests, InvalidTypedStateDocumentDoesNotReplaceCatalog)
     {
-        const WorkspaceModel workspace = MakeWorkspace();
-        const SourceEvidenceRegistry registry = MakeRegistry("subject:test");
         CatalogDatabase catalog;
         AZStd::string error;
+        ASSERT_TRUE(catalog.InsertNew(MakeRecord("record.original", "subject:original"), &error));
+
         CatalogRecord malformed = MakeRecord();
         malformed.m_validationState = "validted";
-        ASSERT_TRUE(catalog.InsertNew(malformed, &error));
+        CatalogDocument corrupted;
+        corrupted.m_schemaVersion = 1;
+        corrupted.m_records = { malformed };
 
-        const CatalogGovernanceService service;
-        EXPECT_FALSE(service.ApplyDecision(MakeMaturityRequest(), workspace, registry, catalog).IsSuccess());
-        EXPECT_EQ(catalog.FindByRecordId("record.test")->m_researchStage, "S5");
+        EXPECT_FALSE(catalog.ReplaceFromDocument(corrupted, &error));
+        ASSERT_NE(catalog.FindByRecordId("record.original"), nullptr);
+        EXPECT_EQ(catalog.GetRecords().size(), 1);
     }
 } // namespace TaintedGrailModdingSDK

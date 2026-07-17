@@ -9,6 +9,8 @@
 
 #include "FoundationService.h"
 
+#include <QAbstractItemView>
+#include <QFont>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHeaderView>
@@ -17,6 +19,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QVBoxLayout>
+
+#include <cstddef>
 
 namespace TaintedGrailModdingSDK
 {

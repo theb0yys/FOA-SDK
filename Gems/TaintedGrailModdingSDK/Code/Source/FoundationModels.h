@@ -63,8 +63,7 @@ namespace TaintedGrailModdingSDK
 
         static void Reflect(AZ::ReflectContext* context);
         bool HasStableIdentity() const;
-        bool HasValidPackId() const;
-        bool HasValidSemanticVersion() const;
+        bool UsesSupportedSchema() const;
 
         AZ::u32 m_schemaVersion = 1;
         AZStd::string m_packId;
@@ -89,6 +88,19 @@ namespace TaintedGrailModdingSDK
         bool m_runtimeActionsEnabled = false;
     };
 
+    struct SourceImporterContract
+    {
+        AZ_TYPE_INFO(SourceImporterContract, "{84A83DA2-52AA-45EA-AEA0-D01DF3F82D7C}");
+
+        static void Reflect(AZ::ReflectContext* context);
+
+        AZStd::string m_importerId;
+        AZStd::string m_displayName;
+        AZStd::vector<AZStd::string> m_supportedSourceKinds;
+        AZStd::vector<AZStd::string> m_supportedExtensions;
+        bool m_extractsEvidence = false;
+    };
+
     struct SourceRecord
     {
         AZ_TYPE_INFO(SourceRecord, "{2569A76D-E028-4FF4-8619-265B354813A4}");
@@ -100,12 +112,20 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_sourceKind;
         AZStd::string m_locator;
         AZStd::string m_fingerprint;
+        AZStd::string m_profileId;
         AZStd::string m_gameVersion;
         AZStd::string m_branch;
+        AZStd::string m_runtimeTarget;
         AZStd::string m_toolName;
         AZStd::string m_toolVersion;
+        AZStd::string m_importerId;
+        AZStd::string m_importerVersion;
         AZStd::string m_capturedAt;
+        AZStd::string m_importedAt;
         AZStd::string m_limitations;
+        AZStd::string m_mediaType;
+        AZ::u64 m_byteSize = 0;
+        AZStd::string m_importStatus;
     };
 
     struct EvidenceRecord
@@ -116,11 +136,81 @@ namespace TaintedGrailModdingSDK
 
         AZStd::string m_evidenceId;
         AZStd::string m_sourceId;
+        AZStd::string m_sourceFingerprint;
+        AZStd::string m_profileId;
+        AZStd::string m_gameVersion;
+        AZStd::string m_branch;
         AZStd::string m_subjectRef;
         AZStd::string m_claim;
         AZStd::string m_evidenceKind;
         AZStd::string m_confidence;
         AZStd::string m_locator;
+        AZStd::string m_recordPath;
+        AZStd::string m_extractedAt;
+    };
+
+    struct ImportIssue
+    {
+        AZ_TYPE_INFO(ImportIssue, "{65080C4B-37BD-4E54-8071-1FD8B23DF117}");
+
+        static void Reflect(AZ::ReflectContext* context);
+
+        AZStd::string m_issueId;
+        AZStd::string m_severity;
+        AZStd::string m_code;
+        AZStd::string m_message;
+        AZStd::string m_locator;
+        AZStd::string m_recordPath;
+        AZ::s64 m_line = 0;
+    };
+
+    struct SourceDocument
+    {
+        AZ_TYPE_INFO(SourceDocument, "{98E18D12-E262-4404-AF4E-DCA613375B3B}");
+
+        static void Reflect(AZ::ReflectContext* context);
+        bool UsesSupportedSchema() const;
+
+        AZ::u32 m_schemaVersion = 1;
+        SourceRecord m_source;
+        AZStd::vector<ImportIssue> m_issues;
+    };
+
+    struct EvidenceDocument
+    {
+        AZ_TYPE_INFO(EvidenceDocument, "{379F425B-1B32-449F-A045-9832EEAD4AE8}");
+
+        static void Reflect(AZ::ReflectContext* context);
+        bool UsesSupportedSchema() const;
+
+        AZ::u32 m_schemaVersion = 1;
+        AZStd::string m_sourceId;
+        AZStd::string m_sourceFingerprint;
+        AZStd::string m_profileId;
+        AZStd::string m_gameVersion;
+        AZStd::string m_branch;
+        AZStd::vector<EvidenceRecord> m_evidence;
+        AZStd::vector<ImportIssue> m_issues;
+    };
+
+    struct SourceImportRequest
+    {
+        AZStd::string m_inputPath;
+        AZStd::string m_sourceKind;
+        AZStd::string m_title;
+        AZStd::string m_toolName;
+        AZStd::string m_toolVersion;
+        AZStd::string m_capturedAt;
+        AZStd::string m_limitations;
+        AZStd::string m_preferredImporterId;
+    };
+
+    struct SourceImportResult
+    {
+        SourceDocument m_sourceDocument;
+        EvidenceDocument m_evidenceDocument;
+
+        bool HasErrors() const;
     };
 
     struct CatalogRecord
@@ -202,9 +292,12 @@ namespace TaintedGrailModdingSDK
         AZ::u64 m_packCount = 0;
         AZ::u64 m_sourceCount = 0;
         AZ::u64 m_evidenceCount = 0;
+        AZ::u64 m_importErrorCount = 0;
+        AZ::u64 m_importWarningCount = 0;
         AZ::u64 m_catalogRecordCount = 0;
         AZ::u64 m_openBlockerCount = 0;
         AZStd::vector<DomainCoverage> m_domainCoverage;
+        AZStd::vector<ImportIssue> m_importIssues;
         AZStd::vector<BlockerRecord> m_blockers;
     };
 } // namespace TaintedGrailModdingSDK

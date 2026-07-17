@@ -42,6 +42,7 @@ namespace TaintedGrailModdingSDK
         m_sourceRegistry.Clear();
         m_importIssues.clear();
         m_catalog.Clear();
+        m_catalogFilePath.clear();
         m_snapshot = {};
         m_initialized = false;
     }
@@ -103,6 +104,10 @@ namespace TaintedGrailModdingSDK
         m_workspace = result.TakeValue();
         m_workspaceFilePath = filePath;
         if (!ReloadSourceEvidence(error))
+        {
+            return false;
+        }
+        if (!ReloadCatalog(error))
         {
             return false;
         }
@@ -489,7 +494,30 @@ namespace TaintedGrailModdingSDK
                 ++m_snapshot.m_importWarningCount;
             }
         }
+
         m_snapshot.m_catalogRecordCount = static_cast<AZ::u64>(m_catalog.GetRecords().size());
+        m_snapshot.m_catalogRelationshipCount = static_cast<AZ::u64>(m_catalog.GetRelationships().size());
+        m_snapshot.m_catalogValidationCount = static_cast<AZ::u64>(m_catalog.GetValidationHistory().size());
+        m_snapshot.m_catalogGovernanceCount = static_cast<AZ::u64>(m_catalog.GetGovernanceHistory().size());
+        for (const CatalogRecord& record : m_catalog.GetRecords())
+        {
+            if (record.m_stalenessState == "potentially_stale" || record.m_stalenessState == "stale")
+            {
+                ++m_snapshot.m_staleCatalogSubjectCount;
+            }
+            m_snapshot.m_allowedUsageCount += static_cast<AZ::u64>(record.m_allowedUsages.size());
+            m_snapshot.m_forbiddenUsageCount += static_cast<AZ::u64>(record.m_forbiddenUsages.size());
+        }
+        for (const CatalogRelationship& relationship : m_catalog.GetRelationships())
+        {
+            if (relationship.m_stalenessState == "potentially_stale" || relationship.m_stalenessState == "stale")
+            {
+                ++m_snapshot.m_staleCatalogSubjectCount;
+            }
+            m_snapshot.m_allowedUsageCount += static_cast<AZ::u64>(relationship.m_allowedUsages.size());
+            m_snapshot.m_forbiddenUsageCount += static_cast<AZ::u64>(relationship.m_forbiddenUsages.size());
+        }
+
         m_snapshot.m_domainCoverage = m_catalog.BuildCoverage();
         m_snapshot.m_blockers = m_validationService.Evaluate(
             m_workspace,

@@ -20,6 +20,10 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Pack manifest file path is required."));
         }
+        if (pack.m_schemaVersion != 1)
+        {
+            return AZ::Failure(AZStd::string("Unsupported TG pack manifest schema version."));
+        }
         if (!pack.HasStableIdentity())
         {
             return AZ::Failure(AZStd::string("Pack ID, owner ID, and semantic version must be valid before saving."));
@@ -44,7 +48,11 @@ namespace TaintedGrailModdingSDK
         AZ::Outcome<void, AZStd::string> loadResult = AZ::JsonSerializationUtils::LoadObjectFromFile(pack, filePath);
         if (!loadResult.IsSuccess())
         {
-            return AZ::Failure(loadResult.GetError());
+            return AZ::Failure(AZStd::string(loadResult.GetError()));
+        }
+        if (pack.m_schemaVersion != 1)
+        {
+            return AZ::Failure(AZStd::string("Unsupported TG pack manifest schema version."));
         }
         if (!pack.HasStableIdentity())
         {

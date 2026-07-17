@@ -6,8 +6,15 @@
 #
 
 set(FILES
+    Source/CatalogBrowserWidget.cpp
+    Source/CatalogBrowserWidget.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
+    Source/CatalogPersistenceService.cpp
+    Source/CatalogPersistenceService.h
+    Source/CatalogPromotionService.cpp
+    Source/CatalogPromotionService.h
+    Source/FoundationCatalogService.cpp
     Source/FoundationModels.cpp
     Source/FoundationModels.h
     Source/FoundationNotificationBus.h

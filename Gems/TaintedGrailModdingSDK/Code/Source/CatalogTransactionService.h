@@ -10,7 +10,7 @@
 #include "CatalogDatabase.h"
 
 #include <AzCore/Outcome/Outcome.h>
-#include <AzCore/std/function/function.h>
+#include <AzCore/std/function/function_template.h>
 
 namespace TaintedGrailModdingSDK
 {

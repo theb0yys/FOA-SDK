@@ -128,8 +128,8 @@ def main() -> int:
         require_contains(
             tests_root / "CatalogGovernanceTypesTests.cpp",
             (
-                "KnownValuesRoundTripThroughTypedEnums",
-                "MisspelledValuesFailAtTheBoundary",
+                "KnownValuesRoundTripThroughTypedBoundary",
+                "TypographicalValuesFailAtBoundary",
                 "LegacySchemaValuesRemainRepresentable",
             ),
         )

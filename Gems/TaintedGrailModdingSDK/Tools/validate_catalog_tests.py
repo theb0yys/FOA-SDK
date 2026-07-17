@@ -27,6 +27,7 @@ def require_contains(text: str, fragment: str, path: Path) -> None:
 def main() -> int:
     gem_root = Path(__file__).resolve().parents[1]
     code_root = gem_root / "Code"
+    source_root = code_root / "Source"
     cmake_path = code_root / "CMakeLists.txt"
     manifest_path = code_root / "taintedgrailmoddingsdk_catalog_tests_files.cmake"
     database_tests_path = code_root / "Tests" / "CatalogDatabaseTests.cpp"
@@ -34,6 +35,10 @@ def main() -> int:
     hardening_tests_path = code_root / "Tests" / "CatalogGovernanceHardeningTests.cpp"
     types_tests_path = code_root / "Tests" / "CatalogGovernanceTypesTests.cpp"
     economy_tests_path = code_root / "Tests" / "EconomyAuthoringTests.cpp"
+    economy_header_path = source_root / "EconomyAuthoringService.h"
+    economy_source_path = source_root / "EconomyAuthoringService.cpp"
+    editor_header_path = source_root / "ItemRecipeEditorWidget.h"
+    editor_source_path = source_root / "ItemRecipeEditorWidget.cpp"
 
     try:
         for path in (
@@ -44,9 +49,13 @@ def main() -> int:
             hardening_tests_path,
             types_tests_path,
             economy_tests_path,
+            economy_header_path,
+            economy_source_path,
+            editor_header_path,
+            editor_source_path,
         ):
             if not path.is_file():
-                fail(f"Required catalog/governance/economy test file is missing: {path}")
+                fail(f"Required catalog/governance/economy test or source file is missing: {path}")
 
         cmake = cmake_path.read_text(encoding="utf-8")
         for fragment in (
@@ -149,16 +158,68 @@ def main() -> int:
             "EconomyDataRoundTripsThroughCanonicalDocument",
             "AcquisitionRelationshipStartsUnvalidatedAndForbidden",
             "ActionLaneMatrixReflectsGovernedAllowedAndForbiddenState",
+            "RecipeStationEvidenceCombinesSourcesDeterministically",
+            "RecipeStationEvidenceFailsClosedForUnknownAndUnresolvedEvidence",
+            "RecipeStationEvidenceBlocksStaleStationWithoutMutatingCatalog",
             'm_persistenceMode = "native_template"',
             'm_relationshipKind = "sold_by"',
             '"no_unvalidated_runtime_use"',
+            'EXPECT_EQ(rows[0].m_status, "supported evidence")',
+            'EXPECT_EQ(rows[1].m_status, "partial evidence")',
+            'EXPECT_EQ(catalog.GetGovernanceHistory().size(), governanceBefore)',
         ):
             require_contains(economy_tests, fragment, economy_tests_path)
+
+        economy_header = economy_header_path.read_text(encoding="utf-8")
+        for fragment in (
+            "struct EconomyRecipeStationEvidenceRow",
+            "BuildRecipeStationEvidence",
+            "const SourceEvidenceRegistry& sourceRegistry",
+            "const CatalogDatabase& catalog",
+            "const AZStd::vector<BlockerRecord>& blockers",
+        ):
+            require_contains(economy_header, fragment, economy_header_path)
+
+        economy_source = economy_source_path.read_text(encoding="utf-8")
+        for fragment in (
+            "supported evidence",
+            "partial evidence",
+            "missing evidence",
+            "unresolved",
+            "The evidence ID is unknown",
+            "The evidence belongs to an unrelated subject",
+            "The station is not validated, current, reference-complete, conflict-free, and non-superseded",
+            "AZStd::sort(",
+        ):
+            require_contains(economy_source, fragment, economy_source_path)
+        for forbidden in (
+            "SaveCatalog(",
+            "ApplyCatalogGovernanceDecision(",
+            "ApplyCatalogValidationDecision(",
+            "UpsertCatalogRelationship(",
+        ):
+            if forbidden in economy_source[economy_source.find("BuildRecipeStationEvidence"):]:
+                fail(f"Recipe station evidence builder must remain read-only; found {forbidden!r}")
+
+        editor_header = editor_header_path.read_text(encoding="utf-8")
+        editor_source = editor_source_path.read_text(encoding="utf-8")
+        for fragment in (
+            "RefreshRecipeEvidence",
+            "m_recipeEvidenceTable",
+        ):
+            require_contains(editor_header, fragment, editor_header_path)
+        for fragment in (
+            "Station Visibility and Learnability Evidence — Read-only Research",
+            "This view combines exact station IDs",
+            "BuildRecipeStationEvidence(",
+            "Blockers and reasons",
+        ):
+            require_contains(editor_source, fragment, editor_source_path)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail catalog/governance/economy test validation failed: {exc}", file=sys.stderr)
         return 1
 
-    print("Tainted Grail catalog, typed governance hardening, and economy test contract passed.")
+    print("Tainted Grail catalog, typed governance hardening, economy, and recipe evidence test contract passed.")
     return 0
 
 

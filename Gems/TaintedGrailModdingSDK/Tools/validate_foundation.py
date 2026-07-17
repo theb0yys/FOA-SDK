@@ -9,8 +9,8 @@
 """Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
 
 The check verifies repository structure, durable workspace and pack management,
-and the editor-only product boundary. It does not replace an O3DE configure or
-compile.
+source/evidence intake, and the editor-only product boundary. It does not replace
+an O3DE configure or compile.
 """
 
 from __future__ import annotations
@@ -124,8 +124,14 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/PackManagerWidget.h",
         "Source/PackPersistenceService.cpp",
         "Source/PackPersistenceService.h",
+        "Source/SourceEvidenceIntakeWidget.cpp",
+        "Source/SourceEvidenceIntakeWidget.h",
+        "Source/SourceEvidencePersistenceService.cpp",
+        "Source/SourceEvidencePersistenceService.h",
         "Source/SourceEvidenceRegistry.cpp",
         "Source/SourceEvidenceRegistry.h",
+        "Source/SourceImportService.cpp",
+        "Source/SourceImportService.h",
         "Source/TaintedGrailModdingSDKEditorModule.cpp",
         "Source/TaintedGrailModdingSDKSystemComponent.cpp",
         "Source/TaintedGrailModdingSDKSystemComponent.h",
@@ -204,6 +210,50 @@ def validate_editor_foundation(gem_root: Path) -> None:
             fail(f"Editor-only foundation contains forbidden runtime integration {token!r}")
 
 
+def validate_source_intake(gem_root: Path) -> None:
+    source_root = gem_root / "Code" / "Source"
+    source_text = "\n".join(path.read_text(encoding="utf-8") for path in source_root.glob("*"))
+
+    required_fragments = (
+        "SourceImporterContract",
+        "SourceImportRequest",
+        "SourceImportResult",
+        "SourceDocument",
+        "EvidenceDocument",
+        "ImportIssue",
+        "m_fingerprint",
+        "m_profileId",
+        "m_sourceFingerprint",
+        "QCryptographicHash::Sha256",
+        '"tg.structured-json"',
+        '"tg.structured-csv"',
+        '"tg.generic-artifact"',
+        "evidence.manual-extraction-required",
+        "schema.invalid-json",
+        "schema.csv-required-columns",
+        "source.tgsource.json",
+        "evidence.tgevidence.json",
+        "class SourceImportService",
+        "class SourceEvidencePersistenceService",
+        "ImportSource",
+        "ReloadSourceEvidence",
+        "class SourceEvidenceIntakeWidget",
+        "RegisterViewPane<SourceEvidenceIntakeWidget>",
+        "The evidence document does not match the source identity and fingerprint",
+        "Evidence profile, build, branch, or fingerprint does not match its source",
+    )
+    for fragment in required_fragments:
+        if fragment not in source_text:
+            fail(f"Source/evidence intake is missing {fragment!r}")
+
+    service_path = source_root / "FoundationService.cpp"
+    service = service_path.read_text(encoding="utf-8")
+    save_position = service.find("SaveDocuments(")
+    publish_position = service.find("m_sourceRegistry = AZStd::move(candidateRegistry)")
+    if save_position < 0 or publish_position < 0 or save_position > publish_position:
+        fail("Source intake must persist documents before publishing the candidate registry")
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
     gem_root = repo_root / GEM_PATH
@@ -214,15 +264,16 @@ def main() -> int:
         validate_cmake(gem_root)
         validate_source_manifest(gem_root)
         validate_editor_foundation(gem_root)
+        validate_source_intake(gem_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
         return 1
 
     print("Tainted Grail SDK foundation validation passed.")
     print(
-        "Validated: workspace and pack editing, JSON persistence, compatibility and ownership fields, "
-        "source/evidence registry, catalog/query service, blockers, editor docks, automatic refresh, "
-        "and editor-only boundary."
+        "Validated: workspace and pack editing, source/evidence importer contracts, SHA-256 fingerprinting, "
+        "exact profile binding, durable documents, schema/import reporting, catalog/query service, blockers, "
+        "editor docks, automatic refresh, and editor-only boundary."
     )
     return 0
 

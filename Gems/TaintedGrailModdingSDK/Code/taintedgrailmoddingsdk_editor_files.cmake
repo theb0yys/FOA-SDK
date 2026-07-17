@@ -21,8 +21,14 @@ set(FILES
     Source/PackManagerWidget.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
+    Source/SourceEvidenceIntakeWidget.cpp
+    Source/SourceEvidenceIntakeWidget.h
+    Source/SourceEvidencePersistenceService.cpp
+    Source/SourceEvidencePersistenceService.h
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
+    Source/SourceImportService.cpp
+    Source/SourceImportService.h
     Source/TaintedGrailModdingSDKEditorModule.cpp
     Source/TaintedGrailModdingSDKSystemComponent.cpp
     Source/TaintedGrailModdingSDKSystemComponent.h

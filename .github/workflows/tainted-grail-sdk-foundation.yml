@@ -39,4 +39,12 @@ jobs:
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
 
       - name: Validate O3DE source policy for SDK Gem
-        run: python -u scripts/commit_validation/validate_file_or_folder.py --path Gems/TaintedGrailModdingSDK
+        shell: bash
+        run: |
+          set +e
+          python -u scripts/commit_validation/validate_file_or_folder.py \
+            --path Gems/TaintedGrailModdingSDK > o3de-policy-validation.log 2>&1
+          status=$?
+          grep -E "FAILED|VALIDATOR_FAILED|[0-9]+ failed|[0-9]+ passed" \
+            o3de-policy-validation.log || true
+          exit $status

@@ -1,0 +1,22 @@
+{
+    "gem_name": "TaintedGrailModdingSDK",
+    "version": "0.1.0",
+    "display_name": "Tainted Grail Modding SDK",
+    "license": "Apache-2.0 OR MIT",
+    "license_url": "https://github.com/theb0yys/o3de/blob/development/LICENSE.txt",
+    "origin": "theb0yys",
+    "origin_url": "https://github.com/theb0yys/o3de",
+    "type": "Tool",
+    "summary": "Editor-side foundation for governed Tainted Grail: The Fall of Avalon mod authoring and SDK workflows.",
+    "canonical_tags": [
+        "Gem"
+    ],
+    "user_tags": [
+        "Editor",
+        "Modding",
+        "SDK",
+        "Tainted Grail"
+    ],
+    "requirements": "Host tools build required.",
+    "dependencies": []
+}

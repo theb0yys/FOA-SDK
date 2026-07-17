@@ -7,18 +7,38 @@
 
 #include "TaintedGrailModdingSDKSystemComponent.h"
 
+#include "FoundationModels.h"
+#include "FoundationService.h"
+#include "FoundationStatusWidget.h"
+
 #include <AzCore/Debug/Trace.h>
 #include <AzCore/Math/Crc.h>
 #include <AzCore/Serialization/SerializeContext.h>
+#include <AzToolsFramework/API/ViewPaneOptions.h>
 
 namespace TaintedGrailModdingSDK
 {
+    namespace
+    {
+        constexpr const char* FoundationStatusViewPaneName = "Tainted Grail SDK Status";
+    }
+
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
     {
+        GameProfile::Reflect(context);
+        WorkspaceModel::Reflect(context);
+        PackManifest::Reflect(context);
+        SourceRecord::Reflect(context);
+        EvidenceRecord::Reflect(context);
+        CatalogRecord::Reflect(context);
+        BlockerRecord::Reflect(context);
+        DomainCoverage::Reflect(context);
+        FoundationSnapshot::Reflect(context);
+
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<TaintedGrailModdingSDKSystemComponent, AZ::Component>()
-                ->Version(1);
+                ->Version(2);
         }
     }
 
@@ -36,6 +56,9 @@ namespace TaintedGrailModdingSDK
 
     void TaintedGrailModdingSDKSystemComponent::Activate()
     {
+        FoundationService::Get().Initialize();
+        AzToolsFramework::EditorEvents::Bus::Handler::BusConnect();
+
         AZ_Printf(
             "TaintedGrailModdingSDK",
             "Editor foundation activated. FoA runtime execution remains disabled.\n");
@@ -43,6 +66,30 @@ namespace TaintedGrailModdingSDK
 
     void TaintedGrailModdingSDKSystemComponent::Deactivate()
     {
+        if (m_viewRegistered)
+        {
+            AzToolsFramework::UnregisterViewPane(FoundationStatusViewPaneName);
+            m_viewRegistered = false;
+        }
+
+        AzToolsFramework::EditorEvents::Bus::Handler::BusDisconnect();
+        FoundationService::Get().Shutdown();
         AZ_Printf("TaintedGrailModdingSDK", "Editor foundation deactivated.\n");
+    }
+
+    void TaintedGrailModdingSDKSystemComponent::NotifyRegisterViews()
+    {
+        AzToolsFramework::ViewPaneOptions options;
+        options.paneRect = QRect(100, 100, 760, 900);
+        options.preferedDockingArea = Qt::RightDockWidgetArea;
+        options.isDeletable = false;
+        options.isPreview = true;
+        options.saveKeyName = "TaintedGrailModdingSDK.FoundationStatus";
+
+        AzToolsFramework::RegisterViewPane<FoundationStatusWidget>(
+            FoundationStatusViewPaneName,
+            "Tainted Grail SDK",
+            options);
+        m_viewRegistered = true;
     }
 } // namespace TaintedGrailModdingSDK

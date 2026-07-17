@@ -75,7 +75,8 @@ namespace TaintedGrailModdingSDK
         const CatalogGovernanceRequest& request,
         const WorkspaceModel& workspace,
         const SourceEvidenceRegistry& sourceRegistry,
-        const CatalogDatabase& catalog) const
+        const CatalogDatabase& catalog,
+        const AZStd::string& eventIdOverride) const
     {
         const GameProfile* profile = workspace.FindActiveGameProfile();
         if (!profile || !profile->IsConfigured())
@@ -144,11 +145,9 @@ namespace TaintedGrailModdingSDK
         }
 
         CatalogGovernanceEvent event = transitionResult.TakeValue();
-        event.m_eventId = BuildEventId(
-            "governance",
-            subjectKind,
-            request.m_subjectId,
-            candidate.GetGovernanceHistory().size() + 1);
+        event.m_eventId = eventIdOverride.empty()
+            ? BuildUniqueEventId("governance", subjectKind, request.m_subjectId, candidate)
+            : eventIdOverride;
 
         AZStd::string catalogError;
         if (!WriteSubjectState(state, candidate, catalogError))
@@ -170,7 +169,8 @@ namespace TaintedGrailModdingSDK
         const CatalogValidationRequest& request,
         const WorkspaceModel& workspace,
         const SourceEvidenceRegistry& sourceRegistry,
-        const CatalogDatabase& catalog) const
+        const CatalogDatabase& catalog,
+        const AZStd::string& validationIdOverride) const
     {
         const GameProfile* profile = workspace.FindActiveGameProfile();
         if (!profile || !profile->IsConfigured())
@@ -227,11 +227,9 @@ namespace TaintedGrailModdingSDK
         ApplyValidationState(validationState, state);
 
         CatalogValidationEvent validation;
-        validation.m_validationId = BuildEventId(
-            "validation",
-            subjectKind,
-            request.m_subjectId,
-            candidate.GetValidationHistory().size() + 1);
+        validation.m_validationId = validationIdOverride.empty()
+            ? BuildUniqueEventId("validation", subjectKind, request.m_subjectId, candidate)
+            : validationIdOverride;
         validation.m_subjectKind = ToString(subjectKind);
         validation.m_subjectId = request.m_subjectId;
         if (subjectKind == CatalogSubjectKind::Record)
@@ -662,6 +660,39 @@ namespace TaintedGrailModdingSDK
             return false;
         }
         return true;
+    }
+
+    AZStd::string CatalogGovernanceService::BuildUniqueEventId(
+        const char* prefix,
+        CatalogSubjectKind subjectKind,
+        const AZStd::string& subjectId,
+        const CatalogDatabase& catalog)
+    {
+        size_t sequence = 1;
+        while (true)
+        {
+            const AZStd::string candidate = BuildEventId(prefix, subjectKind, subjectId, sequence++);
+            bool exists = false;
+            if (AZStd::string_view(prefix) == "governance")
+            {
+                for (const CatalogGovernanceEvent& event : catalog.GetGovernanceHistory())
+                {
+                    if (event.m_eventId == candidate)
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+            }
+            else if (catalog.FindValidationById(candidate))
+            {
+                exists = true;
+            }
+            if (!exists)
+            {
+                return candidate;
+            }
+        }
     }
 
     AZStd::string CatalogGovernanceService::BuildEventId(

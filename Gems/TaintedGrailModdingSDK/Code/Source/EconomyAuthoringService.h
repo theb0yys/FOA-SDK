@@ -8,6 +8,7 @@
 #pragma once
 
 #include "CatalogDatabase.h"
+#include "SourceEvidenceRegistry.h"
 
 #include <AzCore/Outcome/Outcome.h>
 
@@ -30,6 +31,25 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_status;
     };
 
+    struct EconomyRecipeStationEvidenceRow
+    {
+        AZStd::string m_recipeRecordId;
+        AZStd::string m_stationRecordId;
+        AZStd::string m_stationSubjectRef;
+        AZStd::string m_stationIdentity;
+        AZStd::vector<AZStd::string> m_associationSources;
+        AZStd::string m_unlockMode;
+        AZStd::vector<AZStd::string> m_unlockSubjectRefs;
+        AZStd::vector<AZStd::string> m_learnedFromRelationshipIds;
+        AZStd::vector<AZStd::string> m_evidenceIds;
+        AZStd::string m_status;
+        AZStd::vector<AZStd::string> m_reasons;
+        AZStd::vector<AZStd::string> m_blockerIds;
+        AZStd::string m_validationState;
+        AZStd::string m_stalenessState;
+        AZStd::vector<EconomyActionLaneStatus> m_actionLanes;
+    };
+
     class EconomyAuthoringService
     {
     public:
@@ -38,5 +58,11 @@ namespace TaintedGrailModdingSDK
             const CatalogDatabase& catalog) const;
 
         AZStd::vector<EconomyActionLaneStatus> BuildActionLaneMatrix(const CatalogRecord& record) const;
+
+        AZStd::vector<EconomyRecipeStationEvidenceRow> BuildRecipeStationEvidence(
+            const AZStd::string& recipeRecordId,
+            const SourceEvidenceRegistry& sourceRegistry,
+            const CatalogDatabase& catalog,
+            const AZStd::vector<BlockerRecord>& blockers) const;
     };
 } // namespace TaintedGrailModdingSDK

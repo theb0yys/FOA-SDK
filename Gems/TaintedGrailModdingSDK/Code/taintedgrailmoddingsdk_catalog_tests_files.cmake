@@ -25,5 +25,6 @@ set(FILES
     Tests/CatalogDatabaseTests.cpp
     Tests/CatalogGovernanceHardeningTests.cpp
     Tests/CatalogGovernanceServiceTests.cpp
+    Tests/CatalogGovernanceTypesTests.cpp
     Tests/EconomyAuthoringTests.cpp
 )

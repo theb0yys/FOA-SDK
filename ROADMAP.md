@@ -1,10 +1,10 @@
 # Tainted Grail Modding Editor and SDK Roadmap
 
-This roadmap describes capability order, not promised dates. Work is promoted when architecture, evidence, validation, documentation, and build quality are sufficient.
+This roadmap describes capability order, not promised dates. Work is promoted when architecture, evidence, validation, documentation, tests, and build quality are sufficient.
 
 ## Guiding rule
 
-Every authoring feature must use the shared workspace, pack ownership, source/evidence, catalog, validation, risk, staleness, permission, and prohibition infrastructure. Domain tools must not create private identity systems or bypass blockers.
+Every authoring feature must use the shared workspace, pack ownership, source/evidence, canonical catalog, validation, risk, staleness, permission, and prohibition infrastructure. Domain tools must not create private identity systems, grant their own permissions, or bypass blockers.
 
 ## Phase 0 — Project foundation
 
@@ -61,7 +61,7 @@ Status: implemented, continuing hardening.
 
 ## Phase 5 — Validation, maturity, risk, and permission engine
 
-Status: implemented on the active development line, pending integration and hardening.
+Status: implemented, continuing hardening.
 
 - Independent maturity, confidence, operational risk, validation, staleness, permission, and prohibition states for records and relationships.
 - Usage-specific allow, forbid, and clear decisions.
@@ -72,27 +72,50 @@ Status: implemented on the active development line, pending integration and hard
 - Append-only governance history with evidence, validation proof IDs, reviewer, time, and notes.
 - Governance blockers for unknown assessments, stale subjects, missing proof, missing history references, and profile mismatch.
 - Dedicated **Tainted Grail Catalog Governance** editor pane.
-- Unit tests for validation/permission separation, proof requirements, stale-state revocation, and supersession.
-
-Exit criteria:
-
-- validation never creates an allowed usage;
-- permission grants require validated proof and current, unresolved-free subjects;
-- permissions are revoked on stale, failed, blocked, or superseded transitions;
-- records and relationships use the same independent governance model;
-- decisions survive workspace reload with full history;
-- blockers are visible in the shared status window;
-- no governance action invokes FoA runtime code.
+- Unit tests for validation/permission separation, proof requirements, stale-state revocation, relationship governance, and supersession.
 
 ## Phase 6 — Domain authoring tools
 
-Status: next capability area after Phase 5 integration.
+Status: active development.
+
+All domain tools use canonical IDs, source/evidence provenance, governance decisions, blockers, and the same transactional catalog document.
 
 ### Economy and content
 
-- Item and Recipe Editor.
-- Crafting station, ingredient, output, vendor, loot, and reward relationships.
-- Separate existing-content and custom-content lanes.
+#### Item and Recipe Editor
+
+Status: implemented on `foa-development`, pending integration and hardening.
+
+- Typed item profiles keyed to canonical `economy/item` records.
+- Typed recipe profiles keyed to canonical `economy/recipe` records.
+- Canonical crafting-station references.
+- Ingredient joins with quantity, alternatives, consumption, conditions, and evidence.
+- Output and by-product joins with quantity, chance, conditions, and evidence.
+- Item flags and references for quest sensitivity, uniqueness, hidden state, localisation, icons, and assets.
+- Recipe type, tab, unlock, duplicate key, and persistence description.
+- First-class `sold_by`, `dropped_by`, `found_at`, `rewarded_by`, `learned_from`, `granted_by`, and `crafted_at` relationships.
+- Separate existing-item, existing-recipe, runtime-append, custom-registration, asset/localisation, vendor/loot, and reward lanes.
+- Read-only lane matrices; permission remains owned by Catalog Governance.
+- Economy blockers for missing profiles, evidence, stations, outputs, unresolved joins, quest/unique risks, and identity-incompatible lanes.
+- Transactional persistence inside `Catalog/catalog.tgcatalog.json`.
+- Unit tests for profile identity, stations, joins, chance/quantity, round-trip persistence, acquisition defaults, and lane status.
+
+Exit criteria:
+
+- item and recipe profiles survive workspace reload;
+- an item record cannot masquerade as a recipe record;
+- native and synthetic action lanes remain separate;
+- stations, ingredients, outputs, and acquisition relationships preserve canonical identity and evidence;
+- profile and join writes reject missing or unrelated evidence;
+- action lanes remain read-only in the domain tool;
+- no item or recipe authoring command invokes FoA runtime code.
+
+#### Remaining economy work
+
+- station-specific visibility and learnability evidence views;
+- vendor, loot, reward, and acquisition coverage dashboards;
+- authoring-time duplicate detection reports across packs;
+- work-order generation after adapter contracts exist.
 
 ### Actors and population
 
@@ -165,7 +188,7 @@ Every phase must preserve:
 - durable schema versioning;
 - legal redistribution boundaries;
 - accessibility and usable error reporting;
-- public documentation and tests.
+- public documentation and executable tests.
 
 ## Not roadmap commitments
 

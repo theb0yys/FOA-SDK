@@ -8,9 +8,9 @@
 
 """Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
 
-The check verifies repository structure, the first editor milestone, durable
-workspace management, and the editor-only product boundary. It does not replace
-an O3DE configure or compile.
+The check verifies repository structure, durable workspace and pack management,
+and the editor-only product boundary. It does not replace an O3DE configure or
+compile.
 """
 
 from __future__ import annotations
@@ -120,6 +120,10 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/FoundationStatusWidget.h",
         "Source/FoundationValidationService.cpp",
         "Source/FoundationValidationService.h",
+        "Source/PackManagerWidget.cpp",
+        "Source/PackManagerWidget.h",
+        "Source/PackPersistenceService.cpp",
+        "Source/PackPersistenceService.h",
         "Source/SourceEvidenceRegistry.cpp",
         "Source/SourceEvidenceRegistry.h",
         "Source/TaintedGrailModdingSDKEditorModule.cpp",
@@ -151,19 +155,34 @@ def validate_editor_foundation(gem_root: Path) -> None:
         "m_outputPath",
         "m_stagingPath",
         "m_deploymentPath",
+        "class WorkspacePersistenceService",
+        "OpenWorkspace",
+        "SaveWorkspaceAs",
         "PackManifest",
+        "m_requiredCoreVersion",
+        "m_requiredAdapterVersion",
+        "m_requiredMods",
+        "m_contentDefinitionPaths",
+        "m_assetPaths",
+        "m_localisationPaths",
+        "m_buildConfiguration",
+        "m_releaseChannel",
+        "HasValidPackId",
+        "HasValidSemanticVersion",
+        "class PackPersistenceService",
+        "class PackManagerWidget",
+        "SaveActivePack",
+        "LoadPack",
+        "RegisterViewPane<PackManagerWidget>",
         "class SourceEvidenceRegistry",
         "class CatalogDatabase",
         "class FoundationValidationService",
-        "class WorkspacePersistenceService",
-        "SaveObjectToFile",
-        "LoadObjectFromFile",
         "class FoundationService",
         "FoundationNotificationBus",
         "class FoundationStatusWidget",
-        "OpenWorkspace",
-        "SaveWorkspaceAs",
         "RegisterViewPane<FoundationStatusWidget>",
+        "SaveObjectToFile",
+        "LoadObjectFromFile",
         "TaintedGrailModdingSDKService",
         "FoA runtime execution remains disabled",
     )
@@ -201,9 +220,9 @@ def main() -> int:
 
     print("Tainted Grail SDK foundation validation passed.")
     print(
-        "Validated: workspace/profile editing and JSON persistence, pack manifest, "
-        "source/evidence registry, catalog/query service, blockers, status dock, "
-        "automatic refresh, and editor-only boundary."
+        "Validated: workspace and pack editing, JSON persistence, compatibility and ownership fields, "
+        "source/evidence registry, catalog/query service, blockers, editor docks, automatic refresh, "
+        "and editor-only boundary."
     )
     return 0
 

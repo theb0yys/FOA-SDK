@@ -12,6 +12,8 @@
 #include <AzCore/Outcome/Outcome.h>
 #include <AzCore/std/utility/move.h>
 
+#include <QHash>
+
 namespace TaintedGrailModdingSDK
 {
     struct SourceEvidenceDocumentPaths

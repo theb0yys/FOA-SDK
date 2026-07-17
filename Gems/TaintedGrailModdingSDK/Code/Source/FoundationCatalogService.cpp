@@ -166,30 +166,30 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
-        if (m_workspace.m_rootPath.empty() || m_workspace.m_workspaceId.empty())
+
+        const CatalogTransactionService::SaveCallback save = [this](
+            const CatalogDocument& document,
+            const AZStd::string& workspaceRoot)
+        {
+            return m_catalogPersistence.Save(document, workspaceRoot);
+        };
+        AZ::Outcome<CatalogCommitResult, AZStd::string> commit = m_catalogTransaction.Commit(
+            candidate,
+            m_workspace,
+            *profile,
+            save);
+        if (!commit.IsSuccess())
         {
             if (error)
             {
-                *error = "A configured workspace root and workspace ID are required before the catalog can be saved.";
+                *error = AZStd::string(commit.GetError());
             }
             return false;
         }
 
-        const CatalogDocument document = candidate.BuildDocument(m_workspace, *profile);
-        AZ::Outcome<AZStd::string, AZStd::string> saveResult = m_catalogPersistence.Save(
-            document,
-            m_workspace.m_rootPath);
-        if (!saveResult.IsSuccess())
-        {
-            if (error)
-            {
-                *error = AZStd::string(saveResult.GetError());
-            }
-            return false;
-        }
-
-        m_catalog = candidate;
-        m_catalogFilePath = saveResult.TakeValue();
+        CatalogCommitResult committed = commit.TakeValue();
+        m_catalog = AZStd::move(committed.m_catalog);
+        m_catalogFilePath = AZStd::move(committed.m_filePath);
         RefreshSnapshot();
         return true;
     }

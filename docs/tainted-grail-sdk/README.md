@@ -9,7 +9,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
-- [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, and governance-history contracts.
+- [Item and Recipe Editor Guide](ITEM_RECIPE_EDITOR_GUIDE.md) — typed item and recipe profiles, ingredients, outputs, stations, acquisition relationships, and governed action lanes.
+- [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
 - [Privacy](PRIVACY.md) — local data handling and telemetry requirements.
@@ -58,9 +59,11 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - canonical catalog browser, record inspector, first-class relationships, validation history, and reviewed claim promotion;
 - independent maturity, confidence, operational-risk, validation, staleness, permission, prohibition, and supersession authoring;
 - durable governance history and proof-linked permission decisions;
-- foundation status, coverage, import issues, governance blockers, and usage totals.
+- typed item and recipe profiles, ingredient/output joins, station references, and acquisition relationships;
+- read-only item/recipe action-lane matrices backed by catalog governance;
+- foundation status, coverage, import issues, governance and economy blockers, and usage totals.
 
-Domain authoring tools, runtime adapters, and production deployment are not complete.
+Runtime adapters, production deployment, and the remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

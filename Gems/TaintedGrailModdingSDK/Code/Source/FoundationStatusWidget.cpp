@@ -136,7 +136,7 @@ namespace TaintedGrailModdingSDK
         contentLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Configure an exact FoA build, persist the workspace, and review ownership, evidence, catalog coverage, and blockers. Displayed status never grants runtime permission."),
+            tr("Configure an exact FoA build, persist the workspace, and review ownership, evidence, catalog coverage, governance decisions, usage constraints, and blockers. Displayed status never grants runtime permission."),
             content);
         description->setWordWrap(true);
         contentLayout->addWidget(description);
@@ -245,9 +245,9 @@ namespace TaintedGrailModdingSDK
         workspaceLayout->addRow(tr("Runtime boundary"), m_boundaryValue);
         contentLayout->addWidget(workspaceGroup);
 
-        auto* countsGroup = new QGroupBox(tr("Foundation Counts"), content);
+        auto* countsGroup = new QGroupBox(tr("Foundation and Governance Counts"), content);
         auto* countsLayout = new QVBoxLayout(countsGroup);
-        m_countsTable = new QTableWidget(6, 2, countsGroup);
+        m_countsTable = new QTableWidget(12, 2, countsGroup);
         m_countsTable->setHorizontalHeaderLabels({ tr("Area"), tr("Count") });
         ConfigureReadOnlyTable(m_countsTable);
         countsLayout->addWidget(m_countsTable);
@@ -479,10 +479,18 @@ namespace TaintedGrailModdingSDK
             { "Registered sources", snapshot.m_sourceCount },
             { "Evidence records", snapshot.m_evidenceCount },
             { "Catalog records", snapshot.m_catalogRecordCount },
+            { "Catalog relationships", snapshot.m_catalogRelationshipCount },
+            { "Validation events", snapshot.m_catalogValidationCount },
+            { "Governance decisions", snapshot.m_catalogGovernanceCount },
+            { "Stale catalog subjects", snapshot.m_staleCatalogSubjectCount },
+            { "Allowed usage lanes", snapshot.m_allowedUsageCount },
+            { "Prohibited usage lanes", snapshot.m_forbiddenUsageCount },
             { "Open blockers", snapshot.m_openBlockerCount },
         };
 
-        for (int row = 0; row < 6; ++row)
+        const int countRowCount = static_cast<int>(sizeof(countRows) / sizeof(countRows[0]));
+        m_countsTable->setRowCount(countRowCount);
+        for (int row = 0; row < countRowCount; ++row)
         {
             SetCell(m_countsTable, row, 0, tr(countRows[row].m_name));
             SetCell(m_countsTable, row, 1, QString::number(static_cast<qulonglong>(countRows[row].m_count)));

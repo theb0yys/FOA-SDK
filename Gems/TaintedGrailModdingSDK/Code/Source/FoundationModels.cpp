@@ -8,34 +8,10 @@
 #include "FoundationModels.h"
 
 #include <AzCore/Serialization/SerializeContext.h>
-
-#include <cctype>
+#include <AzCore/std/string/regex.h>
 
 namespace TaintedGrailModdingSDK
 {
-    namespace
-    {
-        bool IsSemVerNumericPart(AZStd::string_view value)
-        {
-            if (value.empty())
-            {
-                return false;
-            }
-            if (value.size() > 1 && value.front() == '0')
-            {
-                return false;
-            }
-            for (char character : value)
-            {
-                if (!std::isdigit(static_cast<unsigned char>(character)))
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-    } // namespace
-
     void GameProfile::Reflect(AZ::ReflectContext* context)
     {
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
@@ -60,8 +36,12 @@ namespace TaintedGrailModdingSDK
 
     bool GameProfile::IsConfigured() const
     {
-        return !m_profileId.empty() && !m_installPath.empty() && !m_gameVersion.empty() && !m_branch.empty()
-            && !m_runtimeTarget.empty() && !m_managedAssembliesPath.empty();
+        return !m_profileId.empty()
+            && !m_installPath.empty()
+            && !m_gameVersion.empty()
+            && !m_branch.empty()
+            && !m_runtimeTarget.empty()
+            && !m_managedAssembliesPath.empty();
     }
 
     void WorkspaceModel::Reflect(AZ::ReflectContext* context)
@@ -98,7 +78,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<PackManifest>()
-                ->Version(2)
+                ->Version(3)
                 ->Field("SchemaVersion", &PackManifest::m_schemaVersion)
                 ->Field("PackId", &PackManifest::m_packId)
                 ->Field("DisplayName", &PackManifest::m_displayName)
@@ -125,49 +105,32 @@ namespace TaintedGrailModdingSDK
 
     bool PackManifest::HasStableIdentity() const
     {
-        return HasValidPackId() && !m_ownerId.empty() && HasValidSemanticVersion();
+        static const AZStd::regex packIdPattern("^[a-z0-9][a-z0-9._-]*\\.[a-z0-9][a-z0-9._-]*$");
+        static const AZStd::regex semanticVersionPattern(
+            "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$");
+        return m_schemaVersion == 1
+            && AZStd::regex_match(m_packId, packIdPattern)
+            && !m_ownerId.empty()
+            && AZStd::regex_match(m_version, semanticVersionPattern);
     }
 
-    bool PackManifest::HasValidPackId() const
+    bool PackManifest::UsesSupportedSchema() const
     {
-        if (m_packId.empty() || m_packId.front() == '.' || m_packId.back() == '.' || m_packId.find('.') == AZStd::string::npos)
-        {
-            return false;
-        }
-
-        char previous = '\0';
-        for (char character : m_packId)
-        {
-            const bool valid = (character >= 'a' && character <= 'z') || std::isdigit(static_cast<unsigned char>(character))
-                || character == '.' || character == '-' || character == '_';
-            if (!valid || (character == '.' && previous == '.'))
-            {
-                return false;
-            }
-            previous = character;
-        }
-        return true;
+        return m_schemaVersion == 1;
     }
 
-    bool PackManifest::HasValidSemanticVersion() const
+    void SourceImporterContract::Reflect(AZ::ReflectContext* context)
     {
-        if (m_version.empty())
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
-            return false;
+            serializeContext->Class<SourceImporterContract>()
+                ->Version(1)
+                ->Field("ImporterId", &SourceImporterContract::m_importerId)
+                ->Field("DisplayName", &SourceImporterContract::m_displayName)
+                ->Field("SupportedSourceKinds", &SourceImporterContract::m_supportedSourceKinds)
+                ->Field("SupportedExtensions", &SourceImporterContract::m_supportedExtensions)
+                ->Field("ExtractsEvidence", &SourceImporterContract::m_extractsEvidence);
         }
-
-        const size_t suffixPosition = m_version.find_first_of("-+");
-        const AZStd::string_view core(m_version.data(), suffixPosition == AZStd::string::npos ? m_version.size() : suffixPosition);
-        const size_t firstDot = core.find('.');
-        const size_t secondDot = firstDot == AZStd::string_view::npos ? AZStd::string_view::npos : core.find('.', firstDot + 1);
-        if (firstDot == AZStd::string_view::npos || secondDot == AZStd::string_view::npos || core.find('.', secondDot + 1) != AZStd::string_view::npos)
-        {
-            return false;
-        }
-
-        return IsSemVerNumericPart(core.substr(0, firstDot))
-            && IsSemVerNumericPart(core.substr(firstDot + 1, secondDot - firstDot - 1))
-            && IsSemVerNumericPart(core.substr(secondDot + 1));
     }
 
     void SourceRecord::Reflect(AZ::ReflectContext* context)
@@ -175,18 +138,26 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<SourceRecord>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("SourceId", &SourceRecord::m_sourceId)
                 ->Field("Title", &SourceRecord::m_title)
                 ->Field("SourceKind", &SourceRecord::m_sourceKind)
                 ->Field("Locator", &SourceRecord::m_locator)
                 ->Field("Fingerprint", &SourceRecord::m_fingerprint)
+                ->Field("ProfileId", &SourceRecord::m_profileId)
                 ->Field("GameVersion", &SourceRecord::m_gameVersion)
                 ->Field("Branch", &SourceRecord::m_branch)
+                ->Field("RuntimeTarget", &SourceRecord::m_runtimeTarget)
                 ->Field("ToolName", &SourceRecord::m_toolName)
                 ->Field("ToolVersion", &SourceRecord::m_toolVersion)
+                ->Field("ImporterId", &SourceRecord::m_importerId)
+                ->Field("ImporterVersion", &SourceRecord::m_importerVersion)
                 ->Field("CapturedAt", &SourceRecord::m_capturedAt)
-                ->Field("Limitations", &SourceRecord::m_limitations);
+                ->Field("ImportedAt", &SourceRecord::m_importedAt)
+                ->Field("Limitations", &SourceRecord::m_limitations)
+                ->Field("MediaType", &SourceRecord::m_mediaType)
+                ->Field("ByteSize", &SourceRecord::m_byteSize)
+                ->Field("ImportStatus", &SourceRecord::m_importStatus);
         }
     }
 
@@ -195,15 +166,95 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<EvidenceRecord>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("EvidenceId", &EvidenceRecord::m_evidenceId)
                 ->Field("SourceId", &EvidenceRecord::m_sourceId)
+                ->Field("SourceFingerprint", &EvidenceRecord::m_sourceFingerprint)
+                ->Field("ProfileId", &EvidenceRecord::m_profileId)
+                ->Field("GameVersion", &EvidenceRecord::m_gameVersion)
+                ->Field("Branch", &EvidenceRecord::m_branch)
                 ->Field("SubjectRef", &EvidenceRecord::m_subjectRef)
                 ->Field("Claim", &EvidenceRecord::m_claim)
                 ->Field("EvidenceKind", &EvidenceRecord::m_evidenceKind)
                 ->Field("Confidence", &EvidenceRecord::m_confidence)
-                ->Field("Locator", &EvidenceRecord::m_locator);
+                ->Field("Locator", &EvidenceRecord::m_locator)
+                ->Field("RecordPath", &EvidenceRecord::m_recordPath)
+                ->Field("ExtractedAt", &EvidenceRecord::m_extractedAt);
         }
+    }
+
+    void ImportIssue::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<ImportIssue>()
+                ->Version(1)
+                ->Field("IssueId", &ImportIssue::m_issueId)
+                ->Field("Severity", &ImportIssue::m_severity)
+                ->Field("Code", &ImportIssue::m_code)
+                ->Field("Message", &ImportIssue::m_message)
+                ->Field("Locator", &ImportIssue::m_locator)
+                ->Field("RecordPath", &ImportIssue::m_recordPath)
+                ->Field("Line", &ImportIssue::m_line);
+        }
+    }
+
+    void SourceDocument::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<SourceDocument>()
+                ->Version(1)
+                ->Field("SchemaVersion", &SourceDocument::m_schemaVersion)
+                ->Field("Source", &SourceDocument::m_source)
+                ->Field("Issues", &SourceDocument::m_issues);
+        }
+    }
+
+    bool SourceDocument::UsesSupportedSchema() const
+    {
+        return m_schemaVersion == 1;
+    }
+
+    void EvidenceDocument::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<EvidenceDocument>()
+                ->Version(1)
+                ->Field("SchemaVersion", &EvidenceDocument::m_schemaVersion)
+                ->Field("SourceId", &EvidenceDocument::m_sourceId)
+                ->Field("SourceFingerprint", &EvidenceDocument::m_sourceFingerprint)
+                ->Field("ProfileId", &EvidenceDocument::m_profileId)
+                ->Field("GameVersion", &EvidenceDocument::m_gameVersion)
+                ->Field("Branch", &EvidenceDocument::m_branch)
+                ->Field("Evidence", &EvidenceDocument::m_evidence)
+                ->Field("Issues", &EvidenceDocument::m_issues);
+        }
+    }
+
+    bool EvidenceDocument::UsesSupportedSchema() const
+    {
+        return m_schemaVersion == 1;
+    }
+
+    bool SourceImportResult::HasErrors() const
+    {
+        for (const ImportIssue& issue : m_sourceDocument.m_issues)
+        {
+            if (issue.m_severity == "error")
+            {
+                return true;
+            }
+        }
+        for (const ImportIssue& issue : m_evidenceDocument.m_issues)
+        {
+            if (issue.m_severity == "error")
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void CatalogRecord::Reflect(AZ::ReflectContext* context)
@@ -262,7 +313,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<FoundationSnapshot>()
-                ->Version(2)
+                ->Version(4)
                 ->Field("WorkspaceName", &FoundationSnapshot::m_workspaceName)
                 ->Field("WorkspaceFilePath", &FoundationSnapshot::m_workspaceFilePath)
                 ->Field("ActiveGameProfile", &FoundationSnapshot::m_activeGameProfile)
@@ -279,9 +330,12 @@ namespace TaintedGrailModdingSDK
                 ->Field("PackCount", &FoundationSnapshot::m_packCount)
                 ->Field("SourceCount", &FoundationSnapshot::m_sourceCount)
                 ->Field("EvidenceCount", &FoundationSnapshot::m_evidenceCount)
+                ->Field("ImportErrorCount", &FoundationSnapshot::m_importErrorCount)
+                ->Field("ImportWarningCount", &FoundationSnapshot::m_importWarningCount)
                 ->Field("CatalogRecordCount", &FoundationSnapshot::m_catalogRecordCount)
                 ->Field("OpenBlockerCount", &FoundationSnapshot::m_openBlockerCount)
                 ->Field("DomainCoverage", &FoundationSnapshot::m_domainCoverage)
+                ->Field("ImportIssues", &FoundationSnapshot::m_importIssues)
                 ->Field("Blockers", &FoundationSnapshot::m_blockers);
         }
     }

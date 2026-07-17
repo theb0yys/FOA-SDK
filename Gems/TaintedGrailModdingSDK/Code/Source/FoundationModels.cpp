@@ -262,22 +262,99 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogRecord>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("RecordId", &CatalogRecord::m_recordId)
+                ->Field("OwnerPackId", &CatalogRecord::m_ownerPackId)
                 ->Field("Domain", &CatalogRecord::m_domain)
                 ->Field("RecordKind", &CatalogRecord::m_recordKind)
                 ->Field("SubjectRef", &CatalogRecord::m_subjectRef)
                 ->Field("NativeRefExact", &CatalogRecord::m_nativeRefExact)
                 ->Field("IdentityKind", &CatalogRecord::m_identityKind)
                 ->Field("DisplayName", &CatalogRecord::m_displayName)
+                ->Field("Aliases", &CatalogRecord::m_aliases)
+                ->Field("SourceScopedRefs", &CatalogRecord::m_sourceScopedRefs)
                 ->Field("ResearchStage", &CatalogRecord::m_researchStage)
+                ->Field("Confidence", &CatalogRecord::m_confidence)
+                ->Field("OperationalRisk", &CatalogRecord::m_operationalRisk)
                 ->Field("ValidationState", &CatalogRecord::m_validationState)
                 ->Field("AllowedUsages", &CatalogRecord::m_allowedUsages)
                 ->Field("ForbiddenUsages", &CatalogRecord::m_forbiddenUsages)
                 ->Field("EvidenceIds", &CatalogRecord::m_evidenceIds)
                 ->Field("MissingRefs", &CatalogRecord::m_missingRefs)
-                ->Field("Tags", &CatalogRecord::m_tags);
+                ->Field("ConflictRefs", &CatalogRecord::m_conflictRefs)
+                ->Field("Tags", &CatalogRecord::m_tags)
+                ->Field("CreatedAt", &CatalogRecord::m_createdAt)
+                ->Field("UpdatedAt", &CatalogRecord::m_updatedAt)
+                ->Field("SupersededByRecordId", &CatalogRecord::m_supersededByRecordId);
         }
+    }
+
+    bool CatalogRecord::IsSynthetic() const
+    {
+        return m_identityKind == "synthetic";
+    }
+
+    bool CatalogRecord::IsBlocked() const
+    {
+        return !m_missingRefs.empty() || !m_conflictRefs.empty() || !m_forbiddenUsages.empty();
+    }
+
+    void CatalogRelationship::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<CatalogRelationship>()
+                ->Version(1)
+                ->Field("RelationshipId", &CatalogRelationship::m_relationshipId)
+                ->Field("FromRecordId", &CatalogRelationship::m_fromRecordId)
+                ->Field("ToRecordId", &CatalogRelationship::m_toRecordId)
+                ->Field("TargetSubjectRef", &CatalogRelationship::m_targetSubjectRef)
+                ->Field("RelationshipKind", &CatalogRelationship::m_relationshipKind)
+                ->Field("EvidenceIds", &CatalogRelationship::m_evidenceIds)
+                ->Field("ValidationState", &CatalogRelationship::m_validationState)
+                ->Field("Attributes", &CatalogRelationship::m_attributes);
+        }
+    }
+
+    void CatalogValidationEvent::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<CatalogValidationEvent>()
+                ->Version(1)
+                ->Field("ValidationId", &CatalogValidationEvent::m_validationId)
+                ->Field("RecordId", &CatalogValidationEvent::m_recordId)
+                ->Field("State", &CatalogValidationEvent::m_state)
+                ->Field("Method", &CatalogValidationEvent::m_method)
+                ->Field("Validator", &CatalogValidationEvent::m_validator)
+                ->Field("CheckedAt", &CatalogValidationEvent::m_checkedAt)
+                ->Field("ProfileId", &CatalogValidationEvent::m_profileId)
+                ->Field("GameVersion", &CatalogValidationEvent::m_gameVersion)
+                ->Field("EvidenceIds", &CatalogValidationEvent::m_evidenceIds)
+                ->Field("Notes", &CatalogValidationEvent::m_notes);
+        }
+    }
+
+    void CatalogDocument::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<CatalogDocument>()
+                ->Version(1)
+                ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
+                ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
+                ->Field("ProfileId", &CatalogDocument::m_profileId)
+                ->Field("GameVersion", &CatalogDocument::m_gameVersion)
+                ->Field("Branch", &CatalogDocument::m_branch)
+                ->Field("Records", &CatalogDocument::m_records)
+                ->Field("Relationships", &CatalogDocument::m_relationships)
+                ->Field("ValidationHistory", &CatalogDocument::m_validationHistory);
+        }
+    }
+
+    bool CatalogDocument::UsesSupportedSchema() const
+    {
+        return m_schemaVersion == 1;
     }
 
     void BlockerRecord::Reflect(AZ::ReflectContext* context)
@@ -313,7 +390,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<FoundationSnapshot>()
-                ->Version(4)
+                ->Version(5)
                 ->Field("WorkspaceName", &FoundationSnapshot::m_workspaceName)
                 ->Field("WorkspaceFilePath", &FoundationSnapshot::m_workspaceFilePath)
                 ->Field("ActiveGameProfile", &FoundationSnapshot::m_activeGameProfile)
@@ -333,6 +410,8 @@ namespace TaintedGrailModdingSDK
                 ->Field("ImportErrorCount", &FoundationSnapshot::m_importErrorCount)
                 ->Field("ImportWarningCount", &FoundationSnapshot::m_importWarningCount)
                 ->Field("CatalogRecordCount", &FoundationSnapshot::m_catalogRecordCount)
+                ->Field("CatalogRelationshipCount", &FoundationSnapshot::m_catalogRelationshipCount)
+                ->Field("CatalogValidationCount", &FoundationSnapshot::m_catalogValidationCount)
                 ->Field("OpenBlockerCount", &FoundationSnapshot::m_openBlockerCount)
                 ->Field("DomainCoverage", &FoundationSnapshot::m_domainCoverage)
                 ->Field("ImportIssues", &FoundationSnapshot::m_importIssues)

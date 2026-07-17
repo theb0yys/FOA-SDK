@@ -243,6 +243,29 @@ namespace TaintedGrailModdingSDK
         recipeLaneLayout->addWidget(m_recipeLaneTable);
         recipeLayout->addWidget(recipeLaneGroup);
 
+        auto* recipeEvidenceGroup = new QGroupBox(
+            tr("Station Visibility and Learnability Evidence — Read-only Research"),
+            recipeContent);
+        auto* recipeEvidenceLayout = new QVBoxLayout(recipeEvidenceGroup);
+        auto* recipeEvidenceDescription = new QLabel(
+            tr("This view combines exact station IDs, crafted_at and learned_from relationships, evidence health, governance, and blockers. It does not prove runtime visibility or learnability and cannot grant permission."),
+            recipeEvidenceGroup);
+        recipeEvidenceDescription->setWordWrap(true);
+        recipeEvidenceLayout->addWidget(recipeEvidenceDescription);
+        m_recipeEvidenceTable = new QTableWidget(0, 8, recipeEvidenceGroup);
+        m_recipeEvidenceTable->setHorizontalHeaderLabels({
+            tr("Station / unresolved subject"),
+            tr("Exact identity"),
+            tr("Association sources"),
+            tr("Evidence"),
+            tr("Research status"),
+            tr("Governance"),
+            tr("Learnability research"),
+            tr("Blockers and reasons") });
+        ConfigureTable(m_recipeEvidenceTable);
+        recipeEvidenceLayout->addWidget(m_recipeEvidenceTable);
+        recipeLayout->addWidget(recipeEvidenceGroup);
+
         auto* ingredientGroup = new QGroupBox(tr("Recipe Ingredients"), recipeContent);
         auto* ingredientLayout = new QVBoxLayout(ingredientGroup);
         m_ingredientTable = new QTableWidget(0, 6, ingredientGroup);
@@ -559,6 +582,7 @@ namespace TaintedGrailModdingSDK
             m_recipeHidden->setChecked(false);
             m_recipeEvidence->clear();
             RefreshRecipeLaneTable();
+            RefreshRecipeEvidence();
             RefreshRecipeJoins();
             return;
         }
@@ -595,6 +619,7 @@ namespace TaintedGrailModdingSDK
             m_recipeEvidence->setText(JoinValues(record->m_evidenceIds));
         }
         RefreshRecipeLaneTable();
+        RefreshRecipeEvidence();
         RefreshRecipeJoins();
     }
 
@@ -746,6 +771,55 @@ namespace TaintedGrailModdingSDK
         {
             SetCell(m_recipeLaneTable, row, 0, ToQString(lanes[static_cast<size_t>(row)].m_lane));
             SetCell(m_recipeLaneTable, row, 1, ToQString(lanes[static_cast<size_t>(row)].m_status));
+        }
+    }
+
+    void ItemRecipeEditorWidget::RefreshRecipeEvidence()
+    {
+        const FoundationService& foundation = FoundationService::Get();
+        const AZStd::vector<EconomyRecipeStationEvidenceRow> rows = m_economyAuthoring.BuildRecipeStationEvidence(
+            ToAzString(m_recipeRecord->currentData().toString()),
+            foundation.GetSourceRegistry(),
+            foundation.GetCatalog(),
+            foundation.GetSnapshot().m_blockers);
+
+        m_recipeEvidenceTable->setRowCount(static_cast<int>(rows.size()));
+        for (int rowIndex = 0; rowIndex < static_cast<int>(rows.size()); ++rowIndex)
+        {
+            const EconomyRecipeStationEvidenceRow& row = rows[static_cast<size_t>(rowIndex)];
+            const QString station = row.m_stationRecordId.empty()
+                ? ToQString(row.m_stationSubjectRef)
+                : ToQString(row.m_stationRecordId);
+            const QString governance = tr("validation: %1 | staleness: %2")
+                .arg(ToQString(row.m_validationState))
+                .arg(ToQString(row.m_stalenessState));
+            QString learnability = ToQString(row.m_unlockMode);
+            if (!row.m_unlockSubjectRefs.empty())
+            {
+                learnability += tr(" | unlock refs: %1").arg(JoinValues(row.m_unlockSubjectRefs));
+            }
+            if (!row.m_learnedFromRelationshipIds.empty())
+            {
+                learnability += tr(" | learned_from: %1").arg(JoinValues(row.m_learnedFromRelationshipIds));
+            }
+            QString blockersAndReasons = JoinValues(row.m_blockerIds);
+            if (!row.m_reasons.empty())
+            {
+                if (!blockersAndReasons.isEmpty())
+                {
+                    blockersAndReasons += QStringLiteral(" | ");
+                }
+                blockersAndReasons += JoinValues(row.m_reasons);
+            }
+
+            SetCell(m_recipeEvidenceTable, rowIndex, 0, station);
+            SetCell(m_recipeEvidenceTable, rowIndex, 1, ToQString(row.m_stationIdentity));
+            SetCell(m_recipeEvidenceTable, rowIndex, 2, JoinValues(row.m_associationSources));
+            SetCell(m_recipeEvidenceTable, rowIndex, 3, JoinValues(row.m_evidenceIds));
+            SetCell(m_recipeEvidenceTable, rowIndex, 4, ToQString(row.m_status));
+            SetCell(m_recipeEvidenceTable, rowIndex, 5, governance);
+            SetCell(m_recipeEvidenceTable, rowIndex, 6, learnability);
+            SetCell(m_recipeEvidenceTable, rowIndex, 7, blockersAndReasons);
         }
     }
 

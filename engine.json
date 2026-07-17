@@ -86,6 +86,7 @@
         "Gems/StartingPointMovement",
         "Gems/Streamer",
         "Gems/SurfaceData",
+        "Gems/TaintedGrailModdingSDK",
         "Gems/Terrain",
         "Gems/TestAssetBuilder",
         "Gems/TextureAtlas",

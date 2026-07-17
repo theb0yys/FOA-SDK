@@ -10,7 +10,9 @@
 #include "CatalogDatabase.h"
 #include "FoundationValidationService.h"
 #include "PackPersistenceService.h"
+#include "SourceEvidencePersistenceService.h"
 #include "SourceEvidenceRegistry.h"
+#include "SourceImportService.h"
 #include "WorkspacePersistenceService.h"
 
 namespace TaintedGrailModdingSDK
@@ -36,6 +38,13 @@ namespace TaintedGrailModdingSDK
         bool LoadPack(const AZStd::string& filePath, AZStd::string* error = nullptr);
         void ClearActivePack();
 
+        bool ImportSource(
+            const SourceImportRequest& request,
+            SourceEvidenceDocumentPaths* savedPaths = nullptr,
+            AZStd::string* error = nullptr);
+        bool ReloadSourceEvidence(AZStd::string* error = nullptr);
+        AZStd::vector<SourceImporterContract> GetSourceImporterContracts() const;
+
         bool RegisterSource(const SourceRecord& source, AZStd::string* error = nullptr);
         bool RegisterEvidence(const EvidenceRecord& evidence, AZStd::string* error = nullptr);
         bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
@@ -46,6 +55,7 @@ namespace TaintedGrailModdingSDK
         const PackManifest* GetActivePack() const;
         const AZStd::string& GetActivePackFilePath() const;
         const SourceEvidenceRegistry& GetSourceRegistry() const;
+        const AZStd::vector<ImportIssue>& GetImportIssues() const;
         const CatalogDatabase& GetCatalog() const;
         const FoundationSnapshot& GetSnapshot() const;
 
@@ -56,6 +66,11 @@ namespace TaintedGrailModdingSDK
 
         PackManifest* FindPackById(const AZStd::string& packId);
         const PackManifest* FindPackById(const AZStd::string& packId) const;
+        static ImportIssue MakeRegistryIssue(
+            AZStd::string severity,
+            AZStd::string code,
+            AZStd::string message,
+            AZStd::string locator);
 
         WorkspaceModel m_workspace;
         AZStd::string m_workspaceFilePath;
@@ -63,10 +78,13 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_activePackId;
         AZStd::string m_activePackFilePath;
         SourceEvidenceRegistry m_sourceRegistry;
+        AZStd::vector<ImportIssue> m_importIssues;
         CatalogDatabase m_catalog;
         FoundationValidationService m_validationService;
         WorkspacePersistenceService m_workspacePersistence;
         PackPersistenceService m_packPersistence;
+        SourceImportService m_sourceImportService;
+        SourceEvidencePersistenceService m_sourceEvidencePersistence;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;
     };

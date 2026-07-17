@@ -27,8 +27,6 @@ Suffix:
 
 Purpose: editor-owned workspace and exact game-profile configuration.
 
-Logical structure:
-
 ```json
 {
   "WorkspaceId": "owner.workspace",
@@ -58,7 +56,7 @@ Logical structure:
 }
 ```
 
-### Required configured profile fields
+Required configured profile fields:
 
 - `ProfileId`
 - `InstallPath`
@@ -78,8 +76,6 @@ Suffix:
 ```
 
 Required location: inside the active workspace root.
-
-Logical structure:
 
 ```json
 {
@@ -107,14 +103,14 @@ Logical structure:
 }
 ```
 
-### Identity rules
+Identity rules:
 
 - `PackId` is lowercase and namespaced.
 - `OwnerId` is explicit.
 - `Version` uses semantic versioning.
 - `RuntimeActionsEnabled` must be `false` in editor-owned documents.
 
-### Save-impact values
+Save-impact values:
 
 - `none`
 - `compatible`
@@ -131,8 +127,6 @@ Sources/<source-id>/source.tgsource.json
 ```
 
 Purpose: immutable description of an imported artifact and its provenance.
-
-Logical structure:
 
 ```json
 {
@@ -162,25 +156,17 @@ Logical structure:
 }
 ```
 
-### Fingerprint rule
-
-`Fingerprint` uses lowercase hexadecimal SHA-256 with the prefix:
+`Fingerprint` uses lowercase hexadecimal SHA-256:
 
 ```text
 sha256:<64-hex-digits>
 ```
 
-A profile/fingerprint pair cannot be registered twice.
-
-### Import status
-
-Current values:
+A profile/fingerprint pair cannot be registered twice. Import status describes processing, not truth or permission:
 
 - `imported`
 - `warning`
 - `error`
-
-Status describes import processing, not factual validity or runtime permission.
 
 ## Evidence document
 
@@ -189,10 +175,6 @@ Path:
 ```text
 Sources/<source-id>/evidence.tgevidence.json
 ```
-
-Purpose: evidence extracted from one source plus schema/import issues.
-
-Logical structure:
 
 ```json
 {
@@ -223,11 +205,9 @@ Logical structure:
 }
 ```
 
-The evidence document's source ID, fingerprint, profile, version, and branch must match the source document and each child evidence record.
+The document and each child evidence record must exactly match the source ID, fingerprint, profile, game version, and branch.
 
 ## Import issue
-
-Logical structure:
 
 ```json
 {
@@ -241,18 +221,16 @@ Logical structure:
 }
 ```
 
-Severity values currently used:
+Current severities:
 
 - `warning`
 - `error`
 
 Issue codes are stable machine-readable identifiers. Message text may improve without a schema change.
 
-## Structured JSON intake schema
+## Structured JSON intake
 
 Accepted shapes:
-
-### Root array
 
 ```json
 [
@@ -262,8 +240,6 @@ Accepted shapes:
   }
 ]
 ```
-
-### Evidence property
 
 ```json
 {
@@ -275,8 +251,6 @@ Accepted shapes:
   ]
 }
 ```
-
-### Single evidence object
 
 ```json
 {
@@ -297,7 +271,7 @@ Optional:
 - `confidence`
 - `locator`
 
-## Structured CSV intake schema
+## Structured CSV intake
 
 Required header columns:
 
@@ -324,46 +298,157 @@ CSV supports quoted values and doubled quotes. It is intended for evidence regis
 
 Generic intake creates a source document and an evidence document containing a manual-extraction warning. It does not infer evidence from logs, screenshots, dumps, notes, or unknown formats.
 
-## Catalog documents
+## Canonical catalog document
 
-The canonical catalog format is introduced by the catalog browser milestone. Its contract must include:
+Path:
 
-- schema version;
-- stable record IDs;
-- exact refs and identity kind;
-- pack ownership for synthetic records;
-- evidence links;
-- typed relationships;
-- maturity, confidence, risk, validation, permissions, and prohibitions;
-- conflict, missing-reference, staleness, and supersession data.
+```text
+Catalog/catalog.tgcatalog.json
+```
 
-The final fields and suffixes must be documented here before catalog persistence is merged.
+The catalog is one versioned document bound to the active workspace and exact game profile.
+
+```json
+{
+  "SchemaVersion": 1,
+  "WorkspaceId": "owner.workspace",
+  "ProfileId": "foa.mono.current",
+  "GameVersion": "exact-version",
+  "Branch": "mono",
+  "Records": [],
+  "Relationships": [],
+  "ValidationHistory": []
+}
+```
+
+Reload rejects mismatched workspace ID, profile ID, game version, or branch.
+
+### Catalog record
+
+```json
+{
+  "RecordId": "native.item.example",
+  "OwnerPackId": "",
+  "Domain": "economy",
+  "RecordKind": "item",
+  "SubjectRef": "subject:item:example",
+  "NativeRefExact": "00000000-0000-0000-0000-000000000000",
+  "IdentityKind": "native",
+  "DisplayName": "Example Item",
+  "Aliases": ["Example"],
+  "SourceScopedRefs": [],
+  "ResearchStage": "reviewed",
+  "Confidence": "documented",
+  "OperationalRisk": "unknown",
+  "ValidationState": "unvalidated",
+  "AllowedUsages": [],
+  "ForbiddenUsages": ["no_unvalidated_runtime_use"],
+  "EvidenceIds": ["evidence.fingerprint.1"],
+  "MissingRefs": [],
+  "ConflictRefs": [],
+  "Tags": ["example"],
+  "CreatedAt": "2026-07-17T12:00:00.000Z",
+  "UpdatedAt": "2026-07-17T12:00:00.000Z",
+  "SupersededByRecordId": ""
+}
+```
+
+Required canonical fields:
+
+- `RecordId`
+- `Domain`
+- `RecordKind`
+- `SubjectRef`
+- `IdentityKind`
+- at least one `EvidenceId`
+
+Identity-specific requirements:
+
+- `native` requires `NativeRefExact` and no custom owner claim;
+- `synthetic` requires an existing `OwnerPackId` and no borrowed native ref;
+- `composite` and `source_scoped` require explicit reviewed meaning and evidence.
+
+The database rejects duplicate record IDs and duplicate non-empty exact native references. Display names may repeat and are never deduplication keys.
+
+Promotion creates `unvalidated` records and cannot populate `AllowedUsages`.
+
+### Catalog relationship
+
+```json
+{
+  "RelationshipId": "relationship.example.contains",
+  "FromRecordId": "record.parent",
+  "ToRecordId": "record.child",
+  "TargetSubjectRef": "",
+  "RelationshipKind": "contains",
+  "EvidenceIds": ["evidence.fingerprint.2"],
+  "ValidationState": "unvalidated",
+  "Attributes": []
+}
+```
+
+A relationship requires:
+
+- stable relationship ID;
+- existing source record ID;
+- relationship kind;
+- target record ID or unresolved target subject reference;
+- at least one evidence ID.
+
+When `ToRecordId` is present, it must identify an existing catalog record. `TargetSubjectRef` supports a reviewed unresolved target without inventing a canonical ID.
+
+### Catalog validation event
+
+```json
+{
+  "ValidationId": "validation.record.example.1",
+  "RecordId": "native.item.example",
+  "State": "validated",
+  "Method": "runtime-observation",
+  "Validator": "validator-id",
+  "CheckedAt": "2026-07-17T13:00:00.000Z",
+  "ProfileId": "foa.mono.current",
+  "GameVersion": "exact-version",
+  "EvidenceIds": ["evidence.fingerprint.3"],
+  "Notes": "Observed in the configured build."
+}
+```
+
+Validation history requires:
+
+- stable validation ID;
+- existing record ID;
+- state;
+- method;
+- check time;
+- exact profile/version binding;
+- evidence links when the method depends on evidence.
+
+History is retained separately from the record's current validation state.
 
 ## Compatibility and migration
 
-### Backward-compatible changes
-
-Examples:
+Backward-compatible examples:
 
 - adding an optional field with a safe default;
-- adding a new issue code;
-- adding a new importer that does not reinterpret existing documents.
+- adding a new issue or blocker code;
+- adding a query filter;
+- adding an importer that does not reinterpret existing documents.
 
-### Breaking changes
-
-Examples:
+Breaking examples:
 
 - changing identity semantics;
-- renaming or removing a field;
+- renaming/removing a field;
 - changing a field type;
-- changing fingerprint scope;
-- changing required profile binding;
+- changing fingerprint or profile-binding scope;
+- changing exact-ref uniqueness;
+- changing pack ownership requirements;
 - merging previously distinct record kinds.
 
 Breaking changes require:
 
 - schema version increment;
 - migration tool or explicit unsupported-version error;
-- tests using old and new fixtures;
-- changelog and user-guide updates;
+- old/new fixtures and tests;
+- changelog, user-guide, and catalog-guide updates;
 - release notes and rollback guidance.

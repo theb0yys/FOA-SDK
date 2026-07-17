@@ -20,7 +20,14 @@ set(FILES
     Source/CatalogPersistenceService.h
     Source/CatalogPromotionService.cpp
     Source/CatalogPromotionService.h
+    Source/EconomyAuthoringService.cpp
+    Source/EconomyAuthoringService.h
+    Source/EconomyBlockerService.cpp
+    Source/EconomyBlockerService.h
+    Source/EconomyModels.cpp
+    Source/EconomyModels.h
     Source/FoundationCatalogService.cpp
+    Source/FoundationEconomyService.cpp
     Source/FoundationGovernanceService.cpp
     Source/FoundationModels.cpp
     Source/FoundationModels.h
@@ -31,6 +38,8 @@ set(FILES
     Source/FoundationStatusWidget.h
     Source/FoundationValidationService.cpp
     Source/FoundationValidationService.h
+    Source/ItemRecipeEditorWidget.cpp
+    Source/ItemRecipeEditorWidget.h
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
     Source/PackPersistenceService.cpp

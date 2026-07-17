@@ -499,6 +499,10 @@ namespace TaintedGrailModdingSDK
         m_snapshot.m_catalogRelationshipCount = static_cast<AZ::u64>(m_catalog.GetRelationships().size());
         m_snapshot.m_catalogValidationCount = static_cast<AZ::u64>(m_catalog.GetValidationHistory().size());
         m_snapshot.m_catalogGovernanceCount = static_cast<AZ::u64>(m_catalog.GetGovernanceHistory().size());
+        m_snapshot.m_economyItemCount = static_cast<AZ::u64>(m_catalog.GetEconomyItems().size());
+        m_snapshot.m_economyRecipeCount = static_cast<AZ::u64>(m_catalog.GetEconomyRecipes().size());
+        m_snapshot.m_recipeIngredientCount = static_cast<AZ::u64>(m_catalog.GetRecipeIngredients().size());
+        m_snapshot.m_recipeOutputCount = static_cast<AZ::u64>(m_catalog.GetRecipeOutputs().size());
         for (const CatalogRecord& record : m_catalog.GetRecords())
         {
             if (record.m_stalenessState == "potentially_stale" || record.m_stalenessState == "stale")
@@ -533,6 +537,13 @@ namespace TaintedGrailModdingSDK
             m_snapshot.m_blockers.end(),
             governanceBlockers.begin(),
             governanceBlockers.end());
+        AZStd::vector<BlockerRecord> economyBlockers = m_economyBlockerService.Evaluate(
+            m_sourceRegistry,
+            m_catalog);
+        m_snapshot.m_blockers.insert(
+            m_snapshot.m_blockers.end(),
+            economyBlockers.begin(),
+            economyBlockers.end());
         m_snapshot.m_openBlockerCount = static_cast<AZ::u64>(m_snapshot.m_blockers.size());
 
         if (const GameProfile* profile = m_workspace.FindActiveGameProfile())

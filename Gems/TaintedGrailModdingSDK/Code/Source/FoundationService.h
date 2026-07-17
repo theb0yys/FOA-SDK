@@ -12,6 +12,7 @@
 #include "CatalogGovernanceService.h"
 #include "CatalogPersistenceService.h"
 #include "CatalogPromotionService.h"
+#include "EconomyBlockerService.h"
 #include "FoundationValidationService.h"
 #include "PackPersistenceService.h"
 #include "SourceEvidencePersistenceService.h"
@@ -60,6 +61,10 @@ namespace TaintedGrailModdingSDK
             AZStd::string* error = nullptr);
         bool UpsertCatalogRelationship(const CatalogRelationship& relationship, AZStd::string* error = nullptr);
         bool AddCatalogValidationEvent(const CatalogValidationEvent& validation, AZStd::string* error = nullptr);
+        bool UpsertEconomyItemProfile(const EconomyItemProfile& profile, AZStd::string* error = nullptr);
+        bool UpsertEconomyRecipeProfile(const EconomyRecipeProfile& profile, AZStd::string* error = nullptr);
+        bool UpsertEconomyRecipeIngredient(const EconomyRecipeIngredient& ingredient, AZStd::string* error = nullptr);
+        bool UpsertEconomyRecipeOutput(const EconomyRecipeOutput& output, AZStd::string* error = nullptr);
         bool SaveCatalog(AZStd::string* error = nullptr);
         bool ReloadCatalog(AZStd::string* error = nullptr);
 
@@ -104,6 +109,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_catalogFilePath;
         FoundationValidationService m_validationService;
         CatalogGovernanceBlockerService m_governanceBlockerService;
+        EconomyBlockerService m_economyBlockerService;
         WorkspacePersistenceService m_workspacePersistence;
         PackPersistenceService m_packPersistence;
         SourceImportService m_sourceImportService;

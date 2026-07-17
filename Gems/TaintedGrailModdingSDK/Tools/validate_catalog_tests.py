@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate catalog, governance, and economy test registration and safety coverage."""
+"""Validate catalog, governance, hardening, and economy test registration and safety coverage."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ def main() -> int:
     manifest_path = code_root / "taintedgrailmoddingsdk_catalog_tests_files.cmake"
     database_tests_path = code_root / "Tests" / "CatalogDatabaseTests.cpp"
     governance_tests_path = code_root / "Tests" / "CatalogGovernanceServiceTests.cpp"
+    hardening_tests_path = code_root / "Tests" / "CatalogGovernanceHardeningTests.cpp"
     economy_tests_path = code_root / "Tests" / "EconomyAuthoringTests.cpp"
 
     try:
@@ -39,6 +40,7 @@ def main() -> int:
             manifest_path,
             database_tests_path,
             governance_tests_path,
+            hardening_tests_path,
             economy_tests_path,
         ):
             if not path.is_file():
@@ -63,6 +65,10 @@ def main() -> int:
             "Source/CatalogDatabase.h",
             "Source/CatalogGovernanceService.cpp",
             "Source/CatalogGovernanceService.h",
+            "Source/CatalogGovernanceTypes.cpp",
+            "Source/CatalogGovernanceTypes.h",
+            "Source/CatalogTransactionService.cpp",
+            "Source/CatalogTransactionService.h",
             "Source/EconomyAuthoringService.cpp",
             "Source/EconomyAuthoringService.h",
             "Source/EconomyModels.cpp",
@@ -72,6 +78,7 @@ def main() -> int:
             "Source/SourceEvidenceRegistry.cpp",
             "Source/SourceEvidenceRegistry.h",
             "Tests/CatalogDatabaseTests.cpp",
+            "Tests/CatalogGovernanceHardeningTests.cpp",
             "Tests/CatalogGovernanceServiceTests.cpp",
             "Tests/EconomyAuthoringTests.cpp",
         }
@@ -95,12 +102,30 @@ def main() -> int:
             "StaleDecisionRevokesAllowedUsage",
             "SupersessionRevokesUsageAndRecordsReplacement",
             "RelationshipValidationAndPermissionUseSameProofGates",
+            "CatalogGovernanceApplyResult",
+            "CatalogValidationApplyResult",
             'm_axis = "permission"',
             'm_axis = "staleness"',
             'm_axis = "supersession"',
             'm_subjectKind = "relationship"',
         ):
             require_contains(governance_tests, fragment, governance_tests_path)
+
+        hardening_tests = hardening_tests_path.read_text(encoding="utf-8")
+        for fragment in (
+            "UnknownEvidenceLeavesOriginalCatalogUnchanged",
+            "WrongEvidenceSubjectLeavesOriginalCatalogUnchanged",
+            "WrongEvidenceProfileLeavesOriginalCatalogUnchanged",
+            "DuplicateGovernanceIdRollsBackStateChange",
+            "DuplicateValidationIdRollsBackStateChange",
+            "PersistenceFailureDoesNotPublishCandidate",
+            "CorruptedDuplicateHistoryDocumentDoesNotReplaceCatalog",
+            "InvalidTypedStateDocumentDoesNotReplaceCatalog",
+            "injected persistence failure",
+            "validation.record.record.test.2",
+            "governance.record.record.test.2",
+        ):
+            require_contains(hardening_tests, fragment, hardening_tests_path)
 
         economy_tests = economy_tests_path.read_text(encoding="utf-8")
         for fragment in (
@@ -119,7 +144,7 @@ def main() -> int:
         print(f"Tainted Grail catalog/governance/economy test validation failed: {exc}", file=sys.stderr)
         return 1
 
-    print("Tainted Grail catalog, governance, and economy test contract passed.")
+    print("Tainted Grail catalog, governance hardening, and economy test contract passed.")
     return 0
 
 

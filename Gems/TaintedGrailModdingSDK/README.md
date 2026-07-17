@@ -12,7 +12,9 @@ This initial slice establishes:
 - engine discovery through `engine.json`;
 - a required editor system component;
 - a stable service identity for future editor subsystems;
-- explicit fail-closed logging that FoA runtime execution is disabled.
+- explicit fail-closed logging that FoA runtime execution is disabled;
+- both O3DE `Tools` and `Builders` host variants;
+- a repository validator and focused GitHub Actions workflow.
 
 It does not yet provide a dock widget, import pipeline, catalog database, runtime adapter, asset converter, packager, or game mutation path.
 
@@ -29,6 +31,16 @@ The SDK will own authoring and review surfaces for:
 - content definitions and downstream execution handoffs.
 
 FoA-facing adapters remain separate components. They must own native game calls, BepInEx/Harmony integration, runtime loading, persistence, cleanup, and rollback after their own validation gates pass.
+
+## Validation
+
+Run the foundation contract check from the repository root:
+
+```shell
+python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+```
+
+The check validates Gem metadata, engine discovery, source-manifest completeness, both required host-tool variants, and the absence of FoA runtime integration in this foundation slice. It does not replace a full O3DE configure and compile.
 
 ## Next development slice
 

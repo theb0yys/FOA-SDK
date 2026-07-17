@@ -134,14 +134,14 @@ namespace TaintedGrailModdingSDK
     {
         m_snapshot = {};
         m_snapshot.m_workspaceName = m_workspace.m_displayName;
-        m_snapshot.m_gameProfileCount = aznumeric_cast<AZ::u64>(m_workspace.m_gameProfiles.size());
-        m_snapshot.m_packCount = aznumeric_cast<AZ::u64>(m_packs.size());
-        m_snapshot.m_sourceCount = aznumeric_cast<AZ::u64>(m_sourceRegistry.GetSources().size());
-        m_snapshot.m_evidenceCount = aznumeric_cast<AZ::u64>(m_sourceRegistry.GetEvidence().size());
-        m_snapshot.m_catalogRecordCount = aznumeric_cast<AZ::u64>(m_catalog.GetRecords().size());
+        m_snapshot.m_gameProfileCount = static_cast<AZ::u64>(m_workspace.m_gameProfiles.size());
+        m_snapshot.m_packCount = static_cast<AZ::u64>(m_packs.size());
+        m_snapshot.m_sourceCount = static_cast<AZ::u64>(m_sourceRegistry.GetSources().size());
+        m_snapshot.m_evidenceCount = static_cast<AZ::u64>(m_sourceRegistry.GetEvidence().size());
+        m_snapshot.m_catalogRecordCount = static_cast<AZ::u64>(m_catalog.GetRecords().size());
         m_snapshot.m_domainCoverage = m_catalog.BuildCoverage();
         m_snapshot.m_blockers = m_validationService.Evaluate(m_workspace, m_packs, m_sourceRegistry, m_catalog);
-        m_snapshot.m_openBlockerCount = aznumeric_cast<AZ::u64>(m_snapshot.m_blockers.size());
+        m_snapshot.m_openBlockerCount = static_cast<AZ::u64>(m_snapshot.m_blockers.size());
 
         if (const GameProfile* profile = m_workspace.FindActiveGameProfile())
         {

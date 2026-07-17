@@ -28,8 +28,6 @@ At minimum:
 
 ## Clone and configure
 
-Clone the fork and install LFS hooks:
-
 ```shell
 git clone https://github.com/theb0yys/o3de.git
 git -C o3de lfs install
@@ -45,10 +43,13 @@ Configure the engine using the standard O3DE source-build instructions for your 
 Gems/TaintedGrailModdingSDK/
 ├── Code/
 │   ├── Source/
+│   ├── Tests/
 │   ├── CMakeLists.txt
-│   └── taintedgrailmoddingsdk_editor_files.cmake
+│   ├── taintedgrailmoddingsdk_editor_files.cmake
+│   └── taintedgrailmoddingsdk_catalog_tests_files.cmake
 ├── Tools/
-│   └── validate_foundation.py
+│   ├── validate_foundation.py
+│   └── validate_catalog_tests.py
 ├── README.md
 └── gem.json
 ```
@@ -59,7 +60,13 @@ The Gem is host-tools-only. Do not add Clients, Servers, or Unified runtime alia
 
 Build an O3DE Editor or applicable host-tools target that resolves the Gem's `Tools` variant. Builder hosts resolve the `Builders` alias.
 
-A full build depends on your O3DE project and platform configuration. The focused validator does not replace compilation.
+The catalog unit target is registered as:
+
+```text
+Gem::TaintedGrailModdingSDK.Catalog.Tests
+```
+
+A full build depends on your O3DE project and platform configuration. The focused validators do not replace compilation.
 
 ## Focused validation
 
@@ -67,19 +74,21 @@ Run from the repository root:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
 ```
 
-The validator checks:
+The validators check:
 
 - engine and Gem registration;
 - host-tool variants;
 - source manifest completeness;
-- required foundation services and tools;
+- required public documentation and governance;
 - workspace, pack, source/evidence, catalog, and blocker contracts;
-- editor/runtime separation;
-- forbidden runtime integration tokens.
+- transactional persistence ordering;
+- catalog test registration and core identity cases;
+- editor/runtime separation.
 
-Update the validator whenever a required source file or architectural contract changes.
+Update the validators whenever a required source file, document, test, or architectural contract changes.
 
 ## Source organisation
 
@@ -87,10 +96,12 @@ Use focused service boundaries:
 
 - `FoundationModels.*` — reflected durable and query models;
 - `FoundationService.*` — orchestration and shared state;
+- `FoundationCatalogService.cpp` — transactional catalog orchestration;
 - `*PersistenceService.*` — versioned durable reads and writes;
 - `SourceImportService.*` — bounded parsing and extraction;
 - `SourceEvidenceRegistry.*` — in-memory identity and linkage rules;
-- `CatalogDatabase.*` — canonical record/query storage;
+- `CatalogDatabase.*` — canonical record/query/relationship storage;
+- `CatalogPromotionService.*` — evidence-backed reviewed-record creation;
 - `FoundationValidationService.*` — blockers and policy checks;
 - `*Widget.*` — Qt views and user commands;
 - `TaintedGrailModdingSDKSystemComponent.*` — editor lifecycle and pane registration.
@@ -141,6 +152,23 @@ An importer contract must declare:
 
 Importers may create source, evidence, and issue records. They may not promote canonical catalog records or runtime permission automatically.
 
+## Adding a catalog capability
+
+A catalog change must preserve:
+
+- stable record IDs;
+- exact native-reference uniqueness;
+- pack ownership for synthetic records;
+- duplicate display-name independence;
+- evidence linkage;
+- first-class relationship identity;
+- validation history;
+- deterministic result ordering;
+- save-before-publish persistence;
+- reviewed promotion separate from validation and permission.
+
+Add or update unit tests for identity, queries, relationships, and negative cases.
+
 ## Adding a dock window
 
 1. Create a focused `QWidget` subclass.
@@ -149,16 +177,16 @@ Importers may create source, evidence, and issue records. They may not promote c
 4. Register and unregister the pane in the system component.
 5. Use a stable pane name and save key.
 6. Provide accessible labels and actionable errors.
-7. Update the source manifest, validator, README, and user guide.
+7. Update the source manifest, validators, README, and user documentation.
 
-Avoid `Q_OBJECT` unless signals, slots, properties, or Qt meta-object features are required; this reduces unnecessary AUTOMOC coupling.
+Avoid `Q_OBJECT` unless signals, slots, properties, or Qt meta-object features are required.
 
 ## C++ and include discipline
 
 - Use explicit includes for every directly used type or function.
 - Do not rely on transitive includes.
 - Prefer O3DE/AZ types where required by O3DE APIs and serialization.
-- Use Qt types at the UI and importer boundary where they are appropriate.
+- Use Qt types at the UI and importer boundary where appropriate.
 - Convert strings deliberately and preserve UTF-8.
 - Avoid unchecked narrowing conversions.
 - Move large objects deliberately and include the correct move utility.
@@ -170,11 +198,19 @@ See `CODE_QUALITY.md` for mandatory details.
 
 ### Contract tests
 
-The Python validator ensures repository structure and architectural invariants.
+Python validators ensure repository structure and architecture invariants.
 
 ### Unit tests
 
-Use O3DE test targets for:
+Current catalog tests cover:
+
+- duplicate display names remaining independent;
+- duplicate exact native references being rejected;
+- synthetic pack ownership;
+- evidence/permission/validation search filters;
+- relationship target and evidence requirements.
+
+Add O3DE test coverage for:
 
 - identity validation;
 - registry duplicate and mismatch handling;
@@ -182,7 +218,8 @@ Use O3DE test targets for:
 - blocker generation;
 - schema version handling;
 - importer parsing and issue reporting;
-- persistence round trips.
+- persistence round trips and migrations;
+- promotion profile, pack, and permission failures.
 
 ### Integration tests
 
@@ -192,6 +229,7 @@ Cover:
 - pack open/save/reload;
 - source intake and paired document persistence;
 - catalog reload and exact-reference search;
+- promotion save-before-publish behavior;
 - editor pane registration;
 - notification-driven UI refresh.
 
@@ -203,7 +241,7 @@ Record:
 - steps performed;
 - screenshots when useful;
 - expected and observed blockers;
-- any generated workspace files.
+- generated workspace files.
 
 Do not include private paths or copyrighted game data in screenshots.
 
@@ -214,7 +252,7 @@ Behavior and documentation ship together.
 Update:
 
 - root README for public capability changes;
-- User Guide for user-facing workflows;
+- User or Catalog Guide for user-facing workflows;
 - Data Formats for schema changes;
 - Architecture for boundary changes;
 - Changelog for notable changes;
@@ -226,6 +264,7 @@ Before committing:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
 git diff --check
 git status
 ```
@@ -239,15 +278,16 @@ git commit -s -m "Add concise imperative summary"
 ## Pull-request workflow
 
 1. Synchronize `foa-development` to the accepted `main` merge commit.
-2. Implement and self-review the scoped change.
-3. Run focused and relevant local tests.
-4. Update documentation and changelog.
-5. Open a pull request from `foa-development` to `main`.
-6. Complete every PR-template section.
-7. Resolve review threads and CI failures.
-8. Obtain maintainer approval.
-9. Merge through GitHub.
-10. Synchronize `foa-development` to the new merge commit before new work.
+2. Obtain design review for significant changes.
+3. Implement and perform pre-commit self-review.
+4. Run focused and relevant local tests.
+5. Update documentation and changelog.
+6. Open a pull request from `foa-development` to `main`.
+7. Complete every PR-template section.
+8. Resolve review threads and CI failures.
+9. Obtain maintainer approval.
+10. Merge through GitHub only after required checks pass.
+11. Synchronize `foa-development` to the new merge commit before new work.
 
 ## Debugging
 
@@ -259,7 +299,8 @@ Useful first checks:
 - inspect O3DE Editor logs for module load and pane-registration errors;
 - isolate serialization errors with a minimal document;
 - validate workspace-root and path-containment behavior;
-- check exact profile and fingerprint binding for source/evidence failures.
+- check exact profile and fingerprint binding for source/evidence failures;
+- inspect exact native-ref and record-ID collisions for catalog failures.
 
 ## Upstream O3DE changes
 

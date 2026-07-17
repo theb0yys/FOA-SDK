@@ -8,9 +8,9 @@
 
 """Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
 
-The check verifies repository structure, public-project governance, durable workspace
-and pack management, source/evidence intake, and the editor-only product boundary.
-It does not replace an O3DE configure or compile.
+The check verifies repository structure, public-project governance, durable workspace,
+pack, source/evidence, and canonical catalog workflows, plus the editor-only product
+boundary. It does not replace an O3DE configure or compile.
 """
 
 from __future__ import annotations
@@ -95,7 +95,11 @@ def validate_source_manifest(gem_root: Path) -> None:
     manifest = manifest_path.read_text(encoding="utf-8")
     entries = set(re.findall(r"^\s+(Source/[^\s\)]+)\s*$", manifest, re.MULTILINE))
     required_entries = {
+        "Source/CatalogBrowserWidget.cpp", "Source/CatalogBrowserWidget.h",
         "Source/CatalogDatabase.cpp", "Source/CatalogDatabase.h",
+        "Source/CatalogPersistenceService.cpp", "Source/CatalogPersistenceService.h",
+        "Source/CatalogPromotionService.cpp", "Source/CatalogPromotionService.h",
+        "Source/FoundationCatalogService.cpp",
         "Source/FoundationModels.cpp", "Source/FoundationModels.h",
         "Source/FoundationNotificationBus.h",
         "Source/FoundationService.cpp", "Source/FoundationService.h",
@@ -174,6 +178,38 @@ def validate_source_intake(gem_root: Path) -> None:
         fail("Source intake must persist documents before publishing the candidate registry")
 
 
+def validate_catalog(gem_root: Path) -> None:
+    source_root, combined = read_sources(gem_root)
+    for fragment in (
+        "CatalogDocument", "CatalogRelationship", "CatalogValidationEvent", "CatalogPromotionRequest",
+        "m_nativeRefExact", "m_ownerPackId", "m_aliases", "m_sourceScopedRefs", "m_conflictRefs",
+        "m_supersededByRecordId", "catalog.tgcatalog.json", "class CatalogPersistenceService",
+        "class CatalogPromotionService", "class CatalogBrowserWidget", "PromoteEvidenceToCatalog",
+        "ReloadCatalog", "RegisterViewPane<CatalogBrowserWidget>",
+        "Catalog record ID already exists; promotion never merges by display name",
+        "Exact native reference is already owned by another canonical catalog record",
+        "Claim promotion cannot grant usage permission",
+        "no_unvalidated_runtime_use", "The canonical catalog document is bound to a different workspace or game profile",
+        "permission-before-validation", "relationship-evidence", "validation-profile",
+    ):
+        if fragment not in combined:
+            fail(f"Canonical catalog is missing {fragment!r}")
+
+    promotion = (source_root / "CatalogPromotionService.cpp").read_text(encoding="utf-8")
+    if "record.m_allowedUsages" in promotion:
+        fail("Evidence promotion must not assign allowed usages")
+
+    catalog_service = (source_root / "FoundationCatalogService.cpp").read_text(encoding="utf-8")
+    save_position = catalog_service.find("m_catalogPersistence.Save(")
+    publish_position = catalog_service.find("m_catalog = candidate")
+    if save_position < 0 or publish_position < 0 or save_position > publish_position:
+        fail("Canonical catalog must persist the candidate document before publishing in-memory state")
+
+    catalog_database = (source_root / "CatalogDatabase.cpp").read_text(encoding="utf-8")
+    if "record.m_displayName ==" in catalog_database or "record.m_displayName !=" in catalog_database:
+        fail("Canonical identity must not merge or reject records based on display name")
+
+
 def validate_public_project(repo_root: Path) -> None:
     required_files = {
         "README.md",
@@ -192,6 +228,7 @@ def validate_public_project(repo_root: Path) -> None:
         ".github/ISSUE_TEMPLATE/tg_sdk_research.yml",
         "docs/tainted-grail-sdk/README.md",
         "docs/tainted-grail-sdk/USER_GUIDE.md",
+        "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
         "docs/tainted-grail-sdk/ARCHITECTURE.md",
         "docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md",
         "docs/tainted-grail-sdk/CODE_QUALITY.md",
@@ -210,12 +247,13 @@ def validate_public_project(repo_root: Path) -> None:
 
     required_fragments = {
         "README.md": "Direct development on `main` is prohibited",
-        "CONTRIBUTING.md": "Pre-commit self-review",
+        "CONTRIBUTING.md": "pre-commit self-review",
         "SECURITY.md": "Report a vulnerability",
         "GOVERNANCE.md": "Evidence, claims, reviewed records, validation, and permission remain separate",
-        "docs/tainted-grail-sdk/CODE_QUALITY.md": "Display names are not identities",
+        "docs/tainted-grail-sdk/CODE_QUALITY.md": "Never use a display name as a database key",
         "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md": "Pending is not passing",
-        "docs/tainted-grail-sdk/DATA_FORMATS.md": "RuntimeActionsEnabled",
+        "docs/tainted-grail-sdk/DATA_FORMATS.md": "Catalog/catalog.tgcatalog.json",
+        "docs/tainted-grail-sdk/CATALOG_GUIDE.md": "Promotion cannot create allowed usages",
         ".github/PULL_REQUEST_TEMPLATE.md": "Author self-review",
         ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml": "design review before implementation",
         ".github/CODEOWNERS": "/Gems/TaintedGrailModdingSDK/ @theb0yys",
@@ -224,8 +262,8 @@ def validate_public_project(repo_root: Path) -> None:
         path = repo_root / relative_path
         require_contains(path.read_text(encoding="utf-8"), fragment, path)
 
-    issue_config = (repo_root / ".github/ISSUE_TEMPLATE/config.yml").read_text(encoding="utf-8")
-    require_contains(issue_config, "blank_issues_enabled: false", repo_root / ".github/ISSUE_TEMPLATE/config.yml")
+    issue_config_path = repo_root / ".github/ISSUE_TEMPLATE/config.yml"
+    require_contains(issue_config_path.read_text(encoding="utf-8"), "blank_issues_enabled: false", issue_config_path)
 
 
 def main() -> int:
@@ -238,6 +276,7 @@ def main() -> int:
         validate_source_manifest(gem_root)
         validate_editor_foundation(gem_root)
         validate_source_intake(gem_root)
+        validate_catalog(gem_root)
         validate_public_project(repo_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
@@ -245,9 +284,9 @@ def main() -> int:
 
     print("Tainted Grail SDK foundation validation passed.")
     print(
-        "Validated: public documentation and governance, workspace and pack editing, source/evidence importer "
-        "contracts, SHA-256 fingerprinting, exact profile binding, durable documents, schema/import reporting, "
-        "catalog/query service, blockers, editor docks, automatic refresh, and editor-only boundary."
+        "Validated: public documentation and governance, workspace and pack editing, source/evidence intake, "
+        "canonical catalog persistence/search/inspection/promotion, transactional publish boundaries, blockers, "
+        "editor panes, automatic refresh, and editor-only runtime separation."
     )
     return 0
 

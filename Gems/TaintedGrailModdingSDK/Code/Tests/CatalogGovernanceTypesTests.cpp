@@ -36,6 +36,14 @@ namespace TaintedGrailModdingSDK
 
     TEST(TaintedGrailCatalogGovernanceTypesTests, LegacySchemaValuesRemainRepresentable)
     {
+        const auto unsetMaturity = ParseResearchStage("");
+        ASSERT_TRUE(unsetMaturity.IsSuccess());
+        EXPECT_EQ(ToString(unsetMaturity.GetValue()), "");
+
+        const auto unsetValidation = ParseValidationState("");
+        ASSERT_TRUE(unsetValidation.IsSuccess());
+        EXPECT_EQ(ToString(unsetValidation.GetValue()), "");
+
         const auto maturity = ParseResearchStage("unknown");
         ASSERT_TRUE(maturity.IsSuccess());
         EXPECT_EQ(ToString(maturity.GetValue()), "unknown");

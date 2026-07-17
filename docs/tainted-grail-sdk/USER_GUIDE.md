@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Tainted Grail Modding Editor and SDK is an O3DE-hosted authoring environment for governed FoA mod projects. It records exact game-build context, pack ownership, source provenance, evidence, blockers, and eventually canonical game knowledge and authored content.
+The Tainted Grail Modding Editor and SDK is an O3DE-hosted authoring environment for governed FoA mod projects. It records exact game-build context, pack ownership, source provenance, evidence, canonical identities, independent governance decisions, permissions, prohibitions, and blockers.
 
-The current project is pre-alpha. It does not yet provide production runtime deployment or complete domain authoring tools.
+The current project is pre-alpha. It does not provide production runtime deployment or complete domain authoring tools.
 
 ## Before you begin
 
@@ -23,10 +23,11 @@ Do not place your workspace inside the game installation. Keep authoring data, g
 
 Build the O3DE Editor using the standard source-build process for your platform. The `TaintedGrailModdingSDK` Gem is registered with the engine and is available to host-tool builds.
 
-Run the repository contract validator before diagnosing a build problem:
+Run the repository validators first:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
 ```
 
 After launching the O3DE Editor, open **Tools → Tainted Grail SDK**.
@@ -36,6 +37,8 @@ Current tools:
 - **Tainted Grail SDK Status**
 - **Tainted Grail Pack Manager**
 - **Tainted Grail Source Intake**
+- **Tainted Grail Catalog Browser**
+- **Tainted Grail Catalog Governance**
 
 ## Recommended workflow
 
@@ -45,8 +48,12 @@ Use the tools in this order:
 2. configure an exact game profile;
 3. create and save a pack manifest;
 4. import sources and evidence;
-5. review blockers and compatibility;
-6. use later catalog and authoring tools only after their required evidence and permissions exist.
+5. promote evidence into canonical records;
+6. inspect records, relationships, and blockers;
+7. review maturity, confidence, risk, and staleness independently;
+8. record validation proof;
+9. allow or forbid one named usage lane explicitly;
+10. review the shared status window before downstream planning.
 
 ## Workspace and game profile
 
@@ -63,182 +70,67 @@ Configure:
 - staging directory;
 - deployment directory.
 
-The directories have separate purposes:
+The roots have separate purposes:
 
-- **workspace root** stores project-controlled JSON documents and authoring data;
-- **output** stores generated build products;
+- **workspace** stores governed documents and authoring data;
+- **output** stores generated products;
 - **staging** stores package layouts before deployment;
-- **deployment** is the explicit destination considered by later deployment tooling.
-
-Using distinct directories reduces accidental overwrite and makes review and rollback possible.
+- **deployment** is the explicit destination considered by later tools.
 
 ### Game-profile fields
 
 Configure:
 
-- stable profile ID;
-- profile display name;
+- stable profile ID and name;
 - FoA installation path;
-- exact game version;
-- game branch;
-- runtime target: `Mono` or `IL2CPP`;
+- exact game version and branch;
+- `Mono` or `IL2CPP` runtime target;
 - Unity version;
-- BepInEx version for Mono profiles;
-- managed assemblies path;
-- BepInEx plugin path for Mono profiles;
-- diagnostics path;
-- extracted-data path;
-- installed DLC and content scopes.
+- BepInEx version and plugin path for Mono profiles;
+- managed assemblies;
+- diagnostics and extracted-data locations;
+- installed DLC/content scopes.
 
-Imported evidence is bound to the active profile ID, game version, branch, and runtime target. Changing profiles does not automatically re-authorise older evidence.
+Imported evidence, catalogs, validation events, and governance decisions are bound to the exact active profile. Changing profiles does not re-authorise older data.
 
 ### Apply and save
 
-- **Apply Configuration** updates the in-memory workspace.
+- **Apply Configuration** updates in-memory state.
 - **Save Workspace As** creates a `*.tgworkspace.json` document.
-- **Save Workspace** updates the current document.
-- **Open Workspace** loads an existing document and reloads its persisted source/evidence records.
-
-A workspace document contains editor configuration only. It does not edit the game installation, BepInEx configuration, or saves.
+- **Save Workspace** updates the active document.
+- **Open Workspace** loads configuration, source/evidence documents, and the canonical catalog.
 
 ## Pack manager
 
-Open **Tainted Grail Pack Manager** after configuring the workspace and active game profile.
-
-### Identity and ownership
+Open **Tainted Grail Pack Manager** after configuring the workspace and profile.
 
 A pack requires:
 
-- lowercase namespaced pack ID, such as `owner.pack-name`;
+- lowercase namespaced pack ID such as `owner.pack-name`;
+- explicit owner ID;
 - display name;
-- owner ID;
-- semantic version, such as `0.1.0`.
+- semantic version;
+- exact game/Core/adapter compatibility;
+- dependencies, required mods, and incompatibilities;
+- save-impact declaration;
+- content, asset, and localisation declarations;
+- build configuration and release channel.
 
-Custom records created later must be owned by a pack. Do not reuse a native game identity for custom content.
+Synthetic catalog records require an existing pack owner. Do not reuse native game identities for custom content.
 
-### Compatibility
-
-Declare:
-
-- primary game version;
-- target branch;
-- additional compatible game versions;
-- required Avalon Core version;
-- required FoA adapter version;
-- DLC and content scopes.
-
-The blocker engine compares the active game profile with the pack's declared compatibility.
-
-### Dependencies and conflicts
-
-Enter one value per line for:
-
-- pack dependencies;
-- required external mods;
-- incompatibilities.
-
-A dependency or required mod must not also be listed as incompatible.
-
-### Save impact
-
-Choose one:
-
-- `none` — no persistent save effect is expected;
-- `compatible` — persistent data is expected to remain compatible;
-- `migration` — a versioned migration is required;
-- `destructive` — removal or change may lose persistent state;
-- `unknown` — impact has not been established and release remains blocked.
-
-The declaration is a planning and validation input, not proof by itself.
-
-### Content and release declarations
-
-Declare content-definition, asset, and localisation paths relative to the workspace or pack layout. Also declare a build configuration and release channel.
-
-### Apply and save
-
-- **New Pack** clears the active draft.
-- **Apply** validates identity and publishes the pack to the in-memory foundation state.
-- **Save As** writes a `*.tgpack.json` manifest inside the workspace root.
-- **Save** updates the active manifest.
-- **Open** loads an existing manifest.
-
-Pack manifests outside the active workspace root are rejected. Runtime actions are always written as disabled.
+Pack manifests must remain inside the workspace and always persist runtime actions as disabled.
 
 ## Source and evidence intake
 
-Open **Tainted Grail Source Intake** after the active workspace and game profile are fully configured.
+Open **Tainted Grail Source Intake** after the workspace and profile are complete.
 
-### Supported source kinds
+Supported source kinds include diagnostics, item/recipe dumps, world observations, decompilation notes, runtime logs, screenshots, CSV/JSON registers, and Avalon Core source sets.
 
-- template diagnostics;
-- item and recipe dumps;
-- scene and world observations;
-- decompilation notes;
-- runtime logs;
-- screenshots;
-- CSV registers;
-- JSON registers;
-- Avalon Core source sets.
+Importer contracts:
 
-### Importer contracts
-
-#### Structured JSON
-
-Accepts:
-
-- a root JSON array of evidence objects;
-- an object containing an `evidence` array;
-- one evidence-shaped root object.
-
-Required fields:
-
-```json
-{
-  "subject_ref": "subject:example",
-  "claim": "Evidence-backed statement"
-}
-```
-
-Optional fields:
-
-- `evidence_id`;
-- `kind`;
-- `confidence`;
-- `locator`.
-
-#### Structured CSV
-
-Required columns:
-
-```text
-subject_ref,claim
-```
-
-Optional columns:
-
-```text
-evidence_id,kind,confidence,locator
-```
-
-#### Generic artifact
-
-Fingerprints and registers the file without creating evidence. Use this for opaque dumps, logs, screenshots, notes, and unsupported structured formats. Manual evidence extraction remains required.
-
-### Source metadata
-
-Provide, when known:
-
-- source kind;
-- title;
-- tool name and version;
-- capture time;
-- limitations;
-- preferred importer contract.
-
-The importer computes a SHA-256 fingerprint and deterministic source ID. The same fingerprint cannot be imported twice for the same game profile.
-
-### Durable output
+- `tg.structured-json` extracts evidence-shaped JSON;
+- `tg.structured-csv` extracts rows containing `subject_ref` and `claim`;
+- `tg.generic-artifact` fingerprints opaque data without inventing evidence.
 
 Each successful intake writes:
 
@@ -247,31 +139,153 @@ Sources/<source-id>/source.tgsource.json
 Sources/<source-id>/evidence.tgevidence.json
 ```
 
-The in-memory registry is updated only after both documents save successfully.
+The importer computes a SHA-256 fingerprint and deterministic source ID. The same fingerprint cannot be imported twice for one profile. The in-memory registry is published only after both documents save.
 
-### Import issues
+Parsing success does not make a claim reviewed or permitted.
 
-Malformed inputs, missing fields, duplicate evidence IDs, unsupported schemas, size limits, profile mismatches, and document mismatches are preserved as structured import issues.
+## Canonical catalog browser
 
-An imported source may exist with warnings or errors. That does not make its evidence reviewed or usable for runtime action.
+Open **Tainted Grail Catalog Browser**.
+
+The catalog is stored at:
+
+```text
+Catalog/catalog.tgcatalog.json
+```
+
+It is bound to workspace ID, profile ID, exact game version, and branch.
+
+### Search
+
+Search by:
+
+- record ID;
+- exact native ref or GUID;
+- subject reference;
+- display name or alias;
+- domain and kind;
+- owner pack;
+- identity kind;
+- maturity and confidence;
+- operational risk;
+- validation and staleness;
+- permission/prohibition;
+- evidence ID;
+- blocked state;
+- supersession.
+
+Display-name search is discovery only. Records are never merged because labels match.
+
+### Inspect
+
+Selecting a record shows:
+
+- stable identity and ownership;
+- exact refs and aliases;
+- evidence details;
+- relationships;
+- current governance states;
+- validation and governance history;
+- permissions and prohibitions;
+- missing refs, conflicts, supersession, and blockers.
+
+### Promote evidence
+
+Promotion requires an existing profile-matched evidence ID and a new stable record ID.
+
+Native records require an exact native ref and cannot claim custom pack ownership. Synthetic records require an existing owner pack and cannot borrow a native ref.
+
+Promotion creates a reviewed-but-`unvalidated`, staleness-`unknown` record. It adds `no_unvalidated_runtime_use` and cannot create an allowed usage.
+
+## Catalog governance
+
+Open **Tainted Grail Catalog Governance** after selecting or creating canonical subjects.
+
+The pane supports both records and relationships.
+
+### Current states
+
+It displays:
+
+- maturity;
+- confidence;
+- operational risk;
+- validation;
+- staleness;
+- allowed usages;
+- prohibitions;
+- supersession;
+- validation history;
+- governance history.
+
+### Governance decisions
+
+Select an axis:
+
+- `maturity`;
+- `confidence`;
+- `operational_risk`;
+- `staleness`;
+- `permission`;
+- `supersession`.
+
+Provide evidence IDs, a named reviewer, and notes. Permission grants also require validation proof IDs.
+
+### Validation decisions
+
+Provide:
+
+- validation state;
+- method or test protocol;
+- evidence IDs;
+- named validator;
+- notes.
+
+Validation is bound to the active exact profile/build and is recorded as append-only history.
+
+**Validation does not grant permission.**
+
+### Allow a usage
+
+To allow one named usage, the subject must be:
+
+- `validated`;
+- `current`;
+- free of missing refs and conflicts;
+- not superseded.
+
+The decision also requires evidence and at least one `validated` proof event for the same subject.
+
+Examples of usage names include `display_only`, `planning_only`, `grant_existing_item`, `spawn_static`, or `quest_read`. Later adapter contracts will formalise the vocabulary.
+
+### Forbid a usage
+
+A `forbid` decision removes the usage from the allowed list and creates an explicit prohibition. A prohibition remains meaningful even when the subject is visible and searchable.
+
+### Staleness and supersession
+
+Marking a subject `potentially_stale` or `stale` removes all allowed usages. Returning it to `current` does not restore old permissions.
+
+Supersession requires a different existing replacement ID. The old subject becomes stale, loses allowed usage, and remains durable for auditability.
+
+See [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) for the full state vocabulary and transition rules.
 
 ## Foundation status and blockers
 
-The status window is the shared health view for:
+The status window reports:
 
-- active workspace and game profile;
-- active pack;
-- source, evidence, catalog, and blocker counts;
+- active workspace/profile and pack;
+- source and evidence totals;
+- catalog records and relationships;
+- validation events and governance decisions;
+- stale subjects;
+- allowed and prohibited usage counts;
 - domain coverage;
-- missing paths and compatibility;
-- import and schema problems;
-- unresolved identity, evidence, or relationship requirements.
+- import, compatibility, identity, evidence, governance, permission, and proof blockers.
 
-A blocker explains why a use is unavailable. Fix the underlying configuration or evidence; do not remove blockers merely to make the interface appear complete.
+A blocker explains why a use is unavailable. Fix the underlying data or decision; do not remove validation solely to make the dashboard green.
 
-## Workspace file layout
-
-A typical workspace evolves toward:
+## Workspace layout
 
 ```text
 MyWorkspace/
@@ -284,6 +298,7 @@ MyWorkspace/
 │       ├── source.tgsource.json
 │       └── evidence.tgevidence.json
 ├── Catalog/
+│   └── catalog.tgcatalog.json
 ├── Content/
 ├── Assets/
 ├── Localisation/
@@ -291,53 +306,58 @@ MyWorkspace/
 └── Reports/
 ```
 
-Catalog and later authoring layouts are introduced by their respective milestones.
-
 ## Safe-use rules
 
-- Back up workspaces and saves before testing any future adapter or deployment feature.
+- Back up workspaces and saves before testing future adapter/deployment features.
 - Never treat a display name as an identity.
 - Keep exact native references unchanged.
 - Do not reuse native IDs for custom records.
 - Do not share copyrighted game assets or proprietary source material.
-- Review generated output before deployment.
-- Treat warnings and unknown save impact as unresolved work.
+- Treat unknown risk, staleness, or save impact as unresolved work.
 - Do not assume an imported claim is true because parsing succeeded.
+- Do not assume a validated claim is permitted for every usage.
+- Do not assume clearing staleness restores permission.
+- Review generated output before any future deployment.
 
 ## Troubleshooting
 
-### The TG SDK menu is missing
+### TG SDK menu is missing
 
-- confirm the Gem is present in `engine.json` external subdirectories;
-- confirm you built a host-tool target;
-- run the foundation validator;
-- inspect Editor logs for Gem module load errors.
+- confirm the Gem is registered in `engine.json`;
+- confirm a host-tool target was built;
+- run both TG validators;
+- inspect Editor logs for module-load errors.
 
-### Workspace save fails
+### Workspace or pack save fails
 
-- verify the target directory is writable;
-- avoid the game installation and protected system directories;
-- confirm the file suffix and parent path are valid;
-- review the error message for serialization or path details.
-
-### Pack save fails
-
-- use a lowercase namespaced pack ID;
-- provide owner and semantic version;
-- keep the manifest inside the workspace root;
-- ensure runtime actions are disabled.
+- verify the destination is writable and inside the expected workspace boundary;
+- use valid stable IDs and semantic versions;
+- keep runtime actions disabled;
+- inspect the serialization/path error.
 
 ### Source import fails
 
-- configure an exact active game profile;
-- verify the source file exists and is readable;
-- choose the correct importer contract;
-- inspect schema issues in the intake window;
-- use generic artifact intake when the data is not evidence-shaped.
+- configure an exact active profile;
+- verify the source exists and is readable;
+- choose the correct importer;
+- inspect schema issues;
+- use generic artifact intake for opaque formats.
 
-### A source imported but no evidence appeared
+### Catalog reload fails
 
-This is expected for generic artifacts and for structured files that do not contain the required evidence shape. The source remains registered for manual review.
+- confirm the catalog belongs to the same workspace/profile/version/branch;
+- inspect exact identity and relationship errors;
+- check validation/governance history references;
+- do not hand-edit allowed permissions without corresponding proof history.
+
+### Permission decision fails
+
+- validate the subject first;
+- mark staleness `current` through a reviewed evidence-backed decision;
+- resolve missing refs and conflicts;
+- provide the validated proof event ID;
+- use the same record or relationship subject for the proof;
+- provide a named reviewer.
 
 ## Getting help
 

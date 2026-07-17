@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate that canonical catalog tests remain registered and cover core identity rules."""
+"""Validate that catalog and governance tests remain registered and cover safety rules."""
 
 from __future__ import annotations
 
@@ -29,12 +29,13 @@ def main() -> int:
     code_root = gem_root / "Code"
     cmake_path = code_root / "CMakeLists.txt"
     manifest_path = code_root / "taintedgrailmoddingsdk_catalog_tests_files.cmake"
-    tests_path = code_root / "Tests" / "CatalogDatabaseTests.cpp"
+    database_tests_path = code_root / "Tests" / "CatalogDatabaseTests.cpp"
+    governance_tests_path = code_root / "Tests" / "CatalogGovernanceServiceTests.cpp"
 
     try:
-        for path in (cmake_path, manifest_path, tests_path):
+        for path in (cmake_path, manifest_path, database_tests_path, governance_tests_path):
             if not path.is_file():
-                fail(f"Required catalog test file is missing: {path}")
+                fail(f"Required catalog/governance test file is missing: {path}")
 
         cmake = cmake_path.read_text(encoding="utf-8")
         for fragment in (
@@ -43,6 +44,7 @@ def main() -> int:
             "NAME ${gem_name}.Catalog.Tests",
             "taintedgrailmoddingsdk_catalog_tests_files.cmake",
             "AZ::AzTest",
+            "AZ::AzToolsFramework",
             "ly_add_googletest",
         ):
             require_contains(cmake, fragment, cmake_path)
@@ -52,14 +54,19 @@ def main() -> int:
         expected = {
             "Source/CatalogDatabase.cpp",
             "Source/CatalogDatabase.h",
+            "Source/CatalogGovernanceService.cpp",
+            "Source/CatalogGovernanceService.h",
             "Source/FoundationModels.cpp",
             "Source/FoundationModels.h",
+            "Source/SourceEvidenceRegistry.cpp",
+            "Source/SourceEvidenceRegistry.h",
             "Tests/CatalogDatabaseTests.cpp",
+            "Tests/CatalogGovernanceServiceTests.cpp",
         }
         if entries != expected:
             fail(f"Catalog test manifest mismatch: expected {sorted(expected)}, found {sorted(entries)}")
 
-        tests = tests_path.read_text(encoding="utf-8")
+        database_tests = database_tests_path.read_text(encoding="utf-8")
         for fragment in (
             "SameDisplayNameDoesNotMergeDistinctRecordIds",
             "DuplicateExactNativeReferenceIsRejected",
@@ -67,12 +74,26 @@ def main() -> int:
             "QueryFiltersEvidencePermissionAndBlockedState",
             "RelationshipRequiresKnownRecordsAndEvidence",
         ):
-            require_contains(tests, fragment, tests_path)
+            require_contains(database_tests, fragment, database_tests_path)
+
+        governance_tests = governance_tests_path.read_text(encoding="utf-8")
+        for fragment in (
+            "ValidationDoesNotGrantUsagePermission",
+            "PermissionRequiresCurrentStateAndValidatedProof",
+            "StaleDecisionRevokesAllowedUsage",
+            "SupersessionRevokesUsageAndRecordsReplacement",
+            "RelationshipValidationAndPermissionUseSameProofGates",
+            'm_axis = "permission"',
+            'm_axis = "staleness"',
+            'm_axis = "supersession"',
+            'm_subjectKind = "relationship"',
+        ):
+            require_contains(governance_tests, fragment, governance_tests_path)
     except (OSError, RuntimeError) as exc:
-        print(f"Tainted Grail catalog test validation failed: {exc}", file=sys.stderr)
+        print(f"Tainted Grail catalog/governance test validation failed: {exc}", file=sys.stderr)
         return 1
 
-    print("Tainted Grail canonical catalog test contract passed.")
+    print("Tainted Grail catalog and governance test contract passed.")
     return 0
 
 

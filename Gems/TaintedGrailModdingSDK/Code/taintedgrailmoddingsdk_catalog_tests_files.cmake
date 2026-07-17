@@ -8,7 +8,12 @@
 set(FILES
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
+    Source/CatalogGovernanceService.cpp
+    Source/CatalogGovernanceService.h
     Source/FoundationModels.cpp
     Source/FoundationModels.h
+    Source/SourceEvidenceRegistry.cpp
+    Source/SourceEvidenceRegistry.h
     Tests/CatalogDatabaseTests.cpp
+    Tests/CatalogGovernanceServiceTests.cpp
 )

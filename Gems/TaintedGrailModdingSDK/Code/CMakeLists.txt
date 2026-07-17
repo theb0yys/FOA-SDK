@@ -46,6 +46,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
             PRIVATE
                 AZ::AzCore
                 AZ::AzTest
+                AZ::AzToolsFramework
     )
 
     ly_add_googletest(

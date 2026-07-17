@@ -32,6 +32,7 @@ namespace TaintedGrailModdingSDK
             record.m_confidence = "documented";
             record.m_operationalRisk = "unknown";
             record.m_validationState = "unvalidated";
+            record.m_stalenessState = "unknown";
             record.m_forbiddenUsages = { "no_unvalidated_runtime_use" };
             record.m_evidenceIds = { AZStd::move(evidenceId) };
             return record;
@@ -95,6 +96,7 @@ namespace TaintedGrailModdingSDK
         CatalogRecord record = MakeNativeRecord(
             "record.filtered", "native-filtered", "Filtered", "evidence.filtered");
         record.m_validationState = "validated";
+        record.m_stalenessState = "current";
         record.m_allowedUsages = { "display_only" };
         record.m_forbiddenUsages.clear();
 
@@ -105,6 +107,7 @@ namespace TaintedGrailModdingSDK
         query.m_evidenceId = "evidence.filtered";
         query.m_permission = "display_only";
         query.m_validationState = "validated";
+        query.m_stalenessState = "current";
         EXPECT_EQ(catalog.Query(query).size(), 1);
 
         query.m_blockedOnly = true;
@@ -128,6 +131,7 @@ namespace TaintedGrailModdingSDK
         relationship.m_toRecordId = "record.child";
         relationship.m_relationshipKind = "contains";
         relationship.m_validationState = "unvalidated";
+        relationship.m_stalenessState = "unknown";
 
         EXPECT_FALSE(catalog.UpsertRelationship(relationship, &error));
         relationship.m_evidenceIds = { "evidence.relationship" };

@@ -56,16 +56,7 @@ Purpose: editor-owned workspace and exact game-profile configuration.
 }
 ```
 
-Required configured profile fields:
-
-- `ProfileId`
-- `InstallPath`
-- `GameVersion`
-- `Branch`
-- `RuntimeTarget`
-- `ManagedAssembliesPath`
-
-`RuntimeTarget` must be `Mono` or `IL2CPP`. Mono profiles also require BepInEx version and plugin path for build/deployment planning.
+A configured profile requires `ProfileId`, installation, exact game version, branch, runtime target, and managed-assemblies path. `RuntimeTarget` must be `Mono` or `IL2CPP`.
 
 ## Pack manifest
 
@@ -105,18 +96,12 @@ Required location: inside the active workspace root.
 
 Identity rules:
 
-- `PackId` is lowercase and namespaced.
-- `OwnerId` is explicit.
-- `Version` uses semantic versioning.
+- `PackId` is lowercase and namespaced;
+- `OwnerId` is explicit;
+- `Version` uses semantic versioning;
 - `RuntimeActionsEnabled` must be `false` in editor-owned documents.
 
-Save-impact values:
-
-- `none`
-- `compatible`
-- `migration`
-- `destructive`
-- `unknown`
+Save-impact values are `none`, `compatible`, `migration`, `destructive`, and `unknown`.
 
 ## Source document
 
@@ -156,17 +141,7 @@ Purpose: immutable description of an imported artifact and its provenance.
 }
 ```
 
-`Fingerprint` uses lowercase hexadecimal SHA-256:
-
-```text
-sha256:<64-hex-digits>
-```
-
-A profile/fingerprint pair cannot be registered twice. Import status describes processing, not truth or permission:
-
-- `imported`
-- `warning`
-- `error`
+`Fingerprint` uses `sha256:<64-hex-digits>`. A profile/fingerprint pair cannot be registered twice. Import status describes processing, not factual validity or runtime permission.
 
 ## Evidence document
 
@@ -205,98 +180,13 @@ Sources/<source-id>/evidence.tgevidence.json
 }
 ```
 
-The document and each child evidence record must exactly match the source ID, fingerprint, profile, game version, and branch.
+The evidence document and child records must match the source ID, fingerprint, profile, version, and branch.
 
-## Import issue
+## Structured intake shapes
 
-```json
-{
-  "IssueId": "issue.source-id.1",
-  "Severity": "error",
-  "Code": "schema.evidence-required-fields",
-  "Message": "Evidence entries require subject_ref and claim.",
-  "Locator": "/path/to/input.json",
-  "RecordPath": "$.evidence[0]",
-  "Line": 0
-}
-```
+Structured JSON accepts a root array, an `evidence` array, or one evidence-shaped object. Required fields are `subject_ref` and `claim`; optional fields are `evidence_id`, `kind`, `confidence`, and `locator`.
 
-Current severities:
-
-- `warning`
-- `error`
-
-Issue codes are stable machine-readable identifiers. Message text may improve without a schema change.
-
-## Structured JSON intake
-
-Accepted shapes:
-
-```json
-[
-  {
-    "subject_ref": "subject:example",
-    "claim": "Statement"
-  }
-]
-```
-
-```json
-{
-  "evidence": [
-    {
-      "subject_ref": "subject:example",
-      "claim": "Statement"
-    }
-  ]
-}
-```
-
-```json
-{
-  "subject_ref": "subject:example",
-  "claim": "Statement"
-}
-```
-
-Required:
-
-- `subject_ref`
-- `claim`
-
-Optional:
-
-- `evidence_id`
-- `kind`
-- `confidence`
-- `locator`
-
-## Structured CSV intake
-
-Required header columns:
-
-```text
-subject_ref,claim
-```
-
-Accepted aliases:
-
-- `subject` for `subject_ref`
-- `id` for `evidence_id`
-- `evidence_kind` for `kind`
-
-Optional columns:
-
-- `evidence_id`
-- `kind`
-- `confidence`
-- `locator`
-
-CSV supports quoted values and doubled quotes. It is intended for evidence registers, not arbitrary spreadsheet semantics.
-
-## Generic artifact intake
-
-Generic intake creates a source document and an evidence document containing a manual-extraction warning. It does not infer evidence from logs, screenshots, dumps, notes, or unknown formats.
+Structured CSV requires `subject_ref,claim`. Accepted aliases include `subject`, `id`, and `evidence_kind`. Generic artifact intake registers provenance without inferring evidence.
 
 ## Canonical catalog document
 
@@ -305,8 +195,6 @@ Path:
 ```text
 Catalog/catalog.tgcatalog.json
 ```
-
-The catalog is one versioned document bound to the active workspace and exact game profile.
 
 ```json
 {
@@ -317,13 +205,16 @@ The catalog is one versioned document bound to the active workspace and exact ga
   "Branch": "mono",
   "Records": [],
   "Relationships": [],
-  "ValidationHistory": []
+  "ValidationHistory": [],
+  "GovernanceHistory": []
 }
 ```
 
 Reload rejects mismatched workspace ID, profile ID, game version, or branch.
 
-### Catalog record
+`GovernanceHistory` is optional when reading older schema-1 documents. New governance decisions append entries to it.
+
+## Catalog record
 
 ```json
 {
@@ -337,10 +228,11 @@ Reload rejects mismatched workspace ID, profile ID, game version, or branch.
   "DisplayName": "Example Item",
   "Aliases": ["Example"],
   "SourceScopedRefs": [],
-  "ResearchStage": "reviewed",
+  "ResearchStage": "S5",
   "Confidence": "documented",
   "OperationalRisk": "unknown",
   "ValidationState": "unvalidated",
+  "StalenessState": "unknown",
   "AllowedUsages": [],
   "ForbiddenUsages": ["no_unvalidated_runtime_use"],
   "EvidenceIds": ["evidence.fingerprint.1"],
@@ -355,24 +247,24 @@ Reload rejects mismatched workspace ID, profile ID, game version, or branch.
 
 Required canonical fields:
 
-- `RecordId`
-- `Domain`
-- `RecordKind`
-- `SubjectRef`
-- `IdentityKind`
-- at least one `EvidenceId`
+- `RecordId`;
+- `Domain`;
+- `RecordKind`;
+- `SubjectRef`;
+- `IdentityKind`;
+- at least one `EvidenceId`.
 
-Identity-specific requirements:
+Identity rules:
 
 - `native` requires `NativeRefExact` and no custom owner claim;
 - `synthetic` requires an existing `OwnerPackId` and no borrowed native ref;
 - `composite` and `source_scoped` require explicit reviewed meaning and evidence.
 
-The database rejects duplicate record IDs and duplicate non-empty exact native references. Display names may repeat and are never deduplication keys.
+The database rejects duplicate record IDs and duplicate non-empty exact native references. Display names may repeat and are never identity keys.
 
-Promotion creates `unvalidated` records and cannot populate `AllowedUsages`.
+Promotion creates `unvalidated`, staleness-`unknown` records and cannot populate `AllowedUsages`.
 
-### Catalog relationship
+## Catalog relationship
 
 ```json
 {
@@ -382,26 +274,73 @@ Promotion creates `unvalidated` records and cannot populate `AllowedUsages`.
   "TargetSubjectRef": "",
   "RelationshipKind": "contains",
   "EvidenceIds": ["evidence.fingerprint.2"],
+  "ResearchStage": "S4",
+  "Confidence": "documented",
+  "OperationalRisk": "unknown",
   "ValidationState": "unvalidated",
-  "Attributes": []
+  "StalenessState": "unknown",
+  "AllowedUsages": [],
+  "ForbiddenUsages": ["no_unvalidated_runtime_use"],
+  "MissingRefs": [],
+  "ConflictRefs": [],
+  "Attributes": [],
+  "CreatedAt": "2026-07-17T12:00:00.000Z",
+  "UpdatedAt": "2026-07-17T12:00:00.000Z",
+  "SupersededByRelationshipId": ""
 }
 ```
 
-A relationship requires:
+A relationship requires a stable ID, existing source record, relationship kind, target record or unresolved target subject, and evidence. Relationships carry the same independent governance axes as records.
 
-- stable relationship ID;
-- existing source record ID;
-- relationship kind;
-- target record ID or unresolved target subject reference;
-- at least one evidence ID.
+## State vocabularies
 
-When `ToRecordId` is present, it must identify an existing catalog record. `TargetSubjectRef` supports a reviewed unresolved target without inventing a canonical ID.
+### Maturity/research stage
 
-### Catalog validation event
+Preferred values: `S0` through `S8`. Legacy descriptive values remain readable for compatibility.
+
+### Confidence
+
+- `unknown`;
+- `unrated`;
+- `hypothesis`;
+- `inferred`;
+- `documented`;
+- `runtime_observed`;
+- `validated`.
+
+### Operational risk
+
+- `unknown`;
+- `low`;
+- `medium`;
+- `high`;
+- `critical`.
+
+### Validation state
+
+- `unvalidated`;
+- `pending`;
+- `validated`;
+- `failed`;
+- `stale`;
+- `blocked`.
+
+### Staleness state
+
+- `unknown`;
+- `current`;
+- `potentially_stale`;
+- `stale`.
+
+Allowed usages require `ValidationState: validated`, `StalenessState: current`, no missing/conflict refs, and no supersession.
+
+## Catalog validation event
 
 ```json
 {
-  "ValidationId": "validation.record.example.1",
+  "ValidationId": "validation.record.native-item-example.1",
+  "SubjectKind": "record",
+  "SubjectId": "native.item.example",
   "RecordId": "native.item.example",
   "State": "validated",
   "Method": "runtime-observation",
@@ -409,28 +348,66 @@ When `ToRecordId` is present, it must identify an existing catalog record. `Targ
   "CheckedAt": "2026-07-17T13:00:00.000Z",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
+  "Branch": "mono",
   "EvidenceIds": ["evidence.fingerprint.3"],
   "Notes": "Observed in the configured build."
 }
 ```
 
-Validation history requires:
+`SubjectKind` is `record` or `relationship`. `SubjectId` is the corresponding stable ID. `RecordId` remains for backward compatibility with older record-only events.
 
-- stable validation ID;
-- existing record ID;
-- state;
-- method;
-- check time;
-- exact profile/version binding;
-- evidence links when the method depends on evidence.
+New validation events require state, method, named validator, exact profile/version/branch binding, and evidence IDs. History is retained separately from current state.
 
-History is retained separately from the record's current validation state.
+## Catalog governance event
+
+```json
+{
+  "EventId": "governance.record.native-item-example.1",
+  "SubjectKind": "record",
+  "SubjectId": "native.item.example",
+  "Axis": "permission",
+  "PreviousValue": "unset",
+  "NewValue": "allow",
+  "Usage": "display_only",
+  "EvidenceIds": ["evidence.fingerprint.3"],
+  "ValidationIds": ["validation.record.native-item-example.1"],
+  "Reviewer": "reviewer-id",
+  "DecidedAt": "2026-07-17T13:05:00.000Z",
+  "Notes": "Approved only for display in authoring tools."
+}
+```
+
+Governance event axes currently include:
+
+- `maturity`;
+- `confidence`;
+- `operational_risk`;
+- `staleness`;
+- `permission`;
+- `supersession`.
+
+Permission outcomes are `allow`, `forbid`, and `clear`. `allow` requires validation proof IDs with at least one `validated` event for the same subject.
+
+Governance history is append-only through normal editor workflows. Current record or relationship fields store the latest state; history explains how the state was reached.
+
+## Fail-closed transition rules
+
+- validation never creates an allowed usage;
+- non-validated states remove allowed usages;
+- stale or potentially stale subjects lose allowed usages;
+- superseded subjects lose allowed usages and become stale;
+- returning to `current` does not restore old permissions;
+- the same usage cannot be both allowed and forbidden;
+- permission proof must belong to the same subject;
+- relationship governance evidence must already be linked to the relationship.
 
 ## Compatibility and migration
 
 Backward-compatible examples:
 
 - adding an optional field with a safe default;
+- adding `GovernanceHistory` to schema 1;
+- adding subject-scoped validation fields while retaining legacy `RecordId`;
 - adding a new issue or blocker code;
 - adding a query filter;
 - adding an importer that does not reinterpret existing documents.
@@ -438,17 +415,12 @@ Backward-compatible examples:
 Breaking examples:
 
 - changing identity semantics;
-- renaming/removing a field;
+- renaming or removing a field;
 - changing a field type;
 - changing fingerprint or profile-binding scope;
 - changing exact-ref uniqueness;
 - changing pack ownership requirements;
+- changing a state value's meaning;
 - merging previously distinct record kinds.
 
-Breaking changes require:
-
-- schema version increment;
-- migration tool or explicit unsupported-version error;
-- old/new fixtures and tests;
-- changelog, user-guide, and catalog-guide updates;
-- release notes and rollback guidance.
+Breaking changes require a schema increment, migration or explicit unsupported-version error, old/new fixtures, tests, changelog and guide updates, release notes, and rollback guidance.

@@ -262,7 +262,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogRecord>()
-                ->Version(2)
+                ->Version(3)
                 ->Field("RecordId", &CatalogRecord::m_recordId)
                 ->Field("OwnerPackId", &CatalogRecord::m_ownerPackId)
                 ->Field("Domain", &CatalogRecord::m_domain)
@@ -277,6 +277,7 @@ namespace TaintedGrailModdingSDK
                 ->Field("Confidence", &CatalogRecord::m_confidence)
                 ->Field("OperationalRisk", &CatalogRecord::m_operationalRisk)
                 ->Field("ValidationState", &CatalogRecord::m_validationState)
+                ->Field("StalenessState", &CatalogRecord::m_stalenessState)
                 ->Field("AllowedUsages", &CatalogRecord::m_allowedUsages)
                 ->Field("ForbiddenUsages", &CatalogRecord::m_forbiddenUsages)
                 ->Field("EvidenceIds", &CatalogRecord::m_evidenceIds)
@@ -296,7 +297,12 @@ namespace TaintedGrailModdingSDK
 
     bool CatalogRecord::IsBlocked() const
     {
-        return !m_missingRefs.empty() || !m_conflictRefs.empty() || !m_forbiddenUsages.empty();
+        return !m_missingRefs.empty()
+            || !m_conflictRefs.empty()
+            || !m_forbiddenUsages.empty()
+            || m_stalenessState == "potentially_stale"
+            || m_stalenessState == "stale"
+            || !m_supersededByRecordId.empty();
     }
 
     void CatalogRelationship::Reflect(AZ::ReflectContext* context)
@@ -304,16 +310,37 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogRelationship>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("RelationshipId", &CatalogRelationship::m_relationshipId)
                 ->Field("FromRecordId", &CatalogRelationship::m_fromRecordId)
                 ->Field("ToRecordId", &CatalogRelationship::m_toRecordId)
                 ->Field("TargetSubjectRef", &CatalogRelationship::m_targetSubjectRef)
                 ->Field("RelationshipKind", &CatalogRelationship::m_relationshipKind)
                 ->Field("EvidenceIds", &CatalogRelationship::m_evidenceIds)
+                ->Field("ResearchStage", &CatalogRelationship::m_researchStage)
+                ->Field("Confidence", &CatalogRelationship::m_confidence)
+                ->Field("OperationalRisk", &CatalogRelationship::m_operationalRisk)
                 ->Field("ValidationState", &CatalogRelationship::m_validationState)
-                ->Field("Attributes", &CatalogRelationship::m_attributes);
+                ->Field("StalenessState", &CatalogRelationship::m_stalenessState)
+                ->Field("AllowedUsages", &CatalogRelationship::m_allowedUsages)
+                ->Field("ForbiddenUsages", &CatalogRelationship::m_forbiddenUsages)
+                ->Field("MissingRefs", &CatalogRelationship::m_missingRefs)
+                ->Field("ConflictRefs", &CatalogRelationship::m_conflictRefs)
+                ->Field("Attributes", &CatalogRelationship::m_attributes)
+                ->Field("CreatedAt", &CatalogRelationship::m_createdAt)
+                ->Field("UpdatedAt", &CatalogRelationship::m_updatedAt)
+                ->Field("SupersededByRelationshipId", &CatalogRelationship::m_supersededByRelationshipId);
         }
+    }
+
+    bool CatalogRelationship::IsBlocked() const
+    {
+        return !m_missingRefs.empty()
+            || !m_conflictRefs.empty()
+            || !m_forbiddenUsages.empty()
+            || m_stalenessState == "potentially_stale"
+            || m_stalenessState == "stale"
+            || !m_supersededByRelationshipId.empty();
     }
 
     void CatalogValidationEvent::Reflect(AZ::ReflectContext* context)
@@ -321,8 +348,10 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogValidationEvent>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("ValidationId", &CatalogValidationEvent::m_validationId)
+                ->Field("SubjectKind", &CatalogValidationEvent::m_subjectKind)
+                ->Field("SubjectId", &CatalogValidationEvent::m_subjectId)
                 ->Field("RecordId", &CatalogValidationEvent::m_recordId)
                 ->Field("State", &CatalogValidationEvent::m_state)
                 ->Field("Method", &CatalogValidationEvent::m_method)
@@ -330,8 +359,40 @@ namespace TaintedGrailModdingSDK
                 ->Field("CheckedAt", &CatalogValidationEvent::m_checkedAt)
                 ->Field("ProfileId", &CatalogValidationEvent::m_profileId)
                 ->Field("GameVersion", &CatalogValidationEvent::m_gameVersion)
+                ->Field("Branch", &CatalogValidationEvent::m_branch)
                 ->Field("EvidenceIds", &CatalogValidationEvent::m_evidenceIds)
                 ->Field("Notes", &CatalogValidationEvent::m_notes);
+        }
+    }
+
+    AZStd::string CatalogValidationEvent::GetSubjectKind() const
+    {
+        return m_subjectKind.empty() ? AZStd::string("record") : m_subjectKind;
+    }
+
+    AZStd::string CatalogValidationEvent::GetSubjectId() const
+    {
+        return m_subjectId.empty() ? m_recordId : m_subjectId;
+    }
+
+    void CatalogGovernanceEvent::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext->Class<CatalogGovernanceEvent>()
+                ->Version(1)
+                ->Field("EventId", &CatalogGovernanceEvent::m_eventId)
+                ->Field("SubjectKind", &CatalogGovernanceEvent::m_subjectKind)
+                ->Field("SubjectId", &CatalogGovernanceEvent::m_subjectId)
+                ->Field("Axis", &CatalogGovernanceEvent::m_axis)
+                ->Field("PreviousValue", &CatalogGovernanceEvent::m_previousValue)
+                ->Field("NewValue", &CatalogGovernanceEvent::m_newValue)
+                ->Field("Usage", &CatalogGovernanceEvent::m_usage)
+                ->Field("EvidenceIds", &CatalogGovernanceEvent::m_evidenceIds)
+                ->Field("ValidationIds", &CatalogGovernanceEvent::m_validationIds)
+                ->Field("Reviewer", &CatalogGovernanceEvent::m_reviewer)
+                ->Field("DecidedAt", &CatalogGovernanceEvent::m_decidedAt)
+                ->Field("Notes", &CatalogGovernanceEvent::m_notes);
         }
     }
 
@@ -340,7 +401,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -348,7 +409,8 @@ namespace TaintedGrailModdingSDK
                 ->Field("Branch", &CatalogDocument::m_branch)
                 ->Field("Records", &CatalogDocument::m_records)
                 ->Field("Relationships", &CatalogDocument::m_relationships)
-                ->Field("ValidationHistory", &CatalogDocument::m_validationHistory);
+                ->Field("ValidationHistory", &CatalogDocument::m_validationHistory)
+                ->Field("GovernanceHistory", &CatalogDocument::m_governanceHistory);
         }
     }
 
@@ -390,7 +452,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<FoundationSnapshot>()
-                ->Version(5)
+                ->Version(6)
                 ->Field("WorkspaceName", &FoundationSnapshot::m_workspaceName)
                 ->Field("WorkspaceFilePath", &FoundationSnapshot::m_workspaceFilePath)
                 ->Field("ActiveGameProfile", &FoundationSnapshot::m_activeGameProfile)
@@ -412,6 +474,10 @@ namespace TaintedGrailModdingSDK
                 ->Field("CatalogRecordCount", &FoundationSnapshot::m_catalogRecordCount)
                 ->Field("CatalogRelationshipCount", &FoundationSnapshot::m_catalogRelationshipCount)
                 ->Field("CatalogValidationCount", &FoundationSnapshot::m_catalogValidationCount)
+                ->Field("CatalogGovernanceCount", &FoundationSnapshot::m_catalogGovernanceCount)
+                ->Field("StaleCatalogSubjectCount", &FoundationSnapshot::m_staleCatalogSubjectCount)
+                ->Field("AllowedUsageCount", &FoundationSnapshot::m_allowedUsageCount)
+                ->Field("ForbiddenUsageCount", &FoundationSnapshot::m_forbiddenUsageCount)
                 ->Field("OpenBlockerCount", &FoundationSnapshot::m_openBlockerCount)
                 ->Field("DomainCoverage", &FoundationSnapshot::m_domainCoverage)
                 ->Field("ImportIssues", &FoundationSnapshot::m_importIssues)

@@ -8,6 +8,8 @@
 #pragma once
 
 #include "CatalogDatabase.h"
+#include "CatalogGovernanceBlockerService.h"
+#include "CatalogGovernanceService.h"
 #include "CatalogPersistenceService.h"
 #include "CatalogPromotionService.h"
 #include "FoundationValidationService.h"
@@ -49,6 +51,12 @@ namespace TaintedGrailModdingSDK
 
         bool PromoteEvidenceToCatalog(
             const CatalogPromotionRequest& request,
+            AZStd::string* error = nullptr);
+        bool ApplyCatalogGovernanceDecision(
+            const CatalogGovernanceRequest& request,
+            AZStd::string* error = nullptr);
+        bool ApplyCatalogValidationDecision(
+            const CatalogValidationRequest& request,
             AZStd::string* error = nullptr);
         bool UpsertCatalogRelationship(const CatalogRelationship& relationship, AZStd::string* error = nullptr);
         bool AddCatalogValidationEvent(const CatalogValidationEvent& validation, AZStd::string* error = nullptr);
@@ -95,12 +103,14 @@ namespace TaintedGrailModdingSDK
         CatalogDatabase m_catalog;
         AZStd::string m_catalogFilePath;
         FoundationValidationService m_validationService;
+        CatalogGovernanceBlockerService m_governanceBlockerService;
         WorkspacePersistenceService m_workspacePersistence;
         PackPersistenceService m_packPersistence;
         SourceImportService m_sourceImportService;
         SourceEvidencePersistenceService m_sourceEvidencePersistence;
         CatalogPersistenceService m_catalogPersistence;
         CatalogPromotionService m_catalogPromotion;
+        CatalogGovernanceService m_catalogGovernance;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;
     };

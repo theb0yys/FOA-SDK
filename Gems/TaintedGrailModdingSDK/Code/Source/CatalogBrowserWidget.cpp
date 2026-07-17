@@ -127,7 +127,7 @@ namespace TaintedGrailModdingSDK
         rootLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Search exact identities and evidence-backed records. Promotion creates reviewed-but-unvalidated records and never grants runtime permission."),
+            tr("Search exact identities and governed state. Promotion creates reviewed-but-unvalidated, staleness-unknown records and never grants runtime permission."),
             this);
         description->setWordWrap(true);
         rootLayout->addWidget(description);
@@ -152,8 +152,11 @@ namespace TaintedGrailModdingSDK
         m_domainFilter = new QComboBox(filterGroup);
         m_kindFilter = new QComboBox(filterGroup);
         m_identityFilter = new QComboBox(filterGroup);
+        m_stageFilter = new QComboBox(filterGroup);
         m_confidenceFilter = new QComboBox(filterGroup);
+        m_riskFilter = new QComboBox(filterGroup);
         m_validationFilter = new QComboBox(filterGroup);
+        m_stalenessFilter = new QComboBox(filterGroup);
         m_permissionFilter = new QLineEdit(filterGroup);
         m_blockedOnly = new QCheckBox(tr("Blocked only"), filterGroup);
         m_includeSuperseded = new QCheckBox(tr("Include superseded"), filterGroup);
@@ -179,24 +182,30 @@ namespace TaintedGrailModdingSDK
         filterLayout->addWidget(m_kindFilter, 4, 1);
         filterLayout->addWidget(new QLabel(tr("Identity"), filterGroup), 4, 2);
         filterLayout->addWidget(m_identityFilter, 4, 3);
-        filterLayout->addWidget(new QLabel(tr("Confidence"), filterGroup), 5, 0);
-        filterLayout->addWidget(m_confidenceFilter, 5, 1);
-        filterLayout->addWidget(new QLabel(tr("Validation"), filterGroup), 5, 2);
-        filterLayout->addWidget(m_validationFilter, 5, 3);
-        filterLayout->addWidget(new QLabel(tr("Permission / prohibition"), filterGroup), 6, 0);
-        filterLayout->addWidget(m_permissionFilter, 6, 1);
-        filterLayout->addWidget(m_blockedOnly, 6, 2);
-        filterLayout->addWidget(m_includeSuperseded, 6, 3);
-        filterLayout->addWidget(searchButton, 7, 1);
-        filterLayout->addWidget(reloadButton, 7, 2);
-        filterLayout->addWidget(saveButton, 7, 3);
+        filterLayout->addWidget(new QLabel(tr("Maturity"), filterGroup), 5, 0);
+        filterLayout->addWidget(m_stageFilter, 5, 1);
+        filterLayout->addWidget(new QLabel(tr("Confidence"), filterGroup), 5, 2);
+        filterLayout->addWidget(m_confidenceFilter, 5, 3);
+        filterLayout->addWidget(new QLabel(tr("Operational risk"), filterGroup), 6, 0);
+        filterLayout->addWidget(m_riskFilter, 6, 1);
+        filterLayout->addWidget(new QLabel(tr("Validation"), filterGroup), 6, 2);
+        filterLayout->addWidget(m_validationFilter, 6, 3);
+        filterLayout->addWidget(new QLabel(tr("Staleness"), filterGroup), 7, 0);
+        filterLayout->addWidget(m_stalenessFilter, 7, 1);
+        filterLayout->addWidget(new QLabel(tr("Permission / prohibition"), filterGroup), 7, 2);
+        filterLayout->addWidget(m_permissionFilter, 7, 3);
+        filterLayout->addWidget(m_blockedOnly, 8, 0, 1, 2);
+        filterLayout->addWidget(m_includeSuperseded, 8, 2, 1, 2);
+        filterLayout->addWidget(searchButton, 9, 1);
+        filterLayout->addWidget(reloadButton, 9, 2);
+        filterLayout->addWidget(saveButton, 9, 3);
         rootLayout->addWidget(filterGroup);
 
         auto* splitter = new QSplitter(Qt::Horizontal, this);
-        m_resultsTable = new QTableWidget(0, 7, splitter);
+        m_resultsTable = new QTableWidget(0, 10, splitter);
         m_resultsTable->setHorizontalHeaderLabels({
-            tr("Record ID"), tr("Display name"), tr("Domain"), tr("Kind"),
-            tr("Exact ref"), tr("Validation"), tr("Blocked") });
+            tr("Record ID"), tr("Display name"), tr("Domain"), tr("Kind"), tr("Exact ref"),
+            tr("Maturity"), tr("Risk"), tr("Validation"), tr("Staleness"), tr("Blocked") });
         ConfigureReadOnlyTable(m_resultsTable);
         splitter->addWidget(m_resultsTable);
 
@@ -217,13 +226,13 @@ namespace TaintedGrailModdingSDK
             label->setWordWrap(true);
             label->setTextInteractionFlags(Qt::TextSelectableByMouse);
         }
-        m_recordAliasesView = CreateReadOnlyText(identityGroup, 90);
+        m_recordAliasesView = CreateReadOnlyText(identityGroup, 100);
         identityLayout->addRow(tr("Identity"), m_recordIdentityValue);
         identityLayout->addRow(tr("Owner pack"), m_recordOwnerValue);
         identityLayout->addRow(tr("Subject"), m_recordSubjectValue);
         identityLayout->addRow(tr("Exact native ref"), m_recordNativeRefValue);
-        identityLayout->addRow(tr("State"), m_recordStateValue);
-        identityLayout->addRow(tr("Aliases / scoped refs / tags"), m_recordAliasesView);
+        identityLayout->addRow(tr("Independent state"), m_recordStateValue);
+        identityLayout->addRow(tr("Aliases / refs / usage / conflicts"), m_recordAliasesView);
         inspectorLayout->addWidget(identityGroup);
 
         auto* evidenceGroup = new QGroupBox(tr("Linked Evidence"), inspectorContent);
@@ -234,19 +243,25 @@ namespace TaintedGrailModdingSDK
 
         auto* relationshipsGroup = new QGroupBox(tr("Relationships"), inspectorContent);
         auto* relationshipsLayout = new QVBoxLayout(relationshipsGroup);
-        m_recordRelationshipsView = CreateReadOnlyText(relationshipsGroup, 150);
+        m_recordRelationshipsView = CreateReadOnlyText(relationshipsGroup, 170);
         relationshipsLayout->addWidget(m_recordRelationshipsView);
         inspectorLayout->addWidget(relationshipsGroup);
 
         auto* validationGroup = new QGroupBox(tr("Validation History"), inspectorContent);
         auto* validationLayout = new QVBoxLayout(validationGroup);
-        m_recordValidationView = CreateReadOnlyText(validationGroup, 150);
+        m_recordValidationView = CreateReadOnlyText(validationGroup, 160);
         validationLayout->addWidget(m_recordValidationView);
         inspectorLayout->addWidget(validationGroup);
 
+        auto* governanceGroup = new QGroupBox(tr("Governance History"), inspectorContent);
+        auto* governanceLayout = new QVBoxLayout(governanceGroup);
+        m_recordGovernanceView = CreateReadOnlyText(governanceGroup, 180);
+        governanceLayout->addWidget(m_recordGovernanceView);
+        inspectorLayout->addWidget(governanceGroup);
+
         auto* blockersGroup = new QGroupBox(tr("Record Blockers"), inspectorContent);
         auto* blockersLayout = new QVBoxLayout(blockersGroup);
-        m_recordBlockersView = CreateReadOnlyText(blockersGroup, 130);
+        m_recordBlockersView = CreateReadOnlyText(blockersGroup, 150);
         blockersLayout->addWidget(m_recordBlockersView);
         inspectorLayout->addWidget(blockersGroup);
 
@@ -264,7 +279,7 @@ namespace TaintedGrailModdingSDK
         m_promotionDisplayName = new QLineEdit(promotionGroup);
         m_promotionAliases = new QLineEdit(promotionGroup);
         m_promotionStage = new QComboBox(promotionGroup);
-        m_promotionStage->addItems({ "reviewed", "reconciled" });
+        m_promotionStage->addItems({ "S5", "S6", "reviewed", "reconciled" });
         m_promotionConfidence = new QComboBox(promotionGroup);
         m_promotionConfidence->addItems({ "unknown", "hypothesis", "inferred", "documented", "runtime_observed", "validated" });
         m_promotionRisk = new QComboBox(promotionGroup);
@@ -418,21 +433,30 @@ namespace TaintedGrailModdingSDK
         QStringList domains;
         QStringList kinds;
         QStringList identities;
+        QStringList stages;
         QStringList confidence;
+        QStringList risks;
         QStringList validation;
+        QStringList staleness;
         for (const CatalogRecord& record : catalog.GetRecords())
         {
             domains.push_back(ToQString(record.m_domain));
             kinds.push_back(ToQString(record.m_recordKind));
             identities.push_back(ToQString(record.m_identityKind));
+            stages.push_back(ToQString(record.m_researchStage));
             confidence.push_back(ToQString(record.m_confidence));
+            risks.push_back(ToQString(record.m_operationalRisk));
             validation.push_back(ToQString(record.m_validationState));
+            staleness.push_back(ToQString(record.m_stalenessState));
         }
         PopulateTextCombo(m_domainFilter, domains, tr("Any domain"));
         PopulateTextCombo(m_kindFilter, kinds, tr("Any kind"));
         PopulateTextCombo(m_identityFilter, identities, tr("Any identity"));
+        PopulateTextCombo(m_stageFilter, stages, tr("Any maturity"));
         PopulateTextCombo(m_confidenceFilter, confidence, tr("Any confidence"));
+        PopulateTextCombo(m_riskFilter, risks, tr("Any risk"));
         PopulateTextCombo(m_validationFilter, validation, tr("Any validation"));
+        PopulateTextCombo(m_stalenessFilter, staleness, tr("Any staleness"));
 
         const QString previousEvidence = m_promotionEvidence->currentData().toString();
         {
@@ -468,8 +492,11 @@ namespace TaintedGrailModdingSDK
         query.m_domain = ToAzString(m_domainFilter->currentData().toString());
         query.m_recordKind = ToAzString(m_kindFilter->currentData().toString());
         query.m_identityKind = ToAzString(m_identityFilter->currentData().toString());
+        query.m_researchStage = ToAzString(m_stageFilter->currentData().toString());
         query.m_confidence = ToAzString(m_confidenceFilter->currentData().toString());
+        query.m_operationalRisk = ToAzString(m_riskFilter->currentData().toString());
         query.m_validationState = ToAzString(m_validationFilter->currentData().toString());
+        query.m_stalenessState = ToAzString(m_stalenessFilter->currentData().toString());
         query.m_permission = ToAzString(m_permissionFilter->text());
         query.m_blockedOnly = m_blockedOnly->isChecked();
         query.m_includeSuperseded = m_includeSuperseded->isChecked();
@@ -489,8 +516,11 @@ namespace TaintedGrailModdingSDK
             SetCell(m_resultsTable, row, 2, ToQString(record.m_domain));
             SetCell(m_resultsTable, row, 3, ToQString(record.m_recordKind));
             SetCell(m_resultsTable, row, 4, ToQString(record.m_nativeRefExact));
-            SetCell(m_resultsTable, row, 5, ToQString(record.m_validationState));
-            SetCell(m_resultsTable, row, 6, record.IsBlocked() ? tr("Yes") : tr("No"));
+            SetCell(m_resultsTable, row, 5, ToQString(record.m_researchStage));
+            SetCell(m_resultsTable, row, 6, ToQString(record.m_operationalRisk));
+            SetCell(m_resultsTable, row, 7, ToQString(record.m_validationState));
+            SetCell(m_resultsTable, row, 8, ToQString(record.m_stalenessState));
+            SetCell(m_resultsTable, row, 9, record.IsBlocked() ? tr("Yes") : tr("No"));
         }
         m_resultsTable->resizeRowsToContents();
 
@@ -529,6 +559,7 @@ namespace TaintedGrailModdingSDK
             m_recordEvidenceView->clear();
             m_recordRelationshipsView->clear();
             m_recordValidationView->clear();
+            m_recordGovernanceView->clear();
             m_recordBlockersView->clear();
             return;
         }
@@ -543,11 +574,12 @@ namespace TaintedGrailModdingSDK
         m_recordSubjectValue->setText(ToQString(record->m_subjectRef));
         m_recordNativeRefValue->setText(record->m_nativeRefExact.empty() ? tr("Not applicable") : ToQString(record->m_nativeRefExact));
         m_recordStateValue->setText(
-            tr("Stage: %1 | Confidence: %2 | Risk: %3 | Validation: %4 | Superseded by: %5")
+            tr("Maturity: %1 | Confidence: %2 | Risk: %3 | Validation: %4 | Staleness: %5 | Superseded by: %6")
                 .arg(ToQString(record->m_researchStage))
                 .arg(ToQString(record->m_confidence))
                 .arg(ToQString(record->m_operationalRisk))
                 .arg(ToQString(record->m_validationState))
+                .arg(ToQString(record->m_stalenessState))
                 .arg(record->m_supersededByRecordId.empty() ? tr("No") : ToQString(record->m_supersededByRecordId)));
 
         QStringList aliases;
@@ -585,28 +617,51 @@ namespace TaintedGrailModdingSDK
             const QString target = relationship.m_toRecordId.empty()
                 ? ToQString(relationship.m_targetSubjectRef)
                 : ToQString(relationship.m_toRecordId);
-            relationshipLines << tr("%1 | %2 | %3 → %4 | validation: %5 | evidence: %6")
+            relationshipLines << tr("%1 | %2 | %3 → %4\n  Maturity: %5 | Confidence: %6 | Risk: %7 | Validation: %8 | Staleness: %9\n  Allowed: %10 | Prohibited: %11 | Evidence: %12")
                 .arg(ToQString(relationship.m_relationshipId))
                 .arg(ToQString(relationship.m_relationshipKind))
                 .arg(ToQString(relationship.m_fromRecordId))
                 .arg(target)
+                .arg(ToQString(relationship.m_researchStage))
+                .arg(ToQString(relationship.m_confidence))
+                .arg(ToQString(relationship.m_operationalRisk))
                 .arg(ToQString(relationship.m_validationState))
+                .arg(ToQString(relationship.m_stalenessState))
+                .arg(JoinValues(relationship.m_allowedUsages))
+                .arg(JoinValues(relationship.m_forbiddenUsages))
                 .arg(JoinValues(relationship.m_evidenceIds));
         }
-        m_recordRelationshipsView->setPlainText(relationshipLines.join('\n'));
+        m_recordRelationshipsView->setPlainText(relationshipLines.join(QStringLiteral("\n\n")));
 
         QStringList validationLines;
         for (const CatalogValidationEvent& validation : service.GetCatalog().FindValidationForRecord(record->m_recordId))
         {
-            validationLines << tr("%1 | %2 | %3 | %4 | %5\n  %6")
+            validationLines << tr("%1 | %2 | %3 | %4 | %5\n  Evidence: %6\n  %7")
                 .arg(ToQString(validation.m_checkedAt))
                 .arg(ToQString(validation.m_state))
                 .arg(ToQString(validation.m_method))
                 .arg(ToQString(validation.m_validator))
                 .arg(ToQString(validation.m_gameVersion))
+                .arg(JoinValues(validation.m_evidenceIds))
                 .arg(ToQString(validation.m_notes));
         }
         m_recordValidationView->setPlainText(validationLines.join(QStringLiteral("\n\n")));
+
+        QStringList governanceLines;
+        for (const CatalogGovernanceEvent& event : service.GetCatalog().FindGovernanceForSubject("record", record->m_recordId))
+        {
+            governanceLines << tr("%1 | %2 | %3 → %4 | usage: %5 | reviewer: %6\n  Evidence: %7 | Validation proof: %8\n  %9")
+                .arg(ToQString(event.m_decidedAt))
+                .arg(ToQString(event.m_axis))
+                .arg(ToQString(event.m_previousValue))
+                .arg(ToQString(event.m_newValue))
+                .arg(ToQString(event.m_usage))
+                .arg(ToQString(event.m_reviewer))
+                .arg(JoinValues(event.m_evidenceIds))
+                .arg(JoinValues(event.m_validationIds))
+                .arg(ToQString(event.m_notes));
+        }
+        m_recordGovernanceView->setPlainText(governanceLines.join(QStringLiteral("\n\n")));
 
         QStringList blockerLines;
         for (const BlockerRecord& blocker : service.GetSnapshot().m_blockers)
@@ -654,7 +709,7 @@ namespace TaintedGrailModdingSDK
         }
         RefreshChoices();
         RunSearch();
-        SetStatus(tr("Evidence promoted to a reviewed, unvalidated catalog record. No usage permission was granted."));
+        SetStatus(tr("Evidence promoted to a reviewed, unvalidated, staleness-unknown catalog record. No usage permission was granted."));
     }
 
     void CatalogBrowserWidget::SetStatus(const QString& message, bool error)

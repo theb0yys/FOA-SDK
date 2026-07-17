@@ -10,11 +10,18 @@ set(FILES
     Source/CatalogBrowserWidget.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
+    Source/CatalogGovernanceBlockerService.cpp
+    Source/CatalogGovernanceBlockerService.h
+    Source/CatalogGovernanceService.cpp
+    Source/CatalogGovernanceService.h
+    Source/CatalogGovernanceWidget.cpp
+    Source/CatalogGovernanceWidget.h
     Source/CatalogPersistenceService.cpp
     Source/CatalogPersistenceService.h
     Source/CatalogPromotionService.cpp
     Source/CatalogPromotionService.h
     Source/FoundationCatalogService.cpp
+    Source/FoundationGovernanceService.cpp
     Source/FoundationModels.cpp
     Source/FoundationModels.h
     Source/FoundationNotificationBus.h

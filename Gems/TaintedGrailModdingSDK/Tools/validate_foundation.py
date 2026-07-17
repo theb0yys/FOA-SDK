@@ -9,8 +9,8 @@
 """Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
 
 The check verifies repository structure, public-project governance, durable workspace,
-pack, source/evidence, and canonical catalog workflows, plus the editor-only product
-boundary. It does not replace an O3DE configure or compile.
+pack, source/evidence, canonical catalog, and independent governance-state workflows,
+plus the editor-only product boundary. It does not replace an O3DE configure or compile.
 """
 
 from __future__ import annotations
@@ -79,6 +79,7 @@ def validate_cmake(gem_root: Path) -> None:
         "NAME ${gem_name}.Editor GEM_MODULE",
         "taintedgrailmoddingsdk_editor_files.cmake",
         "AZ::AzToolsFramework",
+        "NAME ${gem_name}.Catalog.Tests",
         "ly_create_alias(NAME ${gem_name}.Tools",
         "ly_create_alias(NAME ${gem_name}.Builders",
         "VARIANTS Tools Builders",
@@ -97,9 +98,12 @@ def validate_source_manifest(gem_root: Path) -> None:
     required_entries = {
         "Source/CatalogBrowserWidget.cpp", "Source/CatalogBrowserWidget.h",
         "Source/CatalogDatabase.cpp", "Source/CatalogDatabase.h",
+        "Source/CatalogGovernanceBlockerService.cpp", "Source/CatalogGovernanceBlockerService.h",
+        "Source/CatalogGovernanceService.cpp", "Source/CatalogGovernanceService.h",
+        "Source/CatalogGovernanceWidget.cpp", "Source/CatalogGovernanceWidget.h",
         "Source/CatalogPersistenceService.cpp", "Source/CatalogPersistenceService.h",
         "Source/CatalogPromotionService.cpp", "Source/CatalogPromotionService.h",
-        "Source/FoundationCatalogService.cpp",
+        "Source/FoundationCatalogService.cpp", "Source/FoundationGovernanceService.cpp",
         "Source/FoundationModels.cpp", "Source/FoundationModels.h",
         "Source/FoundationNotificationBus.h",
         "Source/FoundationService.cpp", "Source/FoundationService.h",
@@ -188,8 +192,8 @@ def validate_catalog(gem_root: Path) -> None:
         "ReloadCatalog", "RegisterViewPane<CatalogBrowserWidget>",
         "Catalog record ID already exists; promotion never merges by display name",
         "Exact native reference is already owned by another canonical catalog record",
-        "Claim promotion cannot grant usage permission",
-        "no_unvalidated_runtime_use", "The canonical catalog document is bound to a different workspace or game profile",
+        "Claim promotion cannot grant usage permission", "no_unvalidated_runtime_use",
+        "The canonical catalog document is bound to a different workspace or game profile",
         "permission-before-validation", "relationship-evidence", "validation-profile",
     ):
         if fragment not in combined:
@@ -198,6 +202,7 @@ def validate_catalog(gem_root: Path) -> None:
     promotion = (source_root / "CatalogPromotionService.cpp").read_text(encoding="utf-8")
     if "record.m_allowedUsages" in promotion:
         fail("Evidence promotion must not assign allowed usages")
+    require_contains(promotion, 'record.m_stalenessState = "unknown"', source_root / "CatalogPromotionService.cpp")
 
     catalog_service = (source_root / "FoundationCatalogService.cpp").read_text(encoding="utf-8")
     save_position = catalog_service.find("m_catalogPersistence.Save(")
@@ -210,36 +215,63 @@ def validate_catalog(gem_root: Path) -> None:
         fail("Canonical identity must not merge or reject records based on display name")
 
 
+def validate_governance_engine(gem_root: Path) -> None:
+    source_root, combined = read_sources(gem_root)
+    required = (
+        "CatalogGovernanceEvent", "CatalogGovernanceRequest", "CatalogValidationRequest",
+        "m_stalenessState", "m_governanceHistory", "GetGovernanceHistory",
+        "class CatalogGovernanceService", "class CatalogGovernanceBlockerService",
+        "class CatalogGovernanceWidget", "ApplyCatalogGovernanceDecision",
+        "ApplyCatalogValidationDecision", "RegisterViewPane<CatalogGovernanceWidget>",
+        "GovernanceHistory", "stale_or_unverified", "validation_failed", "superseded",
+        "Allowed usage requires at least one validated proof event",
+        "Permission never follows automatically from evidence or validation",
+        "Usage permission requires a validated, current, unresolved-free, non-superseded record",
+    )
+    for fragment in required:
+        if fragment not in combined:
+            fail(f"Catalog governance engine is missing {fragment!r}")
+
+    governance = (source_root / "CatalogGovernanceService.cpp").read_text(encoding="utf-8")
+    if "updated.m_allowedUsages.push_back" in governance:
+        fail("Governance permissions must use duplicate-safe reviewed transitions")
+    validation_position = governance.find("catalog.AddValidationEvent(validation")
+    permission_text = "ApplyValidation"
+    if validation_position < 0 or permission_text not in governance:
+        fail("Validation decisions must be persisted as validation history")
+    require_contains(
+        governance,
+        "updated.m_allowedUsages.clear();",
+        source_root / "CatalogGovernanceService.cpp",
+    )
+    require_contains(
+        governance,
+        "ValidatePermissionBasis",
+        source_root / "CatalogGovernanceService.cpp",
+    )
+
+    foundation_governance = (source_root / "FoundationGovernanceService.cpp").read_text(encoding="utf-8")
+    require_contains(
+        foundation_governance,
+        "PersistCatalogCandidate(candidate, error)",
+        source_root / "FoundationGovernanceService.cpp",
+    )
+
+
 def validate_public_project(repo_root: Path) -> None:
     required_files = {
-        "README.md",
-        "CONTRIBUTING.md",
-        "CODE_OF_CONDUCT.md",
-        "SECURITY.md",
-        "SUPPORT.md",
-        "GOVERNANCE.md",
-        "ROADMAP.md",
-        "CHANGELOG.md",
-        ".github/CODEOWNERS",
-        ".github/PULL_REQUEST_TEMPLATE.md",
-        ".github/ISSUE_TEMPLATE/config.yml",
-        ".github/ISSUE_TEMPLATE/tg_sdk_bug.yml",
-        ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml",
-        ".github/ISSUE_TEMPLATE/tg_sdk_research.yml",
-        "docs/tainted-grail-sdk/README.md",
-        "docs/tainted-grail-sdk/USER_GUIDE.md",
-        "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
-        "docs/tainted-grail-sdk/ARCHITECTURE.md",
-        "docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md",
-        "docs/tainted-grail-sdk/CODE_QUALITY.md",
-        "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md",
-        "docs/tainted-grail-sdk/DATA_FORMATS.md",
-        "docs/tainted-grail-sdk/RELEASE_PROCESS.md",
-        "docs/tainted-grail-sdk/MAINTAINER_CHECKLIST.md",
-        "docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md",
-        "docs/tainted-grail-sdk/PRIVACY.md",
-        "docs/tainted-grail-sdk/ACCESSIBILITY.md",
-        "docs/tainted-grail-sdk/GLOSSARY.md",
+        "README.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "SUPPORT.md",
+        "GOVERNANCE.md", "ROADMAP.md", "CHANGELOG.md", ".github/CODEOWNERS",
+        ".github/PULL_REQUEST_TEMPLATE.md", ".github/ISSUE_TEMPLATE/config.yml",
+        ".github/ISSUE_TEMPLATE/tg_sdk_bug.yml", ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml",
+        ".github/ISSUE_TEMPLATE/tg_sdk_research.yml", "docs/tainted-grail-sdk/README.md",
+        "docs/tainted-grail-sdk/USER_GUIDE.md", "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
+        "docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md", "docs/tainted-grail-sdk/ARCHITECTURE.md",
+        "docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md", "docs/tainted-grail-sdk/CODE_QUALITY.md",
+        "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md", "docs/tainted-grail-sdk/DATA_FORMATS.md",
+        "docs/tainted-grail-sdk/RELEASE_PROCESS.md", "docs/tainted-grail-sdk/MAINTAINER_CHECKLIST.md",
+        "docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md", "docs/tainted-grail-sdk/PRIVACY.md",
+        "docs/tainted-grail-sdk/ACCESSIBILITY.md", "docs/tainted-grail-sdk/GLOSSARY.md",
     }
     for relative_path in sorted(required_files):
         if not (repo_root / relative_path).is_file():
@@ -252,8 +284,9 @@ def validate_public_project(repo_root: Path) -> None:
         "GOVERNANCE.md": "Evidence, claims, reviewed records, validation, and permission remain separate",
         "docs/tainted-grail-sdk/CODE_QUALITY.md": "Never use a display name as a database key",
         "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md": "Pending is not passing",
-        "docs/tainted-grail-sdk/DATA_FORMATS.md": "Catalog/catalog.tgcatalog.json",
+        "docs/tainted-grail-sdk/DATA_FORMATS.md": "GovernanceHistory",
         "docs/tainted-grail-sdk/CATALOG_GUIDE.md": "Promotion cannot create allowed usages",
+        "docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md": "Validation does not grant permission",
         ".github/PULL_REQUEST_TEMPLATE.md": "Author self-review",
         ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml": "design review before implementation",
         ".github/CODEOWNERS": "/Gems/TaintedGrailModdingSDK/ @theb0yys",
@@ -277,6 +310,7 @@ def main() -> int:
         validate_editor_foundation(gem_root)
         validate_source_intake(gem_root)
         validate_catalog(gem_root)
+        validate_governance_engine(gem_root)
         validate_public_project(repo_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
@@ -285,7 +319,8 @@ def main() -> int:
     print("Tainted Grail SDK foundation validation passed.")
     print(
         "Validated: public documentation and governance, workspace and pack editing, source/evidence intake, "
-        "canonical catalog persistence/search/inspection/promotion, transactional publish boundaries, blockers, "
+        "canonical catalog persistence/search/promotion, independent maturity/confidence/risk/validation/staleness, "
+        "proof-backed permission/prohibition decisions, supersession, transactional publish boundaries, blockers, "
         "editor panes, automatic refresh, and editor-only runtime separation."
     )
     return 0

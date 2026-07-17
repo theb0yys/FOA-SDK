@@ -235,6 +235,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_confidence;
         AZStd::string m_operationalRisk;
         AZStd::string m_validationState;
+        AZStd::string m_stalenessState;
         AZStd::vector<AZStd::string> m_allowedUsages;
         AZStd::vector<AZStd::string> m_forbiddenUsages;
         AZStd::vector<AZStd::string> m_evidenceIds;
@@ -251,6 +252,7 @@ namespace TaintedGrailModdingSDK
         AZ_TYPE_INFO(CatalogRelationship, "{B4E770F5-CE9D-4F03-9653-BF10EBE27275}");
 
         static void Reflect(AZ::ReflectContext* context);
+        bool IsBlocked() const;
 
         AZStd::string m_relationshipId;
         AZStd::string m_fromRecordId;
@@ -258,8 +260,19 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_targetSubjectRef;
         AZStd::string m_relationshipKind;
         AZStd::vector<AZStd::string> m_evidenceIds;
+        AZStd::string m_researchStage;
+        AZStd::string m_confidence;
+        AZStd::string m_operationalRisk;
         AZStd::string m_validationState;
+        AZStd::string m_stalenessState;
+        AZStd::vector<AZStd::string> m_allowedUsages;
+        AZStd::vector<AZStd::string> m_forbiddenUsages;
+        AZStd::vector<AZStd::string> m_missingRefs;
+        AZStd::vector<AZStd::string> m_conflictRefs;
         AZStd::vector<AZStd::string> m_attributes;
+        AZStd::string m_createdAt;
+        AZStd::string m_updatedAt;
+        AZStd::string m_supersededByRelationshipId;
     };
 
     struct CatalogValidationEvent
@@ -267,16 +280,41 @@ namespace TaintedGrailModdingSDK
         AZ_TYPE_INFO(CatalogValidationEvent, "{5D896787-D118-4702-B5E3-F02BFA7D3E61}");
 
         static void Reflect(AZ::ReflectContext* context);
+        AZStd::string GetSubjectKind() const;
+        AZStd::string GetSubjectId() const;
 
         AZStd::string m_validationId;
-        AZStd::string m_recordId;
+        AZStd::string m_subjectKind;
+        AZStd::string m_subjectId;
+        AZStd::string m_recordId; // Legacy schema-1 record binding.
         AZStd::string m_state;
         AZStd::string m_method;
         AZStd::string m_validator;
         AZStd::string m_checkedAt;
         AZStd::string m_profileId;
         AZStd::string m_gameVersion;
+        AZStd::string m_branch;
         AZStd::vector<AZStd::string> m_evidenceIds;
+        AZStd::string m_notes;
+    };
+
+    struct CatalogGovernanceEvent
+    {
+        AZ_TYPE_INFO(CatalogGovernanceEvent, "{7E46D7D8-1D57-4F39-AC1C-6D9F2CB8A3C1}");
+
+        static void Reflect(AZ::ReflectContext* context);
+
+        AZStd::string m_eventId;
+        AZStd::string m_subjectKind;
+        AZStd::string m_subjectId;
+        AZStd::string m_axis;
+        AZStd::string m_previousValue;
+        AZStd::string m_newValue;
+        AZStd::string m_usage;
+        AZStd::vector<AZStd::string> m_evidenceIds;
+        AZStd::vector<AZStd::string> m_validationIds;
+        AZStd::string m_reviewer;
+        AZStd::string m_decidedAt;
         AZStd::string m_notes;
     };
 
@@ -295,6 +333,7 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<CatalogRecord> m_records;
         AZStd::vector<CatalogRelationship> m_relationships;
         AZStd::vector<CatalogValidationEvent> m_validationHistory;
+        AZStd::vector<CatalogGovernanceEvent> m_governanceHistory;
     };
 
     struct CatalogPromotionRequest
@@ -317,6 +356,30 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<AZStd::string> m_tags;
     };
 
+    struct CatalogGovernanceRequest
+    {
+        AZStd::string m_subjectKind;
+        AZStd::string m_subjectId;
+        AZStd::string m_axis;
+        AZStd::string m_value;
+        AZStd::string m_usage;
+        AZStd::vector<AZStd::string> m_evidenceIds;
+        AZStd::vector<AZStd::string> m_validationIds;
+        AZStd::string m_reviewer;
+        AZStd::string m_notes;
+    };
+
+    struct CatalogValidationRequest
+    {
+        AZStd::string m_subjectKind;
+        AZStd::string m_subjectId;
+        AZStd::string m_state;
+        AZStd::string m_method;
+        AZStd::vector<AZStd::string> m_evidenceIds;
+        AZStd::string m_validator;
+        AZStd::string m_notes;
+    };
+
     struct CatalogQuery
     {
         AZStd::string m_searchText;
@@ -327,8 +390,11 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_subjectRef;
         AZStd::string m_nativeRefExact;
         AZStd::string m_identityKind;
+        AZStd::string m_researchStage;
         AZStd::string m_confidence;
+        AZStd::string m_operationalRisk;
         AZStd::string m_validationState;
+        AZStd::string m_stalenessState;
         AZStd::string m_permission;
         AZStd::string m_evidenceId;
         bool m_blockedOnly = false;
@@ -388,6 +454,10 @@ namespace TaintedGrailModdingSDK
         AZ::u64 m_catalogRecordCount = 0;
         AZ::u64 m_catalogRelationshipCount = 0;
         AZ::u64 m_catalogValidationCount = 0;
+        AZ::u64 m_catalogGovernanceCount = 0;
+        AZ::u64 m_staleCatalogSubjectCount = 0;
+        AZ::u64 m_allowedUsageCount = 0;
+        AZ::u64 m_forbiddenUsageCount = 0;
         AZ::u64 m_openBlockerCount = 0;
         AZStd::vector<DomainCoverage> m_domainCoverage;
         AZStd::vector<ImportIssue> m_importIssues;

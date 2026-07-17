@@ -51,8 +51,11 @@ namespace TaintedGrailModdingSDK
         QComboBox* m_domainFilter = nullptr;
         QComboBox* m_kindFilter = nullptr;
         QComboBox* m_identityFilter = nullptr;
+        QComboBox* m_stageFilter = nullptr;
         QComboBox* m_confidenceFilter = nullptr;
+        QComboBox* m_riskFilter = nullptr;
         QComboBox* m_validationFilter = nullptr;
+        QComboBox* m_stalenessFilter = nullptr;
         QLineEdit* m_permissionFilter = nullptr;
         QCheckBox* m_blockedOnly = nullptr;
         QCheckBox* m_includeSuperseded = nullptr;
@@ -68,6 +71,7 @@ namespace TaintedGrailModdingSDK
         QPlainTextEdit* m_recordEvidenceView = nullptr;
         QPlainTextEdit* m_recordRelationshipsView = nullptr;
         QPlainTextEdit* m_recordValidationView = nullptr;
+        QPlainTextEdit* m_recordGovernanceView = nullptr;
         QPlainTextEdit* m_recordBlockersView = nullptr;
 
         QComboBox* m_promotionEvidence = nullptr;

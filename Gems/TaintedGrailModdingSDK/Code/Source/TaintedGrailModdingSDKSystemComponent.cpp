@@ -8,6 +8,7 @@
 #include "TaintedGrailModdingSDKSystemComponent.h"
 
 #include "CatalogBrowserWidget.h"
+#include "CatalogGovernanceWidget.h"
 #include "FoundationModels.h"
 #include "FoundationService.h"
 #include "FoundationStatusWidget.h"
@@ -27,6 +28,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* PackManagerViewPaneName = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakeViewPaneName = "Tainted Grail Source Intake";
         constexpr const char* CatalogBrowserViewPaneName = "Tainted Grail Catalog Browser";
+        constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -43,6 +45,7 @@ namespace TaintedGrailModdingSDK
         CatalogRecord::Reflect(context);
         CatalogRelationship::Reflect(context);
         CatalogValidationEvent::Reflect(context);
+        CatalogGovernanceEvent::Reflect(context);
         CatalogDocument::Reflect(context);
         BlockerRecord::Reflect(context);
         DomainCoverage::Reflect(context);
@@ -51,7 +54,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<TaintedGrailModdingSDKSystemComponent, AZ::Component>()
-                ->Version(5);
+                ->Version(6);
         }
     }
 
@@ -85,6 +88,7 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(PackManagerViewPaneName);
             AzToolsFramework::UnregisterViewPane(SourceIntakeViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogBrowserViewPaneName);
+            AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             m_viewRegistered = false;
         }
 
@@ -106,7 +110,6 @@ namespace TaintedGrailModdingSDK
         statusOptions.isDeletable = true;
         statusOptions.isPreview = true;
         statusOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.FoundationStatus");
-
         AzToolsFramework::RegisterViewPane<FoundationStatusWidget>(
             FoundationStatusViewPaneName,
             "Tainted Grail SDK",
@@ -118,7 +121,6 @@ namespace TaintedGrailModdingSDK
         packOptions.isDeletable = true;
         packOptions.isPreview = true;
         packOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.PackManager");
-
         AzToolsFramework::RegisterViewPane<PackManagerWidget>(
             PackManagerViewPaneName,
             "Tainted Grail SDK",
@@ -130,7 +132,6 @@ namespace TaintedGrailModdingSDK
         intakeOptions.isDeletable = true;
         intakeOptions.isPreview = true;
         intakeOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.SourceIntake");
-
         AzToolsFramework::RegisterViewPane<SourceEvidenceIntakeWidget>(
             SourceIntakeViewPaneName,
             "Tainted Grail SDK",
@@ -142,11 +143,21 @@ namespace TaintedGrailModdingSDK
         catalogOptions.isDeletable = true;
         catalogOptions.isPreview = true;
         catalogOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.CatalogBrowser");
-
         AzToolsFramework::RegisterViewPane<CatalogBrowserWidget>(
             CatalogBrowserViewPaneName,
             "Tainted Grail SDK",
             catalogOptions);
+
+        AzToolsFramework::ViewPaneOptions governanceOptions;
+        governanceOptions.paneRect = QRect(180, 180, 980, 980);
+        governanceOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
+        governanceOptions.isDeletable = true;
+        governanceOptions.isPreview = true;
+        governanceOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.CatalogGovernance");
+        AzToolsFramework::RegisterViewPane<CatalogGovernanceWidget>(
+            CatalogGovernanceViewPaneName,
+            "Tainted Grail SDK",
+            governanceOptions);
 
         m_viewRegistered = true;
     }

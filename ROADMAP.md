@@ -4,7 +4,7 @@ This roadmap describes capability order, not promised dates. Work is promoted wh
 
 ## Guiding rule
 
-Every authoring feature must use the shared workspace, pack ownership, source/evidence, catalog, validation, risk, and permission infrastructure. Domain tools must not create private identity systems or bypass blockers.
+Every authoring feature must use the shared workspace, pack ownership, source/evidence, catalog, validation, risk, staleness, permission, and prohibition infrastructure. Domain tools must not create private identity systems or bypass blockers.
 
 ## Phase 0 — Project foundation
 
@@ -15,12 +15,6 @@ Status: implemented, continuing hardening.
 - Focused repository validation.
 - Full public README, user and contributor guides, architecture, quality, design-review, pre-commit review, PR review, security, conduct, governance, privacy, legal/content, accessibility, support, release, roadmap, changelog, issue forms, PR template, and CODEOWNERS.
 - Two-branch development model.
-
-Exit criteria:
-
-- Gem is discoverable and structurally validated.
-- Public project rules and contribution workflow are documented and CI-enforced.
-- No FoA runtime integration exists in the editor layer.
 
 ## Phase 1 — Workspace and exact game profile
 
@@ -43,7 +37,7 @@ Status: implemented, continuing hardening.
 
 ## Phase 3 — Source and evidence intake
 
-Status: implemented on the active development line, pending integration and hardening.
+Status: implemented, continuing hardening.
 
 - SHA-256 fingerprinting.
 - Exact profile/build binding.
@@ -54,37 +48,45 @@ Status: implemented on the active development line, pending integration and hard
 
 ## Phase 4 — Canonical catalog browser and record inspector
 
-Status: implemented on the active development line, pending integration and hardening.
+Status: implemented, continuing hardening.
 
 - Durable `Catalog/catalog.tgcatalog.json` document bound to workspace/profile/version/branch.
-- Stable canonical records, first-class relationships, and validation history.
-- Search by exact native reference, GUID, record ID, subject, alias, domain, kind, pack, confidence, validation, permission/prohibition, evidence, blocker state, and supersession.
-- Inspector for identity, ownership, evidence, relationships, versions, validation history, permissions, conflicts, missing references, and blockers.
-- Evidence-backed claim promotion into reviewed-but-unvalidated records.
+- Stable canonical records, first-class relationships, validation history, and governance history.
+- Search by exact native reference, GUID, record ID, subject, alias, domain, kind, pack, maturity, confidence, risk, validation, staleness, permission/prohibition, evidence, blocker state, and supersession.
+- Inspector for identity, ownership, evidence, relationships, versions, history, permissions, conflicts, missing references, and blockers.
+- Evidence-backed claim promotion into reviewed-but-unvalidated, staleness-unknown records.
 - Native exact-ref uniqueness and synthetic pack ownership.
 - No display-name identity merging.
 - Transactional save-before-publish lifecycle.
 
-Exit criteria:
-
-- Records survive workspace reload.
-- Exact-reference search is deterministic.
-- Evidence linkage is visible and validated.
-- Promotion requires pack ownership where applicable, exact profile-matched evidence, and explicit review state.
-- Promotion cannot grant allowed usage and adds `no_unvalidated_runtime_use`.
-
 ## Phase 5 — Validation, maturity, risk, and permission engine
 
-Status: next active slice.
+Status: implemented on the active development line, pending integration and hardening.
 
-- Independent maturity, confidence, operational risk, validation, permission, and prohibition states.
-- Usage-specific permission decisions.
-- Staleness, supersession, and compatibility evaluation.
-- Validation history and proof artifacts.
-- Queryable missing references and conflicts.
-- Review and authoring surfaces for permission decisions without runtime execution.
+- Independent maturity, confidence, operational risk, validation, staleness, permission, and prohibition states for records and relationships.
+- Usage-specific allow, forbid, and clear decisions.
+- Validation events bound to exact profile, game version, branch, evidence, method, and named validator.
+- Permission grants require a separate reviewed decision and validated proof for the same subject.
+- Stale and potentially stale subjects automatically lose allowed usages.
+- Supersession records a replacement, marks the old subject stale, removes allowed usages, and preserves history.
+- Append-only governance history with evidence, validation proof IDs, reviewer, time, and notes.
+- Governance blockers for unknown assessments, stale subjects, missing proof, missing history references, and profile mismatch.
+- Dedicated **Tainted Grail Catalog Governance** editor pane.
+- Unit tests for validation/permission separation, proof requirements, stale-state revocation, and supersession.
+
+Exit criteria:
+
+- validation never creates an allowed usage;
+- permission grants require validated proof and current, unresolved-free subjects;
+- permissions are revoked on stale, failed, blocked, or superseded transitions;
+- records and relationships use the same independent governance model;
+- decisions survive workspace reload with full history;
+- blockers are visible in the shared status window;
+- no governance action invokes FoA runtime code.
 
 ## Phase 6 — Domain authoring tools
+
+Status: next capability area after Phase 5 integration.
 
 ### Economy and content
 
@@ -157,7 +159,8 @@ Every phase must preserve:
 - exact identity;
 - pack ownership;
 - evidence provenance;
-- fail-closed validation;
+- independent governance axes;
+- fail-closed validation and permission;
 - editor/runtime separation;
 - durable schema versioning;
 - legal redistribution boundaries;

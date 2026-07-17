@@ -15,7 +15,7 @@ The project is building a public modding editor and SDK that can:
 - import and fingerprint research, diagnostics, dumps, observations, logs, screenshots, CSV, JSON, and Avalon Core source sets;
 - preserve exact native references, GUIDs, paths, aliases, versions, and evidence;
 - maintain a canonical, queryable game-knowledge catalog;
-- separate research maturity, validation, risk, and runtime permission;
+- assess maturity, confidence, operational risk, validation, staleness, permissions, prohibitions, and supersession independently;
 - author items, recipes, actors, troops, spawns, routes, factions, quests, state, assets, and localisation through shared governed data;
 - generate reviewed work orders and manifests for separately validated FoA runtime adapters;
 - provide a controlled validate, generate, build, package, deploy, launch, capture, and evidence workflow.
@@ -30,6 +30,7 @@ They may:
 - import and preserve evidence;
 - query and inspect game knowledge;
 - validate references and relationships;
+- record reviewed governance decisions and usage constraints;
 - produce blockers, permissions, plans, and handoff documents;
 - build editor-owned packages and reports.
 
@@ -41,13 +42,13 @@ They must not directly:
 - spawn actors or encounters;
 - grant items or recipes;
 - mutate quests, saves, vendors, loot, or world state;
-- claim runtime safety without the required evidence and validation.
+- claim runtime safety without the required evidence, validation, and reviewed permission decision.
 
 Native execution belongs to separate adapters with their own compatibility, persistence, cleanup, and rollback gates.
 
 ## Current editor tools
 
-The `TaintedGrailModdingSDK` Gem currently registers these O3DE tools under **Tools → Tainted Grail SDK**:
+The `TaintedGrailModdingSDK` Gem currently registers these O3DE tools under **Tools → Tainted Grail SDK**.
 
 ### Tainted Grail SDK Status
 
@@ -57,7 +58,7 @@ Configures and reports:
 - exact FoA game profile;
 - Mono or IL2CPP target;
 - Unity and BepInEx versions;
-- pack, source, evidence, catalog, and blocker totals;
+- pack, source, evidence, catalog, governance, and blocker totals;
 - catalog coverage and validation blockers.
 
 Workspace documents use the `*.tgworkspace.json` suffix.
@@ -96,12 +97,26 @@ Sources/<source-id>/evidence.tgevidence.json
 Provides:
 
 - exact native-reference and GUID search;
-- search by record ID, subject, alias, domain, kind, pack, confidence, validation, permission, evidence, blocker state, and supersession;
+- search by record ID, subject, alias, domain, kind, pack, confidence, risk, validation, staleness, permission, evidence, blocker state, and supersession;
 - inspection of identity, pack ownership, evidence, relationships, validation history, conflicts, missing refs, prohibitions, and blockers;
 - evidence-backed promotion into reviewed-but-unvalidated canonical records;
 - durable `Catalog/catalog.tgcatalog.json` persistence bound to the active workspace and exact game profile.
 
 Catalog records are never merged by display name. Claim promotion cannot grant allowed usage and automatically adds `no_unvalidated_runtime_use`.
+
+### Tainted Grail Catalog Governance
+
+Provides reviewed authoring of independent states for both records and relationships:
+
+- maturity/research stage;
+- confidence;
+- operational risk;
+- validation state and proof history;
+- staleness/current-build assessment;
+- named usage permissions and prohibitions;
+- supersession.
+
+Validation does not grant permission. An allowed usage requires a separate permission decision backed by a successful validation event for the same catalog subject. Marking a subject stale or superseded automatically removes allowed usages.
 
 ## Development roadmap
 
@@ -121,6 +136,8 @@ The active roadmap is maintained in [ROADMAP.md](ROADMAP.md). Major capability a
 Start with the [TG SDK documentation hub](docs/tainted-grail-sdk/README.md).
 
 - [User guide](docs/tainted-grail-sdk/USER_GUIDE.md)
+- [Catalog guide](docs/tainted-grail-sdk/CATALOG_GUIDE.md)
+- [Governance engine guide](docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md)
 - [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
 - [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
 - [Code quality standard](docs/tainted-grail-sdk/CODE_QUALITY.md)
@@ -157,6 +174,7 @@ Before opening a pull request, run:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
 ```
 
 A complete contribution must also pass the repository validation workflow and the applicable O3DE host build jobs.

@@ -8,6 +8,8 @@ on:
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   push:
     branches:
+      - foa-development
+      - main
       - development
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
@@ -20,7 +22,7 @@ permissions:
 
 jobs:
   validate-foundation:
-    name: Validate editor-only foundation
+    name: Validate TG SDK first editor milestone
     runs-on: ubuntu-latest
     timeout-minutes: 5
 

@@ -8,8 +8,9 @@
 
 """Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
 
-The check verifies repository structure, the six-piece first milestone, and the
-editor-only product boundary. It does not replace an O3DE configure or compile.
+The check verifies repository structure, the first editor milestone, durable
+workspace management, and the editor-only product boundary. It does not replace
+an O3DE configure or compile.
 """
 
 from __future__ import annotations
@@ -77,7 +78,7 @@ def validate_gem_metadata(gem_root: Path) -> None:
         fail("gem.json version must use MAJOR.MINOR.PATCH")
 
     if gem.get("dependencies") != []:
-        fail("The first editor milestone must not add Gem dependencies yet")
+        fail("The editor foundation must not add Gem dependencies yet")
 
 
 def validate_cmake(gem_root: Path) -> None:
@@ -112,6 +113,7 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/CatalogDatabase.h",
         "Source/FoundationModels.cpp",
         "Source/FoundationModels.h",
+        "Source/FoundationNotificationBus.h",
         "Source/FoundationService.cpp",
         "Source/FoundationService.h",
         "Source/FoundationStatusWidget.cpp",
@@ -123,6 +125,8 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/TaintedGrailModdingSDKEditorModule.cpp",
         "Source/TaintedGrailModdingSDKSystemComponent.cpp",
         "Source/TaintedGrailModdingSDKSystemComponent.h",
+        "Source/WorkspacePersistenceService.cpp",
+        "Source/WorkspacePersistenceService.h",
     }
     if entries != required_entries:
         fail(
@@ -135,7 +139,7 @@ def validate_source_manifest(gem_root: Path) -> None:
             fail(f"Manifest entry does not exist: {relative_path}")
 
 
-def validate_first_milestone(gem_root: Path) -> None:
+def validate_editor_foundation(gem_root: Path) -> None:
     source_root = gem_root / "Code" / "Source"
     source_files = sorted(source_root.glob("*.[ch]pp")) + sorted(source_root.glob("*.h"))
     combined = "\n".join(path.read_text(encoding="utf-8") for path in source_files)
@@ -143,19 +147,29 @@ def validate_first_milestone(gem_root: Path) -> None:
     required_fragments = (
         "WorkspaceModel",
         "GameProfile",
+        "m_runtimeTarget",
+        "m_outputPath",
+        "m_stagingPath",
+        "m_deploymentPath",
         "PackManifest",
         "class SourceEvidenceRegistry",
         "class CatalogDatabase",
         "class FoundationValidationService",
+        "class WorkspacePersistenceService",
+        "SaveObjectToFile",
+        "LoadObjectFromFile",
         "class FoundationService",
+        "FoundationNotificationBus",
         "class FoundationStatusWidget",
+        "OpenWorkspace",
+        "SaveWorkspaceAs",
         "RegisterViewPane<FoundationStatusWidget>",
         "TaintedGrailModdingSDKService",
         "FoA runtime execution remains disabled",
     )
     for fragment in required_fragments:
         if fragment not in combined:
-            fail(f"First editor milestone is missing {fragment!r}")
+            fail(f"Editor foundation is missing {fragment!r}")
 
     forbidden_runtime_tokens = (
         "#include <BepInEx",
@@ -180,15 +194,16 @@ def main() -> int:
         validate_gem_metadata(gem_root)
         validate_cmake(gem_root)
         validate_source_manifest(gem_root)
-        validate_first_milestone(gem_root)
+        validate_editor_foundation(gem_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
         return 1
 
     print("Tainted Grail SDK foundation validation passed.")
     print(
-        "Validated: workspace/profile model, pack manifest, source/evidence registry, "
-        "catalog/query service, blockers, status dock, and editor-only boundary."
+        "Validated: workspace/profile editing and JSON persistence, pack manifest, "
+        "source/evidence registry, catalog/query service, blockers, status dock, "
+        "automatic refresh, and editor-only boundary."
     )
     return 0
 

@@ -6,7 +6,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 ### For users
 
-- [User Guide](USER_GUIDE.md) — build, open, configure, and use the current editor tools.
+- [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
+- [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, and canonical catalog contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.

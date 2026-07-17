@@ -4,15 +4,38 @@ on:
   pull_request:
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
+      - "docs/tainted-grail-sdk/**"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "CODE_OF_CONDUCT.md"
+      - "SECURITY.md"
+      - "SUPPORT.md"
+      - "GOVERNANCE.md"
+      - "ROADMAP.md"
+      - "CHANGELOG.md"
+      - ".github/CODEOWNERS"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/ISSUE_TEMPLATE/**"
       - "engine.json"
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   push:
     branches:
       - foa-development
       - main
-      - development
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
+      - "docs/tainted-grail-sdk/**"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "CODE_OF_CONDUCT.md"
+      - "SECURITY.md"
+      - "SUPPORT.md"
+      - "GOVERNANCE.md"
+      - "ROADMAP.md"
+      - "CHANGELOG.md"
+      - ".github/CODEOWNERS"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/ISSUE_TEMPLATE/**"
       - "engine.json"
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   workflow_dispatch:
@@ -22,7 +45,7 @@ permissions:
 
 jobs:
   validate-foundation:
-    name: Validate TG SDK first editor milestone
+    name: Validate TG SDK public foundation and catalog
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
@@ -35,8 +58,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate foundation contracts
+      - name: Validate foundation and governance contracts
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+
+      - name: Validate catalog test contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
 
       - name: Validate O3DE source policy for SDK Gem
         shell: bash

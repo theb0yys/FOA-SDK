@@ -16,24 +16,31 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<GameProfile>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("ProfileId", &GameProfile::m_profileId)
                 ->Field("DisplayName", &GameProfile::m_displayName)
                 ->Field("InstallPath", &GameProfile::m_installPath)
                 ->Field("GameVersion", &GameProfile::m_gameVersion)
                 ->Field("Branch", &GameProfile::m_branch)
+                ->Field("RuntimeTarget", &GameProfile::m_runtimeTarget)
                 ->Field("UnityVersion", &GameProfile::m_unityVersion)
                 ->Field("BepInExVersion", &GameProfile::m_bepInExVersion)
                 ->Field("ManagedAssembliesPath", &GameProfile::m_managedAssembliesPath)
                 ->Field("PluginPath", &GameProfile::m_pluginPath)
                 ->Field("DiagnosticsPath", &GameProfile::m_diagnosticsPath)
+                ->Field("ExtractedDataPath", &GameProfile::m_extractedDataPath)
                 ->Field("DlcScopes", &GameProfile::m_dlcScopes);
         }
     }
 
     bool GameProfile::IsConfigured() const
     {
-        return !m_profileId.empty() && !m_installPath.empty() && !m_gameVersion.empty() && !m_branch.empty();
+        return !m_profileId.empty()
+            && !m_installPath.empty()
+            && !m_gameVersion.empty()
+            && !m_branch.empty()
+            && !m_runtimeTarget.empty()
+            && !m_managedAssembliesPath.empty();
     }
 
     void WorkspaceModel::Reflect(AZ::ReflectContext* context)
@@ -41,10 +48,13 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<WorkspaceModel>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("WorkspaceId", &WorkspaceModel::m_workspaceId)
                 ->Field("DisplayName", &WorkspaceModel::m_displayName)
                 ->Field("RootPath", &WorkspaceModel::m_rootPath)
+                ->Field("OutputPath", &WorkspaceModel::m_outputPath)
+                ->Field("StagingPath", &WorkspaceModel::m_stagingPath)
+                ->Field("DeploymentPath", &WorkspaceModel::m_deploymentPath)
                 ->Field("ActiveGameProfileId", &WorkspaceModel::m_activeGameProfileId)
                 ->Field("GameProfiles", &WorkspaceModel::m_gameProfiles);
         }
@@ -179,11 +189,15 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<FoundationSnapshot>()
-                ->Version(1)
+                ->Version(2)
                 ->Field("WorkspaceName", &FoundationSnapshot::m_workspaceName)
+                ->Field("WorkspaceFilePath", &FoundationSnapshot::m_workspaceFilePath)
                 ->Field("ActiveGameProfile", &FoundationSnapshot::m_activeGameProfile)
                 ->Field("GameVersion", &FoundationSnapshot::m_gameVersion)
                 ->Field("Branch", &FoundationSnapshot::m_branch)
+                ->Field("RuntimeTarget", &FoundationSnapshot::m_runtimeTarget)
+                ->Field("UnityVersion", &FoundationSnapshot::m_unityVersion)
+                ->Field("BepInExVersion", &FoundationSnapshot::m_bepInExVersion)
                 ->Field("GameProfileCount", &FoundationSnapshot::m_gameProfileCount)
                 ->Field("PackCount", &FoundationSnapshot::m_packCount)
                 ->Field("SourceCount", &FoundationSnapshot::m_sourceCount)

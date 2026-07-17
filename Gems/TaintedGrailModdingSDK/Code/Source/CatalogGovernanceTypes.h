@@ -31,6 +31,7 @@ namespace TaintedGrailModdingSDK
 
     enum class ResearchStage
     {
+        Unknown,
         S0,
         S1,
         S2,
@@ -50,6 +51,7 @@ namespace TaintedGrailModdingSDK
     enum class ConfidenceLevel
     {
         Unknown,
+        Unrated,
         Hypothesis,
         Inferred,
         Documented,
@@ -95,7 +97,7 @@ namespace TaintedGrailModdingSDK
     {
         CatalogSubjectKind m_subjectKind = CatalogSubjectKind::Record;
         AZStd::string m_subjectId;
-        ResearchStage m_researchStage = ResearchStage::S0;
+        ResearchStage m_researchStage = ResearchStage::Unknown;
         ConfidenceLevel m_confidence = ConfidenceLevel::Unknown;
         OperationalRisk m_operationalRisk = OperationalRisk::Unknown;
         ValidationState m_validationState = ValidationState::Unvalidated;

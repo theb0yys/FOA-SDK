@@ -17,14 +17,7 @@ namespace TaintedGrailModdingSDK
     {
         bool Contains(const AZStd::vector<AZStd::string>& values, const AZStd::string& value)
         {
-            for (const AZStd::string& candidate : values)
-            {
-                if (candidate == value)
-                {
-                    return true;
-                }
-            }
-            return false;
+            return AZStd::find(values.begin(), values.end(), value) != values.end();
         }
 
         AZStd::string LowerAscii(AZStd::string value)
@@ -46,6 +39,54 @@ namespace TaintedGrailModdingSDK
             for (const AZStd::string& value : values)
             {
                 if (ContainsText(value, loweredNeedle))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool IsKnownResearchStage(const AZStd::string& value)
+        {
+            return value.empty() || value == "unknown"
+                || value == "S0" || value == "S1" || value == "S2" || value == "S3" || value == "S4"
+                || value == "S5" || value == "S6" || value == "S7" || value == "S8"
+                || value == "reviewed" || value == "reconciled" || value == "validated"
+                || value == "authoring_ready" || value == "runtime_approved";
+        }
+
+        bool IsKnownConfidence(const AZStd::string& value)
+        {
+            return value.empty() || value == "unknown" || value == "unrated" || value == "hypothesis"
+                || value == "inferred" || value == "documented" || value == "runtime_observed"
+                || value == "validated";
+        }
+
+        bool IsKnownOperationalRisk(const AZStd::string& value)
+        {
+            return value.empty() || value == "unknown" || value == "low" || value == "medium"
+                || value == "high" || value == "critical";
+        }
+
+        bool IsKnownValidationState(const AZStd::string& value)
+        {
+            return value.empty() || value == "unvalidated" || value == "pending" || value == "validated"
+                || value == "failed" || value == "stale" || value == "blocked";
+        }
+
+        bool IsKnownStalenessState(const AZStd::string& value)
+        {
+            return value.empty() || value == "unknown" || value == "current"
+                || value == "potentially_stale" || value == "stale";
+        }
+
+        bool HasPermissionConflict(
+            const AZStd::vector<AZStd::string>& allowed,
+            const AZStd::vector<AZStd::string>& forbidden)
+        {
+            for (const AZStd::string& usage : allowed)
+            {
+                if (Contains(forbidden, usage))
                 {
                     return true;
                 }
@@ -75,16 +116,7 @@ namespace TaintedGrailModdingSDK
 
     bool CatalogDatabase::Upsert(const CatalogRecord& record, AZStd::string* error)
     {
-        CatalogRecord* replacing = nullptr;
-        for (CatalogRecord& existing : m_records)
-        {
-            if (existing.m_recordId == record.m_recordId)
-            {
-                replacing = &existing;
-                break;
-            }
-        }
-
+        CatalogRecord* replacing = FindMutableRecordById(record.m_recordId);
         if (!ValidateRecord(record, replacing, error))
         {
             return false;
@@ -108,49 +140,93 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        for (CatalogRelationship& existing : m_relationships)
+        if (CatalogRelationship* existing = FindMutableRelationshipById(relationship.m_relationshipId))
         {
-            if (existing.m_relationshipId == relationship.m_relationshipId)
-            {
-                existing = relationship;
-                return true;
-            }
+            *existing = relationship;
         }
-        m_relationships.push_back(relationship);
+        else
+        {
+            m_relationships.push_back(relationship);
+        }
         return true;
     }
 
     bool CatalogDatabase::AddValidationEvent(const CatalogValidationEvent& validation, AZStd::string* error)
     {
-        if (validation.m_validationId.empty() || validation.m_recordId.empty() || validation.m_state.empty()
-            || validation.m_method.empty() || validation.m_checkedAt.empty())
+        const AZStd::string subjectKind = validation.GetSubjectKind();
+        const AZStd::string subjectId = validation.GetSubjectId();
+        if (validation.m_validationId.empty() || subjectId.empty() || validation.m_state.empty()
+            || validation.m_method.empty() || validation.m_checkedAt.empty() || validation.m_validator.empty())
         {
             if (error)
             {
-                *error = "Validation history requires validation ID, record ID, state, method, and check time.";
+                *error = "Validation history requires validation ID, subject, state, method, validator, and check time.";
             }
             return false;
         }
-        if (!FindByRecordId(validation.m_recordId))
+        if (subjectKind != "record" && subjectKind != "relationship")
         {
             if (error)
             {
-                *error = "Validation history references an unknown catalog record.";
+                *error = "Validation subject kind must be record or relationship.";
             }
             return false;
         }
-        for (const CatalogValidationEvent& existing : m_validationHistory)
+        if ((subjectKind == "record" && !FindByRecordId(subjectId))
+            || (subjectKind == "relationship" && !FindRelationshipById(subjectId)))
         {
-            if (existing.m_validationId == validation.m_validationId)
+            if (error)
+            {
+                *error = "Validation history references an unknown catalog subject.";
+            }
+            return false;
+        }
+        if (!IsKnownValidationState(validation.m_state))
+        {
+            if (error)
+            {
+                *error = "Validation history contains an unsupported validation state.";
+            }
+            return false;
+        }
+        if (validation.m_evidenceIds.empty())
+        {
+            if (error)
+            {
+                *error = "Validation history requires evidence IDs.";
+            }
+            return false;
+        }
+        if (FindValidationById(validation.m_validationId))
+        {
+            if (error)
+            {
+                *error = "Validation history ID already exists.";
+            }
+            return false;
+        }
+        m_validationHistory.push_back(validation);
+        return true;
+    }
+
+    bool CatalogDatabase::AddGovernanceEvent(const CatalogGovernanceEvent& event, AZStd::string* error)
+    {
+        if (!ValidateGovernanceEvent(event, error))
+        {
+            return false;
+        }
+        for (const CatalogGovernanceEvent& existing : m_governanceHistory)
+        {
+            if (existing.m_eventId == event.m_eventId)
             {
                 if (error)
                 {
-                    *error = "Validation history ID already exists.";
+                    *error = "Catalog governance event ID already exists.";
                 }
                 return false;
             }
         }
-        m_validationHistory.push_back(validation);
+        m_governanceHistory.push_back(event);
         return true;
     }
 
@@ -187,6 +263,13 @@ namespace TaintedGrailModdingSDK
                 return false;
             }
         }
+        for (const CatalogGovernanceEvent& event : document.m_governanceHistory)
+        {
+            if (!candidate.AddGovernanceEvent(event, error))
+            {
+                return false;
+            }
+        }
 
         *this = AZStd::move(candidate);
         return true;
@@ -197,6 +280,31 @@ namespace TaintedGrailModdingSDK
         m_records.clear();
         m_relationships.clear();
         m_validationHistory.clear();
+        m_governanceHistory.clear();
+    }
+
+    CatalogRecord* CatalogDatabase::FindMutableRecordById(const AZStd::string& recordId)
+    {
+        for (CatalogRecord& record : m_records)
+        {
+            if (record.m_recordId == recordId)
+            {
+                return &record;
+            }
+        }
+        return nullptr;
+    }
+
+    CatalogRelationship* CatalogDatabase::FindMutableRelationshipById(const AZStd::string& relationshipId)
+    {
+        for (CatalogRelationship& relationship : m_relationships)
+        {
+            if (relationship.m_relationshipId == relationshipId)
+            {
+                return &relationship;
+            }
+        }
+        return nullptr;
     }
 
     const CatalogRecord* CatalogDatabase::FindByRecordId(const AZStd::string& recordId) const
@@ -230,6 +338,18 @@ namespace TaintedGrailModdingSDK
             if (relationship.m_relationshipId == relationshipId)
             {
                 return &relationship;
+            }
+        }
+        return nullptr;
+    }
+
+    const CatalogValidationEvent* CatalogDatabase::FindValidationById(const AZStd::string& validationId) const
+    {
+        for (const CatalogValidationEvent& validation : m_validationHistory)
+        {
+            if (validation.m_validationId == validationId)
+            {
+                return &validation;
             }
         }
         return nullptr;
@@ -274,11 +394,23 @@ namespace TaintedGrailModdingSDK
             {
                 continue;
             }
+            if (!query.m_researchStage.empty() && record.m_researchStage != query.m_researchStage)
+            {
+                continue;
+            }
             if (!query.m_confidence.empty() && record.m_confidence != query.m_confidence)
             {
                 continue;
             }
+            if (!query.m_operationalRisk.empty() && record.m_operationalRisk != query.m_operationalRisk)
+            {
+                continue;
+            }
             if (!query.m_validationState.empty() && record.m_validationState != query.m_validationState)
+            {
+                continue;
+            }
+            if (!query.m_stalenessState.empty() && record.m_stalenessState != query.m_stalenessState)
             {
                 continue;
             }
@@ -344,10 +476,17 @@ namespace TaintedGrailModdingSDK
 
     AZStd::vector<CatalogValidationEvent> CatalogDatabase::FindValidationForRecord(const AZStd::string& recordId) const
     {
+        return FindValidationForSubject("record", recordId);
+    }
+
+    AZStd::vector<CatalogValidationEvent> CatalogDatabase::FindValidationForSubject(
+        const AZStd::string& subjectKind,
+        const AZStd::string& subjectId) const
+    {
         AZStd::vector<CatalogValidationEvent> matches;
         for (const CatalogValidationEvent& validation : m_validationHistory)
         {
-            if (validation.m_recordId == recordId)
+            if (validation.GetSubjectKind() == subjectKind && validation.GetSubjectId() == subjectId)
             {
                 matches.push_back(validation);
             }
@@ -359,6 +498,29 @@ namespace TaintedGrailModdingSDK
                 return left.m_validationId < right.m_validationId;
             }
             return left.m_checkedAt < right.m_checkedAt;
+        });
+        return matches;
+    }
+
+    AZStd::vector<CatalogGovernanceEvent> CatalogDatabase::FindGovernanceForSubject(
+        const AZStd::string& subjectKind,
+        const AZStd::string& subjectId) const
+    {
+        AZStd::vector<CatalogGovernanceEvent> matches;
+        for (const CatalogGovernanceEvent& event : m_governanceHistory)
+        {
+            if (event.m_subjectKind == subjectKind && event.m_subjectId == subjectId)
+            {
+                matches.push_back(event);
+            }
+        }
+        AZStd::sort(matches.begin(), matches.end(), [](const CatalogGovernanceEvent& left, const CatalogGovernanceEvent& right)
+        {
+            if (left.m_decidedAt == right.m_decidedAt)
+            {
+                return left.m_eventId < right.m_eventId;
+            }
+            return left.m_decidedAt < right.m_decidedAt;
         });
         return matches;
     }
@@ -410,6 +572,7 @@ namespace TaintedGrailModdingSDK
         document.m_records = m_records;
         document.m_relationships = m_relationships;
         document.m_validationHistory = m_validationHistory;
+        document.m_governanceHistory = m_governanceHistory;
         return document;
     }
 
@@ -428,6 +591,11 @@ namespace TaintedGrailModdingSDK
         return m_validationHistory;
     }
 
+    const AZStd::vector<CatalogGovernanceEvent>& CatalogDatabase::GetGovernanceHistory() const
+    {
+        return m_governanceHistory;
+    }
+
     bool CatalogDatabase::ValidateRecord(
         const CatalogRecord& record,
         const CatalogRecord* replacing,
@@ -442,11 +610,28 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        if (record.m_identityKind != "native" && record.m_identityKind != "synthetic"
+            && record.m_identityKind != "composite" && record.m_identityKind != "source_scoped")
+        {
+            if (error)
+            {
+                *error = "Catalog identity kind must be native, synthetic, composite, or source_scoped.";
+            }
+            return false;
+        }
         if (record.m_identityKind == "native" && record.m_nativeRefExact.empty())
         {
             if (error)
             {
                 *error = "Native catalog records require an exact native reference.";
+            }
+            return false;
+        }
+        if (record.m_identityKind == "native" && !record.m_ownerPackId.empty())
+        {
+            if (error)
+            {
+                *error = "Native catalog records must not claim custom pack ownership.";
             }
             return false;
         }
@@ -458,11 +643,49 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        if (record.IsSynthetic() && !record.m_nativeRefExact.empty())
+        {
+            if (error)
+            {
+                *error = "Synthetic catalog records must not borrow an exact native reference.";
+            }
+            return false;
+        }
         if (record.m_evidenceIds.empty())
         {
             if (error)
             {
                 *error = "Canonical catalog records require at least one evidence ID.";
+            }
+            return false;
+        }
+        if (!IsKnownResearchStage(record.m_researchStage) || !IsKnownConfidence(record.m_confidence)
+            || !IsKnownOperationalRisk(record.m_operationalRisk)
+            || !IsKnownValidationState(record.m_validationState)
+            || !IsKnownStalenessState(record.m_stalenessState))
+        {
+            if (error)
+            {
+                *error = "Catalog record contains an unsupported maturity, confidence, risk, validation, or staleness value.";
+            }
+            return false;
+        }
+        if (HasPermissionConflict(record.m_allowedUsages, record.m_forbiddenUsages))
+        {
+            if (error)
+            {
+                *error = "A catalog usage cannot be both allowed and forbidden.";
+            }
+            return false;
+        }
+        if (!record.m_allowedUsages.empty()
+            && (record.m_validationState != "validated" || record.m_stalenessState != "current"
+                || !record.m_missingRefs.empty() || !record.m_conflictRefs.empty()
+                || !record.m_supersededByRecordId.empty()))
+        {
+            if (error)
+            {
+                *error = "Allowed usages require a validated, current, unresolved-free, non-superseded catalog record.";
             }
             return false;
         }
@@ -523,6 +746,70 @@ namespace TaintedGrailModdingSDK
             if (error)
             {
                 *error = "Canonical catalog relationships require at least one evidence ID.";
+            }
+            return false;
+        }
+        if (!IsKnownResearchStage(relationship.m_researchStage)
+            || !IsKnownConfidence(relationship.m_confidence)
+            || !IsKnownOperationalRisk(relationship.m_operationalRisk)
+            || !IsKnownValidationState(relationship.m_validationState)
+            || !IsKnownStalenessState(relationship.m_stalenessState))
+        {
+            if (error)
+            {
+                *error = "Catalog relationship contains an unsupported maturity, confidence, risk, validation, or staleness value.";
+            }
+            return false;
+        }
+        if (HasPermissionConflict(relationship.m_allowedUsages, relationship.m_forbiddenUsages))
+        {
+            if (error)
+            {
+                *error = "A relationship usage cannot be both allowed and forbidden.";
+            }
+            return false;
+        }
+        if (!relationship.m_allowedUsages.empty()
+            && (relationship.m_validationState != "validated" || relationship.m_stalenessState != "current"
+                || !relationship.m_missingRefs.empty() || !relationship.m_conflictRefs.empty()
+                || !relationship.m_supersededByRelationshipId.empty()))
+        {
+            if (error)
+            {
+                *error = "Allowed usages require a validated, current, unresolved-free, non-superseded relationship.";
+            }
+            return false;
+        }
+        return true;
+    }
+
+    bool CatalogDatabase::ValidateGovernanceEvent(
+        const CatalogGovernanceEvent& event,
+        AZStd::string* error) const
+    {
+        if (event.m_eventId.empty() || event.m_subjectKind.empty() || event.m_subjectId.empty()
+            || event.m_axis.empty() || event.m_reviewer.empty() || event.m_decidedAt.empty())
+        {
+            if (error)
+            {
+                *error = "Governance history requires event ID, subject, axis, reviewer, and decision time.";
+            }
+            return false;
+        }
+        if (event.m_subjectKind != "record" && event.m_subjectKind != "relationship")
+        {
+            if (error)
+            {
+                *error = "Governance subject kind must be record or relationship.";
+            }
+            return false;
+        }
+        if ((event.m_subjectKind == "record" && !FindByRecordId(event.m_subjectId))
+            || (event.m_subjectKind == "relationship" && !FindRelationshipById(event.m_subjectId)))
+        {
+            if (error)
+            {
+                *error = "Governance history references an unknown catalog subject.";
             }
             return false;
         }

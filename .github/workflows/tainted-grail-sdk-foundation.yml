@@ -40,6 +40,10 @@ on:
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   workflow_dispatch:
 
+concurrency:
+  group: tg-sdk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

@@ -19,7 +19,11 @@ namespace TaintedGrailModdingSDK
         void Clear();
 
         const SourceRecord* FindSource(const AZStd::string& sourceId) const;
+        const SourceRecord* FindSourceByFingerprint(
+            const AZStd::string& fingerprint,
+            const AZStd::string& profileId) const;
         const EvidenceRecord* FindEvidence(const AZStd::string& evidenceId) const;
+        AZStd::vector<EvidenceRecord> FindEvidenceForSource(const AZStd::string& sourceId) const;
         AZStd::vector<EvidenceRecord> FindEvidenceForSubject(const AZStd::string& subjectRef) const;
 
         const AZStd::vector<SourceRecord>& GetSources() const;

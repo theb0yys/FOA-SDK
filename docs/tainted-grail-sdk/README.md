@@ -1,0 +1,72 @@
+# Tainted Grail Modding Editor and SDK Documentation
+
+This directory contains the public documentation for the TG SDK layer in this O3DE fork.
+
+## Start here
+
+### For users
+
+- [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
+- [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
+- [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, and canonical catalog contracts.
+- [Support](../../SUPPORT.md) — where and how to ask for help.
+- [Security](../../SECURITY.md) — private reporting and secure-use guidance.
+- [Privacy](PRIVACY.md) — local data handling and telemetry requirements.
+- [Accessibility](ACCESSIBILITY.md) — user-interface accessibility standard.
+- [Glossary](GLOSSARY.md) — shared project terminology.
+
+### For contributors
+
+- [Contributing](../../CONTRIBUTING.md) — contribution lifecycle and DCO requirements.
+- [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
+- [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
+- [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
+- [Review and Merge Policy](REVIEW_AND_MERGE_POLICY.md) — design review, self-review, pull-request review, and merge gates.
+- [Data Formats](DATA_FORMATS.md) — versioned durable-document requirements.
+- [Release Process](RELEASE_PROCESS.md) — versioning, release evidence, packaging, and rollback.
+- [Maintainer Checklist](MAINTAINER_CHECKLIST.md) — recurring repository and release responsibilities.
+- [Legal and Content Policy](LEGAL_AND_CONTENT_POLICY.md) — redistribution and proprietary-content boundaries.
+
+### Project governance
+
+- [Governance](../../GOVERNANCE.md)
+- [Code of Conduct](../../CODE_OF_CONDUCT.md)
+- [Roadmap](../../ROADMAP.md)
+- [Changelog](../../CHANGELOG.md)
+
+## Documentation authority
+
+When documents conflict, use this order:
+
+1. security policy and licence obligations;
+2. governance and review policy;
+3. architecture and data-format contracts;
+4. code-quality standard;
+5. user and development guides;
+6. examples and issue discussions.
+
+A merged architecture decision or schema migration may supersede an older section. The change must update the affected documentation in the same pull request.
+
+## Current product status
+
+The project is pre-alpha. Current implemented editor workflows cover:
+
+- workspace and exact game profile;
+- mod and content-pack projects;
+- source and evidence intake;
+- canonical catalog browser, record inspector, first-class relationships, validation history, and reviewed claim promotion;
+- foundation status, coverage, import issues, and blockers.
+
+The next active slice expands the independent maturity, confidence, operational-risk, validation, permission, and prohibition engine. Domain authoring tools, runtime adapters, and production deployment are not complete.
+
+## Documentation contribution rules
+
+Documentation changes must:
+
+- describe current behavior honestly;
+- distinguish implemented, planned, and experimental behavior;
+- avoid publishing proprietary game content or private paths;
+- use stable internal links;
+- update examples when schemas change;
+- include migration notes for breaking changes;
+- use clear, direct language and define project-specific terms.

@@ -32,6 +32,28 @@ ly_add_source_properties(
             O3DE_GEM_VERSION=${gem_version}
 )
 
+if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
+    ly_add_target(
+        NAME ${gem_name}.Catalog.Tests ${PAL_TRAIT_TEST_TARGET_TYPE}
+        NAMESPACE Gem
+        FILES_CMAKE
+            taintedgrailmoddingsdk_catalog_tests_files.cmake
+        INCLUDE_DIRECTORIES
+            PRIVATE
+                Source
+                Tests
+        BUILD_DEPENDENCIES
+            PRIVATE
+                AZ::AzCore
+                AZ::AzTest
+    )
+
+    ly_add_googletest(
+        NAME Gem::${gem_name}.Catalog.Tests
+        LABELS REQUIRES_tiaf
+    )
+endif()
+
 # Tool Gems are resolved for both Editor/Project Manager tools and builder hosts.
 ly_create_alias(NAME ${gem_name}.Tools NAMESPACE Gem TARGETS Gem::${gem_name}.Editor)
 ly_create_alias(NAME ${gem_name}.Builders NAMESPACE Gem TARGETS Gem::${gem_name}.Editor)

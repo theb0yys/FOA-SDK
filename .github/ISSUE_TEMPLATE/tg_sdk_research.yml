@@ -1,0 +1,100 @@
+name: TG SDK research or evidence proposal
+description: Propose a source, evidence set, diagnostic capture, schema finding, or claim-review task
+title: "[TG SDK Research]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to plan legally shareable, evidence-governed research. Do not attach proprietary game assets, decompiled source files, personal data, or security-sensitive material.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I can legally share the proposed material or will provide only metadata and sanitized observations.
+          required: true
+        - label: I will preserve exact source locators, versions, and limitations.
+          required: true
+        - label: I understand imported evidence is not automatically a reviewed catalog fact or runtime permission.
+          required: true
+        - label: This is not a public security disclosure.
+          required: true
+  - type: dropdown
+    id: source_kind
+    attributes:
+      label: Source kind
+      options:
+        - Template diagnostics
+        - Item and recipe dump
+        - Scene and world observation
+        - Decompilation note
+        - Runtime log
+        - Screenshot
+        - CSV register
+        - JSON register
+        - Avalon Core source set
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Research question or missing reference
+      description: State what needs to be established without assuming the answer.
+    validations:
+      required: true
+  - type: textarea
+    id: profile
+    attributes:
+      label: Exact game-profile scope
+      description: Profile ID, game version, branch, runtime target, Unity/BepInEx versions, and DLC/content scope as relevant. Do not include personal paths.
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Acquisition method
+      description: Explain how the source is produced, whether it is read-only, and its bounds.
+    validations:
+      required: true
+  - type: textarea
+    id: tool
+    attributes:
+      label: Tool and version
+    validations:
+      required: false
+  - type: textarea
+    id: evidence_shape
+    attributes:
+      label: Expected evidence shape
+      description: Subject refs, claims, locators, rows/paths, and importer contract when known.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Known limitations and ambiguity
+      description: State what the source cannot prove.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Review and validation plan
+      description: Explain independent confirmation, runtime observation, conflict handling, and promotion requirements.
+    validations:
+      required: true
+  - type: textarea
+    id: legal
+    attributes:
+      label: Redistribution and privacy handling
+      description: Explain what can be committed publicly and what must remain metadata-only or private.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected durable output
+      description: Source/evidence documents, catalog candidates, missing refs, or diagnostic reports.
+    validations:
+      required: true

@@ -1,0 +1,110 @@
+name: TG SDK feature or design proposal
+description: Propose a user workflow, architecture change, service, schema, or domain tool
+title: "[TG SDK Proposal]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Significant changes require design review before implementation. Explain the problem and safety model, not only the desired UI.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched the roadmap and existing issues.
+          required: true
+        - label: I read the Architecture, Code Quality, and Review policies.
+          required: true
+        - label: I have not started a significant implementation that requires design approval.
+          required: true
+        - label: This proposal does not require distributing proprietary game assets or source material.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: User or contributor problem
+      description: Describe the problem independently of a particular implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome and acceptance criteria
+      description: State observable completion criteria.
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Proposed owning layer
+      options:
+        - O3DE host integration
+        - TG SDK editor foundation
+        - Avalon Core knowledge layer
+        - Diagnostic / extraction tooling
+        - FoA runtime adapter contract
+        - Build / package / deployment tooling
+        - Documentation / governance
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Proposed workflow
+      description: Describe user actions, service calls, and outputs.
+    validations:
+      required: true
+  - type: textarea
+    id: identity
+    attributes:
+      label: Identity and ownership model
+      description: Explain stable IDs, exact refs, pack ownership, aliases, and duplicate rules.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence, validation, and permission requirements
+      description: Explain sources, claims, validation, risks, permissions, prohibitions, and fail-closed behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: persistence
+    attributes:
+      label: Persistence and schema impact
+      description: Describe documents, schema version, migration, path roots, and transactional behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security, privacy, legal, and supply-chain impact
+      description: Include untrusted input, file writes, dependencies, proprietary data, and threats.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility, save, deployment, and rollback impact
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Test and validation plan
+      description: Include negative, malformed-input, migration, integration, UI, and host-build coverage as applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: textarea
+    id: documentation
+    attributes:
+      label: Documentation changes required
+    validations:
+      required: true

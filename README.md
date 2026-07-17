@@ -1,137 +1,193 @@
-# O3DE (Open 3D Engine)
+# Tainted Grail: The Fall of Avalon Modding Editor and SDK
 
-O3DE (Open 3D Engine) is an open-source, real-time, multi-platform 3D engine that enables developers and content creators to build AAA games, cinema-quality 3D worlds, and high-fidelity simulations without any fees or commercial obligations.
+An O3DE-based, evidence-governed authoring environment for creating, validating, packaging, and eventually deploying mods for **Tainted Grail: The Fall of Avalon**.
 
-## Contribute
-For information about contributing to Open 3D Engine, visit [https://o3de.org/docs/contributing/](https://o3de.org/docs/contributing/).
+> **Project status: pre-alpha.** The editor foundation is under active development. It is not yet a complete mod-production toolchain and must not be treated as a safe runtime executor.
 
-## Roadmap
-For information about upcoming work and features, please visit [https://o3de.org/roadmap](https://o3de.org/roadmap). Progress against the roadmap is tracked [here](https://github.com/orgs/o3de/projects/56/views/2).
+This repository is a fork of Open 3D Engine. O3DE supplies the editor host, UI framework, build system, asset tooling, reflection, automation, and extensibility. Tainted Grail remains a separate Unity runtime target.
 
-## Download and Install
+## Project goals
 
-This repository uses Git LFS for storing large binary files.  
+The project is building a public modding editor and SDK that can:
 
-Verify you have Git LFS installed by running the following command to print the version number.
+- describe an exact FoA installation and game build;
+- create pack-owned mod projects and manifests;
+- import and fingerprint research, diagnostics, dumps, observations, logs, screenshots, CSV, JSON, and Avalon Core source sets;
+- preserve exact native references, GUIDs, paths, aliases, versions, and evidence;
+- maintain a canonical, queryable game-knowledge catalog;
+- separate research maturity, validation, risk, and runtime permission;
+- author items, recipes, actors, troops, spawns, routes, factions, quests, state, assets, and localisation through shared governed data;
+- generate reviewed work orders and manifests for separately validated FoA runtime adapters;
+- provide a controlled validate, generate, build, package, deploy, launch, capture, and evidence workflow.
+
+## Safety and architecture boundary
+
+The editor and Avalon Core knowledge layer do **not** execute gameplay actions.
+
+They may:
+
+- manage workspaces and pack ownership;
+- import and preserve evidence;
+- query and inspect game knowledge;
+- validate references and relationships;
+- produce blockers, permissions, plans, and handoff documents;
+- build editor-owned packages and reports.
+
+They must not directly:
+
+- call FoA game APIs;
+- patch the game with Harmony;
+- load BepInEx plugins into the game;
+- spawn actors or encounters;
+- grant items or recipes;
+- mutate quests, saves, vendors, loot, or world state;
+- claim runtime safety without the required evidence and validation.
+
+Native execution belongs to separate adapters with their own compatibility, persistence, cleanup, and rollback gates.
+
+## Current editor tools
+
+The `TaintedGrailModdingSDK` Gem currently registers these O3DE tools under **Tools → Tainted Grail SDK**:
+
+### Tainted Grail SDK Status
+
+Configures and reports:
+
+- workspace identity and paths;
+- exact FoA game profile;
+- Mono or IL2CPP target;
+- Unity and BepInEx versions;
+- pack, source, evidence, catalog, and blocker totals;
+- catalog coverage and validation blockers.
+
+Workspace documents use the `*.tgworkspace.json` suffix.
+
+### Tainted Grail Pack Manager
+
+Creates and opens governed `*.tgpack.json` manifests containing:
+
+- stable namespaced pack ID and owner;
+- semantic version;
+- game, Avalon Core, and adapter compatibility;
+- dependencies, required mods, and incompatibilities;
+- save-impact declaration;
+- content, asset, and localisation declarations;
+- build configuration and release channel.
+
+Runtime actions are always persisted as disabled.
+
+### Tainted Grail Source Intake
+
+Imports and fingerprints source artifacts using:
+
+- structured JSON evidence extraction;
+- structured CSV evidence extraction;
+- generic artifact registration without inferred evidence.
+
+Every source is bound to the active profile ID, exact game version, branch, and runtime target. Durable files are written under:
+
+```text
+Sources/<source-id>/source.tgsource.json
+Sources/<source-id>/evidence.tgevidence.json
 ```
-git lfs --version 
+
+### Tainted Grail Catalog Browser
+
+Provides:
+
+- exact native-reference and GUID search;
+- search by record ID, subject, alias, domain, kind, pack, confidence, validation, permission, evidence, blocker state, and supersession;
+- inspection of identity, pack ownership, evidence, relationships, validation history, conflicts, missing refs, prohibitions, and blockers;
+- evidence-backed promotion into reviewed-but-unvalidated canonical records;
+- durable `Catalog/catalog.tgcatalog.json` persistence bound to the active workspace and exact game profile.
+
+Catalog records are never merged by display name. Claim promotion cannot grant allowed usage and automatically adds `no_unvalidated_runtime_use`.
+
+## Development roadmap
+
+The active roadmap is maintained in [ROADMAP.md](ROADMAP.md). Major capability areas are:
+
+1. workspace and exact game-profile management;
+2. mod and content-pack project management;
+3. source and evidence intake;
+4. canonical catalog browser and record inspector;
+5. validation, maturity, risk, and permission engine;
+6. specialised domain authoring tools;
+7. typed FoA adapter contracts;
+8. build, package, deploy, test, and evidence capture.
+
+## Documentation
+
+Start with the [TG SDK documentation hub](docs/tainted-grail-sdk/README.md).
+
+- [User guide](docs/tainted-grail-sdk/USER_GUIDE.md)
+- [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
+- [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
+- [Code quality standard](docs/tainted-grail-sdk/CODE_QUALITY.md)
+- [Review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md)
+- [Data formats](docs/tainted-grail-sdk/DATA_FORMATS.md)
+- [Release process](docs/tainted-grail-sdk/RELEASE_PROCESS.md)
+- [Legal and content policy](docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md)
+- [Privacy and telemetry](docs/tainted-grail-sdk/PRIVACY.md)
+- [Accessibility](docs/tainted-grail-sdk/ACCESSIBILITY.md)
+- [Glossary](docs/tainted-grail-sdk/GLOSSARY.md)
+- [Governance](GOVERNANCE.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+- [Support](SUPPORT.md)
+
+## Repository layout
+
+```text
+Gems/TaintedGrailModdingSDK/       TG editor/SDK Gem
+Gems/TaintedGrailModdingSDK/Code/  C++ editor models, services, and tools
+Gems/TaintedGrailModdingSDK/Tools/ Repository contract validation
+docs/tainted-grail-sdk/            Public user and contributor documentation
+.github/                            Issue forms, pull-request template, ownership
+engine.json                         O3DE engine registration
 ```
 
-If Git LFS is not installed, download and run the installer from: [https://git-lfs.github.com/](https://git-lfs.github.com/).
+The remaining repository content is inherited from O3DE and remains subject to O3DE's build, licence, and contribution requirements.
 
-### Install Git LFS hooks 
-```
-git lfs install
-```
+## Building
 
+This fork uses the standard O3DE source build process. Follow the upstream O3DE source-build requirements for your platform, configure the engine with a supported compiler and third-party package cache, and build the O3DE Editor host.
 
-### Clone the repository 
+Before opening a pull request, run:
 
 ```shell
-git clone https://github.com/o3de/o3de.git
+python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
 ```
 
-## Building the Engine
+A complete contribution must also pass the repository validation workflow and the applicable O3DE host build jobs.
 
-### Build requirements and redistributables
+## Branch and review model
 
-For the latest details and system requirements, refer to [System Requirements](https://o3de.org/docs/welcome-guide/requirements/) in the documentation.
+The public project uses two long-lived branches:
 
-#### Windows
+- `main` — reviewed, integrated project state;
+- `foa-development` — the single active development line.
 
-*   Visual Studio 2019 16.9.2 minimum (All editions supported, including Community): [https://visualstudio.microsoft.com/downloads/](https://visualstudio.microsoft.com/downloads/)
-    *   Check [System Requirements](https://o3de.org/docs/welcome-guide/requirements/) for other supported versions.
-    *   Install the following workloads:
-        *   Game Development with C++
-        *   MSVC v142 - VS 2019 C++ x64/x86
-        *   C++ 2019 redistributable update
-*   CMake 3.24.0 minimum: [https://cmake.org/download/#latest](https://cmake.org/download/#latest) (Release Candidate versions are not supported)
+Direct development on `main` is prohibited. Significant changes require design review before implementation, self-review before push, a pull request, successful required checks, and maintainer approval before merge. See [Review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md).
 
-#### Optional
+## Contributing
 
-*   Wwise audio SDK
-    *   For the latest version requirements and setup instructions, refer to the [Wwise Audio Engine Gem](https://o3de.org/docs/user-guide/gems/reference/audio/wwise/audio-engine-wwise/) reference in the documentation.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before filing an issue or changing code.
 
-### Quick start engine setup
+All commits must include Developer Certificate of Origin sign-off:
 
-To set up a project-centric source engine, complete the following steps. For other build options, refer to [Setting up O3DE from GitHub](https://o3de.org/docs/welcome-guide/setup/setup-from-github/) in the documentation.
+```shell
+git commit -s -m "Describe the change"
+```
 
-1.  Create a writable folder to cache downloadable third-party packages. You can also use this to store other redistributable SDKs.
-    
-1.  Install the following redistributables:
-    - Visual Studio and VC++ redistributable can be installed to any location.
-    - CMake can be installed to any location, as long as it's available in the system path.
+Contributors must follow the [Code of Conduct](CODE_OF_CONDUCT.md), code-quality rules, evidence governance, and review requirements.
 
-1.  Configure the engine source into a solution using this command line, replacing `<your build path>`, `<your source path>`, and `<3rdParty package path>` with the paths you've created:
-    ```
-    cmake -B <your build path> -S <your source path> -G "Visual Studio 16" -DLY_3RDPARTY_PATH=<3rdParty package path>
-    ```
-    
-    Example:
-    ```
-    cmake -B C:\o3de\build\windows -S C:\o3de -G "Visual Studio 16" -DLY_3RDPARTY_PATH=C:\o3de-packages
-    ```
-    
-    > Note:  Do not use trailing slashes for the <3rdParty package path>.
+## Security
 
-1.  Alternatively, you can do this through the CMake GUI:
-    
-    1.  Start `cmake-gui.exe`.
-    1.  Select the local path of the repo under "Where is the source code".
-    1.  Select a path where to build binaries under "Where to build the binaries".
-    1.  Click **Add Entry** and add a cache entry for the <3rdParty package path> folder you created, using the following values:
-        1.  **Name:** LY_3RDPARTY_PATH
-        1.  **Type:** STRING
-        1.  **Value:** `<3rdParty package path>`
-    1.  Click **Configure**.
-    1.  Wait for the key values to populate. Update or add any additional fields that are needed for your project.
-    1.  Click **Generate**.
-    
-1.  Register the engine with this command:
-    ```
-    scripts\o3de.bat register --this-engine
-    ```
+Do not disclose vulnerabilities, unsafe deployment paths, or save-corruption risks in public issues. Follow [SECURITY.md](SECURITY.md).
 
-1.  The configuration of the solution is complete. You are now ready to create a project and build the engine.
+## Licence and upstream attribution
 
-For more details on the steps above, refer to [Setting up O3DE from GitHub](https://o3de.org/docs/welcome-guide/setup/setup-from-github/) in the documentation.
+This repository retains the O3DE licence files and third-party notices at the repository root. Contributions must be compatible with those terms.
 
-### Setting up new projects and building the engine
-
-1. From the O3DE repo folder, set up a new project using the `o3de create-project` command.
-    ```
-    scripts\o3de.bat create-project --project-path <your new project path>
-    ```
-
-1. Configure a solution for your project.
-    ```
-    cmake -B <your project build path> -S <your new project source path> -G "Visual Studio 16"
-    ```
-
-    Example:
-    ```
-    cmake -B C:\my-project\build\windows -S C:\my-project -G "Visual Studio 16"
-    ```
-    
-    > Note:  Do not use trailing slashes for the <3rdParty cache path>.
-
-1. Build the project, Asset Processor, and Editor to binaries by running this command inside your project:
-    ```
-    cmake --build <your project build path> --target <New Project Name>.GameLauncher Editor --config profile -- /m
-    ```
-    
-    > Note: Your project name used in the build target is the same as the directory name of your project.
-
-This will compile after some time and binaries will be available in the project build path you've specified, under `bin/profile`.
-
-For a complete tutorial on project configuration, see [Creating Projects Using the Command Line Interface](https://o3de.org/docs/welcome-guide/create/creating-projects-using-cli/) in the documentation.
-
-## Code Contributors
-
-This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
-
-<a href="https://github.com/o3de/o3de/graphs/contributors"><img src="https://contrib.rocks/image?repo=o3de/o3de&max=200&columns=24" width=850px /></a>
-
-## License
-
-For terms please see the LICENSE*.TXT files at the root of this distribution.
+Tainted Grail: The Fall of Avalon and related names, assets, and marks belong to their respective rights holders. This is an independent community project and is not affiliated with or endorsed by the game's rights holders. Do not submit copyrighted game assets or proprietary source material that you do not have permission to distribute.

@@ -19,6 +19,7 @@ namespace TaintedGrailModdingSDK
             const WorkspaceModel& workspace,
             const AZStd::vector<PackManifest>& packs,
             const SourceEvidenceRegistry& sourceRegistry,
+            const AZStd::vector<ImportIssue>& importIssues,
             const CatalogDatabase& catalog) const;
 
     private:

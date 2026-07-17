@@ -9,22 +9,42 @@
 
 #include "FoundationModels.h"
 
+#include <AzCore/std/utility/move.h>
+
 namespace TaintedGrailModdingSDK
 {
     class CatalogDatabase
     {
     public:
+        bool InsertNew(const CatalogRecord& record, AZStd::string* error = nullptr);
         bool Upsert(const CatalogRecord& record, AZStd::string* error = nullptr);
+        bool UpsertRelationship(const CatalogRelationship& relationship, AZStd::string* error = nullptr);
+        bool AddValidationEvent(const CatalogValidationEvent& validation, AZStd::string* error = nullptr);
+        bool ReplaceFromDocument(const CatalogDocument& document, AZStd::string* error = nullptr);
         void Clear();
 
         const CatalogRecord* FindByRecordId(const AZStd::string& recordId) const;
         const CatalogRecord* FindByExactNativeRef(const AZStd::string& nativeRefExact) const;
+        const CatalogRelationship* FindRelationshipById(const AZStd::string& relationshipId) const;
         AZStd::vector<CatalogRecord> Query(const CatalogQuery& query) const;
+        AZStd::vector<CatalogRelationship> FindRelationshipsForRecord(const AZStd::string& recordId) const;
+        AZStd::vector<CatalogValidationEvent> FindValidationForRecord(const AZStd::string& recordId) const;
         AZStd::vector<DomainCoverage> BuildCoverage() const;
 
+        CatalogDocument BuildDocument(
+            const WorkspaceModel& workspace,
+            const GameProfile& profile) const;
+
         const AZStd::vector<CatalogRecord>& GetRecords() const;
+        const AZStd::vector<CatalogRelationship>& GetRelationships() const;
+        const AZStd::vector<CatalogValidationEvent>& GetValidationHistory() const;
 
     private:
+        bool ValidateRecord(const CatalogRecord& record, const CatalogRecord* replacing, AZStd::string* error) const;
+        bool ValidateRelationship(const CatalogRelationship& relationship, AZStd::string* error) const;
+
         AZStd::vector<CatalogRecord> m_records;
+        AZStd::vector<CatalogRelationship> m_relationships;
+        AZStd::vector<CatalogValidationEvent> m_validationHistory;
     };
 } // namespace TaintedGrailModdingSDK

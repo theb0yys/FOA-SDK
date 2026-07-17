@@ -8,9 +8,13 @@
 #pragma once
 
 #include "CatalogDatabase.h"
+#include "CatalogPersistenceService.h"
+#include "CatalogPromotionService.h"
 #include "FoundationValidationService.h"
 #include "PackPersistenceService.h"
+#include "SourceEvidencePersistenceService.h"
 #include "SourceEvidenceRegistry.h"
+#include "SourceImportService.h"
 #include "WorkspacePersistenceService.h"
 
 namespace TaintedGrailModdingSDK
@@ -36,9 +40,23 @@ namespace TaintedGrailModdingSDK
         bool LoadPack(const AZStd::string& filePath, AZStd::string* error = nullptr);
         void ClearActivePack();
 
+        bool ImportSource(
+            const SourceImportRequest& request,
+            SourceEvidenceDocumentPaths* savedPaths = nullptr,
+            AZStd::string* error = nullptr);
+        bool ReloadSourceEvidence(AZStd::string* error = nullptr);
+        AZStd::vector<SourceImporterContract> GetSourceImporterContracts() const;
+
+        bool PromoteEvidenceToCatalog(
+            const CatalogPromotionRequest& request,
+            AZStd::string* error = nullptr);
+        bool UpsertCatalogRelationship(const CatalogRelationship& relationship, AZStd::string* error = nullptr);
+        bool AddCatalogValidationEvent(const CatalogValidationEvent& validation, AZStd::string* error = nullptr);
+        bool SaveCatalog(AZStd::string* error = nullptr);
+        bool ReloadCatalog(AZStd::string* error = nullptr);
+
         bool RegisterSource(const SourceRecord& source, AZStd::string* error = nullptr);
         bool RegisterEvidence(const EvidenceRecord& evidence, AZStd::string* error = nullptr);
-        bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
 
         const WorkspaceModel& GetWorkspace() const;
         const AZStd::string& GetWorkspaceFilePath() const;
@@ -46,7 +64,9 @@ namespace TaintedGrailModdingSDK
         const PackManifest* GetActivePack() const;
         const AZStd::string& GetActivePackFilePath() const;
         const SourceEvidenceRegistry& GetSourceRegistry() const;
+        const AZStd::vector<ImportIssue>& GetImportIssues() const;
         const CatalogDatabase& GetCatalog() const;
+        const AZStd::string& GetCatalogFilePath() const;
         const FoundationSnapshot& GetSnapshot() const;
 
         void RefreshSnapshot();
@@ -54,8 +74,16 @@ namespace TaintedGrailModdingSDK
     private:
         FoundationService() = default;
 
+        // Internal compatibility path only. Public/editor record creation must use governed promotion.
+        bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
+        bool PersistCatalogCandidate(const CatalogDatabase& candidate, AZStd::string* error);
         PackManifest* FindPackById(const AZStd::string& packId);
         const PackManifest* FindPackById(const AZStd::string& packId) const;
+        static ImportIssue MakeRegistryIssue(
+            AZStd::string severity,
+            AZStd::string code,
+            AZStd::string message,
+            AZStd::string locator);
 
         WorkspaceModel m_workspace;
         AZStd::string m_workspaceFilePath;
@@ -63,10 +91,16 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_activePackId;
         AZStd::string m_activePackFilePath;
         SourceEvidenceRegistry m_sourceRegistry;
+        AZStd::vector<ImportIssue> m_importIssues;
         CatalogDatabase m_catalog;
+        AZStd::string m_catalogFilePath;
         FoundationValidationService m_validationService;
         WorkspacePersistenceService m_workspacePersistence;
         PackPersistenceService m_packPersistence;
+        SourceImportService m_sourceImportService;
+        SourceEvidencePersistenceService m_sourceEvidencePersistence;
+        CatalogPersistenceService m_catalogPersistence;
+        CatalogPromotionService m_catalogPromotion;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;
     };

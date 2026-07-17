@@ -401,7 +401,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(2)
+                ->Version(3)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -410,7 +410,11 @@ namespace TaintedGrailModdingSDK
                 ->Field("Records", &CatalogDocument::m_records)
                 ->Field("Relationships", &CatalogDocument::m_relationships)
                 ->Field("ValidationHistory", &CatalogDocument::m_validationHistory)
-                ->Field("GovernanceHistory", &CatalogDocument::m_governanceHistory);
+                ->Field("GovernanceHistory", &CatalogDocument::m_governanceHistory)
+                ->Field("EconomyItems", &CatalogDocument::m_economyItems)
+                ->Field("EconomyRecipes", &CatalogDocument::m_economyRecipes)
+                ->Field("RecipeIngredients", &CatalogDocument::m_recipeIngredients)
+                ->Field("RecipeOutputs", &CatalogDocument::m_recipeOutputs);
         }
     }
 
@@ -452,7 +456,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<FoundationSnapshot>()
-                ->Version(6)
+                ->Version(7)
                 ->Field("WorkspaceName", &FoundationSnapshot::m_workspaceName)
                 ->Field("WorkspaceFilePath", &FoundationSnapshot::m_workspaceFilePath)
                 ->Field("ActiveGameProfile", &FoundationSnapshot::m_activeGameProfile)
@@ -475,6 +479,10 @@ namespace TaintedGrailModdingSDK
                 ->Field("CatalogRelationshipCount", &FoundationSnapshot::m_catalogRelationshipCount)
                 ->Field("CatalogValidationCount", &FoundationSnapshot::m_catalogValidationCount)
                 ->Field("CatalogGovernanceCount", &FoundationSnapshot::m_catalogGovernanceCount)
+                ->Field("EconomyItemCount", &FoundationSnapshot::m_economyItemCount)
+                ->Field("EconomyRecipeCount", &FoundationSnapshot::m_economyRecipeCount)
+                ->Field("RecipeIngredientCount", &FoundationSnapshot::m_recipeIngredientCount)
+                ->Field("RecipeOutputCount", &FoundationSnapshot::m_recipeOutputCount)
                 ->Field("StaleCatalogSubjectCount", &FoundationSnapshot::m_staleCatalogSubjectCount)
                 ->Field("AllowedUsageCount", &FoundationSnapshot::m_allowedUsageCount)
                 ->Field("ForbiddenUsageCount", &FoundationSnapshot::m_forbiddenUsageCount)

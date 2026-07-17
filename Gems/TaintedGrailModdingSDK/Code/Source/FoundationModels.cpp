@@ -9,8 +9,33 @@
 
 #include <AzCore/Serialization/SerializeContext.h>
 
+#include <cctype>
+
 namespace TaintedGrailModdingSDK
 {
+    namespace
+    {
+        bool IsSemVerNumericPart(AZStd::string_view value)
+        {
+            if (value.empty())
+            {
+                return false;
+            }
+            if (value.size() > 1 && value.front() == '0')
+            {
+                return false;
+            }
+            for (char character : value)
+            {
+                if (!std::isdigit(static_cast<unsigned char>(character)))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    } // namespace
+
     void GameProfile::Reflect(AZ::ReflectContext* context)
     {
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
@@ -35,12 +60,8 @@ namespace TaintedGrailModdingSDK
 
     bool GameProfile::IsConfigured() const
     {
-        return !m_profileId.empty()
-            && !m_installPath.empty()
-            && !m_gameVersion.empty()
-            && !m_branch.empty()
-            && !m_runtimeTarget.empty()
-            && !m_managedAssembliesPath.empty();
+        return !m_profileId.empty() && !m_installPath.empty() && !m_gameVersion.empty() && !m_branch.empty()
+            && !m_runtimeTarget.empty() && !m_managedAssembliesPath.empty();
     }
 
     void WorkspaceModel::Reflect(AZ::ReflectContext* context)
@@ -77,24 +98,76 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<PackManifest>()
-                ->Version(1)
+                ->Version(2)
+                ->Field("SchemaVersion", &PackManifest::m_schemaVersion)
                 ->Field("PackId", &PackManifest::m_packId)
                 ->Field("DisplayName", &PackManifest::m_displayName)
                 ->Field("OwnerId", &PackManifest::m_ownerId)
                 ->Field("Version", &PackManifest::m_version)
                 ->Field("TargetGameVersion", &PackManifest::m_targetGameVersion)
                 ->Field("TargetBranch", &PackManifest::m_targetBranch)
+                ->Field("CompatibleGameVersions", &PackManifest::m_compatibleGameVersions)
+                ->Field("RequiredCoreVersion", &PackManifest::m_requiredCoreVersion)
+                ->Field("RequiredAdapterVersion", &PackManifest::m_requiredAdapterVersion)
                 ->Field("SaveImpact", &PackManifest::m_saveImpact)
                 ->Field("DlcScopes", &PackManifest::m_dlcScopes)
                 ->Field("Dependencies", &PackManifest::m_dependencies)
+                ->Field("RequiredMods", &PackManifest::m_requiredMods)
                 ->Field("Incompatibilities", &PackManifest::m_incompatibilities)
+                ->Field("ContentDefinitionPaths", &PackManifest::m_contentDefinitionPaths)
+                ->Field("AssetPaths", &PackManifest::m_assetPaths)
+                ->Field("LocalisationPaths", &PackManifest::m_localisationPaths)
+                ->Field("BuildConfiguration", &PackManifest::m_buildConfiguration)
+                ->Field("ReleaseChannel", &PackManifest::m_releaseChannel)
                 ->Field("RuntimeActionsEnabled", &PackManifest::m_runtimeActionsEnabled);
         }
     }
 
     bool PackManifest::HasStableIdentity() const
     {
-        return !m_packId.empty() && !m_ownerId.empty() && !m_version.empty();
+        return HasValidPackId() && !m_ownerId.empty() && HasValidSemanticVersion();
+    }
+
+    bool PackManifest::HasValidPackId() const
+    {
+        if (m_packId.empty() || m_packId.front() == '.' || m_packId.back() == '.' || m_packId.find('.') == AZStd::string::npos)
+        {
+            return false;
+        }
+
+        char previous = '\0';
+        for (char character : m_packId)
+        {
+            const bool valid = (character >= 'a' && character <= 'z') || std::isdigit(static_cast<unsigned char>(character))
+                || character == '.' || character == '-' || character == '_';
+            if (!valid || (character == '.' && previous == '.'))
+            {
+                return false;
+            }
+            previous = character;
+        }
+        return true;
+    }
+
+    bool PackManifest::HasValidSemanticVersion() const
+    {
+        if (m_version.empty())
+        {
+            return false;
+        }
+
+        const size_t suffixPosition = m_version.find_first_of("-+");
+        const AZStd::string_view core(m_version.data(), suffixPosition == AZStd::string::npos ? m_version.size() : suffixPosition);
+        const size_t firstDot = core.find('.');
+        const size_t secondDot = firstDot == AZStd::string_view::npos ? AZStd::string_view::npos : core.find('.', firstDot + 1);
+        if (firstDot == AZStd::string_view::npos || secondDot == AZStd::string_view::npos || core.find('.', secondDot + 1) != AZStd::string_view::npos)
+        {
+            return false;
+        }
+
+        return IsSemVerNumericPart(core.substr(0, firstDot))
+            && IsSemVerNumericPart(core.substr(firstDot + 1, secondDot - firstDot - 1))
+            && IsSemVerNumericPart(core.substr(secondDot + 1));
     }
 
     void SourceRecord::Reflect(AZ::ReflectContext* context)
@@ -198,6 +271,10 @@ namespace TaintedGrailModdingSDK
                 ->Field("RuntimeTarget", &FoundationSnapshot::m_runtimeTarget)
                 ->Field("UnityVersion", &FoundationSnapshot::m_unityVersion)
                 ->Field("BepInExVersion", &FoundationSnapshot::m_bepInExVersion)
+                ->Field("ActivePackId", &FoundationSnapshot::m_activePackId)
+                ->Field("ActivePackName", &FoundationSnapshot::m_activePackName)
+                ->Field("ActivePackVersion", &FoundationSnapshot::m_activePackVersion)
+                ->Field("ActivePackFilePath", &FoundationSnapshot::m_activePackFilePath)
                 ->Field("GameProfileCount", &FoundationSnapshot::m_gameProfileCount)
                 ->Field("PackCount", &FoundationSnapshot::m_packCount)
                 ->Field("SourceCount", &FoundationSnapshot::m_sourceCount)

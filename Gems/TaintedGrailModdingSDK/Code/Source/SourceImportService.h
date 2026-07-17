@@ -11,6 +11,8 @@
 
 #include <AzCore/Outcome/Outcome.h>
 
+class QByteArray;
+
 namespace TaintedGrailModdingSDK
 {
     class SourceImportService

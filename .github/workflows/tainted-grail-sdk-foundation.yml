@@ -8,6 +8,8 @@ on:
       - ".github/workflows/tainted-grail-sdk-foundation.yml"
   push:
     branches:
+      - foa-development
+      - main
       - development
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
@@ -20,9 +22,9 @@ permissions:
 
 jobs:
   validate-foundation:
-    name: Validate editor-only foundation
+    name: Validate TG SDK first editor milestone
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
 
     steps:
       - name: Check out repository
@@ -35,3 +37,10 @@ jobs:
 
       - name: Validate foundation contracts
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
+
+      - name: Validate O3DE source policy for SDK Gem
+        shell: bash
+        run: |
+          set -o pipefail
+          python -u scripts/commit_validation/validate_file_or_folder.py --path Gems/TaintedGrailModdingSDK 2>&1 \
+            | grep -E "(^[A-Za-z].*(PASSED|FAILED)$|^VALIDATION FAILURE SUMMARY$|^VALIDATOR_FAILED:|^[0-9]+ (failed|passed))"

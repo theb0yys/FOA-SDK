@@ -8,11 +8,13 @@
 #pragma once
 
 #include <AzCore/Component/Component.h>
+#include <AzToolsFramework/API/ToolsApplicationAPI.h>
 
 namespace TaintedGrailModdingSDK
 {
     class TaintedGrailModdingSDKSystemComponent final
         : public AZ::Component
+        , protected AzToolsFramework::EditorEvents::Bus::Handler
     {
     public:
         AZ_COMPONENT(
@@ -25,5 +27,10 @@ namespace TaintedGrailModdingSDK
 
         void Activate() override;
         void Deactivate() override;
+
+    private:
+        void NotifyRegisterViews() override;
+
+        bool m_viewRegistered = false;
     };
 } // namespace TaintedGrailModdingSDK

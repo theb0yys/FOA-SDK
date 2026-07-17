@@ -20,6 +20,7 @@ ly_add_target(
     BUILD_DEPENDENCIES
         PRIVATE
             AZ::AzCore
+            AZ::AzToolsFramework
 )
 
 ly_add_source_properties(

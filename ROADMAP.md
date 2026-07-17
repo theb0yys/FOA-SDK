@@ -13,13 +13,13 @@ Status: implemented, continuing hardening.
 - O3DE editor Gem and host-tool registration.
 - Editor-only product boundary.
 - Focused repository validation.
-- Public documentation and governance.
+- Full public README, user and contributor guides, architecture, quality, design-review, pre-commit review, PR review, security, conduct, governance, privacy, legal/content, accessibility, support, release, roadmap, changelog, issue forms, PR template, and CODEOWNERS.
 - Two-branch development model.
 
 Exit criteria:
 
 - Gem is discoverable and structurally validated.
-- Public project rules and contribution workflow are documented.
+- Public project rules and contribution workflow are documented and CI-enforced.
 - No FoA runtime integration exists in the editor layer.
 
 ## Phase 1 — Workspace and exact game profile
@@ -54,28 +54,35 @@ Status: implemented on the active development line, pending integration and hard
 
 ## Phase 4 — Canonical catalog browser and record inspector
 
-Status: next active slice.
+Status: implemented on the active development line, pending integration and hardening.
 
-- Durable catalog and relationship documents.
-- Search by exact native reference, GUID, subject, alias, domain, kind, pack, confidence, validation, permission, source, and blocker state.
-- Record inspector for identity, evidence, relationships, versions, validation history, permissions, conflicts, and missing references.
-- Governed claim promotion from evidence to reviewed catalog records.
+- Durable `Catalog/catalog.tgcatalog.json` document bound to workspace/profile/version/branch.
+- Stable canonical records, first-class relationships, and validation history.
+- Search by exact native reference, GUID, record ID, subject, alias, domain, kind, pack, confidence, validation, permission/prohibition, evidence, blocker state, and supersession.
+- Inspector for identity, ownership, evidence, relationships, versions, validation history, permissions, conflicts, missing references, and blockers.
+- Evidence-backed claim promotion into reviewed-but-unvalidated records.
+- Native exact-ref uniqueness and synthetic pack ownership.
 - No display-name identity merging.
+- Transactional save-before-publish lifecycle.
 
 Exit criteria:
 
 - Records survive workspace reload.
 - Exact-reference search is deterministic.
 - Evidence linkage is visible and validated.
-- Promotion requires pack ownership, evidence, and explicit review state.
+- Promotion requires pack ownership where applicable, exact profile-matched evidence, and explicit review state.
+- Promotion cannot grant allowed usage and adds `no_unvalidated_runtime_use`.
 
 ## Phase 5 — Validation, maturity, risk, and permission engine
+
+Status: next active slice.
 
 - Independent maturity, confidence, operational risk, validation, permission, and prohibition states.
 - Usage-specific permission decisions.
 - Staleness, supersession, and compatibility evaluation.
 - Validation history and proof artifacts.
 - Queryable missing references and conflicts.
+- Review and authoring surfaces for permission decisions without runtime execution.
 
 ## Phase 6 — Domain authoring tools
 

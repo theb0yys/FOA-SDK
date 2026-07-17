@@ -44,6 +44,7 @@ namespace TaintedGrailModdingSDK
 
     AZ::Outcome<ResearchStage, AZStd::string> ParseResearchStage(const AZStd::string& value)
     {
+        if (value.empty()) return AZ::Success(ResearchStage::Unset);
         if (value == "unknown") return AZ::Success(ResearchStage::Unknown);
         if (value == "S0") return AZ::Success(ResearchStage::S0);
         if (value == "S1") return AZ::Success(ResearchStage::S1);
@@ -64,6 +65,7 @@ namespace TaintedGrailModdingSDK
 
     AZ::Outcome<ConfidenceLevel, AZStd::string> ParseConfidenceLevel(const AZStd::string& value)
     {
+        if (value.empty()) return AZ::Success(ConfidenceLevel::Unset);
         if (value == "unknown") return AZ::Success(ConfidenceLevel::Unknown);
         if (value == "unrated") return AZ::Success(ConfidenceLevel::Unrated);
         if (value == "hypothesis") return AZ::Success(ConfidenceLevel::Hypothesis);
@@ -76,6 +78,7 @@ namespace TaintedGrailModdingSDK
 
     AZ::Outcome<OperationalRisk, AZStd::string> ParseOperationalRisk(const AZStd::string& value)
     {
+        if (value.empty()) return AZ::Success(OperationalRisk::Unset);
         if (value == "unknown") return AZ::Success(OperationalRisk::Unknown);
         if (value == "low") return AZ::Success(OperationalRisk::Low);
         if (value == "medium") return AZ::Success(OperationalRisk::Medium);
@@ -86,6 +89,7 @@ namespace TaintedGrailModdingSDK
 
     AZ::Outcome<ValidationState, AZStd::string> ParseValidationState(const AZStd::string& value)
     {
+        if (value.empty()) return AZ::Success(ValidationState::Unset);
         if (value == "unvalidated") return AZ::Success(ValidationState::Unvalidated);
         if (value == "pending") return AZ::Success(ValidationState::Pending);
         if (value == "validated") return AZ::Success(ValidationState::Validated);
@@ -97,6 +101,7 @@ namespace TaintedGrailModdingSDK
 
     AZ::Outcome<StalenessState, AZStd::string> ParseStalenessState(const AZStd::string& value)
     {
+        if (value.empty()) return AZ::Success(StalenessState::Unset);
         if (value == "unknown") return AZ::Success(StalenessState::Unknown);
         if (value == "current") return AZ::Success(StalenessState::Current);
         if (value == "potentially_stale") return AZ::Success(StalenessState::PotentiallyStale);
@@ -135,6 +140,7 @@ namespace TaintedGrailModdingSDK
     {
         switch (value)
         {
+        case ResearchStage::Unset: return {};
         case ResearchStage::Unknown: return "unknown";
         case ResearchStage::S0: return "S0";
         case ResearchStage::S1: return "S1";
@@ -158,6 +164,7 @@ namespace TaintedGrailModdingSDK
     {
         switch (value)
         {
+        case ConfidenceLevel::Unset: return {};
         case ConfidenceLevel::Unknown: return "unknown";
         case ConfidenceLevel::Unrated: return "unrated";
         case ConfidenceLevel::Hypothesis: return "hypothesis";
@@ -173,6 +180,7 @@ namespace TaintedGrailModdingSDK
     {
         switch (value)
         {
+        case OperationalRisk::Unset: return {};
         case OperationalRisk::Unknown: return "unknown";
         case OperationalRisk::Low: return "low";
         case OperationalRisk::Medium: return "medium";
@@ -186,6 +194,7 @@ namespace TaintedGrailModdingSDK
     {
         switch (value)
         {
+        case ValidationState::Unset: return {};
         case ValidationState::Unvalidated: return "unvalidated";
         case ValidationState::Pending: return "pending";
         case ValidationState::Validated: return "validated";
@@ -200,6 +209,7 @@ namespace TaintedGrailModdingSDK
     {
         switch (value)
         {
+        case StalenessState::Unset: return {};
         case StalenessState::Unknown: return "unknown";
         case StalenessState::Current: return "current";
         case StalenessState::PotentiallyStale: return "potentially_stale";

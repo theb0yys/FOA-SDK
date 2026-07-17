@@ -6,11 +6,12 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the Tainted Grail Modding SDK editor foundation without building O3DE.
+"""Validate the public Tainted Grail Modding SDK editor foundation without building O3DE.
 
-The check verifies repository structure, public-project governance, durable workspace,
-pack, source/evidence, canonical catalog, and independent governance-state workflows,
-plus the editor-only product boundary. It does not replace an O3DE configure or compile.
+The focused check covers repository structure, public governance, workspace and pack
+management, source/evidence intake, canonical catalog and governance workflows, typed
+item/recipe authoring, and the editor-only product boundary. It does not replace an
+O3DE configure, compile, or test run.
 """
 
 from __future__ import annotations
@@ -72,30 +73,32 @@ def validate_gem_metadata(gem_root: Path) -> None:
 
 
 def validate_cmake(gem_root: Path) -> None:
-    cmake_path = gem_root / "Code" / "CMakeLists.txt"
-    cmake = cmake_path.read_text(encoding="utf-8")
+    path = gem_root / "Code" / "CMakeLists.txt"
+    text = path.read_text(encoding="utf-8")
     for fragment in (
         "if(NOT PAL_TRAIT_BUILD_HOST_TOOLS)",
         "NAME ${gem_name}.Editor GEM_MODULE",
         "taintedgrailmoddingsdk_editor_files.cmake",
         "AZ::AzToolsFramework",
         "NAME ${gem_name}.Catalog.Tests",
+        "taintedgrailmoddingsdk_catalog_tests_files.cmake",
+        "ly_add_googletest",
         "ly_create_alias(NAME ${gem_name}.Tools",
         "ly_create_alias(NAME ${gem_name}.Builders",
         "VARIANTS Tools Builders",
     ):
-        require_contains(cmake, fragment, cmake_path)
+        require_contains(text, fragment, path)
     for fragment in ("${gem_name}.Clients", "${gem_name}.Servers", "${gem_name}.Unified"):
-        if fragment in cmake:
+        if fragment in text:
             fail(f"Editor-only foundation must not expose runtime alias {fragment}")
 
 
 def validate_source_manifest(gem_root: Path) -> None:
     code_root = gem_root / "Code"
-    manifest_path = code_root / "taintedgrailmoddingsdk_editor_files.cmake"
-    manifest = manifest_path.read_text(encoding="utf-8")
-    entries = set(re.findall(r"^\s+(Source/[^\s\)]+)\s*$", manifest, re.MULTILINE))
-    required_entries = {
+    path = code_root / "taintedgrailmoddingsdk_editor_files.cmake"
+    text = path.read_text(encoding="utf-8")
+    entries = set(re.findall(r"^\s+(Source/[^\s\)]+)\s*$", text, re.MULTILINE))
+    required = {
         "Source/CatalogBrowserWidget.cpp", "Source/CatalogBrowserWidget.h",
         "Source/CatalogDatabase.cpp", "Source/CatalogDatabase.h",
         "Source/CatalogGovernanceBlockerService.cpp", "Source/CatalogGovernanceBlockerService.h",
@@ -103,12 +106,17 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/CatalogGovernanceWidget.cpp", "Source/CatalogGovernanceWidget.h",
         "Source/CatalogPersistenceService.cpp", "Source/CatalogPersistenceService.h",
         "Source/CatalogPromotionService.cpp", "Source/CatalogPromotionService.h",
-        "Source/FoundationCatalogService.cpp", "Source/FoundationGovernanceService.cpp",
+        "Source/EconomyAuthoringService.cpp", "Source/EconomyAuthoringService.h",
+        "Source/EconomyBlockerService.cpp", "Source/EconomyBlockerService.h",
+        "Source/EconomyModels.cpp", "Source/EconomyModels.h",
+        "Source/FoundationCatalogService.cpp", "Source/FoundationEconomyService.cpp",
+        "Source/FoundationGovernanceService.cpp",
         "Source/FoundationModels.cpp", "Source/FoundationModels.h",
         "Source/FoundationNotificationBus.h",
         "Source/FoundationService.cpp", "Source/FoundationService.h",
         "Source/FoundationStatusWidget.cpp", "Source/FoundationStatusWidget.h",
         "Source/FoundationValidationService.cpp", "Source/FoundationValidationService.h",
+        "Source/ItemRecipeEditorWidget.cpp", "Source/ItemRecipeEditorWidget.h",
         "Source/PackManagerWidget.cpp", "Source/PackManagerWidget.h",
         "Source/PackPersistenceService.cpp", "Source/PackPersistenceService.h",
         "Source/SourceEvidenceIntakeWidget.cpp", "Source/SourceEvidenceIntakeWidget.h",
@@ -120,8 +128,8 @@ def validate_source_manifest(gem_root: Path) -> None:
         "Source/TaintedGrailModdingSDKSystemComponent.h",
         "Source/WorkspacePersistenceService.cpp", "Source/WorkspacePersistenceService.h",
     }
-    if entries != required_entries:
-        fail(f"Editor source manifest mismatch: expected {sorted(required_entries)}, found {sorted(entries)}")
+    if entries != required:
+        fail(f"Editor source manifest mismatch: expected {sorted(required)}, found {sorted(entries)}")
     for relative_path in entries:
         if not (code_root / relative_path).is_file():
             fail(f"Manifest entry does not exist: {relative_path}")
@@ -135,24 +143,25 @@ def read_sources(gem_root: Path) -> tuple[Path, str]:
 
 def validate_editor_foundation(gem_root: Path) -> None:
     _, combined = read_sources(gem_root)
-    for fragment in (
+    required = (
         "WorkspaceModel", "GameProfile", "m_runtimeTarget", "m_outputPath", "m_stagingPath", "m_deploymentPath",
         "class WorkspacePersistenceService", "OpenWorkspace", "SaveWorkspaceAs",
         "PackManifest", "HasStableIdentity", "UsesSupportedSchema", "m_requiredCoreVersion",
         "m_requiredAdapterVersion", "m_requiredMods", "m_contentDefinitionPaths", "m_assetPaths",
         "m_localisationPaths", "m_buildConfiguration", "m_releaseChannel",
         "class PackPersistenceService", "class PackManagerWidget", "SaveActivePack", "LoadPack",
-        "RegisterViewPane<PackManagerWidget>",
-        "class SourceEvidenceRegistry", "class CatalogDatabase", "class FoundationValidationService",
-        "class FoundationService", "FoundationNotificationBus", "class FoundationStatusWidget",
-        "RegisterViewPane<FoundationStatusWidget>", "SaveObjectToFile", "LoadObjectFromFile",
-        "TaintedGrailModdingSDKService", "FoA runtime execution remains disabled",
-    ):
+        "RegisterViewPane<PackManagerWidget>", "class SourceEvidenceRegistry", "class CatalogDatabase",
+        "class FoundationValidationService", "class FoundationService", "FoundationNotificationBus",
+        "class FoundationStatusWidget", "RegisterViewPane<FoundationStatusWidget>",
+        "SaveObjectToFile", "LoadObjectFromFile", "TaintedGrailModdingSDKService",
+        "FoA runtime execution remains disabled",
+    )
+    for fragment in required:
         if fragment not in combined:
             fail(f"Editor foundation is missing {fragment!r}")
     for token in (
         "#include <BepInEx", "HarmonyLib", "TG.Main", "LocationTemplate", "SpawnLocation(",
-        "WriteAllBytes", "std::ofstream",
+        "HeroItems.Add", "HeroRecipes.LearnRecipe", "Stock.AddItem", "WriteAllBytes", "std::ofstream",
     ):
         if token in combined:
             fail(f"Editor-only foundation contains forbidden runtime integration {token!r}")
@@ -199,25 +208,28 @@ def validate_catalog(gem_root: Path) -> None:
         if fragment not in combined:
             fail(f"Canonical catalog is missing {fragment!r}")
 
-    promotion = (source_root / "CatalogPromotionService.cpp").read_text(encoding="utf-8")
+    promotion_path = source_root / "CatalogPromotionService.cpp"
+    promotion = promotion_path.read_text(encoding="utf-8")
     if "record.m_allowedUsages" in promotion:
         fail("Evidence promotion must not assign allowed usages")
-    require_contains(promotion, 'record.m_stalenessState = "unknown"', source_root / "CatalogPromotionService.cpp")
+    require_contains(promotion, 'record.m_stalenessState = "unknown"', promotion_path)
 
-    catalog_service = (source_root / "FoundationCatalogService.cpp").read_text(encoding="utf-8")
+    catalog_service_path = source_root / "FoundationCatalogService.cpp"
+    catalog_service = catalog_service_path.read_text(encoding="utf-8")
     save_position = catalog_service.find("m_catalogPersistence.Save(")
     publish_position = catalog_service.find("m_catalog = candidate")
     if save_position < 0 or publish_position < 0 or save_position > publish_position:
         fail("Canonical catalog must persist the candidate document before publishing in-memory state")
 
-    catalog_database = (source_root / "CatalogDatabase.cpp").read_text(encoding="utf-8")
-    if "record.m_displayName ==" in catalog_database or "record.m_displayName !=" in catalog_database:
+    database_path = source_root / "CatalogDatabase.cpp"
+    database = database_path.read_text(encoding="utf-8")
+    if "record.m_displayName ==" in database or "record.m_displayName !=" in database:
         fail("Canonical identity must not merge or reject records based on display name")
 
 
 def validate_governance_engine(gem_root: Path) -> None:
     source_root, combined = read_sources(gem_root)
-    required = (
+    for fragment in (
         "CatalogGovernanceEvent", "CatalogGovernanceRequest", "CatalogValidationRequest",
         "m_stalenessState", "m_governanceHistory", "GetGovernanceHistory",
         "class CatalogGovernanceService", "class CatalogGovernanceBlockerService",
@@ -227,35 +239,74 @@ def validate_governance_engine(gem_root: Path) -> None:
         "Allowed usage requires at least one validated proof event",
         "Permission never follows automatically from evidence or validation",
         "Usage permission requires a validated, current, unresolved-free, non-superseded record",
-    )
-    for fragment in required:
+    ):
         if fragment not in combined:
             fail(f"Catalog governance engine is missing {fragment!r}")
 
-    governance = (source_root / "CatalogGovernanceService.cpp").read_text(encoding="utf-8")
-    if "updated.m_allowedUsages.push_back" in governance:
+    path = source_root / "CatalogGovernanceService.cpp"
+    text = path.read_text(encoding="utf-8")
+    if "updated.m_allowedUsages.push_back" in text:
         fail("Governance permissions must use duplicate-safe reviewed transitions")
-    validation_position = governance.find("catalog.AddValidationEvent(validation")
-    permission_text = "ApplyValidation"
-    if validation_position < 0 or permission_text not in governance:
-        fail("Validation decisions must be persisted as validation history")
+    for fragment in ("catalog.AddValidationEvent(validation", "updated.m_allowedUsages.clear();", "ValidatePermissionBasis"):
+        require_contains(text, fragment, path)
+
+    foundation_path = source_root / "FoundationGovernanceService.cpp"
     require_contains(
-        governance,
-        "updated.m_allowedUsages.clear();",
-        source_root / "CatalogGovernanceService.cpp",
-    )
-    require_contains(
-        governance,
-        "ValidatePermissionBasis",
-        source_root / "CatalogGovernanceService.cpp",
+        foundation_path.read_text(encoding="utf-8"),
+        "PersistCatalogCandidate(candidate, error)",
+        foundation_path,
     )
 
-    foundation_governance = (source_root / "FoundationGovernanceService.cpp").read_text(encoding="utf-8")
-    require_contains(
-        foundation_governance,
-        "PersistCatalogCandidate(candidate, error)",
-        source_root / "FoundationGovernanceService.cpp",
+
+def validate_economy_authoring(gem_root: Path) -> None:
+    source_root, combined = read_sources(gem_root)
+    required = (
+        "EconomyItemProfile", "EconomyRecipeProfile", "EconomyRecipeIngredient", "EconomyRecipeOutput",
+        "m_economyItems", "m_economyRecipes", "m_recipeIngredients", "m_recipeOutputs",
+        "class EconomyAuthoringService", "class EconomyBlockerService", "class ItemRecipeEditorWidget",
+        "UpsertEconomyItemProfile", "UpsertEconomyRecipeProfile", "UpsertEconomyRecipeIngredient",
+        "UpsertEconomyRecipeOutput", "RegisterViewPane<ItemRecipeEditorWidget>",
+        "Tainted Grail Item and Recipe Editor", "existing_item_grant", "existing_recipe_learn",
+        "runtime_recipe_append", "custom_item_registration", "custom_recipe_registration",
+        "asset_localisation_injection", "vendor_or_loot_injection",
+        "quest_or_contract_reward_injection", "no_unvalidated_runtime_use",
+        "Recipe ingredients require exactly one item record ID or unresolved item subject ref",
+        "Recipe outputs require exactly one item record ID or unresolved item subject ref",
+        "Recipe persistence mode must be unknown, native_template, runtime_append, or custom_template",
+        "The canonical item record does not exist", "Economy evidence belongs to a different catalog subject",
     )
+    for fragment in required:
+        if fragment not in combined:
+            fail(f"Item/recipe editor is missing {fragment!r}")
+
+    database_path = source_root / "CatalogDatabase.cpp"
+    database = database_path.read_text(encoding="utf-8")
+    for fragment in (
+        "document.m_economyItems = m_economyItems",
+        "document.m_economyRecipes = m_economyRecipes",
+        "document.m_recipeIngredients = m_recipeIngredients",
+        "document.m_recipeOutputs = m_recipeOutputs",
+        "candidate.UpsertEconomyItem",
+        "candidate.UpsertEconomyRecipe",
+        "candidate.UpsertRecipeIngredient",
+        "candidate.UpsertRecipeOutput",
+    ):
+        require_contains(database, fragment, database_path)
+
+    service_path = source_root / "FoundationEconomyService.cpp"
+    service = service_path.read_text(encoding="utf-8")
+    for fragment in (
+        "CatalogDatabase candidate = m_catalog",
+        "ValidateEvidenceForSubjects",
+        "PersistCatalogCandidate(candidate, error)",
+    ):
+        require_contains(service, fragment, service_path)
+
+    widget_path = source_root / "ItemRecipeEditorWidget.cpp"
+    widget = widget_path.read_text(encoding="utf-8")
+    for forbidden in ("ApplyCatalogGovernanceDecision", "ApplyCatalogValidationDecision", "m_allowedUsages.push_back"):
+        if forbidden in widget:
+            fail(f"Item/recipe editor must not author permission state directly: {forbidden}")
 
 
 def validate_public_project(repo_root: Path) -> None:
@@ -266,12 +317,14 @@ def validate_public_project(repo_root: Path) -> None:
         ".github/ISSUE_TEMPLATE/tg_sdk_bug.yml", ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml",
         ".github/ISSUE_TEMPLATE/tg_sdk_research.yml", "docs/tainted-grail-sdk/README.md",
         "docs/tainted-grail-sdk/USER_GUIDE.md", "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
-        "docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md", "docs/tainted-grail-sdk/ARCHITECTURE.md",
-        "docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md", "docs/tainted-grail-sdk/CODE_QUALITY.md",
-        "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md", "docs/tainted-grail-sdk/DATA_FORMATS.md",
-        "docs/tainted-grail-sdk/RELEASE_PROCESS.md", "docs/tainted-grail-sdk/MAINTAINER_CHECKLIST.md",
-        "docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md", "docs/tainted-grail-sdk/PRIVACY.md",
-        "docs/tainted-grail-sdk/ACCESSIBILITY.md", "docs/tainted-grail-sdk/GLOSSARY.md",
+        "docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md",
+        "docs/tainted-grail-sdk/ITEM_RECIPE_EDITOR_GUIDE.md",
+        "docs/tainted-grail-sdk/ARCHITECTURE.md", "docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md",
+        "docs/tainted-grail-sdk/CODE_QUALITY.md", "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md",
+        "docs/tainted-grail-sdk/DATA_FORMATS.md", "docs/tainted-grail-sdk/RELEASE_PROCESS.md",
+        "docs/tainted-grail-sdk/MAINTAINER_CHECKLIST.md", "docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md",
+        "docs/tainted-grail-sdk/PRIVACY.md", "docs/tainted-grail-sdk/ACCESSIBILITY.md",
+        "docs/tainted-grail-sdk/GLOSSARY.md",
     }
     for relative_path in sorted(required_files):
         if not (repo_root / relative_path).is_file():
@@ -284,9 +337,10 @@ def validate_public_project(repo_root: Path) -> None:
         "GOVERNANCE.md": "Evidence, claims, reviewed records, validation, and permission remain separate",
         "docs/tainted-grail-sdk/CODE_QUALITY.md": "Never use a display name as a database key",
         "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md": "Pending is not passing",
-        "docs/tainted-grail-sdk/DATA_FORMATS.md": "GovernanceHistory",
+        "docs/tainted-grail-sdk/DATA_FORMATS.md": "RecipeIngredients",
         "docs/tainted-grail-sdk/CATALOG_GUIDE.md": "Promotion cannot create allowed usages",
         "docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md": "Validation does not grant permission",
+        "docs/tainted-grail-sdk/ITEM_RECIPE_EDITOR_GUIDE.md": "An item record is not a recipe record",
         ".github/PULL_REQUEST_TEMPLATE.md": "Author self-review",
         ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml": "design review before implementation",
         ".github/CODEOWNERS": "/Gems/TaintedGrailModdingSDK/ @theb0yys",
@@ -311,6 +365,7 @@ def main() -> int:
         validate_source_intake(gem_root)
         validate_catalog(gem_root)
         validate_governance_engine(gem_root)
+        validate_economy_authoring(gem_root)
         validate_public_project(repo_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
@@ -318,10 +373,9 @@ def main() -> int:
 
     print("Tainted Grail SDK foundation validation passed.")
     print(
-        "Validated: public documentation and governance, workspace and pack editing, source/evidence intake, "
-        "canonical catalog persistence/search/promotion, independent maturity/confidence/risk/validation/staleness, "
-        "proof-backed permission/prohibition decisions, supersession, transactional publish boundaries, blockers, "
-        "editor panes, automatic refresh, and editor-only runtime separation."
+        "Validated: public governance, workspace and pack editing, source/evidence intake, canonical catalog, "
+        "independent governance and proof-backed permissions, typed item/recipe profiles and joins, economy "
+        "blockers and lanes, transactional persistence, six editor panes, tests, and editor-only runtime separation."
     )
     return 0
 

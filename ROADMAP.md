@@ -84,7 +84,7 @@ All domain tools use canonical IDs, source/evidence provenance, governance decis
 
 #### Item and Recipe Editor
 
-Status: implemented on `foa-development`, pending integration and hardening.
+Status: implemented, continuing hardening and evidence coverage.
 
 - Typed item profiles keyed to canonical `economy/item` records.
 - Typed recipe profiles keyed to canonical `economy/recipe` records.
@@ -96,9 +96,10 @@ Status: implemented on `foa-development`, pending integration and hardening.
 - First-class `sold_by`, `dropped_by`, `found_at`, `rewarded_by`, `learned_from`, `granted_by`, and `crafted_at` relationships.
 - Separate existing-item, existing-recipe, runtime-append, custom-registration, asset/localisation, vendor/loot, and reward lanes.
 - Read-only lane matrices; permission remains owned by Catalog Governance.
+- Read-only station visibility and learnability evidence rows derived from exact recipe/station IDs, `crafted_at` and `learned_from` relationships, evidence, governance state, and blockers.
 - Economy blockers for missing profiles, evidence, stations, outputs, unresolved joins, quest/unique risks, and identity-incompatible lanes.
 - Transactional persistence inside `Catalog/catalog.tgcatalog.json`.
-- Unit tests for profile identity, stations, joins, chance/quantity, round-trip persistence, acquisition defaults, and lane status.
+- Unit tests for profile identity, stations, joins, chance/quantity, round-trip persistence, acquisition defaults, lane status, deterministic evidence rows, fail-closed evidence/governance, and non-mutation.
 
 Exit criteria:
 
@@ -107,12 +108,12 @@ Exit criteria:
 - native and synthetic action lanes remain separate;
 - stations, ingredients, outputs, and acquisition relationships preserve canonical identity and evidence;
 - profile and join writes reject missing or unrelated evidence;
-- action lanes remain read-only in the domain tool;
+- action lanes and evidence views remain read-only in the domain tool;
+- station and learnability research never implies runtime capability;
 - no item or recipe authoring command invokes FoA runtime code.
 
 #### Remaining economy work
 
-- station-specific visibility and learnability evidence views;
 - vendor, loot, reward, and acquisition coverage dashboards;
 - authoring-time duplicate detection reports across packs;
 - work-order generation after adapter contracts exist.

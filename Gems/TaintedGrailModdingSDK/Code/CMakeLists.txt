@@ -54,9 +54,10 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
     ly_add_source_properties(
         SOURCES
             Tests/DeveloperPreviewSmokeTests.cpp
+            Tests/WorkspaceSchemaServiceTests.cpp
         PROPERTY COMPILE_DEFINITIONS
             VALUES
-                TG_SDK_PREVIEW_TEMPLATE_ROOT=\"${CMAKE_CURRENT_LIST_DIR}/../Preview/Template\"
+                TG_SDK_PREVIEW_TEMPLATE_ROOT="${CMAKE_CURRENT_LIST_DIR}/../Preview/Template"
     )
 
     ly_add_googletest(

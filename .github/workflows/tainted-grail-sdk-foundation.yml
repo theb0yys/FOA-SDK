@@ -105,6 +105,9 @@ jobs:
       - name: Validate canonical path and executable policy
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py
 
+      - name: Validate atomic workspace and durable schema policy
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_workspace_atomicity_schema.py
+
       - name: Test Developer Preview 0 fixture
         run: >-
           python -m unittest discover

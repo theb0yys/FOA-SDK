@@ -25,6 +25,10 @@ namespace TaintedGrailModdingSDK
             const WorkspaceModel& workspace,
             const AZStd::string& filePath) const;
         AZ::Outcome<WorkspaceModel, AZStd::string> Load(const AZStd::string& filePath) const;
+        AZ::Outcome<WorkspaceModel, AZStd::string> LoadCandidate(
+            const AZStd::string& filePath,
+            AZStd::string& resolvedPath) const;
+        void PublishResolvedPath(const AZStd::string& resolvedPath) const;
         const AZStd::string& GetLastResolvedPath() const;
 
     private:

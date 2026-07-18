@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+
+"""Validate the atomic workspace transition and durable schema-1 contract."""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+
+class WorkspaceContractError(RuntimeError):
+    """Raised when the reviewed workspace contract is incomplete."""
+
+
+def require_file(path: Path) -> str:
+    if not path.is_file():
+        raise WorkspaceContractError(f"Required workspace contract file is missing: {path}")
+    return path.read_text(encoding="utf-8")
+
+
+def require_fragments(path: Path, fragments: tuple[str, ...]) -> str:
+    text = require_file(path)
+    for fragment in fragments:
+        if fragment not in text:
+            raise WorkspaceContractError(f"{path} is missing required fragment {fragment!r}.")
+    return text
+
+
+def validate_workspace_contract(repo_root: Path) -> None:
+    gem_root = repo_root / "Gems/TaintedGrailModdingSDK"
+    source_root = gem_root / "Code/Source"
+    tests_root = gem_root / "Code/Tests"
+    code_root = gem_root / "Code"
+
+    schema_header = source_root / "WorkspaceSchemaService.h"
+    schema_source = source_root / "WorkspaceSchemaService.cpp"
+    persistence = source_root / "WorkspacePersistenceService.cpp"
+    candidate_header = source_root / "FoundationWorkspaceLoadService.h"
+    candidate_source = source_root / "FoundationWorkspaceLoadService.cpp"
+    service_header = source_root / "FoundationService.h"
+    service_source = source_root / "FoundationService.cpp"
+    construction = source_root / "FoundationServiceConstruction.cpp"
+    boundary = source_root / "FoundationPersistenceBoundary.cpp"
+    path_validation = source_root / "PathPolicyWorkspaceValidation.cpp"
+    integration_tests = tests_root / "FoundationServiceWorkspaceLoadTests.cpp"
+    schema_tests = tests_root / "WorkspaceSchemaServiceTests.cpp"
+    editor_manifest = code_root / "taintedgrailmoddingsdk_path_policy_editor_files.cmake"
+    test_manifest = code_root / "taintedgrailmoddingsdk_path_policy_tests_files.cmake"
+    cmake = code_root / "CMakeLists.txt"
+    fixture = gem_root / "Preview/Template/preview.tgworkspace.json"
+    design = repo_root / "docs/tainted-grail-sdk/WORKSPACE_ATOMICITY_AND_SCHEMA.md"
+
+    require_fragments(
+        schema_header,
+        (
+            "LegacySchemaVersion = 0",
+            "CurrentSchemaVersion = 1",
+            "MigrateAndValidate",
+            "Validate(const WorkspaceModel& workspace)",
+        ),
+    )
+    require_fragments(
+        schema_source,
+        (
+            "WorkspaceId must be a lowercase namespaced stable ID",
+            "duplicate ProfileId",
+            "ActiveGameProfileId does not bind",
+            "Mono profiles require BepInExVersion and PluginPath",
+            "Legacy workspace schema 0 cannot be migrated safely",
+        ),
+    )
+    persistence_text = require_fragments(
+        persistence,
+        (
+            'QStringLiteral("SchemaVersion")',
+            "WorkspaceSchemaService::CurrentSchemaVersion",
+            "WorkspaceSchemaService::LegacySchemaVersion",
+            "DetectSchemaVersion",
+            "MigrateAndValidate",
+            "QSaveFile",
+        ),
+    )
+    if "SaveObjectToFile(workspace" in persistence_text:
+        raise WorkspaceContractError(
+            "Workspace persistence must emit the explicit durable schema-1 document."
+        )
+
+    require_fragments(
+        candidate_header,
+        (
+            "struct FoundationWorkspaceLoadCandidate",
+            "m_workspaceFilePath",
+            "m_workspaceRootPath",
+            "m_activeProfile",
+            "m_sourceRegistry",
+            "m_importIssues",
+            "m_catalog",
+            "m_catalogFilePath",
+        ),
+    )
+    require_fragments(
+        candidate_source,
+        (
+            "BuildCandidate",
+            "ValidateSourceBinding",
+            "ValidateEvidenceBinding",
+            "RejectLoadErrors",
+            "SourceEvidenceRegistry registry",
+            "CatalogDatabase catalog",
+            "ReplaceFromDocument",
+            "activeProfileCopy",
+        ),
+    )
+    require_fragments(
+        path_validation,
+        (
+            "ValidateWorkspacePaths",
+            "OutputPath",
+            "StagingPath",
+            "DeploymentPath",
+            "DiagnosticsPath",
+            "ExtractedDataPath",
+            "ManagedAssembliesPath must remain inside",
+            "PluginPath must remain inside",
+        ),
+    )
+    require_fragments(
+        construction,
+        (
+            "LoadCandidate",
+            "ValidateWorkspacePaths",
+            "m_workspaceFilePath;",
+            "FoundationWorkspaceLoadService",
+        ),
+    )
+    require_fragments(
+        boundary,
+        (
+            "LoadCandidate",
+            "PublishResolvedPath",
+            "resolvedPath = resolved.TakeValue()",
+        ),
+    )
+    require_fragments(
+        service_header,
+        (
+            "FoundationWorkspaceLoadService m_workspaceLoadService",
+            "AZStd::string m_workspaceRootPath",
+            "GetWorkspaceRootPath",
+        ),
+    )
+
+    load_match = re.search(
+        r"bool FoundationService::LoadWorkspace\([^\{]+\{(?P<body>.*?)\n    \}",
+        require_file(service_source),
+        re.DOTALL,
+    )
+    if not load_match:
+        raise WorkspaceContractError("Unable to locate FoundationService::LoadWorkspace.")
+    body = load_match.group("body")
+    candidate_position = body.find("BuildCandidate(filePath)")
+    publish_position = body.find("m_workspace = AZStd::move(candidate.m_workspace)")
+    snapshot_position = body.find("RefreshSnapshot()")
+    if min(candidate_position, publish_position, snapshot_position) < 0:
+        raise WorkspaceContractError("Workspace load is missing candidate, publication, or snapshot steps.")
+    if not candidate_position < publish_position < snapshot_position:
+        raise WorkspaceContractError("Workspace candidate must complete before any live publication.")
+    for forbidden in ("ReloadSourceEvidence", "ReloadCatalog", "m_workspace = result.TakeValue"):
+        if forbidden in body:
+            raise WorkspaceContractError(
+                f"Workspace load still contains pre-candidate live mutation path {forbidden!r}."
+            )
+
+    require_fragments(
+        integration_tests,
+        (
+            "SuccessfulCandidatePublishesEveryWorkspaceObject",
+            "WorkspaceDocumentFailurePreservesAllLiveState",
+            "ActiveProfileFailurePreservesAllLiveState",
+            "WorkspacePathFailurePreservesAllLiveState",
+            "SourceLoadFailurePreservesAllLiveState",
+            "ImportIssueFailurePreservesAllLiveState",
+            "RegistryBindingFailurePreservesAllLiveState",
+            "CatalogLoadFailurePreservesAllLiveState",
+            "CatalogBindingFailurePreservesAllLiveState",
+            "CatalogValidationFailurePreservesAllLiveState",
+            "StateSignature",
+            "GetPacks().size()",
+            "GetSnapshot().m_workspaceFilePath",
+        ),
+    )
+    require_fragments(
+        schema_tests,
+        (
+            "StableWorkspaceIdIsRequired",
+            "ProfileIdsMustBeUnique",
+            "ActiveProfileMustBindExactly",
+            "UnknownSchemaVersionIsRejected",
+            "UnsafeLegacyWorkspaceIsClearlyRejected",
+            "SchemaOneRoundTripIsStable",
+            "PreviewFixtureLegacyShapeMigratesAndRoundTrips",
+        ),
+    )
+
+    for manifest, fragments in (
+        (
+            editor_manifest,
+            (
+                "Source/FoundationWorkspaceLoadService.cpp",
+                "Source/PathPolicyWorkspaceValidation.cpp",
+                "Source/WorkspaceSchemaService.cpp",
+            ),
+        ),
+        (
+            test_manifest,
+            (
+                "Tests/FoundationServiceWorkspaceLoadTests.cpp",
+                "Tests/WorkspaceSchemaServiceTests.cpp",
+            ),
+        ),
+    ):
+        require_fragments(manifest, fragments)
+    require_fragments(
+        cmake,
+        (
+            "Tests/WorkspaceSchemaServiceTests.cpp",
+            "TG_SDK_PREVIEW_TEMPLATE_ROOT",
+        ),
+    )
+
+    fixture_document = json.loads(require_file(fixture))
+    if fixture_document.get("SchemaVersion") != 1:
+        raise WorkspaceContractError("Preview workspace fixture must use durable schema version 1.")
+
+    require_fragments(
+        design,
+        (
+            "legacy schema 0",
+            "FoundationWorkspaceLoadCandidate",
+            "publishes only after every stage succeeds",
+            "leaves all previous objects, paths, packs and the previous snapshot unchanged",
+        ),
+    )
+
+
+def main() -> int:
+    repo_root = Path(__file__).resolve().parents[3]
+    try:
+        validate_workspace_contract(repo_root)
+    except (OSError, json.JSONDecodeError, WorkspaceContractError) as exc:
+        print(f"Tainted Grail workspace atomicity/schema validation failed: {exc}", file=sys.stderr)
+        return 1
+    print(
+        "Tainted Grail workspace contract passed: schema-0 migration, durable schema 1, "
+        "candidate validation, atomic publication, and failure preservation are wired."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

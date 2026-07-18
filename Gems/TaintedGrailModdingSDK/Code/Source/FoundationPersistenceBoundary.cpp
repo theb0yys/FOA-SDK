@@ -68,16 +68,33 @@ namespace TaintedGrailModdingSDK
             return AZ::Failure(AZStd::string(resolved.GetError()));
         }
 
+        auto workspaceRoot = m_pathPolicy.ResolveWorkspaceRoot(
+            workspace,
+            resolved.GetValue(),
+            true);
+        if (!workspaceRoot.IsSuccess())
+        {
+            return AZ::Failure(AZStd::string(workspaceRoot.GetError()));
+        }
+        auto workspacePaths = m_pathPolicy.ValidateWorkspacePaths(
+            workspace,
+            workspaceRoot.GetValue());
+        if (!workspacePaths.IsSuccess())
+        {
+            return AZ::Failure(AZStd::string(workspacePaths.GetError()));
+        }
+
         AZ::Outcome<void, AZStd::string> saved = m_persistence.Save(workspace, resolved.GetValue());
         if (saved.IsSuccess())
         {
-            m_lastResolvedPath = resolved.GetValue();
+            PublishResolvedPath(resolved.GetValue());
         }
         return saved;
     }
 
-    AZ::Outcome<WorkspaceModel, AZStd::string> FoundationWorkspacePersistenceBoundary::Load(
-        const AZStd::string& filePath) const
+    AZ::Outcome<WorkspaceModel, AZStd::string> FoundationWorkspacePersistenceBoundary::LoadCandidate(
+        const AZStd::string& filePath,
+        AZStd::string& resolvedPath) const
     {
         AZ::Outcome<AZStd::string, AZStd::string> resolved = m_pathPolicy.ResolveWorkspaceDocumentPath(
             filePath,
@@ -86,12 +103,32 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string(resolved.GetError()));
         }
-        AZ::Outcome<WorkspaceModel, AZStd::string> loaded = m_persistence.Load(resolved.GetValue());
+
+        auto loaded = m_persistence.Load(resolved.GetValue());
+        if (!loaded.IsSuccess())
+        {
+            return AZ::Failure(AZStd::string(loaded.GetError()));
+        }
+        resolvedPath = resolved.TakeValue();
+        return loaded;
+    }
+
+    AZ::Outcome<WorkspaceModel, AZStd::string> FoundationWorkspacePersistenceBoundary::Load(
+        const AZStd::string& filePath) const
+    {
+        AZStd::string resolvedPath;
+        auto loaded = LoadCandidate(filePath, resolvedPath);
         if (loaded.IsSuccess())
         {
-            m_lastResolvedPath = resolved.GetValue();
+            PublishResolvedPath(resolvedPath);
         }
         return loaded;
+    }
+
+    void FoundationWorkspacePersistenceBoundary::PublishResolvedPath(
+        const AZStd::string& resolvedPath) const
+    {
+        m_lastResolvedPath = resolvedPath;
     }
 
     const AZStd::string& FoundationWorkspacePersistenceBoundary::GetLastResolvedPath() const

@@ -8,26 +8,40 @@
 set(FILES
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
+    Source/CatalogGovernanceBlockerService.cpp
+    Source/CatalogGovernanceBlockerService.h
     Source/CatalogGovernanceService.cpp
     Source/CatalogGovernanceService.h
     Source/CatalogGovernanceTypes.cpp
     Source/CatalogGovernanceTypes.h
     Source/CatalogPersistenceService.cpp
     Source/CatalogPersistenceService.h
+    Source/CatalogPromotionService.cpp
+    Source/CatalogPromotionService.h
     Source/CatalogTransactionService.cpp
     Source/CatalogTransactionService.h
     Source/EconomyAuthoringService.cpp
     Source/EconomyAuthoringService.h
+    Source/EconomyBlockerService.cpp
+    Source/EconomyBlockerService.h
     Source/EconomyModels.cpp
     Source/EconomyModels.h
+    Source/FoundationCatalogService.cpp
     Source/FoundationModels.cpp
     Source/FoundationModels.h
+    Source/FoundationNotificationBus.h
+    Source/FoundationService.cpp
+    Source/FoundationService.h
+    Source/FoundationValidationService.cpp
+    Source/FoundationValidationService.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/SourceEvidencePersistenceService.cpp
     Source/SourceEvidencePersistenceService.h
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
+    Source/SourceImportService.cpp
+    Source/SourceImportService.h
     Source/WorkspacePersistenceService.cpp
     Source/WorkspacePersistenceService.h
     Tests/CatalogDatabaseTests.cpp

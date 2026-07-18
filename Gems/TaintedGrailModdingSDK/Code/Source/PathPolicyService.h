@@ -26,6 +26,10 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& workspaceFilePath,
             bool requireExisting) const;
 
+        AZ::Outcome<void, AZStd::string> ValidateWorkspacePaths(
+            const WorkspaceModel& workspace,
+            const AZStd::string& canonicalWorkspaceRoot) const;
+
         AZ::Outcome<AZStd::string, AZStd::string> ResolvePackManifestPath(
             const WorkspaceModel& workspace,
             const AZStd::string& workspaceFilePath,

@@ -8,6 +8,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Added
 
+- Durable workspace schema 1 with explicit legacy schema-0 migration, unknown-version rejection, stable workspace/profile identities, unique profile bindings, and project-owned fixture round-trip tests.
+- `FoundationWorkspaceLoadService` and `FoundationWorkspaceLoadCandidate` for all-or-nothing workspace, source/evidence, catalog, canonical-path, and active-profile transitions.
+- Direct `FoundationService` integration tests for workspace document, active-profile, path, source, import-issue, registry, catalog-load, catalog-binding, and catalog-validation failures.
 - O3DE `TaintedGrailModdingSDK` editor Gem and host-tool registration.
 - Foundation contract validator and focused GitHub Actions workflow.
 - Approved Developer Preview 0 design for a source-built Windows x64 usability milestone with deterministic fixtures, smoke verification, diagnostics, and a legally reviewed artifact path.
@@ -77,6 +80,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
+- Workspace loading now builds and validates a complete candidate before publishing any workspace, canonical path, registry, import issue, catalog, catalog path, or snapshot state.
+- Workspace persistence now emits explicit schema-1 JSON; unversioned schema-0 documents are migrated only when every current invariant can be validated safely.
+- The focused TG SDK workflow runs the atomic workspace/schema contract validator in addition to Developer Preview, path-policy, governance, catalog, and source-policy checks.
 - The focused TG SDK workflow runs Developer Preview command, project-integration, opener, fixture, launch, diagnostics, and manual UI evidence tests; command/project/fixture/persistence/launch-diagnostics/manual-evidence contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before existing foundation, governance, catalog, and source-policy checks.
 - A dedicated Windows workflow validates the product-host project, icon assets, command-line opener, low-level shortcut generator, hardened clickable entry, dry-run plan, and a real COM-created `.lnk`.
 - `AutomatedTesting` is restored to its upstream engine-testing role and no longer enables or hosts the TG SDK preview product.
@@ -96,6 +102,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Security
 
+- Failed workspace candidates cannot publish partial objects, change the live canonical workspace path, redirect pack containment, or replace the previous Foundation snapshot.
+- Workspace root, output, staging, deployment, diagnostics, extracted-data, managed-assembly, and Mono plugin paths are validated before publication and save.
 - Developer Preview fixture generation performs no network access or process launch and refuses silent overwrite of unrelated, partial, modified, or symlink-containing output directories.
 - Fixture verification rejects absolute/private paths, secret-like material, path traversal, borrowed native identities, ownership mismatches, unknown evidence, malformed relationships, and binding drift.
 - The persistence smoke uses temporary workspace roots only, performs no runtime or deployment action, and verifies proof-backed permission preservation separately from legacy fail-closed cleanup.

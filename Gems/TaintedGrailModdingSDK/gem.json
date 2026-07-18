@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "display_name": "Tainted Grail Modding SDK",
     "license": "Apache-2.0 OR MIT",
-    "license_url": "https://github.com/theb0yys/o3de/blob/development/LICENSE.txt",
+    "license_url": "https://github.com/theb0yys/o3de/blob/main/LICENSE.txt",
     "origin": "theb0yys",
     "origin_url": "https://github.com/theb0yys/o3de",
     "type": "Tool",

@@ -21,6 +21,9 @@
 #include <AzCore/Math/Crc.h>
 #include <AzCore/Serialization/SerializeContext.h>
 #include <AzToolsFramework/API/ViewPaneOptions.h>
+#include <QtCore/QRect>
+#include <QtCore/QString>
+#include <QtCore/qnamespace.h>
 
 namespace TaintedGrailModdingSDK
 {

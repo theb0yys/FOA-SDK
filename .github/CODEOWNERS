@@ -136,6 +136,9 @@
 
 # Tainted Grail Modding Editor and SDK ownership
 /Gems/TaintedGrailModdingSDK/ @theb0yys
+/TaintedGrailModdingEditor/ @theb0yys
+/.github/workflows/tainted-grail-*.yml @theb0yys
+/engine.json @theb0yys
 /docs/tainted-grail-sdk/ @theb0yys
 /README.md @theb0yys
 /CONTRIBUTING.md @theb0yys

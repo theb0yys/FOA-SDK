@@ -15,22 +15,19 @@ The launch wrapper expects `Editor.exe` beneath `bin/profile` or `bin/Profile`, 
 
 ## The Editor exits immediately
 
-Capture the wrapper result and native Editor log:
+Use the repository-owned project opener:
 
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile `
-  --project C:\O3DE\Projects\MyProject `
-  --log-dir build/tg-sdk-developer-preview-0-launch
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py
 ```
 
 Review:
 
 - `build/tg-sdk-developer-preview-0-launch/editor-launch.stderr.log`;
 - `build/tg-sdk-developer-preview-0-launch/tg-sdk-developer-preview-launch.json`;
-- `<PROJECT_ROOT>/user/log/Editor.log`.
+- `AutomatedTesting/user/log/Editor.log`.
 
-When no project is selected, O3DE writes the native Editor log beneath the engine `user/log` directory.
+The opener always selects the repository-owned `AutomatedTesting` project, which is committed with `TaintedGrailModdingSDK` enabled.
 
 ## The TG SDK panes are missing
 
@@ -38,28 +35,50 @@ After the Editor opens, use **Tools → Tainted Grail SDK**.
 
 If that menu group is absent:
 
-1. confirm `engine.json` contains `Gems/TaintedGrailModdingSDK` in `external_subdirectories`;
-2. rebuild the `Editor` target from the accepted source head;
-3. ensure the Editor executable comes from the same build directory;
-4. close other Asset Processor or Editor processes using another build;
-5. search `Editor.log` for `TaintedGrailModdingSDK` activation or module-load errors.
+1. run `python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py`;
+2. confirm `AutomatedTesting/project.json` contains `TaintedGrailModdingSDK` in `gem_names`;
+3. confirm `engine.json` contains `Gems/TaintedGrailModdingSDK` in `external_subdirectories` and `AutomatedTesting` in `projects`;
+4. reconfigure after pulling the project-manifest change;
+5. rebuild the `Editor` target from the accepted source head;
+6. ensure the Editor executable comes from the same build directory;
+7. close other Asset Processor or Editor processes using another build;
+8. search `AutomatedTesting/user/log/Editor.log` for `TaintedGrailModdingSDK` activation or module-load errors.
 
 The expected activation message states that the editor foundation was activated and FoA runtime execution remains disabled.
 
+## The repository project contract fails
+
+The supported source-built preview uses:
+
+```text
+AutomatedTesting/project.json
+```
+
+The contract requires that project to be registered by `engine.json` and to enable `TaintedGrailModdingSDK` exactly once. Do not remove the Gem locally before configuring or building the preview.
+
+Run:
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
+```
+
+A failure identifies the missing project, Gem registration, opener, launcher forwarding, or quickstart contract.
+
 ## The selected project is rejected
 
-`--project` must identify an existing directory with a valid UTF-8 `project.json` containing `project_name`. The wrapper passes the resolved directory through O3DE’s `--project-path` switch.
+The lower-level `developer_preview_launch.py --project` option must identify an existing directory with a valid UTF-8 `project.json` containing `project_name`. The wrapper passes the resolved directory through O3DE’s `--project-path` switch.
 
-The preview fixture is a TG SDK workspace, not an O3DE project. Do not pass the fixture directory as `--project` unless it is deliberately placed inside a valid O3DE project.
+For the supported path, prefer `developer_preview_open.py`; it selects `AutomatedTesting` automatically. The preview fixture is a TG SDK workspace, not an O3DE project, and must not be passed as `--project`.
 
 ## Native Editor logs and wrapper logs differ
 
 `--log-dir` belongs to the wrapper. It captures the process command, exit status, stdout, and stderr without injecting an undocumented O3DE log override.
 
-O3DE’s native Editor log remains at:
+The repository-owned opener selects `AutomatedTesting`, so O3DE’s native Editor log is:
 
-- `<PROJECT_ROOT>/user/log/Editor.log` with an explicit project;
-- `<ENGINE_ROOT>/user/log/Editor.log` without one.
+```text
+AutomatedTesting/user/log/Editor.log
+```
 
 Supply the native log explicitly to diagnostics with `--editor-log` when needed.
 

@@ -5,6 +5,7 @@ on:
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
       - "docs/tainted-grail-sdk/**"
+      - "AutomatedTesting/project.json"
       - "README.md"
       - "CONTRIBUTING.md"
       - "CODE_OF_CONDUCT.md"
@@ -24,6 +25,7 @@ on:
     paths:
       - "Gems/TaintedGrailModdingSDK/**"
       - "docs/tainted-grail-sdk/**"
+      - "AutomatedTesting/project.json"
       - "README.md"
       - "CONTRIBUTING.md"
       - "CODE_OF_CONDUCT.md"
@@ -67,6 +69,15 @@ jobs:
       - name: Validate Developer Preview 0 command contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview.py
 
+      - name: Test Developer Preview 0 project integration
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_project.py" -v
+
+      - name: Test Developer Preview 0 project opener
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_open.py" -v
+
+      - name: Validate Developer Preview 0 project integration
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
+
       - name: Test Developer Preview 0 fixture
         run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_fixture.py" -v
 
@@ -105,6 +116,12 @@ jobs:
         run: >-
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify
           --output "${{ runner.temp }}/tg-sdk-developer-preview-0-diagnostics"
+
+      - name: Test Developer Preview 0 manual UI evidence tooling
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_ui_evidence.py" -v
+
+      - name: Validate Developer Preview 0 manual UI evidence contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_ui_evidence.py
 
       - name: Validate foundation and governance contracts
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py

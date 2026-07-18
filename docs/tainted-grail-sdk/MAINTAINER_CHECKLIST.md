@@ -66,6 +66,18 @@
 - PR is ready, not draft;
 - pending checks are not treated as passing.
 
+### Manual UI evidence changes
+
+For a PR that changes the Windows manual UI evidence contract:
+
+- checklist IDs and required screenshot coverage remain explicit;
+- evidence binds to the exact accepted commit;
+- the screenshot verifier checks PNG signature, dimensions, size, hashes, symlinks, traversal, and file allow-list;
+- the tool does not capture screenshots, automate UI coordinates, inspect pixels, or upload evidence;
+- privacy review and runtime-boundary attestation remain mandatory;
+- generated screenshots are kept beneath `build/` or outside the repository and are not committed;
+- implementation does not claim the actual Windows pass unless reviewed evidence exists.
+
 ## After merge
 
 - verify merge commit on `main`;
@@ -103,6 +115,17 @@ Use `RELEASE_PROCESS.md` and additionally confirm:
 - known limitations are prominent;
 - upgrade and rollback steps are tested;
 - public artefacts open successfully after upload.
+
+For a Windows Developer Preview claim, additionally confirm:
+
+- manual UI evidence was captured from the exact accepted commit;
+- every checklist item passed;
+- the screenshot verifier passed against that commit;
+- screenshot hashes and tester alias are recorded in the review evidence;
+- human privacy review is recorded;
+- no proprietary content, game files, saves, credentials, or private paths are visible;
+- the evidence directory and screenshots were not committed;
+- any blocked or failed observation prevents the release claim.
 
 ## Emergency response
 

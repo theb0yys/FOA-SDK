@@ -16,6 +16,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Dry-run CMake wrappers for the approved `windows-vs-unity` x64 configure path and Profile `Editor` plus `TaintedGrailModdingSDK.Catalog.Tests` build targets.
 - Machine-readable Developer Preview prerequisite and validation results with original child-process exit-code propagation.
 - Developer Preview command contract validator and unit coverage for argument construction, path safety, dry runs, deterministic validation order, JSON output, unsupported hosts, and failure propagation.
+- Repository-owned `AutomatedTesting` O3DE project integration with `TaintedGrailModdingSDK` enabled in committed project metadata.
+- `developer_preview_open.py` one-command Editor opener that selects the Gem-enabled repository project and delegates to the restricted launch wrapper.
+- Developer Preview project contract validation and unit tests for engine/project registration, exact Gem enablement, opener delegation, project-path forwarding, and quickstart coverage.
 - Deterministic Developer Preview 0 fixture generator containing only project-owned synthetic `preview.*` identities, portable paths, runtime-disabled pack data, source/evidence, catalog, governance, and economy documents.
 - Canonical `preview-fixture.manifest.json` output with relative paths, byte sizes, and SHA-256 digests for all fixture payloads.
 - Fixture verification for canonical JSON, exact file sets, hashes, path traversal, symlinks, private paths, source/evidence binding, catalog identity and ownership, relationship targets, governance proof links, and economy joins.
@@ -27,7 +30,11 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Controlled Windows x64 `Editor.exe` launch wrapper with explicit executable/build selection, O3DE `--project-path` support, dry-run output, wrapper-owned logs, pane-registration guidance, and exact process exit-code propagation.
 - Redacted local diagnostics collector and verifier with tool/build summaries, supplied validation and launch summaries, tail-limited Editor log excerpts, workspace-relative durable-document hashes, an allow-listed file set, SHA-256 manifest verification, and review-before-sharing guidance.
 - Twenty-five launch and diagnostics unit tests covering command restrictions, host checks, project validation, exit propagation, path/secret redaction, inventory limits, symlinks, overwrite protection, tamper detection, traversal rejection, and collect→verify behavior.
-- Developer Preview troubleshooting documentation for missing Editor output, absent TG SDK panes, native O3DE log locations, diagnostics failures, verification, and disclosure review.
+- Developer Preview troubleshooting documentation for missing Editor output, absent TG SDK panes, native log locations, diagnostics failures, verification, and disclosure review.
+- Windows manual UI checklist covering all TG SDK panes, normal scaling, keyboard traversal, synthetic data display, Item and Recipe Editor state, station/learnability evidence, save-close-reopen behavior, actionable failure messages, and the runtime boundary.
+- Screenshot-evidence initializer, recorder, PNG attachment helper, final attestation, and verifier bound to an exact source commit.
+- Screenshot evidence checks for PNG integrity, dimensions, size limits, SHA-256 hashes, required checklist coverage, path traversal, symlinks, unexpected files, textual private paths, secret-like material, privacy review, and no-runtime attestations.
+- Sixteen manual UI evidence unit tests covering pending initialization, output containment, note privacy, PNG validation, evidence completion, tampering, missing coverage, symlinks, unexpected files, and commit mismatch.
 - Workspace and exact FoA game-profile management with durable `*.tgworkspace.json` documents.
 - Mod/content-pack project management with durable `*.tgpack.json` manifests.
 - Pack ownership, compatibility, dependency, save-impact, resource, build, and release declarations.
@@ -68,9 +75,11 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
-- The focused TG SDK workflow now runs Developer Preview command, fixture, launch, and diagnostics tests; command/fixture/persistence/launch-diagnostics contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before the existing foundation, governance, catalog, and source-policy checks.
+- The focused TG SDK workflow now runs Developer Preview command, project-integration, opener, fixture, launch, diagnostics, and manual UI evidence tests; command/project/fixture/persistence/launch-diagnostics/manual-evidence contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before the existing foundation, governance, catalog, and source-policy checks.
+- Changes to `AutomatedTesting/project.json` now trigger the focused TG SDK workflow.
 - The catalog test target now compiles the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
 - Catalog compatibility loading now preserves current validated allowances only when the latest reviewed permission event has valid proof for the same subject; unproven legacy allowances still fail closed.
+- Release and maintainer procedures now require exact-commit Windows manual UI evidence, screenshot hashes, privacy review, verifier success, and non-commit handling before a Developer Preview claim.
 - Catalog records now carry an explicit staleness state.
 - Catalog relationships now use the same independent maturity, confidence, risk, validation, staleness, permission, prohibition, conflict, missing-reference, and supersession model as records.
 - Record and relationship governance transitions now execute through one typed state machine instead of duplicated branches.
@@ -88,8 +97,12 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Fixture verification rejects absolute/private paths, secret-like material, path traversal, borrowed native identities, ownership mismatches, unknown evidence, malformed relationships, and binding drift.
 - The persistence smoke uses temporary workspace roots only, performs no runtime or deployment action, and verifies proof-backed permission preservation separately from legacy fail-closed cleanup.
 - The Editor launch wrapper accepts only `Editor.exe`, constructs only the documented optional `--project-path` argument, uses no shell command strings or arbitrary passthrough arguments, and never launches FoA or runtime tooling.
+- The repository-owned project opener selects only `AutomatedTesting`, validates the committed Gem integration before launch, and delegates to the existing restricted launch wrapper.
 - Diagnostics collection is explicit and local-only, excludes source artifact contents, game files, saves, environment variables, credentials, binary logs, and unrestricted filesystem listings, and performs no automatic upload.
 - Diagnostics verification enforces relative allow-listed paths, size limits, UTF-8 text, SHA-256 hashes, symlink/traversal rejection, and path/secret redaction before a bundle can be replaced or shared.
+- Manual UI evidence tooling does not capture screenshots, automate UI coordinates, inspect screenshot pixels, perform OCR, access the network, or upload evidence.
+- Screenshot attachment requires explicit privacy and project-owned-content review; final verification requires exact commit binding, successful launch, activation-log confirmation, all checklist items passing, required screenshot coverage, and disclosure/runtime attestations.
+- Generated screenshots must remain beneath `build/` or outside the repository and are not release package contents.
 - Developer Preview commands do not install dependencies silently, use shell command strings, launch FoA, invoke runtime adapters, deploy files, modify saves, or collect telemetry.
 - Preview build-directory validation rejects the repository root, directories containing the checkout, `.git` paths, unrelated non-empty directories, and CMake caches bound to another source tree.
 - Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, and typed economy workflows.
@@ -110,9 +123,10 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Known limitations
 
-- Developer Preview 0 does not yet include completed Windows manual UI evidence or a verified preview archive.
-- The controlled Editor process path and service-level persistence smoke do not themselves prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.
-- The diagnostics verifier reduces accidental disclosure risk but does not replace the user’s responsibility to review every generated file before sharing it.
+- The Windows manual UI checklist and evidence verifier are implemented, but the actual Windows screenshot pass remains pending.
+- Developer Preview 0 does not yet include a prebuilt or verified preview archive; the Editor must be built from source.
+- The service-level smoke and controlled Editor process path do not themselves prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.
+- The UI evidence verifier checks metadata and file integrity but cannot inspect screenshot pixels; human privacy review remains mandatory.
 - The Item and Recipe Editor does not yet generate adapter work orders.
 - The evidence view reports station visibility and recipe learnability research but does not append, learn, register, persist, clean up, roll back, or prove runtime behavior.
 - Runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.

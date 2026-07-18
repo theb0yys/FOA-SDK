@@ -110,6 +110,25 @@ Record:
 - known limitations and troubleshooting updated;
 - release notes include migration and rollback.
 
+### Windows manual UI evidence
+
+Developer Preview and later Windows claims require a completed manual UI evidence directory for the exact reviewed `main` commit.
+
+Confirm:
+
+- the checklist was executed on Windows x64 Profile;
+- every required item is recorded as `pass`;
+- the source commit matches the release commit exactly;
+- the Editor launch result and TG SDK activation log are confirmed;
+- required screenshot coverage is present;
+- screenshot hashes, sizes, and PNG dimensions pass the screenshot verifier;
+- the tester completed the privacy attestation and runtime-boundary attestation;
+- no game files, saves, credentials, private paths, or unrelated desktop content are visible;
+- the evidence verifier passed with the exact expected commit;
+- screenshots and evidence are stored in the approved release record and **must not be committed** to the repository.
+
+A successful verifier result does not inspect screenshot pixels. Human privacy review remains mandatory.
+
 ## Build and package
 
 The release pipeline should eventually implement:
@@ -143,6 +162,8 @@ A public release should include, as applicable:
 - release notes;
 - compatibility matrix;
 - migration and rollback instructions.
+
+Manual UI evidence is release-review material, not a redistributable product payload. Screenshot hashes and the accepted evidence result may be recorded in release notes without publishing the screenshots publicly.
 
 ## Checksums
 

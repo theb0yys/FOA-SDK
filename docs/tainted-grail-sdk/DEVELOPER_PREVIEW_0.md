@@ -1,12 +1,12 @@
 # Developer Preview 0
 
-Status: fourth implementation slice — command layer, deterministic synthetic fixture, service-level persistence smoke, Windows x64 Editor launch wrapper, and redacted local diagnostics available; manual UI evidence and a distributable artifact are not implemented yet.
+Status: fifth implementation slice — command layer, deterministic synthetic fixture, service-level persistence smoke, Windows x64 Editor launch wrapper, redacted local diagnostics, and manual UI evidence tooling available; the actual Windows screenshot pass and a distributable artifact are not complete yet.
 
 ## Purpose
 
 Developer Preview 0 is the project’s source-built, pre-alpha usability milestone. Its first supported runnable target is **Windows x64 Profile**.
 
-This milestone is not a standalone installer or a production mod toolchain. The preview commands do not launch FoA, invoke BepInEx or Harmony, deploy files, modify saves, collect telemetry, upload diagnostics, or install prerequisites automatically.
+This milestone is not a standalone installer or a production mod toolchain. The preview commands do not launch FoA, invoke BepInEx or Harmony, deploy files, modify saves, collect telemetry, upload diagnostics or evidence, or install prerequisites automatically.
 
 Run all commands from the repository root. The default build directory is:
 
@@ -62,20 +62,15 @@ The command stops on the first failure, preserves that command’s exit code, an
 <build-dir>/tg-sdk-developer-preview-validation.json
 ```
 
-Run the launch and diagnostics script tests and contract validator directly when working on this slice:
+Run the manual UI evidence unit tests and contract validator directly when working on this slice:
 
 ```powershell
 python -m unittest discover `
   -s Gems/TaintedGrailModdingSDK/Tools/tests `
-  -p "test_developer_preview_launch.py" `
+  -p "test_developer_preview_ui_evidence.py" `
   -v
 
-python -m unittest discover `
-  -s Gems/TaintedGrailModdingSDK/Tools/tests `
-  -p "test_developer_preview_diagnostics.py" `
-  -v
-
-python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_launch_diagnostics.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_ui_evidence.py
 ```
 
 ## Generate and verify the synthetic fixture
@@ -118,7 +113,7 @@ ctest --test-dir build/tg-sdk-developer-preview-0-windows-profile `
   -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-This is service-level persistence proof. It does not replace the later manual Editor UI smoke pass or prove FoA runtime compatibility.
+This is service-level persistence proof. It does not replace the Windows manual UI smoke or prove FoA runtime compatibility.
 
 ## Launch the O3DE Editor
 
@@ -213,29 +208,54 @@ Verification fails for unexpected files, symlinks, path traversal, oversized fil
 
 `--replace` is accepted only when the existing output first passes complete verification. An unrelated or modified directory is never overwritten silently.
 
+## Windows manual UI smoke
+
+The [Windows Manual UI Smoke and Screenshot Evidence](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md) checklist defines the accepted manual pass for a real Windows x64 Profile session.
+
+The evidence command supports:
+
+```text
+developer_preview_ui_evidence.py init
+developer_preview_ui_evidence.py record
+developer_preview_ui_evidence.py attach
+developer_preview_ui_evidence.py attest
+developer_preview_ui_evidence.py verify
+```
+
+It binds the run to an exact commit, records every checklist result, copies only manually reviewed PNG screenshots, stores dimensions, sizes, and SHA-256 hashes, enforces required screenshot coverage, and checks textual metadata for private paths or secret-like material.
+
+The tool performs no manual screenshot capture, UI-coordinate automation, OCR, network access, or upload. It does not inspect screenshot pixels. A tester must review every image and provide the disclosure attestations.
+
+Keep the evidence under `build/` or outside the repository. Do not commit screenshots.
+
+The checklist and screenshot-evidence verifier are implemented. The **actual Windows pass remains pending** until a tester runs the accepted commit, attaches reviewed screenshots, records all checks as `pass`, attests the privacy and runtime boundary, and verifies the evidence against the same commit.
+
 ## Failure behavior
 
 The preview tooling fails closed for:
 
 - unsupported launch hosts;
 - a missing or wrongly named Editor executable;
-- invalid repository, build, project, workspace, log, or output paths;
+- invalid repository, build, project, workspace, log, evidence, or output paths;
 - prerequisite, configure, build, validator, source-policy, or compiled-test failures;
-- unsafe fixture or diagnostics overwrite attempts;
+- unsafe fixture, diagnostics, or screenshot-evidence overwrite attempts;
 - malformed or tampered fixture documents;
 - persistence or canonical-state mismatches;
 - diagnostics path traversal, symlinks, oversized content, unexpected files, or redaction failures;
+- incomplete manual UI checklist items;
+- missing screenshot coverage, invalid PNGs, screenshot tampering, or commit mismatches;
+- absent privacy, disclosure, activation-log, or runtime-boundary attestations;
 - child-process launch errors.
 
-No command performs runtime deployment, game launch, save mutation, telemetry, automatic upload, or automatic dependency installation.
+No command performs runtime deployment, game launch, save mutation, telemetry, automatic upload, automatic screenshot capture, or automatic dependency installation.
 
 ## Current limitations
 
-This fourth slice does not yet provide:
+This fifth slice does not yet provide:
 
-- completed Windows manual UI smoke evidence and screenshots;
+- completed Windows manual UI smoke evidence and screenshots from an accepted commit;
 - a CI-produced runnable Windows archive or source-build support bundle.
 
-The Editor launch wrapper proves a controlled source-built Editor process path, and diagnostics prove a redacted local support path. They do not prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.
+The checklist and verifier make the manual pass reproducible and reviewable, but they do not create or fabricate release evidence. The actual Windows screenshot pass remains pending.
 
-Those remaining capabilities are gated by the approved [Developer Preview 0 design](DEVELOPER_PREVIEW_0_DESIGN.md). Until they are complete and verified, the project remains a source-built pre-alpha editor and must not be presented as a finished Developer Preview release.
+The remaining artifact capability is gated by the approved [Developer Preview 0 design](DEVELOPER_PREVIEW_0_DESIGN.md). Until the manual evidence and artifact gates are complete, the project remains a source-built pre-alpha editor and must not be presented as a finished Developer Preview release.

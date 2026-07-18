@@ -1,0 +1,116 @@
+name: Tainted Grail Editor Entry
+
+on:
+  pull_request:
+    paths:
+      - "TaintedGrailModdingEditor/**"
+      - "AutomatedTesting/project.json"
+      - "engine.json"
+      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_open.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_project.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_shortcut.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_entry.py"
+      - "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
+      - ".github/workflows/tainted-grail-editor-entry.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "TaintedGrailModdingEditor/**"
+      - "AutomatedTesting/project.json"
+      - "engine.json"
+      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_open.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_project.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_shortcut.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_entry.py"
+      - "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
+      - ".github/workflows/tainted-grail-editor-entry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-entry:
+    name: Validate dedicated project and clickable entry
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test dedicated project contract
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_project.py" -v
+
+      - name: Test dedicated project opener
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_open.py" -v
+
+      - name: Test low-level Windows shortcut generator
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_shortcut.py" -v
+
+      - name: Test hardened clickable entry
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_entry.py" -v
+
+      - name: Validate dedicated project and clickable entry
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
+
+      - name: Dry-run hardened clickable entry generation
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create
+          --build-dir build/tg-sdk-developer-preview-0-windows-profile
+          --dry-run
+
+      - name: Create, verify, and inspect a real Windows shortcut
+        shell: pwsh
+        run: |
+          $editor = Join-Path $env:RUNNER_TEMP "Editor.exe"
+          $shortcut = Join-Path $env:RUNNER_TEMP "Tainted Grail Modding Editor.lnk"
+          New-Item -ItemType File -Path $editor -Force | Out-Null
+
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
+            --editor $editor `
+            --output $shortcut
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py verify `
+            --shortcut $shortcut
+
+          $shell = New-Object -ComObject WScript.Shell
+          $link = $shell.CreateShortcut($shortcut)
+          $expectedProject = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
+          $expectedArguments = '--project-path "' + $expectedProject + '"'
+          $expectedIcon = Join-Path $expectedProject "TaintedGrailModdingEditor.ico"
+
+          if ([IO.Path]::GetFullPath($link.TargetPath) -ne [IO.Path]::GetFullPath($editor)) {
+            throw "Shortcut target mismatch: $($link.TargetPath)"
+          }
+          if ($link.Arguments -ne $expectedArguments) {
+            throw "Shortcut argument mismatch: $($link.Arguments)"
+          }
+          if (-not $link.IconLocation.StartsWith($expectedIcon, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Shortcut icon mismatch: $($link.IconLocation)"
+          }

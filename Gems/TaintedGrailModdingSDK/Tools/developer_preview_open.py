@@ -6,11 +6,11 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Open the repository-owned Tainted Grail Developer Preview O3DE project.
+"""Open the dedicated Tainted Grail Modding Editor O3DE project.
 
-This command selects AutomatedTesting, which is committed with the
-TaintedGrailModdingSDK Gem enabled, then delegates process handling to the
-reviewed Developer Preview launch wrapper.
+This command selects TaintedGrailModdingEditor, validates the committed project
+contract, and delegates process handling to the restricted Developer Preview
+Editor launch wrapper.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ if str(TOOLS_DIR) not in sys.path:
 import developer_preview_launch
 import validate_developer_preview_project
 
-PREVIEW_PROJECT = Path("AutomatedTesting")
+PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")
 DEFAULT_BUILD_DIRECTORY = Path("build/tg-sdk-developer-preview-0-windows-profile")
 DEFAULT_LOG_DIRECTORY = Path("build/tg-sdk-developer-preview-0-launch")
 
@@ -87,7 +87,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     print(
-        "Opening repository-owned O3DE project AutomatedTesting with "
+        "Opening dedicated O3DE project TaintedGrailModdingEditor with "
         "TaintedGrailModdingSDK enabled."
     )
     return developer_preview_launch.main(launch_arguments(args, repo_root))

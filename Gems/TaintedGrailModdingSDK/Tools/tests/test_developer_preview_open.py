@@ -16,7 +16,7 @@ SPEC.loader.exec_module(open_preview)
 
 
 class DeveloperPreviewOpenTests(unittest.TestCase):
-    def test_launch_arguments_select_repository_project(self) -> None:
+    def test_launch_arguments_select_dedicated_project(self) -> None:
         args = argparse.Namespace(
             editor=None,
             build_dir=Path("build/preview"),
@@ -25,9 +25,11 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             dry_run=True,
         )
         values = open_preview.launch_arguments(args, Path("C:/repo"))
-        self.assertIn("--project", values)
         project_index = values.index("--project") + 1
-        self.assertEqual(Path(values[project_index]), Path("C:/repo/AutomatedTesting"))
+        self.assertEqual(
+            Path(values[project_index]),
+            Path("C:/repo/TaintedGrailModdingEditor"),
+        )
         self.assertIn("--build-dir", values)
         self.assertIn("--dry-run", values)
 
@@ -64,7 +66,9 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
         with mock.patch.object(
             open_preview.validate_developer_preview_project,
             "validate_preview_project",
-            side_effect=open_preview.validate_developer_preview_project.PreviewProjectContractError("missing"),
+            side_effect=open_preview.validate_developer_preview_project.PreviewProjectContractError(
+                "missing"
+            ),
         ), mock.patch.object(open_preview.developer_preview_launch, "main") as launch:
             code = open_preview.main(["--dry-run"])
         self.assertEqual(code, 2)

@@ -1,6 +1,6 @@
 # Developer Preview 0
 
-Status: second implementation slice — command layer and deterministic synthetic fixture available; launch wrapper, load/save/reopen smoke harness, diagnostics bundle, manual UI evidence, and distributable artifact are not implemented yet.
+Status: third implementation slice — command layer, deterministic synthetic fixture, and service-level persistence smoke available; launch wrapper, diagnostics bundle, manual UI evidence, and distributable artifact are not implemented yet.
 
 ## Purpose
 
@@ -37,24 +37,16 @@ Required checks cover:
 
 The checker is read-only. It reports whether the build directory is configured and whether `bin/profile/Editor.exe` exists, but those are informational until the configure and build steps run.
 
-### 2. Preview the configure command
-
-```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile `
-  --dry-run
-```
-
-The approved configure command uses the repository’s `windows-vs-unity` CMake preset, an explicit build directory, and x64 architecture. Remove `--dry-run` to execute it:
+### 2. Configure
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
   --build-dir build/tg-sdk-developer-preview-0-windows-profile
 ```
 
-The wrapper prints the exact CMake command before execution and returns CMake’s original exit code.
+Use `--dry-run` to inspect the exact `windows-vs-unity` x64 CMake command without executing it.
 
-### 3. Build the Editor and focused test target
+### 3. Build
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py build `
@@ -68,34 +60,20 @@ Editor
 TaintedGrailModdingSDK.Catalog.Tests
 ```
 
-Use `--dry-run` to inspect the command without invoking the build.
-
-### 4. Run the focused command-layer validation
+### 4. Validate
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
   --build-dir build/tg-sdk-developer-preview-0-windows-profile
 ```
 
-The validation command currently runs, in order:
-
-1. Developer Preview command unit tests;
-2. Developer Preview command contract validation;
-3. TG SDK foundation validation;
-4. governance-hardening validation;
-5. catalog/governance/economy contract validation;
-6. O3DE source-policy validation for the TG SDK Gem;
-7. compiled `TaintedGrailModdingSDK.Catalog.Tests` through CTest.
-
-It stops on the first failure and propagates that command’s exit code. It writes a machine-readable summary to:
+The command stops on the first failure, preserves that command’s exit code, and writes:
 
 ```text
 <build-dir>/tg-sdk-developer-preview-validation.json
 ```
 
-Use `--result <path>` to select another explicit result path. Use `--dry-run` to print the ordered plan and write a planned-result document without executing tests.
-
-The deterministic fixture has its own unit and contract validation commands in this slice. They run automatically in GitHub Actions and can be run locally with:
+The deterministic fixture also has local tests and contract validation:
 
 ```powershell
 python -m unittest discover `
@@ -104,11 +82,10 @@ python -m unittest discover `
   -v
 
 python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_fixture.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_smoke.py
 ```
 
 ## Generate the deterministic synthetic fixture
-
-Choose an explicit output directory:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
@@ -129,9 +106,7 @@ The fixture includes:
 - allowed, forbidden, blocked, stale, and unresolved states;
 - item and recipe profiles, one ingredient join, and one output join.
 
-Generation is byte-for-byte deterministic. Repeating the command in two clean directories produces identical payload and manifest bytes.
-
-The generator refuses to overwrite a non-empty directory. `--replace` works only when the existing directory first passes complete verification. It will not replace a modified, partial, unrelated, or symlink-containing directory.
+Generation is byte-for-byte deterministic. The generator refuses to overwrite a non-empty directory. `--replace` works only when the existing directory first passes complete verification.
 
 ## Verify the fixture and SHA-256 manifest
 
@@ -140,52 +115,63 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output build/tg-sdk-developer-preview-0-fixture
 ```
 
-The fixture contains:
+`preview-fixture.manifest.json` records the relative path, byte size, and SHA-256 digest of every payload file. Verification fails closed for missing, extra, modified, traversing, symlinked, private-path, ownership, evidence, relationship, governance, economy, or binding defects.
 
-```text
-preview-fixture.manifest.json
+The committed workspace, pack, source, evidence, and catalog fixture files remain canonical plain schema-1 JSON. The persistence services accept both these documented plain objects and existing O3DE `JsonSerialization` envelopes through the same reflected model types. Files saved by the current services use the O3DE envelope and are reopened through the same compatibility path.
+
+## Service-level persistence smoke
+
+The compiled `TaintedGrailModdingSDK.Catalog.Tests` target contains a service-level persistence smoke test using the committed fixture and the real editor persistence classes:
+
+- `WorkspacePersistenceService`;
+- `PackPersistenceService`;
+- `SourceEvidencePersistenceService`;
+- `CatalogPersistenceService`;
+- `SourceEvidenceRegistry` and `CatalogDatabase`;
+- `EconomyAuthoringService::BuildRecipeStationEvidence`.
+
+The smoke test:
+
+1. loads the plain schema fixture through those services;
+2. verifies expected workspace/profile, source/evidence, catalog, governance, economy, stale, blocked, and unresolved state;
+3. saves all durable documents to a temporary workspace;
+4. discards the in-memory state as a close-equivalent step;
+5. reopens the saved documents through the same services;
+6. compares canonical state before and after.
+
+The canonical state comparison covers workspace/profile data, pack data, source/evidence documents, catalog records and relationships, validation and governance history, item/recipe profiles, joins, permissions, and recipe station/learnability evidence rows.
+
+The smoke target also proves that reviewed, proof-backed allowed usages survive catalog loading while legacy unproven allowances and newly injected allowances without matching reviewed validation proof are cleared and marked `legacy_permission_review_required`.
+
+Run the compiled smoke with the other focused C++ tests:
+
+```powershell
+ctest --test-dir build/tg-sdk-developer-preview-0-windows-profile `
+  -C profile `
+  --output-on-failure `
+  -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-The manifest records the relative path, byte size, and SHA-256 digest of every payload file. Verification fails closed for:
-
-- missing, extra, non-canonical, or modified files;
-- SHA-256 or size mismatches;
-- path traversal or symbolic links;
-- absolute or private filesystem paths;
-- secret-like material;
-- workspace, profile, game-version, or branch binding mismatches;
-- source/evidence fingerprint mismatches;
-- non-synthetic or non-preview identities;
-- synthetic records without the preview pack owner;
-- borrowed native references;
-- unknown evidence or catalog references;
-- invalid relationship target cardinality;
-- unresolved relationships that lose their explicit subject or missing-reference state;
-- invalid item, recipe, ingredient, output, validation, or governance links;
-- loss of the expected allowed, forbidden, blocked, stale, or unresolved states.
-
-The generated fixture is compatible with the current schema-1 field contracts and is intended as the input to the next service-level smoke slice. This slice does not prove Editor load/save/reopen behavior; that proof requires the approved C++ service and persistence smoke harness.
+This is service-level load, save, close-equivalent, and reopen proof. It does not replace the later manual Editor UI smoke pass or prove FoA runtime compatibility.
 
 ## Failure behavior
 
-The command layer and fixture tooling fail closed for:
+The command layer, fixture tooling, and persistence compatibility path fail closed for:
 
 - unsupported hosts;
-- invalid repository roots;
-- unsafe or unrelated build directories;
-- CMake caches bound to another source tree;
-- missing build configuration before a real build or validation run;
+- invalid repository or build roots;
 - prerequisite, configure, build, validator, source-policy, or compiled-test failures;
-- unsafe fixture output paths or overwrite attempts;
-- malformed, tampered, mismatched, non-portable, or non-synthetic fixture data.
+- unsafe fixture output or overwrite attempts;
+- malformed, tampered, mismatched, non-portable, or non-synthetic fixture data;
+- altered, partial, or halted plain-schema deserialization;
+- catalog permissions without current reviewed proof for the same subject.
 
-No command uses a shell command string. Child processes receive explicit argument arrays, no prerequisite is installed silently, and fixture generation performs no network access or process launch.
+No command launches the game, performs deployment, mutates a save, installs a dependency silently, or uploads data.
 
 ## Current limitations
 
-This second slice does not yet provide:
+This third slice does not yet provide:
 
-- service-level load, save, close-equivalent, and reopen smoke automation;
 - an Editor launch wrapper;
 - redacted diagnostics collection;
 - manual UI smoke evidence;

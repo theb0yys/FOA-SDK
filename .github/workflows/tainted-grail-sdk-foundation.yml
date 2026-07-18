@@ -67,6 +67,22 @@ jobs:
       - name: Validate Developer Preview 0 command contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview.py
 
+      - name: Test Developer Preview 0 fixture
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_fixture.py" -v
+
+      - name: Validate Developer Preview 0 fixture contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_fixture.py
+
+      - name: Generate Developer Preview 0 fixture
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate
+          --output "${{ runner.temp }}/tg-sdk-developer-preview-0-fixture"
+
+      - name: Verify Developer Preview 0 fixture
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify
+          --output "${{ runner.temp }}/tg-sdk-developer-preview-0-fixture"
+
       - name: Validate foundation and governance contracts
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
 

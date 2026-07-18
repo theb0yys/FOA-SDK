@@ -91,7 +91,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - The focused TG SDK workflow runs Developer Preview command, project-integration, opener, fixture, launch, diagnostics, and manual UI evidence tests; command/project/fixture/persistence/launch-diagnostics/manual-evidence contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before existing foundation, governance, catalog, and source-policy checks.
 - A dedicated Windows workflow validates the product-host project, icon assets, command-line opener, low-level shortcut generator, hardened clickable entry, dry-run plan, and a real COM-created `.lnk`.
 - `AutomatedTesting` is restored to its upstream engine-testing role and no longer enables or hosts the TG SDK preview product.
-- The catalog test target compiles the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
+- The catalog test target links the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
 - Catalog compatibility loading preserves current validated allowances only when the latest reviewed permission event has valid proof for the same subject; unproven legacy allowances still fail closed.
 - Release and maintainer procedures require exact-commit Windows manual UI evidence, screenshot hashes, privacy review, verifier success, and non-commit handling before a Developer Preview claim.
 - Catalog records carry an explicit staleness state.
@@ -124,3 +124,36 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Generated screenshots must remain beneath `build/` or outside the repository and are not release package contents.
 - Developer Preview commands do not install dependencies silently, use shell command strings, launch FoA, invoke runtime adapters, deploy files, modify saves, or collect telemetry.
 - Preview build-directory validation rejects the repository root, directories containing the checkout, `.git` paths, unrelated non-empty directories, and CMake caches bound to another source tree.
+- Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, and typed economy workflows.
+- Source intake rejects missing or mismatched profile and fingerprint bindings.
+- Structured imports are size-limited and fail closed on malformed schemas.
+- Catalog promotion cannot grant allowed usages and adds `no_unvalidated_runtime_use`.
+- Validation never grants permission automatically.
+- Allowed usage requires a separate reviewed permission event backed by validated proof for the same subject.
+- Stale, failed, blocked, and superseded transitions remove existing allowed usages.
+- A failed governance-history append cannot leave changed state in a caller-owned catalog.
+- A failed catalog save cannot publish a candidate into the live editor state.
+- Item/recipe profile and join writes reject missing or unrelated evidence before persistence.
+- Native and synthetic item/recipe lanes are checked independently.
+- Quest-sensitive and unique item distribution lanes receive explicit blockers.
+- The Item and Recipe Editor exposes governance lanes and recipe station/learnability research as read-only status and cannot grant permission.
+- Missing, mismatched, unresolved, stale, blocked, conflicted, missing-reference, and superseded station/learnability inputs fail closed.
+- Public contribution rules require design review, pre-commit self-review, required CI, resolved review threads, and maintainer approval before merge.
+
+### Known limitations
+
+- The Windows manual UI checklist and evidence verifier are implemented, but the actual Windows screenshot pass remains pending.
+- Developer Preview 0 does not include a prebuilt or verified preview archive; the Editor must be built from source before the clickable `.lnk` is generated.
+- The service-level smoke and controlled Editor process path do not themselves prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.
+- The UI evidence verifier checks metadata and file integrity but cannot inspect screenshot pixels; human privacy review remains mandatory.
+- The Item and Recipe Editor does not yet generate adapter work orders.
+- The evidence view reports station visibility and recipe learnability research but does not append, learn, register, persist, clean up, roll back, or prove runtime behavior.
+- Runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.
+- Permission usage names remain free-form pending typed adapter-capability contracts; the decision operation itself is strongly typed.
+- Remaining actor, spawn, world, faction, quest/state, asset, and localisation authoring tools are not implemented.
+- FoA runtime adapters and production deployment are not implemented.
+- The project has not published a supported binary release.
+
+## Release history
+
+No tagged public releases have been published yet.

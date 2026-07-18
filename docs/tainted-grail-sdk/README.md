@@ -6,6 +6,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 ### For users
 
+- [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisite, configure, build, and full focused-validation commands plus current preview limitations.
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
@@ -22,6 +23,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 - [Contributing](../../CONTRIBUTING.md) — contribution lifecycle and DCO requirements.
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
+- [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence for the usability milestone.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -66,9 +68,10 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed item and recipe profiles, ingredient/output joins, station references, and acquisition relationships;
 - read-only item/recipe action-lane matrices backed by catalog governance;
 - read-only recipe station visibility and learnability evidence rows derived from exact identities, relationships, evidence, governance, and blockers;
-- foundation status, coverage, import issues, governance and economy blockers, and usage totals.
+- foundation status, coverage, import issues, governance and economy blockers, and usage totals;
+- the first Developer Preview 0 command layer for Windows x64 prerequisite checks, O3DE configure/build wrapping, ordered focused validation, unit tests, and machine-readable results.
 
-Runtime adapters, production deployment, and the remaining specialised domain tools are not complete.
+The preview fixture, automated reload smoke harness, launch wrapper, diagnostics bundle, verified runnable archive, runtime adapters, production deployment, and the remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

@@ -32,12 +32,22 @@ namespace TaintedGrailModdingSDK
             return QString::fromUtf8(value.c_str());
         }
 
+        bool Contains(const AZStd::vector<AZStd::string>& values, const AZStd::string& value)
+        {
+            return AZStd::find(values.begin(), values.end(), value) != values.end();
+        }
+
         void AddUnique(AZStd::vector<AZStd::string>& values, const AZStd::string& value)
         {
-            if (AZStd::find(values.begin(), values.end(), value) == values.end())
+            if (!value.empty() && !Contains(values, value))
             {
                 values.push_back(value);
             }
+        }
+
+        void RemoveValue(AZStd::vector<AZStd::string>& values, const AZStd::string& value)
+        {
+            values.erase(AZStd::remove(values.begin(), values.end(), value), values.end());
         }
 
         const CatalogRecord* FindRecord(const CatalogDocument& document, const AZStd::string& recordId)
@@ -64,6 +74,112 @@ namespace TaintedGrailModdingSDK
                 }
             }
             return nullptr;
+        }
+
+        const CatalogValidationEvent* FindValidation(
+            const CatalogDocument& document,
+            const AZStd::string& validationId)
+        {
+            for (const CatalogValidationEvent& validation : document.m_validationHistory)
+            {
+                if (validation.m_validationId == validationId)
+                {
+                    return &validation;
+                }
+            }
+            return nullptr;
+        }
+
+        const CatalogGovernanceEvent* FindLatestPermissionEvent(
+            const CatalogDocument& document,
+            const AZStd::string& subjectKind,
+            const AZStd::string& subjectId,
+            const AZStd::string& usage)
+        {
+            const CatalogGovernanceEvent* latest = nullptr;
+            for (const CatalogGovernanceEvent& event : document.m_governanceHistory)
+            {
+                if (event.m_subjectKind == subjectKind
+                    && event.m_subjectId == subjectId
+                    && event.m_axis == "permission"
+                    && event.m_usage == usage)
+                {
+                    latest = &event;
+                }
+            }
+            return latest;
+        }
+
+        bool HasValidatedPermissionBasis(
+            const CatalogDocument& document,
+            const CatalogGovernanceEvent& event)
+        {
+            if (event.m_reviewer.empty() || event.m_evidenceIds.empty() || event.m_validationIds.empty())
+            {
+                return false;
+            }
+
+            bool hasValidatedBasis = false;
+            for (const AZStd::string& validationId : event.m_validationIds)
+            {
+                const CatalogValidationEvent* validation = FindValidation(document, validationId);
+                if (!validation
+                    || validation->GetSubjectKind() != event.m_subjectKind
+                    || validation->GetSubjectId() != event.m_subjectId)
+                {
+                    return false;
+                }
+                if (validation->m_state == "validated")
+                {
+                    hasValidatedBasis = true;
+                }
+            }
+            return hasValidatedBasis;
+        }
+
+        bool IsReadyForPermission(
+            const AZStd::string& validationState,
+            const AZStd::string& stalenessState,
+            const AZStd::vector<AZStd::string>& missingRefs,
+            const AZStd::vector<AZStd::string>& conflictRefs,
+            const AZStd::string& supersededById)
+        {
+            return validationState == "validated"
+                && stalenessState == "current"
+                && missingRefs.empty()
+                && conflictRefs.empty()
+                && supersededById.empty();
+        }
+
+        bool HasProofBackedAllowance(
+            const CatalogDocument& document,
+            const AZStd::string& subjectKind,
+            const AZStd::string& subjectId,
+            const AZStd::string& usage,
+            const AZStd::string& validationState,
+            const AZStd::string& stalenessState,
+            const AZStd::vector<AZStd::string>& missingRefs,
+            const AZStd::vector<AZStd::string>& conflictRefs,
+            const AZStd::string& supersededById)
+        {
+            if (!IsReadyForPermission(
+                    validationState,
+                    stalenessState,
+                    missingRefs,
+                    conflictRefs,
+                    supersededById))
+            {
+                return false;
+            }
+
+            const CatalogGovernanceEvent* event = FindLatestPermissionEvent(
+                document,
+                subjectKind,
+                subjectId,
+                usage);
+            return event
+                && event->m_newValue == "allow"
+                && HasValidatedPermissionBasis(document, *event);
         }
 
         AZStd::string CompatibilityTime(
@@ -105,8 +221,56 @@ namespace TaintedGrailModdingSDK
             event.m_reviewer = "compatibility-normalizer";
             event.m_decidedAt = decidedAt;
             event.m_notes =
-                "Legacy schema-1 allowance was cleared because it had no staleness assessment or reviewed proof history.";
+                "Legacy schema-1 allowance was cleared because it had no current, validated, reviewed proof history.";
             document.m_governanceHistory.push_back(AZStd::move(event));
+        }
+
+        void NormalizeAllowedUsages(
+            CatalogDocument& document,
+            const AZStd::string& subjectKind,
+            const AZStd::string& subjectId,
+            AZStd::vector<AZStd::string>& allowedUsages,
+            AZStd::vector<AZStd::string>& forbiddenUsages,
+            const AZStd::string& validationState,
+            const AZStd::string& stalenessState,
+            const AZStd::vector<AZStd::string>& missingRefs,
+            const AZStd::vector<AZStd::string>& conflictRefs,
+            const AZStd::string& supersededById,
+            const AZStd::string& decidedAt,
+            size_t& sequence)
+        {
+            const AZStd::vector<AZStd::string> persistedAllowed = allowedUsages;
+            bool clearedAllowance = false;
+            for (const AZStd::string& usage : persistedAllowed)
+            {
+                if (HasProofBackedAllowance(
+                        document,
+                        subjectKind,
+                        subjectId,
+                        usage,
+                        validationState,
+                        stalenessState,
+                        missingRefs,
+                        conflictRefs,
+                        supersededById))
+                {
+                    continue;
+                }
+
+                RemoveValue(allowedUsages, usage);
+                AddLegacyPermissionClearEvent(
+                    document,
+                    subjectKind,
+                    subjectId,
+                    usage,
+                    decidedAt,
+                    sequence++);
+                clearedAllowance = true;
+            }
+            if (clearedAllowance)
+            {
+                AddUnique(forbiddenUsages, "legacy_permission_review_required");
+            }
         }
 
         void NormalizeLegacyGovernanceState(CatalogDocument& document)
@@ -118,22 +282,19 @@ namespace TaintedGrailModdingSDK
                 {
                     record.m_stalenessState = "unknown";
                 }
-                if (!record.m_allowedUsages.empty())
-                {
-                    const AZStd::vector<AZStd::string> legacyAllowed = record.m_allowedUsages;
-                    for (const AZStd::string& usage : legacyAllowed)
-                    {
-                        AddLegacyPermissionClearEvent(
-                            document,
-                            "record",
-                            record.m_recordId,
-                            usage,
-                            CompatibilityTime(record.m_updatedAt, record.m_createdAt),
-                            sequence++);
-                    }
-                    record.m_allowedUsages.clear();
-                    AddUnique(record.m_forbiddenUsages, "legacy_permission_review_required");
-                }
+                NormalizeAllowedUsages(
+                    document,
+                    "record",
+                    record.m_recordId,
+                    record.m_allowedUsages,
+                    record.m_forbiddenUsages,
+                    record.m_validationState,
+                    record.m_stalenessState,
+                    record.m_missingRefs,
+                    record.m_conflictRefs,
+                    record.m_supersededByRecordId,
+                    CompatibilityTime(record.m_updatedAt, record.m_createdAt),
+                    sequence);
             }
 
             for (CatalogRelationship& relationship : document.m_relationships)
@@ -142,22 +303,19 @@ namespace TaintedGrailModdingSDK
                 {
                     relationship.m_stalenessState = "unknown";
                 }
-                if (!relationship.m_allowedUsages.empty())
-                {
-                    const AZStd::vector<AZStd::string> legacyAllowed = relationship.m_allowedUsages;
-                    for (const AZStd::string& usage : legacyAllowed)
-                    {
-                        AddLegacyPermissionClearEvent(
-                            document,
-                            "relationship",
-                            relationship.m_relationshipId,
-                            usage,
-                            CompatibilityTime(relationship.m_updatedAt, relationship.m_createdAt),
-                            sequence++);
-                    }
-                    relationship.m_allowedUsages.clear();
-                    AddUnique(relationship.m_forbiddenUsages, "legacy_permission_review_required");
-                }
+                NormalizeAllowedUsages(
+                    document,
+                    "relationship",
+                    relationship.m_relationshipId,
+                    relationship.m_allowedUsages,
+                    relationship.m_forbiddenUsages,
+                    relationship.m_validationState,
+                    relationship.m_stalenessState,
+                    relationship.m_missingRefs,
+                    relationship.m_conflictRefs,
+                    relationship.m_supersededByRelationshipId,
+                    CompatibilityTime(relationship.m_updatedAt, relationship.m_createdAt),
+                    sequence);
             }
         }
 
@@ -325,8 +483,8 @@ namespace TaintedGrailModdingSDK
             return AZ::Failure(AZStd::string(identityResult.GetError()));
         }
 
-        NormalizeLegacyGovernanceState(document);
         NormalizeLegacyValidationHistory(document);
+        NormalizeLegacyGovernanceState(document);
         return AZ::Success(AZStd::move(document));
     }
 } // namespace TaintedGrailModdingSDK

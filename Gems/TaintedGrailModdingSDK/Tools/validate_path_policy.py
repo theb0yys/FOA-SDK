@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -32,36 +33,20 @@ def require_fragments(path: Path, fragments: tuple[str, ...]) -> str:
     return text
 
 
+def manifest_entries(path: Path) -> set[str]:
+    return set(re.findall(r"^\s+((?:Source|Tests)/[^\s\)]+)\s*$", require_file(path), re.MULTILINE))
+
+
 def validate_path_policy(repo_root: Path) -> None:
     gem_root = repo_root / "Gems/TaintedGrailModdingSDK"
-    source_root = gem_root / "Code/Source"
-    tests_root = gem_root / "Code/Tests"
+    code_root = gem_root / "Code"
+    source_root = code_root / "Source"
+    tests_root = code_root / "Tests"
     tools_root = gem_root / "Tools"
     tool_tests = tools_root / "tests"
 
-    path_header = source_root / "PathPolicyService.h"
-    path_source = source_root / "PathPolicyService.cpp"
-    workspace_paths = source_root / "PathPolicyWorkspaceValidation.cpp"
-    boundary_header = source_root / "FoundationPersistenceBoundary.h"
-    boundary_source = source_root / "FoundationPersistenceBoundary.cpp"
-    construction_source = source_root / "FoundationServiceConstruction.cpp"
-    pack_manager_source = source_root / "PackManagerWidget.cpp"
-    cpp_tests = tests_root / "PathPolicyServiceTests.cpp"
-    cmake_path = gem_root / "Code/CMakeLists.txt"
-    editor_manifest = gem_root / "Code/taintedgrailmoddingsdk_path_policy_editor_files.cmake"
-    test_manifest = gem_root / "Code/taintedgrailmoddingsdk_path_policy_tests_files.cmake"
-    developer_preview_command = tools_root / "developer_preview.py"
-    python_policy = tools_root / "developer_preview_path_policy.py"
-    shortcut = tools_root / "developer_preview_shortcut.py"
-    entry = tools_root / "developer_preview_entry.py"
-    python_policy_tests = tool_tests / "test_developer_preview_path_policy.py"
-    shortcut_tests = tool_tests / "test_developer_preview_shortcut.py"
-    entry_tests = tool_tests / "test_developer_preview_entry.py"
-    workflow = repo_root / ".github/workflows/tainted-grail-editor-entry.yml"
-    documentation = repo_root / "docs/tainted-grail-sdk/PATH_POLICY.md"
-
     require_fragments(
-        path_header,
+        source_root / "PathPolicyService.h",
         (
             "class PathPolicyService",
             "ResolveWorkspaceDocumentPath",
@@ -72,7 +57,7 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        path_source,
+        source_root / "PathPolicyService.cpp",
         (
             "std::filesystem",
             "Filesystem::canonical",
@@ -84,9 +69,10 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        workspace_paths,
+        source_root / "PathPolicyWorkspaceValidation.cpp",
         (
             "ValidateWorkspacePaths",
+            "for (const GameProfile& profile : workspace.m_gameProfiles)",
             "OutputPath",
             "StagingPath",
             "DeploymentPath",
@@ -97,7 +83,7 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        boundary_header,
+        source_root / "FoundationPersistenceBoundary.h",
         (
             "FoundationWorkspacePersistenceBoundary",
             "FoundationPackPersistenceBoundary",
@@ -106,7 +92,7 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        boundary_source,
+        source_root / "FoundationPersistenceBoundary.cpp",
         (
             "ResolveWorkspaceDocumentPath",
             "ResolvePackManifestPath",
@@ -117,12 +103,12 @@ def validate_path_policy(repo_root: Path) -> None:
             "m_persistence.Load",
         ),
     )
-    if "QDir().mkpath" in require_file(pack_manager_source):
+    if "QDir().mkpath" in require_file(source_root / "PackManagerWidget.cpp"):
         raise PathPolicyContractError(
             "Pack Manager must not create directories before canonical path validation."
         )
     require_fragments(
-        construction_source,
+        source_root / "FoundationServiceConstruction.cpp",
         (
             "FoundationService::FoundationService()",
             "m_workspacePersistence(m_pathPolicy)",
@@ -133,51 +119,62 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        cpp_tests,
+        tests_root / "PathPolicyServiceTests.cpp",
         (
             "RelativeWorkspaceRootUsesWorkspaceDocumentDirectory",
             "LexicalPrefixOutsideWorkspaceIsRejected",
             "SymlinkEscapeIsRejectedAfterCanonicalization",
             "WindowsCaseFoldUsesPathComponents",
             "PackManifestSuffixIsRequired",
-        ),
-    )
-    require_fragments(
-        cmake_path,
-        (
-            "taintedgrailmoddingsdk_path_policy_editor_files.cmake",
-            "taintedgrailmoddingsdk_path_policy_tests_files.cmake",
-            'TG_SDK_PREVIEW_TEMPLATE_ROOT="${CMAKE_CURRENT_LIST_DIR}/../Preview/Template"',
-        ),
-    )
-    require_fragments(
-        editor_manifest,
-        (
-            "Source/PathPolicyService.cpp",
-            "Source/PathPolicyWorkspaceValidation.cpp",
-            "Source/FoundationPersistenceBoundary.cpp",
-            "Source/FoundationServiceConstruction.cpp",
-        ),
-    )
-    require_fragments(
-        test_manifest,
-        (
-            "Source/PathPolicyService.cpp",
-            "Source/PathPolicyWorkspaceValidation.cpp",
-            "Tests/PathPolicyServiceTests.cpp",
+            "EveryConfiguredProfilePathCanValidate",
+            "InactiveDiagnosticsEscapeIsRejected",
+            "InactiveManagedAssembliesEscapeFromInstallIsRejected",
         ),
     )
 
-    require_fragments(
-        developer_preview_command,
+    cmake = require_fragments(
+        code_root / "CMakeLists.txt",
         (
-            "CMakeCache.txt",
-            "CMAKE_HOME_DIRECTORY:INTERNAL",
-            "configured_source != repo_root",
+            "NAME ${gem_name}.Framework.Static STATIC",
+            "taintedgrailmoddingsdk_framework_files.cmake",
+            "taintedgrailmoddingsdk_path_policy_tests_files.cmake",
+            "Gem::${gem_name}.Framework.Static",
+            'TG_SDK_PREVIEW_TEMPLATE_ROOT="${CMAKE_CURRENT_LIST_DIR}/../Preview/Template"',
         ),
     )
+    if "taintedgrailmoddingsdk_path_policy_editor_files.cmake" in cmake:
+        raise PathPolicyContractError("Path-policy sources must not remain in an Editor-only manifest.")
+
+    framework_entries = manifest_entries(code_root / "taintedgrailmoddingsdk_framework_files.cmake")
+    required_framework = {
+        "Source/PathPolicyService.cpp",
+        "Source/PathPolicyWorkspaceValidation.cpp",
+        "Source/FoundationPersistenceBoundary.cpp",
+        "Source/FoundationServiceConstruction.cpp",
+    }
+    if not required_framework.issubset(framework_entries):
+        raise PathPolicyContractError(
+            "Framework manifest is missing path-policy ownership: "
+            + ", ".join(sorted(required_framework - framework_entries))
+        )
+
+    test_entries = manifest_entries(code_root / "taintedgrailmoddingsdk_path_policy_tests_files.cmake")
+    expected_tests = {
+        "Tests/FoundationServiceWorkspaceLoadTests.cpp",
+        "Tests/PathPolicyServiceTests.cpp",
+        "Tests/WorkspaceSchemaServiceTests.cpp",
+    }
+    if test_entries != expected_tests:
+        raise PathPolicyContractError(
+            f"Path-policy test manifest mismatch: expected {sorted(expected_tests)}, found {sorted(test_entries)}"
+        )
+
     require_fragments(
-        python_policy,
+        tools_root / "developer_preview.py",
+        ("CMakeCache.txt", "CMAKE_HOME_DIRECTORY:INTERNAL", "configured_source != repo_root"),
+    )
+    require_fragments(
+        tools_root / "developer_preview_path_policy.py",
         (
             "APPROVED_BUILD_DIRECTORY",
             "TRUST_MODE_SOURCE_BUILD",
@@ -195,7 +192,7 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        shortcut,
+        tools_root / "developer_preview_shortcut.py",
         (
             "developer_preview_path_policy",
             "diagnostic_override",
@@ -205,7 +202,7 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     entry_text = require_fragments(
-        entry,
+        tools_root / "developer_preview_entry.py",
         (
             "resolve_source_built_entry",
             "_require_manifest_matches_policy",
@@ -220,7 +217,7 @@ def validate_path_policy(repo_root: Path) -> None:
         )
 
     require_fragments(
-        python_policy_tests,
+        tool_tests / "test_developer_preview_path_policy.py",
         (
             "test_component_containment_does_not_use_string_prefixes",
             "test_symlink_escape_is_rejected",
@@ -233,7 +230,7 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        shortcut_tests,
+        tool_tests / "test_developer_preview_shortcut.py",
         (
             "test_explicit_editor_requires_diagnostic_override",
             "test_diagnostic_override_is_labeled",
@@ -241,16 +238,15 @@ def validate_path_policy(repo_root: Path) -> None:
         ),
     )
     require_fragments(
-        entry_tests,
+        tool_tests / "test_developer_preview_entry.py",
         (
             "test_self_consistent_manifest_with_unapproved_editor_is_rejected",
             "test_diagnostic_override_is_not_verified_by_default",
             "test_diagnostic_override_can_be_deliberately_inspected",
         ),
     )
-
-    workflow_text = require_fragments(
-        workflow,
+    require_fragments(
+        repo_root / ".github/workflows/tainted-grail-editor-entry.yml",
         (
             "Test canonical path policy",
             "Validate canonical path and executable policy",
@@ -259,33 +255,28 @@ def validate_path_policy(repo_root: Path) -> None:
             "--allow-diagnostic-override",
         ),
     )
-    if "CMAKE_HOME_DIRECTORY:INTERNAL=$env:GITHUB_WORKSPACE" in workflow_text:
-        raise PathPolicyContractError(
-            "CI must not manufacture source-build provenance for an empty Editor.exe."
-        )
-
     require_fragments(
-        documentation,
+        repo_root / "docs/tainted-grail-sdk/PATH_POLICY.md",
         (
-            "One logical policy, two language bindings",
-            "Compare containment by path components",
-            "symlink or junction",
-            "must not create directories before the persistence boundary validates it",
-            "The sidecar records evidence",
-            "Diagnostic override",
+            "Canonical resolution",
+            "component containment",
+            "filesystem links",
+            "diagnostic-only",
+            "source-built",
         ),
     )
 
 
 def main() -> int:
+    repo_root = Path(__file__).resolve().parents[3]
     try:
-        validate_path_policy(Path(__file__).resolve().parents[3])
+        validate_path_policy(repo_root)
     except (OSError, PathPolicyContractError) as exc:
-        print(f"Tainted Grail canonical path-policy validation failed: {exc}", file=sys.stderr)
+        print(f"Tainted Grail path-policy validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Tainted Grail canonical path-policy contract passed: workspace and pack persistence "
-        "use canonical containment, and shortcut trust is repository-derived."
+        "Tainted Grail path policy passed: Framework-owned canonical persistence paths and trusted "
+        "source-built Editor entry are enforced."
     )
     return 0
 

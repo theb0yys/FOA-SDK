@@ -10,6 +10,8 @@ set(FILES
     Source/CatalogBrowserWidget.h
     Source/CatalogGovernanceWidget.cpp
     Source/CatalogGovernanceWidget.h
+    Source/EconomyCoverageDashboardWidget.cpp
+    Source/EconomyCoverageDashboardWidget.h
     Source/FoundationStatusWidget.cpp
     Source/FoundationStatusWidget.h
     Source/ItemRecipeEditorWidget.cpp

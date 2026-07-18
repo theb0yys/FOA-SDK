@@ -16,6 +16,8 @@ set(FILES
     Source/CatalogTransactionService.h
     Source/EconomyBlockerService.cpp
     Source/EconomyBlockerService.h
+    Source/EconomyCoverageService.cpp
+    Source/EconomyCoverageService.h
     Source/EconomyModels.cpp
     Source/EconomyModels.h
     Source/FoundationModels.cpp

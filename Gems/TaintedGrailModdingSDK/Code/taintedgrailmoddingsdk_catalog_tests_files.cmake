@@ -12,4 +12,5 @@ set(FILES
     Tests/CatalogGovernanceTypesTests.cpp
     Tests/DeveloperPreviewSmokeTests.cpp
     Tests/EconomyAuthoringTests.cpp
+    Tests/EconomyCoverageServiceTests.cpp
 )

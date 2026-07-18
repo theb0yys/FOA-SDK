@@ -82,7 +82,8 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Source Intake;
 - Tainted Grail Catalog Browser;
 - Tainted Grail Catalog Governance;
-- Tainted Grail Item and Recipe Editor.
+- Tainted Grail Item and Recipe Editor;
+- Tainted Grail Economy Acquisition Coverage.
 
 Confirm every pane opens without an error and remains interactive.
 
@@ -93,7 +94,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All six TG SDK panes opened from the Tools menu."
+  --notes "All seven TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
@@ -115,16 +116,19 @@ Use `Tab`, `Shift+Tab`, arrow keys, and activation keys where appropriate. Confi
 
 A screenshot is not mandatory because focus traversal is temporal, but detailed notes are required.
 
-### 4. Preview workspace and catalog data
+### 4. Preview workspace, catalog, and acquisition coverage data
 
 Open the synthetic workspace and confirm:
 
 - the active preview profile is visible;
 - source and evidence documents are present;
 - the catalog shows the expected synthetic records and relationships;
-- blocked, stale, allowed, forbidden, and unresolved states are distinguishable.
+- blocked, stale, allowed, forbidden, and unresolved states are distinguishable;
+- the Economy Acquisition Coverage pane lists canonical economy items and recipes;
+- vendor, loot, reward, learnability, and crafting columns show only applicable lanes;
+- relationship, evidence, blocker, and reason details are visible without an editing control.
 
-Screenshot required.
+Record this observation under `preview-data-displayed`. Screenshot required.
 
 ### 5. Item and Recipe Editor
 
@@ -163,7 +167,8 @@ Confirm the reviewed state survives:
 - catalog records and relationships;
 - governance and validation history;
 - economy profiles and joins;
-- station and learnability evidence rows.
+- station and learnability evidence rows;
+- derived economy acquisition coverage rows and statuses.
 
 Screenshot required after reopen.
 
@@ -193,7 +198,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attach
   --screenshot C:\Evidence\catalog-and-governance.png `
   --check all-panes-open `
   --check preview-data-displayed `
-  --title "Catalog and governance panes" `
+  --title "Catalog, governance, and acquisition coverage panes" `
   --description "Project-owned synthetic preview data displayed after opening the TG SDK panes." `
   --privacy-reviewed `
   --project-owned-only

@@ -8,6 +8,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Added
 
+- Pure-Core `EconomyCoverageService` analysis for deterministic vendor, loot, reward, learnability, and crafting coverage over canonical economy relationships, exact evidence bindings, governance state, and open blockers.
+- Read-only **Tainted Grail Economy Acquisition Coverage** editor pane with per-lane `covered`, `partial`, `blocked`, and `missing` states plus relationship, evidence, blocker, and reason details.
+- Economy coverage C++ tests, focused contract validator and unit tests, CI integration, public design documentation, and Windows manual UI checklist coverage.
 - Internal `TaintedGrailModdingSDK.Core.Static` and `TaintedGrailModdingSDK.Framework.Static` targets with explicit Core → Framework → Editor dependency direction.
 - Core/Framework build-graph validation and unit tests for unique production-source ownership, test-only manifests, target dependencies, internal aliases, and Core isolation from Qt, AzToolsFramework, and Framework headers.
 - Durable workspace schema 1 with explicit legacy schema-0 migration, unknown-version rejection, stable workspace/profile identities, unique profile bindings, and project-owned fixture round-trip tests.
@@ -82,6 +85,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
+- Phase 6 now records the economy acquisition coverage dashboard as implemented; cross-pack duplicate detection is the next ordered economy slice.
+- The Windows manual UI checklist now opens all seven TG SDK panes and verifies synthetic economy acquisition coverage data and non-editability.
 - Production implementation files are compiled exactly once by Core, Framework, or Editor; catalog and path-policy tests now link `Framework.Static` instead of recompiling private copies of production `.cpp` files.
 - The Editor Gem target now owns only Qt views, the Editor system component, and module composition; persistence, path policy, loading, and Foundation orchestration are owned by `Framework.Static`.
 - The focused TG SDK workflow now runs the Core/Framework validator and its focused unit tests before the existing Developer Preview and foundation contracts.
@@ -107,6 +112,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Security
 
+- Economy coverage analysis is immutable and fail-closed; the dashboard exposes no editing, governance, persistence, deployment, launch, injection, vendor/loot/reward mutation, recipe learning, or save behavior.
 - The Core/Framework split remains host-tool-only and exposes no internal static target through Tool or Builder aliases; it adds no runtime adapter, deployment, launch, injection, telemetry, or save behavior.
 - Failed workspace candidates cannot publish partial objects, change the live canonical workspace path, redirect pack containment, or replace the previous Foundation snapshot.
 - Workspace root, output, staging, deployment, diagnostics, extracted-data, managed-assembly, and Mono plugin paths are validated before publication and save.
@@ -142,6 +148,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Known limitations
 
+- Economy acquisition coverage is research-only: it does not prove actual vendor stock, loot tables, reward delivery, recipe learning, crafting availability, runtime registration, persistence, cleanup, or rollback.
 - The Windows manual UI checklist and evidence verifier are implemented, but the actual Windows screenshot pass remains pending.
 - Developer Preview 0 does not include a prebuilt or verified preview archive; the Editor must be built from source before the clickable `.lnk` is generated.
 - The service-level smoke and controlled Editor process path do not themselves prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.

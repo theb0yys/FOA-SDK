@@ -72,6 +72,15 @@ jobs:
       - name: Validate Core and Framework build graph
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_core_framework_build_graph.py
 
+      - name: Test economy coverage dashboard validator
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_validate_economy_coverage_dashboard.py" -v
+
+      - name: Validate economy coverage dashboard contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_economy_coverage_dashboard.py
+
       - name: Test Developer Preview 0 command layer
         run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview.py" -v
 

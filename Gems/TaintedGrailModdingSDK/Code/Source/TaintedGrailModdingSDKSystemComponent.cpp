@@ -9,6 +9,7 @@
 
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
+#include "EconomyCoverageDashboardWidget.h"
 #include "EconomyModels.h"
 #include "FoundationModels.h"
 #include "FoundationService.h"
@@ -35,6 +36,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogBrowserViewPaneName = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -100,6 +102,7 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(CatalogBrowserViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
+            AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
             m_viewRegistered = false;
         }
 
@@ -180,6 +183,17 @@ namespace TaintedGrailModdingSDK
             ItemRecipeEditorViewPaneName,
             "Tainted Grail SDK",
             itemRecipeOptions);
+
+        AzToolsFramework::ViewPaneOptions economyCoverageOptions;
+        economyCoverageOptions.paneRect = QRect(220, 220, 1280, 900);
+        economyCoverageOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
+        economyCoverageOptions.isDeletable = true;
+        economyCoverageOptions.isPreview = true;
+        economyCoverageOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.EconomyCoverageDashboard");
+        AzToolsFramework::RegisterViewPane<EconomyCoverageDashboardWidget>(
+            EconomyCoverageDashboardViewPaneName,
+            "Tainted Grail SDK",
+            economyCoverageOptions);
 
         m_viewRegistered = true;
     }

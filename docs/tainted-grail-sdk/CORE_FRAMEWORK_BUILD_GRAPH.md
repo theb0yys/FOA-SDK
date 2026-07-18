@@ -2,18 +2,18 @@
 
 ## Status
 
-Accepted correction contract for Slice 5. This slice decomposes the existing editor-side implementation into real build targets without changing durable schemas, user-facing behavior, runtime permissions, deployment, game launch, or save behavior.
+Accepted correction contract for Slice 5 and extended by Slice 6. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
 
 ## Targets
 
 ### `TaintedGrailModdingSDK.Core.Static`
 
-Owns shared domain state and services that are already free of Qt and host-tool dependencies:
+Owns shared domain state and services that are free of Qt and host-tool dependencies:
 
 - workspace, pack, source, evidence, catalog, governance, and economy models;
 - catalog database and publish-after-save transaction logic;
 - governance types and governance blocker evaluation;
-- foundation validation and economy blocker evaluation;
+- foundation validation, economy blocker evaluation, and immutable economy acquisition coverage analysis;
 - the source/evidence registry.
 
 Core depends publicly on `AZ::AzCore`. Core must not depend on Framework, Editor, Qt, AzToolsFramework, runtime adapters, deployment, or game APIs.
@@ -34,7 +34,7 @@ Framework depends publicly on Core and privately on the host-tool facilities nee
 
 Remains the Tool Gem module and owns only composition and presentation:
 
-- Qt widgets;
+- Qt widgets, including the read-only economy acquisition coverage dashboard;
 - the Editor system component;
 - the Gem Editor module.
 
@@ -66,7 +66,7 @@ The test arrow means the test target links Framework; it does not reverse the pr
 
 This correction changes build ownership, not include paths or public C++ namespaces. Existing files remain under `Code/Source` so the split does not create an unrelated filesystem migration. The CMake manifests are the authoritative ownership map.
 
-Qt-dependent services are deliberately Framework-owned in this slice rather than being labelled Core while retaining hidden Qt coupling. Moving one of those services into Core later requires first removing its Qt and host-tool dependencies under a separate reviewed change.
+Qt-dependent services are deliberately Framework-owned rather than being labelled Core while retaining hidden Qt coupling. Moving one of those services into Core later requires first removing its Qt and host-tool dependencies under a separate reviewed change. New Core analysis services must follow the same pure dependency boundary.
 
 ## Enforcement
 
@@ -82,10 +82,12 @@ Qt-dependent services are deliberately Framework-owned in this slice rather than
 - Tool or Builder aliases expose internal static targets;
 - the obsolete path-policy Editor manifest returns.
 
+Feature-specific validators may add stricter contracts for individual Core analyses and Editor views. The economy coverage validator, for example, rejects Qt or mutation dependencies in the Core service and editing controls in its dashboard.
+
 ## Runtime boundary
 
 No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, deployment, injection, telemetry, game launch, or save mutation code is introduced or authorized. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
 
 ## Rollback
 
-Revert the implementing pull request. No durable documents or user state require migration because the slice changes build ownership only.
+Revert the implementing pull request. No durable documents or user state require migration because these slices change build ownership and derived read-only analysis only.

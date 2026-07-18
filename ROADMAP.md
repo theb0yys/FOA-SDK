@@ -112,9 +112,31 @@ Exit criteria:
 - station and learnability research never implies runtime capability;
 - no item or recipe authoring command invokes FoA runtime code.
 
+#### Economy acquisition coverage dashboard
+
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Pure Core analysis over canonical economy records, acquisition relationships, exact evidence bindings, governance state, and open blockers.
+- Item vendor, loot, and reward lanes.
+- Recipe reward, learnability, and crafting lanes.
+- Deterministic `covered`, `partial`, `blocked`, and `missing` statuses.
+- Read-only Editor pane with relationship, evidence, blocker, and reason details.
+- Fail-closed handling for unknown evidence, mismatched source bindings, unrelated evidence subjects, unresolved targets, stale or invalid governance, and open blockers.
+- Unit coverage for deterministic lane separation and input non-mutation.
+- Focused static validator, documentation contract, and CI integration.
+- No schema change, permission grant, runtime adapter, deployment, game launch, or save mutation.
+
+Exit criteria:
+
+- every canonical economy item and recipe receives only its applicable lanes;
+- lane and row aggregation remains deterministic and fail-closed;
+- a covered relationship cannot hide another blocked or partial relationship in the same lane;
+- the Core service remains free of Qt, AzToolsFramework, persistence, and Framework dependencies;
+- the Editor dashboard remains non-editable and cannot author governance or acquisition state;
+- the Windows manual UI checklist includes the pane and its synthetic-data display.
+
 #### Remaining economy work
 
-- vendor, loot, reward, and acquisition coverage dashboards;
 - authoring-time duplicate detection reports across packs;
 - work-order generation after adapter contracts exist.
 

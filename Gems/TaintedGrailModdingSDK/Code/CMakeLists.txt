@@ -10,17 +10,44 @@ if(NOT PAL_TRAIT_BUILD_HOST_TOOLS)
 endif()
 
 ly_add_target(
+    NAME ${gem_name}.Core.Static STATIC
+    NAMESPACE Gem
+    FILES_CMAKE
+        taintedgrailmoddingsdk_core_files.cmake
+    INCLUDE_DIRECTORIES
+        PUBLIC
+            Source
+    BUILD_DEPENDENCIES
+        PUBLIC
+            AZ::AzCore
+)
+
+ly_add_target(
+    NAME ${gem_name}.Framework.Static STATIC
+    NAMESPACE Gem
+    FILES_CMAKE
+        taintedgrailmoddingsdk_framework_files.cmake
+    INCLUDE_DIRECTORIES
+        PUBLIC
+            Source
+    BUILD_DEPENDENCIES
+        PUBLIC
+            Gem::${gem_name}.Core.Static
+        PRIVATE
+            AZ::AzToolsFramework
+)
+
+ly_add_target(
     NAME ${gem_name}.Editor GEM_MODULE
     NAMESPACE Gem
     FILES_CMAKE
         taintedgrailmoddingsdk_editor_files.cmake
-        taintedgrailmoddingsdk_path_policy_editor_files.cmake
     INCLUDE_DIRECTORIES
         PRIVATE
             Source
     BUILD_DEPENDENCIES
         PRIVATE
-            AZ::AzCore
+            Gem::${gem_name}.Framework.Static
             AZ::AzToolsFramework
 )
 
@@ -46,7 +73,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
                 Tests
         BUILD_DEPENDENCIES
             PRIVATE
-                AZ::AzCore
+                Gem::${gem_name}.Framework.Static
                 AZ::AzTest
                 AZ::AzToolsFramework
     )
@@ -67,6 +94,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
 endif()
 
 # Tool Gems are resolved for both Editor/Project Manager tools and builder hosts.
+# Core and Framework remain internal implementation targets; only the Editor module is aliased.
 ly_create_alias(NAME ${gem_name}.Tools NAMESPACE Gem TARGETS Gem::${gem_name}.Editor)
 ly_create_alias(NAME ${gem_name}.Builders NAMESPACE Gem TARGETS Gem::${gem_name}.Editor)
 

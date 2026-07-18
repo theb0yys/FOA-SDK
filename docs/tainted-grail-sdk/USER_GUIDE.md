@@ -39,6 +39,9 @@ Current tools:
 - **Tainted Grail Source Intake**
 - **Tainted Grail Catalog Browser**
 - **Tainted Grail Catalog Governance**
+- **Tainted Grail Item and Recipe Editor**
+- **Tainted Grail Economy Acquisition Coverage**
+- **Tainted Grail Economy Cross-Pack Duplicates**
 
 ## Recommended workflow
 
@@ -53,7 +56,8 @@ Use the tools in this order:
 7. review maturity, confidence, risk, and staleness independently;
 8. record validation proof;
 9. allow or forbid one named usage lane explicitly;
-10. review the shared status window before downstream planning.
+10. review economy acquisition coverage and exact cross-pack duplicate candidates;
+11. review the shared status window before downstream planning.
 
 ## Workspace and game profile
 
@@ -270,6 +274,36 @@ Supersession requires a different existing replacement ID. The old subject becom
 
 See [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) for the full state vocabulary and transition rules.
 
+## Item and recipe authoring
+
+Open **Tainted Grail Item and Recipe Editor** after canonical economy records and evidence exist.
+
+The pane authors typed item and recipe profiles on existing canonical identities. It also manages ingredient, output, by-product, station, unlock, and acquisition relationship data through the shared catalog transaction boundary.
+
+The lane matrices and station/learnability evidence rows are read-only. The pane cannot grant governance permission and does not invoke FoA runtime behavior.
+
+## Economy acquisition coverage
+
+Open **Tainted Grail Economy Acquisition Coverage** to inspect read-only vendor, loot, reward, learnability, and crafting coverage.
+
+The view derives applicable lanes from canonical relationships, exact evidence bindings, governance state, and open blockers. `covered`, `partial`, `blocked`, and `missing` describe research coverage only; they do not grant permission or prove runtime behavior.
+
+## Economy cross-pack duplicate report
+
+Open **Tainted Grail Economy Cross-Pack Duplicates** to review authoring-time duplicate candidates across owner packs.
+
+The report uses only:
+
+- exact subject references for pack-owned economy records of the same kind;
+- exact recipe duplicate keys for pack-owned recipes;
+- at least two distinct owner packs.
+
+Matching is case-sensitive and never uses display-name similarity, aliases, localisation text, tags, asset paths, or fuzzy inference.
+
+A `review_required` group has current validated candidates with usable exact-subject evidence and no open blockers. `partial` means at least one candidate is not yet current/validated or lacks its typed profile. `blocked` means evidence, governance, references, supersession, or blockers fail closed.
+
+The report does not merge records, reject a pack, choose a winner, author governance, or prove a runtime conflict. Review the exact canonical records and evidence before making any separate catalog decision.
+
 ## Foundation status and blockers
 
 The status window reports:
@@ -317,6 +351,7 @@ MyWorkspace/
 - Do not assume an imported claim is true because parsing succeeded.
 - Do not assume a validated claim is permitted for every usage.
 - Do not assume clearing staleness restores permission.
+- Do not treat a duplicate candidate group as an automatic merge or deletion instruction.
 - Review generated output before any future deployment.
 
 ## Troubleshooting
@@ -358,6 +393,13 @@ MyWorkspace/
 - provide the validated proof event ID;
 - use the same record or relationship subject for the proof;
 - provide a named reviewer.
+
+### Duplicate report is empty
+
+- confirm the records are pack-owned economy items or recipes;
+- confirm at least two distinct owner packs use the same exact case-sensitive subject reference or recipe duplicate key;
+- do not expect display names or fuzzy similarity to create a group;
+- confirm typed profiles and exact-subject evidence exist for candidate health details.
 
 ## Getting help
 

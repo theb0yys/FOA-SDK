@@ -1,0 +1,25 @@
+{
+  "AssetPaths": [],
+  "BuildConfiguration": "Profile",
+  "CompatibleGameVersions": [],
+  "ContentDefinitionPaths": [],
+  "Dependencies": [],
+  "DisplayName": "Developer Preview Duplicate Review Companion",
+  "DlcScopes": [
+    "preview-synthetic"
+  ],
+  "Incompatibilities": [],
+  "LocalisationPaths": [],
+  "OwnerId": "preview",
+  "PackId": "preview.duplicate-companion",
+  "ReleaseChannel": "development",
+  "RequiredAdapterVersion": "0.0.0-preview",
+  "RequiredCoreVersion": "0.0.0-preview",
+  "RequiredMods": [],
+  "RuntimeActionsEnabled": false,
+  "SaveImpact": "none",
+  "SchemaVersion": 1,
+  "TargetBranch": "preview",
+  "TargetGameVersion": "preview-build-0",
+  "Version": "0.0.0-preview.0"
+}

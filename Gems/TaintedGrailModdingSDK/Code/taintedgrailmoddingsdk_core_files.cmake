@@ -18,6 +18,8 @@ set(FILES
     Source/EconomyBlockerService.h
     Source/EconomyCoverageService.cpp
     Source/EconomyCoverageService.h
+    Source/EconomyDuplicateDetectionService.cpp
+    Source/EconomyDuplicateDetectionService.h
     Source/EconomyModels.cpp
     Source/EconomyModels.h
     Source/FoundationModels.cpp

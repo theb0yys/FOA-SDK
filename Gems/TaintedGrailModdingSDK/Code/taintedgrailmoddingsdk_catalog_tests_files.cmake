@@ -13,4 +13,5 @@ set(FILES
     Tests/DeveloperPreviewSmokeTests.cpp
     Tests/EconomyAuthoringTests.cpp
     Tests/EconomyCoverageServiceTests.cpp
+    Tests/EconomyDuplicateDetectionServiceTests.cpp
 )

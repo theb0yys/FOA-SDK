@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted correction contract for Slice 5 and extended by Slice 6. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
+Accepted correction contract for Slice 5 and extended by Slices 6 and 7. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
 
 ## Targets
 
@@ -13,7 +13,7 @@ Owns shared domain state and services that are free of Qt and host-tool dependen
 - workspace, pack, source, evidence, catalog, governance, and economy models;
 - catalog database and publish-after-save transaction logic;
 - governance types and governance blocker evaluation;
-- foundation validation, economy blocker evaluation, and immutable economy acquisition coverage analysis;
+- foundation validation, economy blocker evaluation, and immutable economy acquisition coverage and cross-pack duplicate analysis;
 - the source/evidence registry.
 
 Core depends publicly on `AZ::AzCore`. Core must not depend on Framework, Editor, Qt, AzToolsFramework, runtime adapters, deployment, or game APIs.
@@ -34,7 +34,7 @@ Framework depends publicly on Core and privately on the host-tool facilities nee
 
 Remains the Tool Gem module and owns only composition and presentation:
 
-- Qt widgets, including the read-only economy acquisition coverage dashboard;
+- Qt widgets, including the read-only economy acquisition and duplicate-report dashboards;
 - the Editor system component;
 - the Gem Editor module.
 
@@ -82,7 +82,7 @@ Qt-dependent services are deliberately Framework-owned rather than being labelle
 - Tool or Builder aliases expose internal static targets;
 - the obsolete path-policy Editor manifest returns.
 
-Feature-specific validators may add stricter contracts for individual Core analyses and Editor views. The economy coverage validator, for example, rejects Qt or mutation dependencies in the Core service and editing controls in its dashboard.
+Feature-specific validators add stricter contracts for individual Core analyses and Editor views. The economy coverage validator rejects Qt or mutation dependencies in the coverage service and editing controls in its dashboard. The economy duplicate validator additionally enforces exact case-sensitive signals, distinct-pack gating, no display-name or fuzzy identity matching, pure Core ownership, and a non-editable report.
 
 ## Runtime boundary
 
@@ -90,4 +90,4 @@ No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, deployment, inject
 
 ## Rollback
 
-Revert the implementing pull request. No durable documents or user state require migration because these slices change build ownership and derived read-only analysis only.
+Revert the implementing pull request. No durable documents or user state require migration because these slices change build ownership and add derived read-only analysis only.

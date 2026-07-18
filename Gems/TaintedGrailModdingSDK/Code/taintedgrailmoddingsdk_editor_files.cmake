@@ -12,6 +12,8 @@ set(FILES
     Source/CatalogGovernanceWidget.h
     Source/EconomyCoverageDashboardWidget.cpp
     Source/EconomyCoverageDashboardWidget.h
+    Source/EconomyDuplicateReportWidget.cpp
+    Source/EconomyDuplicateReportWidget.h
     Source/FoundationStatusWidget.cpp
     Source/FoundationStatusWidget.h
     Source/ItemRecipeEditorWidget.cpp

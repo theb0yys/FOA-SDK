@@ -100,7 +100,8 @@ class EconomyCoverageDashboardValidatorTests(unittest.TestCase):
         self._write(
             "ROADMAP.md",
             "Economy acquisition coverage dashboard\n"
-            "authoring-time duplicate detection reports across packs\n",
+            "Economy cross-pack duplicate report\n"
+            "work-order generation after adapter contracts exist\n",
         )
 
     def test_valid_contract_passes(self) -> None:

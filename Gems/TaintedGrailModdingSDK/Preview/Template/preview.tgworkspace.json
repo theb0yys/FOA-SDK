@@ -1,28 +1,33 @@
 {
-  "ActiveGameProfileId": "preview.profile.windows-x64",
-  "DeploymentPath": "Deployment",
-  "DisplayName": "Developer Preview 0 Synthetic Workspace",
-  "GameProfiles": [
-    {
-      "BepInExVersion": "preview-not-configured",
-      "Branch": "preview",
-      "DiagnosticsPath": "Diagnostics",
-      "DisplayName": "Synthetic Preview Profile",
-      "DlcScopes": [
-        "preview-synthetic"
-      ],
-      "ExtractedDataPath": "Extracted",
-      "GameVersion": "preview-build-0",
-      "InstallPath": "PlaceholderGame",
-      "ManagedAssembliesPath": "PlaceholderGame/Managed",
-      "PluginPath": "PlaceholderGame/Plugins",
-      "ProfileId": "preview.profile.windows-x64",
-      "RuntimeTarget": "Mono",
-      "UnityVersion": "preview-not-configured"
-    }
-  ],
-  "OutputPath": "Build",
-  "RootPath": ".",
-  "StagingPath": "Staging",
-  "WorkspaceId": "preview.workspace"
+  "ClassData": {
+    "ActiveGameProfileId": "preview.profile.windows-x64",
+    "DeploymentPath": "Deployment",
+    "DisplayName": "Developer Preview 0 Synthetic Workspace",
+    "GameProfiles": [
+      {
+        "BepInExVersion": "preview-not-configured",
+        "Branch": "preview",
+        "DiagnosticsPath": "Diagnostics",
+        "DisplayName": "Synthetic Preview Profile",
+        "DlcScopes": [
+          "preview-synthetic"
+        ],
+        "ExtractedDataPath": "Extracted",
+        "GameVersion": "preview-build-0",
+        "InstallPath": "PlaceholderGame",
+        "ManagedAssembliesPath": "PlaceholderGame/Managed",
+        "PluginPath": "PlaceholderGame/Plugins",
+        "ProfileId": "preview.profile.windows-x64",
+        "RuntimeTarget": "Mono",
+        "UnityVersion": "preview-not-configured"
+      }
+    ],
+    "OutputPath": "Build",
+    "RootPath": ".",
+    "StagingPath": "Staging",
+    "WorkspaceId": "preview.workspace"
+  },
+  "ClassName": "WorkspaceModel",
+  "Type": "JsonSerialization",
+  "Version": 1
 }

@@ -7,6 +7,8 @@
 
 #include "WorkspacePersistenceService.h"
 
+#include "PersistenceJsonUtils.h"
+
 #include <AzCore/Serialization/Json/JsonUtils.h>
 #include <AzCore/std/utility/move.h>
 
@@ -33,8 +35,8 @@ namespace TaintedGrailModdingSDK
         }
 
         WorkspaceModel workspace;
-        AZ::Outcome<void, AZStd::string> loadResult =
-            AZ::JsonSerializationUtils::LoadObjectFromFile(workspace, filePath);
+        const AZ::Outcome<void, AZStd::string> loadResult =
+            PersistenceJsonUtils::LoadObjectFromFile(workspace, filePath);
         if (!loadResult.IsSuccess())
         {
             return AZ::Failure(AZStd::string(loadResult.GetError()));

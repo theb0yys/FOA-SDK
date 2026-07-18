@@ -23,6 +23,7 @@
   ],
   "OutputPath": "Build",
   "RootPath": ".",
+  "SchemaVersion": 1,
   "StagingPath": "Staging",
   "WorkspaceId": "preview.workspace"
 }

@@ -36,6 +36,7 @@ namespace TaintedGrailModdingSDK
     {
         m_workspace = {};
         m_workspaceFilePath.clear();
+        m_workspaceRootPath.clear();
         m_packs.clear();
         m_activePackId.clear();
         m_activePackFilePath.clear();
@@ -55,6 +56,7 @@ namespace TaintedGrailModdingSDK
     void FoundationService::SetWorkspace(const WorkspaceModel& workspace)
     {
         m_workspace = workspace;
+        m_workspaceRootPath.clear();
         RefreshSnapshot();
     }
 
@@ -70,7 +72,16 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        m_workspaceFilePath = filePath;
+        m_workspaceFilePath = m_workspacePersistence.GetLastResolvedPath();
+        auto root = m_pathPolicy.ResolveWorkspaceRoot(m_workspace, m_workspaceFilePath, true);
+        if (root.IsSuccess())
+        {
+            auto pathValidation = m_pathPolicy.ValidateWorkspacePaths(m_workspace, root.GetValue());
+            if (pathValidation.IsSuccess())
+            {
+                m_workspaceRootPath = root.TakeValue();
+            }
+        }
         RefreshSnapshot();
         return true;
     }
@@ -91,26 +102,24 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationService::LoadWorkspace(const AZStd::string& filePath, AZStd::string* error)
     {
-        AZ::Outcome<WorkspaceModel, AZStd::string> result = m_workspacePersistence.Load(filePath);
-        if (!result.IsSuccess())
+        auto candidateResult = m_workspaceLoadService.BuildCandidate(filePath);
+        if (!candidateResult.IsSuccess())
         {
             if (error)
             {
-                *error = AZStd::string(result.GetError());
+                *error = AZStd::string(candidateResult.GetError());
             }
             return false;
         }
 
-        m_workspace = result.TakeValue();
-        m_workspaceFilePath = filePath;
-        if (!ReloadSourceEvidence(error))
-        {
-            return false;
-        }
-        if (!ReloadCatalog(error))
-        {
-            return false;
-        }
+        FoundationWorkspaceLoadCandidate candidate = candidateResult.TakeValue();
+        m_workspace = AZStd::move(candidate.m_workspace);
+        m_workspaceFilePath = AZStd::move(candidate.m_workspaceFilePath);
+        m_workspaceRootPath = AZStd::move(candidate.m_workspaceRootPath);
+        m_sourceRegistry = AZStd::move(candidate.m_sourceRegistry);
+        m_importIssues = AZStd::move(candidate.m_importIssues);
+        m_catalog = AZStd::move(candidate.m_catalog);
+        m_catalogFilePath = AZStd::move(candidate.m_catalogFilePath);
         RefreshSnapshot();
         return true;
     }
@@ -248,7 +257,10 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
-        if (m_workspace.m_rootPath.empty())
+        const AZStd::string& workspaceRoot = m_workspaceRootPath.empty()
+            ? m_workspace.m_rootPath
+            : m_workspaceRootPath;
+        if (workspaceRoot.empty())
         {
             if (error)
             {
@@ -293,7 +305,7 @@ namespace TaintedGrailModdingSDK
         AZ::Outcome<SourceEvidenceDocumentPaths, AZStd::string> saveResult = m_sourceEvidencePersistence.SaveDocuments(
             imported.m_sourceDocument,
             imported.m_evidenceDocument,
-            m_workspace.m_rootPath);
+            workspaceRoot);
         if (!saveResult.IsSuccess())
         {
             if (error)
@@ -322,7 +334,10 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationService::ReloadSourceEvidence(AZStd::string* error)
     {
-        if (m_workspace.m_rootPath.empty())
+        const AZStd::string& workspaceRoot = m_workspaceRootPath.empty()
+            ? m_workspace.m_rootPath
+            : m_workspaceRootPath;
+        if (workspaceRoot.empty())
         {
             m_sourceRegistry.Clear();
             m_importIssues.clear();
@@ -334,7 +349,7 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<EvidenceDocument> evidenceDocuments;
         AZStd::vector<ImportIssue> loadIssues;
         const AZ::Outcome<void, AZStd::string> loadResult = m_sourceEvidencePersistence.LoadWorkspaceDocuments(
-            m_workspace.m_rootPath,
+            workspaceRoot,
             sourceDocuments,
             evidenceDocuments,
             loadIssues);
@@ -436,6 +451,11 @@ namespace TaintedGrailModdingSDK
     const AZStd::string& FoundationService::GetWorkspaceFilePath() const
     {
         return m_workspaceFilePath;
+    }
+
+    const AZStd::string& FoundationService::GetWorkspaceRootPath() const
+    {
+        return m_workspaceRootPath;
     }
 
     const AZStd::vector<PackManifest>& FoundationService::GetPacks() const

@@ -83,17 +83,20 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationService::ReloadCatalog(AZStd::string* error)
     {
-        if (m_workspace.m_rootPath.empty())
+        const AZStd::string& workspaceRoot = m_workspaceRootPath.empty()
+            ? m_workspace.m_rootPath
+            : m_workspaceRootPath;
+        if (workspaceRoot.empty())
         {
             m_catalog.Clear();
             m_catalogFilePath.clear();
             RefreshSnapshot();
             return true;
         }
-        if (!m_catalogPersistence.Exists(m_workspace.m_rootPath))
+        if (!m_catalogPersistence.Exists(workspaceRoot))
         {
             m_catalog.Clear();
-            m_catalogFilePath.clear();
+            m_catalogFilePath = m_catalogPersistence.GetCatalogPath(workspaceRoot);
             RefreshSnapshot();
             return true;
         }
@@ -108,7 +111,7 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        AZ::Outcome<CatalogDocument, AZStd::string> loadResult = m_catalogPersistence.Load(m_workspace.m_rootPath);
+        AZ::Outcome<CatalogDocument, AZStd::string> loadResult = m_catalogPersistence.Load(workspaceRoot);
         if (!loadResult.IsSuccess())
         {
             if (error)
@@ -143,7 +146,7 @@ namespace TaintedGrailModdingSDK
         }
 
         m_catalog = AZStd::move(candidate);
-        m_catalogFilePath = m_catalogPersistence.GetCatalogPath(m_workspace.m_rootPath);
+        m_catalogFilePath = m_catalogPersistence.GetCatalogPath(workspaceRoot);
         RefreshSnapshot();
         return true;
     }
@@ -167,15 +170,30 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
+        const AZStd::string& workspaceRoot = m_workspaceRootPath.empty()
+            ? m_workspace.m_rootPath
+            : m_workspaceRootPath;
+        if (workspaceRoot.empty())
+        {
+            if (error)
+            {
+                *error = "A canonical workspace root is required before the catalog can be saved.";
+            }
+            return false;
+        }
+
         const CatalogTransactionService::SaveCallback save = [this](
             const CatalogDocument& document,
-            const AZStd::string& workspaceRoot)
+            const AZStd::string& root)
         {
-            return m_catalogPersistence.Save(document, workspaceRoot);
+            return m_catalogPersistence.Save(document, root);
         };
+
+        WorkspaceModel persistenceWorkspace = m_workspace;
+        persistenceWorkspace.m_rootPath = workspaceRoot;
         AZ::Outcome<CatalogCommitResult, AZStd::string> commit = m_catalogTransaction.Commit(
             candidate,
-            m_workspace,
+            persistenceWorkspace,
             *profile,
             save);
         if (!commit.IsSuccess())

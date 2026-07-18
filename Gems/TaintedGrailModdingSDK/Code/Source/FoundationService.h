@@ -16,6 +16,7 @@
 #include "EconomyBlockerService.h"
 #include "FoundationPersistenceBoundary.h"
 #include "FoundationValidationService.h"
+#include "FoundationWorkspaceLoadService.h"
 #include "SourceEvidencePersistenceService.h"
 #include "SourceEvidenceRegistry.h"
 #include "SourceImportService.h"
@@ -26,6 +27,7 @@ namespace TaintedGrailModdingSDK
     {
     public:
         static FoundationService& Get();
+        explicit FoundationService(FoundationWorkspaceLoadDependencies workspaceLoadDependencies);
 
         void Initialize();
         void Shutdown();
@@ -85,6 +87,7 @@ namespace TaintedGrailModdingSDK
 
         const WorkspaceModel& GetWorkspace() const;
         const AZStd::string& GetWorkspaceFilePath() const;
+        const AZStd::string& GetWorkspaceRootPath() const;
         const AZStd::vector<PackManifest>& GetPacks() const;
         const PackManifest* GetActivePack() const;
         const AZStd::string& GetActivePackFilePath() const;
@@ -99,7 +102,6 @@ namespace TaintedGrailModdingSDK
     private:
         FoundationService();
 
-        // Internal compatibility path only. Public/editor record creation must use governed promotion.
         bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
         bool PersistCatalogCandidate(const CatalogDatabase& candidate, AZStd::string* error);
         PackManifest* FindPackById(const AZStd::string& packId);
@@ -112,6 +114,7 @@ namespace TaintedGrailModdingSDK
 
         WorkspaceModel m_workspace;
         AZStd::string m_workspaceFilePath;
+        AZStd::string m_workspaceRootPath;
         AZStd::vector<PackManifest> m_packs;
         AZStd::string m_activePackId;
         AZStd::string m_activePackFilePath;
@@ -131,6 +134,7 @@ namespace TaintedGrailModdingSDK
         CatalogTransactionService m_catalogTransaction;
         CatalogPromotionService m_catalogPromotion;
         CatalogGovernanceService m_catalogGovernance;
+        FoundationWorkspaceLoadService m_workspaceLoadService;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;
     };

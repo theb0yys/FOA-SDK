@@ -2,7 +2,7 @@
 
 ## General rules
 
-TG SDK durable documents are UTF-8 JSON produced through O3DE serialization.
+TG SDK durable documents are UTF-8 JSON produced through reviewed persistence services.
 
 All durable formats follow these rules:
 
@@ -16,7 +16,7 @@ All durable formats follow these rules:
 - imported evidence, reviewed records, validation, and permission remain separate;
 - examples must not contain copyrighted game assets or proprietary source code.
 
-O3DE serialization may omit fields equal to default values. Missing optional fields therefore use the model defaults described below.
+O3DE reflection versions are implementation metadata and are not durable document schema versions.
 
 ## Workspace document
 
@@ -30,6 +30,7 @@ Purpose: editor-owned workspace and exact game-profile configuration.
 
 ```json
 {
+  "SchemaVersion": 1,
   "WorkspaceId": "owner.workspace",
   "DisplayName": "My TG Workspace",
   "RootPath": "/authoring/MyWorkspace",
@@ -57,7 +58,17 @@ Purpose: editor-owned workspace and exact game-profile configuration.
 }
 ```
 
-A configured profile requires profile ID, installation, exact game version, branch, runtime target, and managed-assembly path. `RuntimeTarget` is `Mono` or `IL2CPP`. Mono profiles also require the BepInEx version and plugin path for downstream build/deployment planning.
+Schema-1 rules:
+
+- `WorkspaceId` and every `ProfileId` are lowercase namespaced stable IDs;
+- profile IDs are unique and `ActiveGameProfileId` binds to exactly one profile;
+- root, output, staging and deployment paths are required;
+- a relative root is resolved against the canonical workspace-document directory;
+- output, staging, deployment, diagnostics and extracted-data paths remain inside the canonical workspace root;
+- managed assemblies and the Mono plugin path remain inside the canonical installation path;
+- `RuntimeTarget` is `Mono` or `IL2CPP`; Mono profiles also require the BepInEx version and plugin path.
+
+A workspace without `SchemaVersion` is legacy schema 0. It migrates in memory only when every schema-1 identity, binding and path-independent structural rule can be validated without guessing. Unsafe legacy documents and unknown schema versions are rejected. Saving a migrated workspace emits schema 1.
 
 ## Pack manifest
 

@@ -41,6 +41,41 @@ namespace TaintedGrailModdingSDK
             workspace.m_rootPath = ".";
             return workspace;
         }
+
+        GameProfile ValidatedProfile(
+            const AZStd::string& profileId,
+            const AZStd::string& installPath)
+        {
+            GameProfile profile;
+            profile.m_profileId = profileId;
+            profile.m_displayName = profileId;
+            profile.m_installPath = installPath;
+            profile.m_gameVersion = "1.0.0";
+            profile.m_branch = "mono";
+            profile.m_runtimeTarget = "Mono";
+            profile.m_unityVersion = "2022.3";
+            profile.m_bepInExVersion = "5.4";
+            profile.m_managedAssembliesPath = installPath + "/Managed";
+            profile.m_pluginPath = installPath + "/Plugins";
+            profile.m_diagnosticsPath = AZStd::string("Diagnostics/") + profileId;
+            profile.m_extractedDataPath = AZStd::string("Extracted/") + profileId;
+            return profile;
+        }
+
+        WorkspaceModel ValidatedWorkspace(const QString& workspacePath)
+        {
+            WorkspaceModel workspace;
+            workspace.m_workspaceId = "test.workspace";
+            workspace.m_displayName = "Test Workspace";
+            workspace.m_rootPath = ToAzString(workspacePath);
+            workspace.m_outputPath = "Build";
+            workspace.m_stagingPath = "Staging";
+            workspace.m_deploymentPath = "Deployment";
+            workspace.m_activeGameProfileId = "test.active";
+            workspace.m_gameProfiles.push_back(ValidatedProfile("test.active", "GameActive"));
+            workspace.m_gameProfiles.push_back(ValidatedProfile("test.inactive", "GameInactive"));
+            return workspace;
+        }
     } // namespace
 
     TEST(PathPolicyServiceTests, WorkspaceDocumentRequiresCanonicalSuffix)
@@ -187,5 +222,113 @@ namespace TaintedGrailModdingSDK
             true);
         EXPECT_FALSE(result.IsSuccess());
         EXPECT_NE(result.GetError().find(".tgpack.json"), AZStd::string::npos);
+    }
+
+    TEST(PathPolicyServiceTests, EveryConfiguredProfilePathCanValidate)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(QDir(workspacePath).filePath("GameActive/Managed")));
+        ASSERT_TRUE(QDir().mkpath(QDir(workspacePath).filePath("GameActive/Plugins")));
+        ASSERT_TRUE(QDir().mkpath(QDir(workspacePath).filePath("GameInactive/Managed")));
+        ASSERT_TRUE(QDir().mkpath(QDir(workspacePath).filePath("GameInactive/Plugins")));
+
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ValidateWorkspacePaths(
+            ValidatedWorkspace(workspacePath),
+            ToAzString(canonicalRoot));
+        EXPECT_TRUE(result.IsSuccess()) << result.GetError().c_str();
+    }
+
+    TEST(PathPolicyServiceTests, WorkspaceOwnedPathEscapeIsRejected)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+
+        WorkspaceModel workspace = ValidatedWorkspace(workspacePath);
+        workspace.m_outputPath = "../outside-build";
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ValidateWorkspacePaths(workspace, ToAzString(canonicalRoot));
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("OutputPath"), AZStd::string::npos);
+    }
+
+    TEST(PathPolicyServiceTests, ActiveManagedAssembliesEscapeFromInstallIsRejected)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+
+        WorkspaceModel workspace = ValidatedWorkspace(workspacePath);
+        workspace.m_gameProfiles.front().m_managedAssembliesPath = "Other/Managed";
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ValidateWorkspacePaths(workspace, ToAzString(canonicalRoot));
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("test.active"), AZStd::string::npos);
+        EXPECT_NE(result.GetError().find("ManagedAssembliesPath"), AZStd::string::npos);
+    }
+
+    TEST(PathPolicyServiceTests, InactiveDiagnosticsEscapeIsRejected)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+
+        WorkspaceModel workspace = ValidatedWorkspace(workspacePath);
+        workspace.m_gameProfiles[1].m_diagnosticsPath = "../outside-diagnostics";
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ValidateWorkspacePaths(workspace, ToAzString(canonicalRoot));
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("test.inactive"), AZStd::string::npos);
+        EXPECT_NE(result.GetError().find("DiagnosticsPath"), AZStd::string::npos);
+    }
+
+    TEST(PathPolicyServiceTests, InactiveManagedAssembliesEscapeFromInstallIsRejected)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+
+        WorkspaceModel workspace = ValidatedWorkspace(workspacePath);
+        workspace.m_gameProfiles[1].m_managedAssembliesPath = "OtherGame/Managed";
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ValidateWorkspacePaths(workspace, ToAzString(canonicalRoot));
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("test.inactive"), AZStd::string::npos);
+        EXPECT_NE(result.GetError().find("ManagedAssembliesPath"), AZStd::string::npos);
+    }
+
+    TEST(PathPolicyServiceTests, MonoPluginEscapeFromInstallIsRejected)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+
+        WorkspaceModel workspace = ValidatedWorkspace(workspacePath);
+        workspace.m_gameProfiles.front().m_pluginPath = "Other/Plugins";
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ValidateWorkspacePaths(workspace, ToAzString(canonicalRoot));
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("test.active"), AZStd::string::npos);
+        EXPECT_NE(result.GetError().find("PluginPath"), AZStd::string::npos);
     }
 } // namespace TaintedGrailModdingSDK

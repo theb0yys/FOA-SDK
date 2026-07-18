@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate catalog, governance, economy, preview-smoke test registration, and safety coverage."""
+"""Validate catalog, governance, economy, preview-smoke, workspace atomicity, and safety coverage."""
 
 from __future__ import annotations
 
@@ -37,11 +37,14 @@ def main() -> int:
     types_tests_path = tests_root / "CatalogGovernanceTypesTests.cpp"
     economy_tests_path = tests_root / "EconomyAuthoringTests.cpp"
     preview_smoke_tests_path = tests_root / "DeveloperPreviewSmokeTests.cpp"
+    atomic_tests_path = tests_root / "FoundationServiceWorkspaceLoadTests.cpp"
+    schema_tests_path = tests_root / "WorkspaceSchemaServiceTests.cpp"
     economy_header_path = source_root / "EconomyAuthoringService.h"
     economy_source_path = source_root / "EconomyAuthoringService.cpp"
     editor_header_path = source_root / "ItemRecipeEditorWidget.h"
     editor_source_path = source_root / "ItemRecipeEditorWidget.cpp"
     catalog_persistence_path = source_root / "CatalogPersistenceService.cpp"
+    workspace_persistence_path = source_root / "WorkspacePersistenceService.cpp"
     persistence_compatibility_path = source_root / "PersistenceJsonUtils.h"
 
     try:
@@ -54,16 +57,19 @@ def main() -> int:
             types_tests_path,
             economy_tests_path,
             preview_smoke_tests_path,
+            atomic_tests_path,
+            schema_tests_path,
             economy_header_path,
             economy_source_path,
             editor_header_path,
             editor_source_path,
             catalog_persistence_path,
+            workspace_persistence_path,
             persistence_compatibility_path,
         )
         for path in required_paths:
             if not path.is_file():
-                fail(f"Required catalog/governance/economy/preview test or source file is missing: {path}")
+                fail(f"Required catalog/workspace test or source file is missing: {path}")
 
         cmake = cmake_path.read_text(encoding="utf-8")
         for fragment in (
@@ -71,10 +77,12 @@ def main() -> int:
             "PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED",
             "NAME ${gem_name}.Catalog.Tests",
             "taintedgrailmoddingsdk_catalog_tests_files.cmake",
+            "taintedgrailmoddingsdk_path_policy_tests_files.cmake",
             "AZ::AzTest",
             "AZ::AzToolsFramework",
             "ly_add_googletest",
             "Tests/DeveloperPreviewSmokeTests.cpp",
+            "Tests/WorkspaceSchemaServiceTests.cpp",
             "TG_SDK_PREVIEW_TEMPLATE_ROOT",
             "../Preview/Template",
         ):
@@ -84,16 +92,24 @@ def main() -> int:
         entries = set(re.findall(r"^\s+([^\s\)]+)\s*$", manifest, re.MULTILINE))
         expected = {
             "Source/CatalogDatabase.cpp", "Source/CatalogDatabase.h",
+            "Source/CatalogGovernanceBlockerService.cpp", "Source/CatalogGovernanceBlockerService.h",
             "Source/CatalogGovernanceService.cpp", "Source/CatalogGovernanceService.h",
             "Source/CatalogGovernanceTypes.cpp", "Source/CatalogGovernanceTypes.h",
             "Source/CatalogPersistenceService.cpp", "Source/CatalogPersistenceService.h",
+            "Source/CatalogPromotionService.cpp", "Source/CatalogPromotionService.h",
             "Source/CatalogTransactionService.cpp", "Source/CatalogTransactionService.h",
             "Source/EconomyAuthoringService.cpp", "Source/EconomyAuthoringService.h",
+            "Source/EconomyBlockerService.cpp", "Source/EconomyBlockerService.h",
             "Source/EconomyModels.cpp", "Source/EconomyModels.h",
+            "Source/FoundationCatalogService.cpp",
             "Source/FoundationModels.cpp", "Source/FoundationModels.h",
+            "Source/FoundationNotificationBus.h",
+            "Source/FoundationService.cpp", "Source/FoundationService.h",
+            "Source/FoundationValidationService.cpp", "Source/FoundationValidationService.h",
             "Source/PackPersistenceService.cpp", "Source/PackPersistenceService.h",
             "Source/SourceEvidencePersistenceService.cpp", "Source/SourceEvidencePersistenceService.h",
             "Source/SourceEvidenceRegistry.cpp", "Source/SourceEvidenceRegistry.h",
+            "Source/SourceImportService.cpp", "Source/SourceImportService.h",
             "Source/WorkspacePersistenceService.cpp", "Source/WorkspacePersistenceService.h",
             "Tests/CatalogDatabaseTests.cpp",
             "Tests/CatalogGovernanceHardeningTests.cpp",
@@ -230,11 +246,28 @@ def main() -> int:
             "EXPECT_EQ(snapshotBefore, snapshotAfterResult.GetValue())",
         ):
             require_contains(smoke_tests, fragment, preview_smoke_tests_path)
-        for forbidden in (
-            "FoA.exe", "BepInEx", "HarmonyLib", "WriteProcessMemory", "Deployment/",
-        ):
+        for forbidden in ("FoA.exe", "BepInEx", "HarmonyLib", "WriteProcessMemory", "Deployment/"):
             if forbidden in smoke_tests:
                 fail(f"Developer Preview smoke test crosses the runtime boundary: {forbidden}")
+
+        atomic_tests = atomic_tests_path.read_text(encoding="utf-8")
+        for fragment in (
+            "SuccessfulCandidatePublishesEveryWorkspaceObject",
+            "WorkspaceDocumentFailurePreservesAllLiveState",
+            "ImportIssueFailurePreservesAllLiveState",
+            "CatalogValidationFailurePreservesAllLiveState",
+            "StateSignature",
+        ):
+            require_contains(atomic_tests, fragment, atomic_tests_path)
+
+        schema_tests = schema_tests_path.read_text(encoding="utf-8")
+        for fragment in (
+            "UnknownSchemaVersionIsRejected",
+            "UnsafeLegacyWorkspaceIsClearlyRejected",
+            "SchemaOneRoundTripIsStable",
+            "PreviewFixtureLegacyShapeMigratesAndRoundTrips",
+        ):
+            require_contains(schema_tests, fragment, schema_tests_path)
 
         compatibility = persistence_compatibility_path.read_text(encoding="utf-8")
         for fragment in (
@@ -257,11 +290,26 @@ def main() -> int:
             "PersistenceJsonUtils::LoadObjectFromFile",
         ):
             require_contains(persistence, fragment, catalog_persistence_path)
+
+        workspace_persistence = workspace_persistence_path.read_text(encoding="utf-8")
+        for fragment in (
+            "WorkspaceSchemaService::CurrentSchemaVersion",
+            "WorkspaceSchemaService::LegacySchemaVersion",
+            "DetectSchemaVersion",
+            "MigrateAndValidate",
+            "QSaveFile",
+        ):
+            require_contains(workspace_persistence, fragment, workspace_persistence_path)
     except (OSError, RuntimeError) as exc:
-        print(f"Tainted Grail catalog/governance/economy/preview smoke validation failed: {exc}", file=sys.stderr)
+        print(
+            f"Tainted Grail catalog/governance/economy/workspace validation failed: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
-    print("Tainted Grail catalog, governance, economy, and Developer Preview persistence-smoke contract passed.")
+    print(
+        "Tainted Grail catalog, governance, economy, atomic workspace, and persistence-smoke contract passed."
+    )
     return 0
 
 

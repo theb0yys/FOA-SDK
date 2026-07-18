@@ -209,7 +209,8 @@ def validate_economy_coverage_dashboard(repo_root: Path) -> None:
         roadmap,
         (
             "Economy acquisition coverage dashboard",
-            "authoring-time duplicate detection reports across packs",
+            "Economy cross-pack duplicate report",
+            "work-order generation after adapter contracts exist",
         ),
         "Roadmap",
     )

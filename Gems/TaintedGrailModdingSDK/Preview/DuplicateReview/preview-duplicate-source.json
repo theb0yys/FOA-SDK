@@ -1,0 +1,18 @@
+{
+  "evidence": [
+    {
+      "claim": "The primary preview pack declares a synthetic item candidate for duplicate-report testing.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.duplicate.primary",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:item:duplicate-review"
+    },
+    {
+      "claim": "The companion preview pack declares the same exact synthetic item subject for duplicate-report testing.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.duplicate.companion",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:item:duplicate-review"
+    }
+  ]
+}

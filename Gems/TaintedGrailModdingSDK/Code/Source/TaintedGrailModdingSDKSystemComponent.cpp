@@ -10,6 +10,7 @@
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
 #include "EconomyCoverageDashboardWidget.h"
+#include "EconomyDuplicateReportWidget.h"
 #include "EconomyModels.h"
 #include "FoundationModels.h"
 #include "FoundationService.h"
@@ -37,6 +38,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
         constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
+        constexpr const char* EconomyDuplicateReportViewPaneName = "Tainted Grail Economy Cross-Pack Duplicates";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -103,6 +105,7 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
+            AzToolsFramework::UnregisterViewPane(EconomyDuplicateReportViewPaneName);
             m_viewRegistered = false;
         }
 
@@ -194,6 +197,17 @@ namespace TaintedGrailModdingSDK
             EconomyCoverageDashboardViewPaneName,
             "Tainted Grail SDK",
             economyCoverageOptions);
+
+        AzToolsFramework::ViewPaneOptions economyDuplicateOptions;
+        economyDuplicateOptions.paneRect = QRect(240, 240, 1280, 900);
+        economyDuplicateOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
+        economyDuplicateOptions.isDeletable = true;
+        economyDuplicateOptions.isPreview = true;
+        economyDuplicateOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.EconomyDuplicateReport");
+        AzToolsFramework::RegisterViewPane<EconomyDuplicateReportWidget>(
+            EconomyDuplicateReportViewPaneName,
+            "Tainted Grail SDK",
+            economyDuplicateOptions);
 
         m_viewRegistered = true;
     }

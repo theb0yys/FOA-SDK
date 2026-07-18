@@ -8,6 +8,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Added
 
+- Pure-Core `EconomyDuplicateDetectionService` analysis for exact, case-sensitive cross-pack economy `subjectRef` and recipe `duplicateKey` candidate groups, evidence health, governance state, and open blockers.
+- Read-only **Tainted Grail Economy Cross-Pack Duplicates** editor pane with exact signals, owner packs, canonical records, `review_required`, `partial`, and `blocked` states, evidence, blockers, and reasons.
+- Economy duplicate C++ tests, focused contract validator and unit tests, CI integration, public design documentation, and eighth-pane Windows manual UI checklist coverage.
 - Pure-Core `EconomyCoverageService` analysis for deterministic vendor, loot, reward, learnability, and crafting coverage over canonical economy relationships, exact evidence bindings, governance state, and open blockers.
 - Read-only **Tainted Grail Economy Acquisition Coverage** editor pane with per-lane `covered`, `partial`, `blocked`, and `missing` states plus relationship, evidence, blocker, and reason details.
 - Economy coverage C++ tests, focused contract validator and unit tests, CI integration, public design documentation, and Windows manual UI checklist coverage.
@@ -85,6 +88,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
+- Phase 6 now records the economy cross-pack duplicate report as implemented; economy work-order generation remains gated on adapter contracts.
+- The Windows manual UI checklist now opens all eight TG SDK panes and verifies exact synthetic cross-pack duplicate candidates and non-editability.
+- Duplicate detection uses only exact, case-sensitive subject references and recipe duplicate keys across distinct owner packs; it performs no display-name or fuzzy matching.
 - Phase 6 now records the economy acquisition coverage dashboard as implemented; cross-pack duplicate detection is the next ordered economy slice.
 - The Windows manual UI checklist now opens all seven TG SDK panes and verifies synthetic economy acquisition coverage data and non-editability.
 - Production implementation files are compiled exactly once by Core, Framework, or Editor; catalog and path-policy tests now link `Framework.Static` instead of recompiling private copies of production `.cpp` files.
@@ -112,6 +118,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Security
 
+- Economy duplicate analysis is immutable and fail-closed; the report cannot merge records, reject packs, select a winner, author governance, persist changes, or expose runtime/deployment actions.
+- Exact duplicate signals are case-sensitive and pack-gated; display names, aliases, localisation, tags, asset paths, inferred semantics, and fuzzy similarity cannot create a duplicate group.
 - Economy coverage analysis is immutable and fail-closed; the dashboard exposes no editing, governance, persistence, deployment, launch, injection, vendor/loot/reward mutation, recipe learning, or save behavior.
 - The Core/Framework split remains host-tool-only and exposes no internal static target through Tool or Builder aliases; it adds no runtime adapter, deployment, launch, injection, telemetry, or save behavior.
 - Failed workspace candidates cannot publish partial objects, change the live canonical workspace path, redirect pack containment, or replace the previous Foundation snapshot.
@@ -148,6 +156,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Known limitations
 
+- Cross-pack duplicate groups are review candidates only; they do not confirm semantic equivalence, choose a canonical winner, authorize deletion, or prove a runtime conflict.
 - Economy acquisition coverage is research-only: it does not prove actual vendor stock, loot tables, reward delivery, recipe learning, crafting availability, runtime registration, persistence, cleanup, or rollback.
 - The Windows manual UI checklist and evidence verifier are implemented, but the actual Windows screenshot pass remains pending.
 - Developer Preview 0 does not include a prebuilt or verified preview archive; the Editor must be built from source before the clickable `.lnk` is generated.

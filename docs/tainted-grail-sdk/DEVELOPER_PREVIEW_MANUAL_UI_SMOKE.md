@@ -10,7 +10,7 @@ The accepted evidence must be tied to the **exact source commit** being reviewed
 
 ## Safety and privacy boundary
 
-Use only the project-owned synthetic Developer Preview 0 fixture. Do not display or capture:
+Use only the project-owned synthetic Developer Preview 0 fixture and the project-owned duplicate-review companion. Do not display or capture:
 
 - proprietary game files, assets, saves, identifiers, or screenshots;
 - credentials, tokens, user names, private absolute paths, or unrelated desktop content;
@@ -42,6 +42,16 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output build/tg-sdk-developer-preview-0-fixture
 ```
+
+Prepare the project-owned duplicate-review companion before opening the workspace:
+
+```powershell
+Copy-Item `
+  Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/preview.duplicate-companion.tgpack.json `
+  build/tg-sdk-developer-preview-0-fixture/Packs/preview.duplicate-companion.tgpack.json
+```
+
+The canonical fixture verifier intentionally covers the unchanged generated fixture only. The copied companion is separately repository-owned and must match the reviewed source commit. Follow `Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/README.md` during the duplicate-report step.
 
 ## Launch the Editor
 
@@ -83,9 +93,10 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Catalog Browser;
 - Tainted Grail Catalog Governance;
 - Tainted Grail Item and Recipe Editor;
-- Tainted Grail Economy Acquisition Coverage.
+- Tainted Grail Economy Acquisition Coverage;
+- Tainted Grail Economy Cross-Pack Duplicates.
 
-Confirm every pane opens without an error and remains interactive.
+Confirm every pane opens without an error and remains interactive. All eight TG SDK panes must be present.
 
 Record:
 
@@ -94,7 +105,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All seven TG SDK panes opened from the Tools menu."
+  --notes "All eight TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
@@ -116,9 +127,20 @@ Use `Tab`, `Shift+Tab`, arrow keys, and activation keys where appropriate. Confi
 
 A screenshot is not mandatory because focus traversal is temporal, but detailed notes are required.
 
-### 4. Preview workspace, catalog, and acquisition coverage data
+### 4. Preview workspace, catalog, acquisition coverage, and duplicates
 
-Open the synthetic workspace and confirm:
+Open the generated synthetic workspace after the companion pack has been copied. Confirm both owner packs load:
+
+- `preview.developer-preview-0`;
+- `preview.duplicate-companion`.
+
+Import `Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/preview-duplicate-source.json` through **Tainted Grail Source Intake** using the structured JSON importer. Then promote the two project-owned claims exactly as documented in `Preview/DuplicateReview/README.md`:
+
+- `preview.evidence.duplicate.primary` → `preview.item.duplicate.primary`, owner `preview.developer-preview-0`;
+- `preview.evidence.duplicate.companion` → `preview.item.duplicate.companion`, owner `preview.duplicate-companion`;
+- domain `economy`, kind `item`, subject `subject:preview:item:duplicate-review`, identity `synthetic` for both.
+
+Confirm:
 
 - the active preview profile is visible;
 - source and evidence documents are present;
@@ -126,7 +148,12 @@ Open the synthetic workspace and confirm:
 - blocked, stale, allowed, forbidden, and unresolved states are distinguishable;
 - the Economy Acquisition Coverage pane lists canonical economy items and recipes;
 - vendor, loot, reward, learnability, and crafting columns show only applicable lanes;
-- relationship, evidence, blocker, and reason details are visible without an editing control.
+- relationship, evidence, blocker, and reason details are visible without an editing control;
+- the Economy Cross-Pack Duplicates pane displays one exact `subject_ref` group for the two promoted cross-pack duplicate candidates;
+- the group shows `partial`, because neither promoted candidate has a typed item profile;
+- exact signal, exact match key, owner packs, canonical records, evidence, blockers, and status are visible;
+- same-pack repeats, case-different keys, and display-name similarity do not appear as duplicate groups;
+- both economy analysis panes remain non-editable.
 
 Record this observation under `preview-data-displayed`. Screenshot required.
 
@@ -134,11 +161,13 @@ Record this observation under `preview-data-displayed`. Screenshot required.
 
 Confirm the Item and Recipe Editor displays:
 
-- two synthetic item profiles;
-- one synthetic recipe profile;
+- two original synthetic item profiles;
+- one original synthetic recipe profile;
 - the ingredient and output joins;
 - the expected station and unlock references;
 - read-only action-lane status.
+
+The two duplicate-review records intentionally have no typed profiles and must not be mistaken for the two original typed items.
 
 Screenshot required.
 
@@ -162,13 +191,14 @@ Save durable documents, close the Editor, relaunch the same commit, reopen the w
 Confirm the reviewed state survives:
 
 - workspace and profile;
-- pack;
+- both packs;
 - source and evidence;
 - catalog records and relationships;
 - governance and validation history;
 - economy profiles and joins;
 - station and learnability evidence rows;
-- derived economy acquisition coverage rows and statuses.
+- derived economy acquisition coverage rows and statuses;
+- the derived partial cross-pack duplicate group, exact key, candidate health, and status.
 
 Screenshot required after reopen.
 
@@ -182,7 +212,7 @@ Screenshot required.
 
 ### 9. Runtime boundary remains absent
 
-Inspect every TG SDK pane and confirm no runtime, deployment, injection, or save-mutation action is exposed.
+Inspect every TG SDK pane and confirm no runtime, deployment, injection, save-mutation, automatic duplicate merge, pack rejection, or winner-selection action is exposed.
 
 Record detailed notes. A screenshot is optional because absence is established across the full pass, not by a single image.
 
@@ -198,7 +228,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attach
   --screenshot C:\Evidence\catalog-and-governance.png `
   --check all-panes-open `
   --check preview-data-displayed `
-  --title "Catalog, governance, and acquisition coverage panes" `
+  --title "Catalog, governance, acquisition coverage, and duplicate-report panes" `
   --description "Project-owned synthetic preview data displayed after opening the TG SDK panes." `
   --privacy-reviewed `
   --project-owned-only

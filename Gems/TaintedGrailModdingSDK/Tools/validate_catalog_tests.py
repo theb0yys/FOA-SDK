@@ -83,6 +83,8 @@ def main() -> int:
             "Tests/CatalogGovernanceTypesTests.cpp",
             "Tests/DeveloperPreviewSmokeTests.cpp",
             "Tests/EconomyAuthoringTests.cpp",
+            "Tests/EconomyCoverageServiceTests.cpp",
+            "Tests/EconomyDuplicateDetectionServiceTests.cpp",
         }
         if test_entries != expected_tests:
             fail(
@@ -97,6 +99,8 @@ def main() -> int:
             "Source/CatalogGovernanceTypes.cpp",
             "Source/CatalogTransactionService.cpp",
             "Source/EconomyBlockerService.cpp",
+            "Source/EconomyCoverageService.cpp",
+            "Source/EconomyDuplicateDetectionService.cpp",
             "Source/EconomyModels.cpp",
             "Source/FoundationModels.cpp",
             "Source/FoundationValidationService.cpp",
@@ -177,6 +181,34 @@ def main() -> int:
                 'm_relationshipKind = "sold_by"',
                 '"no_unvalidated_runtime_use"',
             ),
+            "EconomyCoverageServiceTests.cpp": (
+                "ItemCoverageSeparatesVendorLootAndRewardDeterministically",
+                "RecipeCoverageUsesLearnabilityCraftingAndRewardLanes",
+                "CoveredRelationshipCannotHideBlockedRelationshipInSameLane",
+                "CoverageFailsClosedForUnrelatedEvidenceAndOpenBlockersWithoutMutation",
+                'EXPECT_EQ(vendor->m_status, "covered")',
+                'EXPECT_EQ(loot->m_status, "partial")',
+                'EXPECT_EQ(vendor->m_status, "blocked")',
+                "recordCountBefore",
+                "relationshipCountBefore",
+                "sourceCountBefore",
+                "evidenceCountBefore",
+            ),
+            "EconomyDuplicateDetectionServiceTests.cpp": (
+                "ExactSubjectRefFindsCrossPackItemsWithoutDisplayNameMatching",
+                "ExactRecipeDuplicateKeyFindsDifferentSubjectsAcrossPacks",
+                "SamePackAndCaseDifferentKeysDoNotCreateCrossPackGroups",
+                "CandidateHealthEscalatesGroupFromPartialToBlocked",
+                "ReportIsDeterministicAndDoesNotMutateInputs",
+                'EXPECT_EQ(group->m_status, "review_required")',
+                'EXPECT_EQ(report.m_groups[0].m_status, "partial")',
+                'EXPECT_EQ(report.m_groups[0].m_status, "blocked")',
+                "recordCountBefore",
+                "itemCountBefore",
+                "recipeCountBefore",
+                "sourceCountBefore",
+                "evidenceCountBefore",
+            ),
             "DeveloperPreviewSmokeTests.cpp": (
                 "DeveloperPreviewFixtureLoadSaveReopenPreservesCanonicalState",
                 "ProofBackedAllowedUsageSurvivesCatalogLoad",
@@ -252,6 +284,27 @@ def main() -> int:
             ),
         )
 
+        require_fragments(
+            source_root / "EconomyCoverageService.cpp",
+            (
+                "BuildAcquisitionCoverage",
+                '"covered"',
+                '"partial"',
+                '"blocked"',
+                '"missing"',
+            ),
+        )
+        require_fragments(
+            source_root / "EconomyDuplicateDetectionService.cpp",
+            (
+                "BuildCrossPackDuplicateReport",
+                '"subject_ref"',
+                '"recipe_duplicate_key"',
+                "HasDistinctPackOwners",
+                "packIds.size() >= 2",
+            ),
+        )
+
         compatibility = require_fragments(
             source_root / "PersistenceJsonUtils.h",
             ("ReadJsonFile", 'document.HasMember("Type")', "AZ::JsonSerialization::Load", "Processing::Completed"),
@@ -288,7 +341,7 @@ def main() -> int:
         return 1
 
     print(
-        "Tainted Grail catalog, governance, economy, atomic workspace, linked-target, and "
+        "Tainted Grail catalog, governance, economy analysis, atomic workspace, linked-target, and "
         "persistence-smoke contract passed."
     )
     return 0

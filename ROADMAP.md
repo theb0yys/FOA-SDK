@@ -135,9 +135,35 @@ Exit criteria:
 - the Editor dashboard remains non-editable and cannot author governance or acquisition state;
 - the Windows manual UI checklist includes the pane and its synthetic-data display.
 
+#### Economy cross-pack duplicate report
+
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Pure Core analysis of pack-owned canonical economy items and recipes.
+- Exact, case-sensitive grouping by record kind plus `subjectRef`.
+- Exact, case-sensitive recipe grouping by typed `duplicateKey`.
+- Cross-pack gating that requires at least two distinct owner packs.
+- Deterministic `review_required`, `partial`, and `blocked` states.
+- Evidence source/profile/build/branch verification and exact-subject checks.
+- Fail-closed handling for missing profiles, invalid evidence, stale/failed state, missing refs, conflicts, supersession, and open blockers.
+- Read-only Editor pane with exact keys, owner packs, canonical records, evidence, blockers, and reasons.
+- No display-name, alias, localisation, tag, asset-path, case-folded, or fuzzy identity matching.
+- Focused C++ tests, static validator, documentation contract, CI integration, and Windows manual UI coverage.
+- No schema change, automatic merge, pack rejection, winner selection, permission grant, runtime adapter, deployment, launch, or save mutation.
+
+Exit criteria:
+
+- exact shared subjects across distinct packs produce candidate groups without display-name heuristics;
+- exact recipe duplicate keys can group different recipe subjects across packs;
+- same-pack repeats and case-different keys do not produce cross-pack groups;
+- candidate health escalates deterministically from `review_required` to `partial` or `blocked`;
+- report generation never mutates catalog, typed profile, source/evidence, governance, or blocker state;
+- the Core service remains free of Qt, AzToolsFramework, persistence, and Framework dependencies;
+- the Editor report remains non-editable and does not decide which record is correct;
+- the Windows manual UI checklist includes the eighth pane and synthetic duplicate candidates.
+
 #### Remaining economy work
 
-- authoring-time duplicate detection reports across packs;
 - work-order generation after adapter contracts exist.
 
 ### Actors and population

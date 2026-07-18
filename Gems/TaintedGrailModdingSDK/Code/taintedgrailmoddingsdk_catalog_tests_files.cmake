@@ -12,6 +12,8 @@ set(FILES
     Source/CatalogGovernanceService.h
     Source/CatalogGovernanceTypes.cpp
     Source/CatalogGovernanceTypes.h
+    Source/CatalogPersistenceService.cpp
+    Source/CatalogPersistenceService.h
     Source/CatalogTransactionService.cpp
     Source/CatalogTransactionService.h
     Source/EconomyAuthoringService.cpp
@@ -20,11 +22,18 @@ set(FILES
     Source/EconomyModels.h
     Source/FoundationModels.cpp
     Source/FoundationModels.h
+    Source/PackPersistenceService.cpp
+    Source/PackPersistenceService.h
+    Source/SourceEvidencePersistenceService.cpp
+    Source/SourceEvidencePersistenceService.h
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
+    Source/WorkspacePersistenceService.cpp
+    Source/WorkspacePersistenceService.h
     Tests/CatalogDatabaseTests.cpp
     Tests/CatalogGovernanceHardeningTests.cpp
     Tests/CatalogGovernanceServiceTests.cpp
     Tests/CatalogGovernanceTypesTests.cpp
+    Tests/DeveloperPreviewSmokeTests.cpp
     Tests/EconomyAuthoringTests.cpp
 )

@@ -20,6 +20,10 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Canonical `preview-fixture.manifest.json` output with relative paths, byte sizes, and SHA-256 digests for all fixture payloads.
 - Fixture verification for canonical JSON, exact file sets, hashes, path traversal, symlinks, private paths, source/evidence binding, catalog identity and ownership, relationship targets, governance proof links, and economy joins.
 - Seventeen fixture tests covering byte-for-byte determinism, safe replacement, tamper detection, manifest safety, bindings, reserved namespaces, and allowed, forbidden, blocked, stale, and unresolved example states.
+- Shared persistence compatibility loading for documented plain schema-1 documents and existing O3DE `JsonSerialization` envelopes.
+- Service-level Developer Preview persistence smoke coverage using the real workspace, pack, source/evidence, catalog, registry, database, and economy evidence services.
+- Canonical-state comparison across load, save, close-equivalent state disposal, and reopen, including governance history, economy profiles/joins, and station/learnability evidence rows.
+- Compatibility tests proving reviewed proof-backed allowances survive catalog load while unproven allowances are cleared fail-closed.
 - Workspace and exact FoA game-profile management with durable `*.tgworkspace.json` documents.
 - Mod/content-pack project management with durable `*.tgpack.json` manifests.
 - Pack ownership, compatibility, dependency, save-impact, resource, build, and release declarations.
@@ -60,7 +64,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
-- The focused TG SDK workflow now runs Developer Preview command tests, fixture tests, contract validators, and a clean generate→verify fixture cycle before the existing foundation, governance, catalog, and source-policy checks.
+- The focused TG SDK workflow now runs Developer Preview command tests, fixture tests, command/fixture/persistence-smoke contract validators, and a clean generate→verify fixture cycle before the existing foundation, governance, catalog, and source-policy checks.
+- The catalog test target now compiles the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
+- Catalog compatibility loading now preserves current validated allowances only when the latest reviewed permission event has valid proof for the same subject; unproven legacy allowances still fail closed.
 - Catalog records now carry an explicit staleness state.
 - Catalog relationships now use the same independent maturity, confidence, risk, validation, staleness, permission, prohibition, conflict, missing-reference, and supersession model as records.
 - Record and relationship governance transitions now execute through one typed state machine instead of duplicated branches.
@@ -76,6 +82,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 - Developer Preview fixture generation performs no network access or process launch and refuses silent overwrite of unrelated, partial, modified, or symlink-containing output directories.
 - Fixture verification rejects absolute/private paths, secret-like material, path traversal, borrowed native identities, ownership mismatches, unknown evidence, malformed relationships, and binding drift.
+- The persistence smoke uses temporary workspace roots only, performs no runtime or deployment action, and verifies proof-backed permission preservation separately from legacy fail-closed cleanup.
 - Developer Preview commands do not install dependencies silently, use shell command strings, launch FoA, invoke runtime adapters, deploy files, modify saves, or collect telemetry.
 - Preview build-directory validation rejects the repository root, directories containing the checkout, `.git` paths, unrelated non-empty directories, and CMake caches bound to another source tree.
 - Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, and typed economy workflows.
@@ -96,8 +103,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Known limitations
 
-- Developer Preview 0 does not yet include the load/save/reopen smoke harness, launch wrapper, diagnostics bundle, manual UI evidence, or verified preview archive.
-- The generated fixture does not itself prove Editor load/save/reopen behavior or runtime compatibility.
+- Developer Preview 0 does not yet include the launch wrapper, diagnostics bundle, manual UI evidence, or verified preview archive.
+- The service-level smoke proves persistence round-trip behavior but does not itself prove manual Editor UI behavior or FoA runtime compatibility.
 - The Item and Recipe Editor does not yet generate adapter work orders.
 - The evidence view reports station visibility and recipe learnability research but does not append, learn, register, persist, clean up, roll back, or prove runtime behavior.
 - Runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.

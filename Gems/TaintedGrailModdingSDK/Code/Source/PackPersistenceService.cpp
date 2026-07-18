@@ -7,6 +7,8 @@
 
 #include "PackPersistenceService.h"
 
+#include "PersistenceJsonUtils.h"
+
 #include <AzCore/Serialization/Json/JsonUtils.h>
 #include <AzCore/std/utility/move.h>
 
@@ -45,7 +47,8 @@ namespace TaintedGrailModdingSDK
         }
 
         PackManifest pack;
-        AZ::Outcome<void, AZStd::string> loadResult = AZ::JsonSerializationUtils::LoadObjectFromFile(pack, filePath);
+        const AZ::Outcome<void, AZStd::string> loadResult =
+            PersistenceJsonUtils::LoadObjectFromFile(pack, filePath);
         if (!loadResult.IsSuccess())
         {
             return AZ::Failure(AZStd::string(loadResult.GetError()));

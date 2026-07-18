@@ -7,6 +7,8 @@
 
 #include "SourceEvidencePersistenceService.h"
 
+#include "PersistenceJsonUtils.h"
+
 #include <AzCore/Serialization/Json/JsonUtils.h>
 
 #include <QDir>
@@ -127,9 +129,8 @@ namespace TaintedGrailModdingSDK
         {
             const QString sourcePath = iterator.next();
             SourceDocument sourceDocument;
-            const AZ::Outcome<void, AZStd::string> sourceLoad = AZ::JsonSerializationUtils::LoadObjectFromFile(
-                sourceDocument,
-                ToAzString(sourcePath));
+            const AZ::Outcome<void, AZStd::string> sourceLoad =
+                PersistenceJsonUtils::LoadObjectFromFile(sourceDocument, ToAzString(sourcePath));
             if (!sourceLoad.IsSuccess())
             {
                 loadIssues.push_back(MakeLoadIssue(
@@ -159,9 +160,8 @@ namespace TaintedGrailModdingSDK
             }
             else
             {
-                const AZ::Outcome<void, AZStd::string> evidenceLoad = AZ::JsonSerializationUtils::LoadObjectFromFile(
-                    evidenceDocument,
-                    ToAzString(evidencePath));
+                const AZ::Outcome<void, AZStd::string> evidenceLoad =
+                    PersistenceJsonUtils::LoadObjectFromFile(evidenceDocument, ToAzString(evidencePath));
                 if (!evidenceLoad.IsSuccess())
                 {
                     loadIssues.push_back(MakeLoadIssue(

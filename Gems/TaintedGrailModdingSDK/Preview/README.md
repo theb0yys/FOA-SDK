@@ -2,15 +2,9 @@
 
 This directory owns the deterministic Developer Preview 0 fixture contract.
 
-The fixture contains only project-owned synthetic data in the reserved `preview.*` and
-`subject:preview:*` namespaces. It does not contain proprietary game data, extracted
-assets, decompiled code, private paths, saves, credentials, native game identifiers,
-runtime adapters, deployment files, or telemetry.
+The fixture contains only project-owned synthetic data in the reserved `preview.*` and `subject:preview:*` namespaces. It does not contain proprietary game data, extracted assets, decompiled code, private paths, saves, credentials, native game identifiers, runtime adapters, deployment files, or telemetry.
 
-`Template/` is the canonical generator input. It contains one reviewed copy of each
-schema-1 payload. Generated output is not committed a second time. The generator reads
-only those canonical UTF-8 JSON files, validates them, copies them byte-for-byte to an
-explicit output directory, and creates the SHA-256 manifest.
+`Template/` is the canonical generator input. Its workspace, pack, source, evidence, and catalog documents are plain schema-1 JSON matching the public data-format documentation. The editor persistence services accept those plain objects and existing O3DE `JsonSerialization` envelopes through the same reflected model types. Generated output is not committed a second time.
 
 Generate the fixture:
 
@@ -19,7 +13,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
   --output build/tg-sdk-developer-preview-0-fixture
 ```
 
-Verify an existing fixture without rewriting it:
+Verify it without rewriting:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
@@ -38,15 +32,7 @@ Catalog/catalog.tgcatalog.json
 preview-fixture.manifest.json
 ```
 
-`preview-fixture.manifest.json` records the relative path, byte size, and SHA-256 digest
-of every payload file. The manifest itself is canonical UTF-8 JSON and is regenerated
-from the reviewed template.
-
-Generation is byte-for-byte deterministic. The command refuses to overwrite a non-empty
-directory. `--replace` is accepted only when the existing directory first passes complete
-manifest, hash, path, schema, identity, ownership, evidence, relationship, governance,
-economy, and template-equivalence verification. A modified or unrelated directory is
-never overwritten silently.
+The manifest records the relative path, byte size, and SHA-256 digest of every payload. Generation is byte-for-byte deterministic and refuses to overwrite unrelated, partial, modified, or symlink-containing output.
 
 The fixture demonstrates:
 
@@ -60,6 +46,6 @@ The fixture demonstrates:
 - allowed, forbidden, blocked, stale, and unresolved states;
 - two item profiles, one recipe profile, one ingredient, and one output.
 
-The fixture is research and authoring data only. Successful generation and verification
-do not prove Editor load/save/reopen behavior, runtime safety, game compatibility,
-deployment, or a distributable preview archive.
+The compiled Developer Preview service-level smoke loads these plain schema documents through the real persistence services, saves them to a temporary workspace, discards the in-memory state as a close-equivalent step, reopens the saved envelope documents, and verifies canonical state equivalence. It also proves that current proof-backed allowed usages survive reload while unproven allowances fail closed.
+
+This service-level load, save, close-equivalent, and reopen proof does not replace the later manual Editor UI pass or prove runtime safety, game compatibility, deployment, or a distributable preview archive.

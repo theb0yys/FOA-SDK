@@ -83,6 +83,9 @@ jobs:
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify
           --output "${{ runner.temp }}/tg-sdk-developer-preview-0-fixture"
 
+      - name: Validate Developer Preview 0 persistence smoke contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_smoke.py
+
       - name: Validate foundation and governance contracts
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
 

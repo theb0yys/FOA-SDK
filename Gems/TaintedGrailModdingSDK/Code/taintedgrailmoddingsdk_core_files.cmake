@@ -10,16 +10,10 @@ set(FILES
     Source/CatalogDatabase.h
     Source/CatalogGovernanceBlockerService.cpp
     Source/CatalogGovernanceBlockerService.h
-    Source/CatalogGovernanceService.cpp
-    Source/CatalogGovernanceService.h
     Source/CatalogGovernanceTypes.cpp
     Source/CatalogGovernanceTypes.h
-    Source/CatalogPromotionService.cpp
-    Source/CatalogPromotionService.h
     Source/CatalogTransactionService.cpp
     Source/CatalogTransactionService.h
-    Source/EconomyAuthoringService.cpp
-    Source/EconomyAuthoringService.h
     Source/EconomyBlockerService.cpp
     Source/EconomyBlockerService.h
     Source/EconomyModels.cpp

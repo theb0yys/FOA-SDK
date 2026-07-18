@@ -6,7 +6,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 ### For users
 
-- [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, and current limitations.
+- [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, manual UI evidence tooling, and current limitations.
+- [Windows Manual UI Smoke](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md) — real Windows checklist, screenshot-evidence initializer/verifier, exact-commit binding, privacy attestation, and evidence handling.
 - [Developer Preview Troubleshooting](DEVELOPER_PREVIEW_TROUBLESHOOTING.md) — missing Editor output, absent TG SDK panes, native log locations, diagnostics failures, verification, and review-before-sharing guidance.
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
@@ -67,9 +68,10 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - read-only action lanes and station/learnability evidence rows;
 - Developer Preview 0 prerequisite checks, configure/build wrapping, deterministic synthetic fixture, SHA-256 verification, and service-level load/save/reopen smoke coverage;
 - controlled Windows x64 `Editor.exe` launch with optional O3DE project selection and wrapper-owned process logs;
-- explicit local diagnostics collection with path/secret redaction, allow-listed files, log excerpts, workspace-relative hashes, manifest verification, and no automatic upload.
+- explicit local diagnostics collection with path/secret redaction, allow-listed files, log excerpts, workspace-relative hashes, manifest verification, and no automatic upload;
+- Windows manual UI checklist and screenshot-evidence tooling with exact-commit binding, PNG hashes, required coverage, and privacy/runtime attestations.
 
-The manual Windows UI evidence pass, verified runnable archive, runtime adapters, production deployment, and remaining specialised domain tools are not complete.
+The actual Windows screenshot pass remains pending. The verified runnable archive, runtime adapters, production deployment, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

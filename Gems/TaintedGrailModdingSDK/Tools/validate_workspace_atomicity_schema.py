@@ -51,6 +51,7 @@ def validate_workspace_contract(repo_root: Path) -> None:
     boundary = source_root / "FoundationPersistenceBoundary.cpp"
     path_validation = source_root / "PathPolicyWorkspaceValidation.cpp"
     integration_tests = tests_root / "FoundationServiceWorkspaceLoadTests.cpp"
+    path_tests = tests_root / "PathPolicyServiceTests.cpp"
     schema_tests = tests_root / "WorkspaceSchemaServiceTests.cpp"
     editor_manifest = code_root / "taintedgrailmoddingsdk_path_policy_editor_files.cmake"
     test_manifest = code_root / "taintedgrailmoddingsdk_path_policy_tests_files.cmake"
@@ -86,11 +87,19 @@ def validate_workspace_contract(repo_root: Path) -> None:
             "DetectSchemaVersion",
             "MigrateAndValidate",
             "QSaveFile",
+            "schemaVersion != WorkspaceSchemaService::LegacySchemaVersion",
+            "Legacy workspace schema 0 cannot be migrated safely",
         ),
     )
     if "SaveObjectToFile(workspace" in persistence_text:
         raise WorkspaceContractError(
             "Workspace persistence must emit the explicit durable schema-1 document."
+        )
+    detection_position = persistence_text.find("auto detected = DetectSchemaVersion(object)")
+    envelope_position = persistence_text.find('if (object.contains(QStringLiteral("Type")))')
+    if min(detection_position, envelope_position) < 0 or detection_position > envelope_position:
+        raise WorkspaceContractError(
+            "Workspace schema must be detected and rejected before selecting the legacy envelope parser."
         )
 
     require_fragments(
@@ -123,6 +132,8 @@ def validate_workspace_contract(repo_root: Path) -> None:
         path_validation,
         (
             "ValidateWorkspacePaths",
+            "ValidateProfilePaths",
+            "for (const GameProfile& profile : workspace.m_gameProfiles)",
             "OutputPath",
             "StagingPath",
             "DeploymentPath",
@@ -189,6 +200,7 @@ def validate_workspace_contract(repo_root: Path) -> None:
             "SourceLoadFailurePreservesAllLiveState",
             "ImportIssueFailurePreservesAllLiveState",
             "RegistryBindingFailurePreservesAllLiveState",
+            "EvidenceBindingFailurePreservesAllLiveState",
             "CatalogLoadFailurePreservesAllLiveState",
             "CatalogBindingFailurePreservesAllLiveState",
             "CatalogValidationFailurePreservesAllLiveState",
@@ -198,12 +210,25 @@ def validate_workspace_contract(repo_root: Path) -> None:
         ),
     )
     require_fragments(
+        path_tests,
+        (
+            "EveryConfiguredProfilePathCanValidate",
+            "WorkspaceOwnedPathEscapeIsRejected",
+            "ActiveManagedAssembliesEscapeFromInstallIsRejected",
+            "InactiveDiagnosticsEscapeIsRejected",
+            "InactiveManagedAssembliesEscapeFromInstallIsRejected",
+            "MonoPluginEscapeFromInstallIsRejected",
+        ),
+    )
+    require_fragments(
         schema_tests,
         (
             "StableWorkspaceIdIsRequired",
             "ProfileIdsMustBeUnique",
             "ActiveProfileMustBindExactly",
             "UnknownSchemaVersionIsRejected",
+            "UnknownSchemaVersionCannotHideBehindLegacyEnvelope",
+            "MalformedLegacyWorkspaceHasMigrationError",
             "UnsafeLegacyWorkspaceIsClearlyRejected",
             "SchemaOneRoundTripIsStable",
             "PreviewFixtureLegacyShapeMigratesAndRoundTrips",
@@ -223,6 +248,7 @@ def validate_workspace_contract(repo_root: Path) -> None:
             test_manifest,
             (
                 "Tests/FoundationServiceWorkspaceLoadTests.cpp",
+                "Tests/PathPolicyServiceTests.cpp",
                 "Tests/WorkspaceSchemaServiceTests.cpp",
             ),
         ),
@@ -260,7 +286,7 @@ def main() -> int:
         return 1
     print(
         "Tainted Grail workspace contract passed: schema-0 migration, durable schema 1, "
-        "candidate validation, atomic publication, and failure preservation are wired."
+        "all-profile path validation, candidate validation, atomic publication, and failure preservation are wired."
     )
     return 0
 

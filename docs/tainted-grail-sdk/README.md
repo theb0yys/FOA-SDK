@@ -6,7 +6,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 ### For users
 
-- [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build commands, deterministic fixture, service-level persistence smoke, and current limitations.
+- [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, and current limitations.
+- [Developer Preview Troubleshooting](DEVELOPER_PREVIEW_TROUBLESHOOTING.md) — missing Editor output, absent TG SDK panes, native log locations, diagnostics failures, verification, and review-before-sharing guidance.
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
@@ -65,9 +66,10 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed item and recipe profiles, joins, station references, and acquisition relationships;
 - read-only action lanes and station/learnability evidence rows;
 - Developer Preview 0 prerequisite checks, configure/build wrapping, deterministic synthetic fixture, SHA-256 verification, and service-level load/save/reopen smoke coverage;
-- plain schema-1 fixture compatibility and preservation of current proof-backed permissions while unproven allowances fail closed.
+- controlled Windows x64 `Editor.exe` launch with optional O3DE project selection and wrapper-owned process logs;
+- explicit local diagnostics collection with path/secret redaction, allow-listed files, log excerpts, workspace-relative hashes, manifest verification, and no automatic upload.
 
-The launch wrapper, diagnostics bundle, manual UI evidence, verified runnable archive, runtime adapters, production deployment, and remaining specialised domain tools are not complete.
+The manual Windows UI evidence pass, verified runnable archive, runtime adapters, production deployment, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

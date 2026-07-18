@@ -1,0 +1,60 @@
+{
+  "evidence": [
+    {
+      "claim": "The synthetic component is an input to the preview recipe.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.item.component",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:item:component"
+    },
+    {
+      "claim": "The synthetic result is produced by the preview recipe.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.item.result",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:item:result"
+    },
+    {
+      "claim": "The synthetic recipe joins one component to one result.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.recipe.synthesis",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:recipe:synthesis"
+    },
+    {
+      "claim": "The synthetic workbench is the declared crafting station.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.station.workbench",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:station:workbench"
+    },
+    {
+      "claim": "The synthetic manual is a resolved learnability source.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.learn-source.manual",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:learn-source:manual"
+    },
+    {
+      "claim": "The preview recipe has a crafted_at relationship to the preview workbench.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.relationship.crafted-at",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:recipe:synthesis"
+    },
+    {
+      "claim": "The preview recipe has a learned_from relationship to the preview manual.",
+      "confidence": "documented",
+      "evidence_id": "preview.evidence.relationship.learned-from",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:learn-source:manual"
+    },
+    {
+      "claim": "A second learnability source remains explicitly unresolved for blocker testing.",
+      "confidence": "hypothesis",
+      "evidence_id": "preview.evidence.relationship.unresolved",
+      "kind": "project-owned-fixture",
+      "subject_ref": "subject:preview:learn-source:unresolved"
+    }
+  ]
+}

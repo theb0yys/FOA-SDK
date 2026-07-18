@@ -6,6 +6,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 ### For users
 
+- [Open and Test the Actual Editor](OPEN_AND_TEST_EDITOR.md) — shortest Windows path from a fresh pull to the repository-owned Gem-enabled O3DE project, source build, real Editor launch, native log, and synthetic workspace.
 - [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, manual UI evidence tooling, and current limitations.
 - [Windows Manual UI Smoke](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md) — real Windows checklist, screenshot-evidence initializer/verifier, exact-commit binding, privacy attestation, and evidence handling.
 - [Developer Preview Troubleshooting](DEVELOPER_PREVIEW_TROUBLESHOOTING.md) — missing Editor output, absent TG SDK panes, native log locations, diagnostics failures, verification, and review-before-sharing guidance.
@@ -67,7 +68,8 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed item and recipe profiles, joins, station references, and acquisition relationships;
 - read-only action lanes and station/learnability evidence rows;
 - Developer Preview 0 prerequisite checks, configure/build wrapping, deterministic synthetic fixture, SHA-256 verification, and service-level load/save/reopen smoke coverage;
-- controlled Windows x64 `Editor.exe` launch with optional O3DE project selection and wrapper-owned process logs;
+- repository-owned `AutomatedTesting` O3DE project with `TaintedGrailModdingSDK` enabled;
+- one-command Windows Editor opening through `developer_preview_open.py` and the restricted launch wrapper;
 - explicit local diagnostics collection with path/secret redaction, allow-listed files, log excerpts, workspace-relative hashes, manifest verification, and no automatic upload;
 - Windows manual UI checklist and screenshot-evidence tooling with exact-commit binding, PNG hashes, required coverage, and privacy/runtime attestations.
 

@@ -18,8 +18,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Developer Preview command contract validator and unit coverage for argument construction, path safety, dry runs, deterministic validation order, JSON output, unsupported hosts, and failure propagation.
 - Dedicated repository-owned `TaintedGrailModdingEditor` O3DE project with `TaintedGrailModdingSDK` enabled, deterministic sibling-engine resolution, and project-owned preview PNG and Windows shortcut ICO.
 - `developer_preview_open.py` command-line Editor opener that selects the dedicated project and delegates to the restricted launch wrapper.
-- `developer_preview_shortcut.py` Windows `.lnk` generator with a project-owned icon, fixed `--project-path`, explicit replacement, SHA-256 manifest output, and verification.
-- Dedicated-entry project, opener, and shortcut contract validation with fifteen focused unit tests and a Windows workflow.
+- Low-level `developer_preview_shortcut.py` Windows `.lnk` generator with a project-owned icon, fixed `--project-path`, explicit replacement, SHA-256 manifest output, and verification.
+- Supported `developer_preview_entry.py` clickable-entry command with semantic Windows shortcut inspection and verified-before-replace behavior.
+- Dedicated-entry project, opener, shortcut, and hardened-entry contract validation with twenty-one focused unit tests and a Windows workflow.
 - Deterministic Developer Preview 0 fixture generator containing only project-owned synthetic `preview.*` identities, portable paths, runtime-disabled pack data, source/evidence, catalog, governance, and economy documents.
 - Canonical `preview-fixture.manifest.json` output with relative paths, byte sizes, and SHA-256 digests for all fixture payloads.
 - Fixture verification for canonical JSON, exact file sets, hashes, path traversal, symlinks, private paths, source/evidence binding, catalog identity and ownership, relationship targets, governance proof links, and economy joins.
@@ -77,7 +78,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 ### Changed
 
 - The focused TG SDK workflow runs Developer Preview command, project-integration, opener, fixture, launch, diagnostics, and manual UI evidence tests; command/project/fixture/persistence/launch-diagnostics/manual-evidence contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before existing foundation, governance, catalog, and source-policy checks.
-- A dedicated Windows workflow validates the product-host project, icon assets, command-line opener, clickable shortcut generator, and dry-run shortcut plan.
+- A dedicated Windows workflow validates the product-host project, icon assets, command-line opener, low-level shortcut generator, hardened clickable entry, dry-run plan, and a real COM-created `.lnk`.
 - `AutomatedTesting` is restored to its upstream engine-testing role and no longer enables or hosts the TG SDK preview product.
 - The catalog test target compiles the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
 - Catalog compatibility loading preserves current validated allowances only when the latest reviewed permission event has valid proof for the same subject; unproven legacy allowances still fail closed.
@@ -100,7 +101,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - The persistence smoke uses temporary workspace roots only, performs no runtime or deployment action, and verifies proof-backed permission preservation separately from legacy fail-closed cleanup.
 - The Editor launch wrapper accepts only `Editor.exe`, constructs only the documented optional `--project-path` argument, uses no shell command strings or arbitrary passthrough arguments, and never launches FoA or runtime tooling.
 - The project opener selects only `TaintedGrailModdingEditor`, validates the dedicated project contract before launch, and delegates to the existing restricted launch wrapper.
-- The shortcut generator uses a fixed PowerShell COM script with explicit environment values, creates no desktop entry silently, exposes no arbitrary Editor arguments, and records the generated `.lnk` size and SHA-256.
+- The low-level shortcut generator uses a fixed PowerShell COM script with explicit environment values, creates no desktop entry silently, exposes no arbitrary Editor arguments, and records the generated `.lnk` size and SHA-256.
+- The supported clickable-entry command inspects the real Windows shortcut target, project arguments, working directory, icon, and description, and verifies an existing generated entry before `--replace` can remove it.
 - Diagnostics collection is explicit and local-only, excludes source artifact contents, game files, saves, environment variables, credentials, binary logs, and unrestricted filesystem listings, and performs no automatic upload.
 - Diagnostics verification enforces relative allow-listed paths, size limits, UTF-8 text, SHA-256 hashes, symlink/traversal rejection, and path/secret redaction before a bundle can be replaced or shared.
 - Manual UI evidence tooling does not capture screenshots, automate UI coordinates, inspect screenshot pixels, perform OCR, access the network, or upload evidence.

@@ -1,0 +1,25 @@
+{
+  "Issues": [],
+  "SchemaVersion": 1,
+  "Source": {
+    "Branch": "preview",
+    "ByteSize": 2308,
+    "CapturedAt": "2026-01-01T00:00:00.000Z",
+    "Fingerprint": "sha256:f89dae9732484956fb6f5c4d1905329ad08ec721e849c0398207a0d090e65c38",
+    "GameVersion": "preview-build-0",
+    "ImportStatus": "imported",
+    "ImportedAt": "2026-01-01T00:00:00.000Z",
+    "ImporterId": "tg.structured-json",
+    "ImporterVersion": "1.0.0",
+    "Limitations": "Project-owned synthetic fixture; not evidence about the game.",
+    "Locator": "Input/preview-source.json",
+    "MediaType": "application/json",
+    "ProfileId": "preview.profile.windows-x64",
+    "RuntimeTarget": "Mono",
+    "SourceId": "preview.source.synthetic",
+    "SourceKind": "project-owned-preview-fixture",
+    "Title": "Developer Preview 0 synthetic source",
+    "ToolName": "developer_preview_fixture.py",
+    "ToolVersion": "1"
+  }
+}

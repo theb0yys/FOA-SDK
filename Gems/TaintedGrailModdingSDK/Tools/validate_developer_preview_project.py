@@ -76,6 +76,18 @@ def validate_ico(path: Path) -> None:
         raise PreviewProjectContractError(f"Windows shortcut icon has no image entries: {path}")
 
 
+def require_fragments(path: Path, fragments: tuple[str, ...], label: str) -> str:
+    if not path.is_file():
+        raise PreviewProjectContractError(f"{label} is missing: {path}")
+    content = path.read_text(encoding="utf-8")
+    for fragment in fragments:
+        if fragment not in content:
+            raise PreviewProjectContractError(
+                f"{path} is missing required {label} fragment {fragment!r}."
+            )
+    return content
+
+
 def validate_preview_project(repo_root: Path) -> None:
     engine = load_json_object(repo_root / "engine.json", "engine manifest")
     projects = require_string_list(engine, "projects", "engine manifest")
@@ -124,60 +136,78 @@ def validate_preview_project(repo_root: Path) -> None:
         )
 
     quickstart_path = repo_root / "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
-    if not quickstart_path.is_file():
-        raise PreviewProjectContractError(f"Required Editor quickstart is missing: {quickstart_path}")
-    quickstart = quickstart_path.read_text(encoding="utf-8")
-    for fragment in (
-        "TaintedGrailModdingEditor",
-        "developer_preview_shortcut.py create",
-        "Tainted Grail Modding Editor.lnk",
-        "Tools → Tainted Grail SDK",
-        "TaintedGrailModdingEditor/user/log/Editor.log",
-    ):
-        if fragment not in quickstart:
-            raise PreviewProjectContractError(
-                f"{quickstart_path} is missing required dedicated-entry fragment {fragment!r}."
-            )
+    quickstart = require_fragments(
+        quickstart_path,
+        (
+            "TaintedGrailModdingEditor",
+            "developer_preview_entry.py create",
+            "developer_preview_entry.py verify",
+            "Tainted Grail Modding Editor.lnk",
+            "Tools → Tainted Grail SDK",
+            "TaintedGrailModdingEditor/user/log/Editor.log",
+        ),
+        "dedicated-entry quickstart",
+    )
+    if "developer_preview_shortcut.py create" in quickstart:
+        raise PreviewProjectContractError(
+            "The quickstart must use the hardened developer_preview_entry.py command."
+        )
 
     opener_path = repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py"
-    opener = opener_path.read_text(encoding="utf-8")
-    for fragment in (
-        'PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")',
-        "validate_preview_project",
-        "developer_preview_launch.main",
-    ):
-        if fragment not in opener:
-            raise PreviewProjectContractError(
-                f"{opener_path} is missing required project opener fragment {fragment!r}."
-            )
+    opener = require_fragments(
+        opener_path,
+        (
+            'PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")',
+            "validate_preview_project",
+            "developer_preview_launch.main",
+        ),
+        "project opener",
+    )
 
     shortcut_path = repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py"
-    shortcut = shortcut_path.read_text(encoding="utf-8")
-    for fragment in (
-        "WScript.Shell",
-        "TG_SHORTCUT_OUTPUT",
-        "TaintedGrailModdingEditor.ico",
-        "'--project-path \"'",
-        "developer_preview_launch.resolve_editor_executable",
-        "validate_preview_project",
+    shortcut = require_fragments(
+        shortcut_path,
+        (
+            "WScript.Shell",
+            "TG_SHORTCUT_OUTPUT",
+            "TaintedGrailModdingEditor.ico",
+            "'--project-path \"'",
+            "developer_preview_launch.resolve_editor_executable",
+            "validate_preview_project",
+        ),
+        "low-level shortcut generator",
+    )
+
+    entry_path = repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py"
+    entry = require_fragments(
+        entry_path,
+        (
+            "developer_preview_shortcut.verify_shortcut",
+            "developer_preview_shortcut.create_shortcut",
+            "inspect_shortcut",
+            "verify_entry",
+            "if output.exists() and replace",
+            "WScript.Shell",
+        ),
+        "hardened clickable entry",
+    )
+
+    for prohibited in (
+        "shell=True",
+        "AutomatedTesting/user/log",
+        'PREVIEW_PROJECT = Path("AutomatedTesting")',
     ):
-        if fragment not in shortcut:
-            raise PreviewProjectContractError(
-                f"{shortcut_path} is missing required shortcut fragment {fragment!r}."
-            )
-    for prohibited in ("shell=True", "AutomatedTesting/user/log", 'PREVIEW_PROJECT = Path("AutomatedTesting")'):
-        if prohibited in shortcut or prohibited in opener:
+        if prohibited in shortcut or prohibited in entry or prohibited in opener:
             raise PreviewProjectContractError(
                 f"Dedicated entry tooling still contains prohibited fragment {prohibited!r}."
             )
 
     launcher_path = repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py"
-    launcher = launcher_path.read_text(encoding="utf-8")
-    for fragment in ('"--project"', '"--project-path"', "validate_project_path"):
-        if fragment not in launcher:
-            raise PreviewProjectContractError(
-                f"{launcher_path} is missing required project launch fragment {fragment!r}."
-            )
+    require_fragments(
+        launcher_path,
+        ('"--project"', '"--project-path"', "validate_project_path"),
+        "project launcher",
+    )
 
 
 def main() -> int:
@@ -189,7 +219,7 @@ def main() -> int:
         return 1
     print(
         "Developer Preview project contract passed: dedicated "
-        "TaintedGrailModdingEditor project, icons, opener, and shortcut are complete."
+        "TaintedGrailModdingEditor project, icons, opener, and hardened clickable entry are complete."
     )
     return 0
 

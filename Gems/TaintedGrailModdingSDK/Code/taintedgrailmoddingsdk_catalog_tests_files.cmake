@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Tests/AdapterContractTests.cpp
     Tests/CatalogDatabaseTests.cpp
     Tests/CatalogGovernanceHardeningTests.cpp
     Tests/CatalogGovernanceServiceTests.cpp

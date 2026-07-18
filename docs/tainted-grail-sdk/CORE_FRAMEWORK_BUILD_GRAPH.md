@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted correction contract for Slice 5 and extended by Slices 6 and 7. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
+Accepted correction contract for Slice 5 and extended by Slices 6, 7, and 8. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
 
 ## Targets
 
@@ -14,6 +14,7 @@ Owns shared domain state and services that are free of Qt and host-tool dependen
 - catalog database and publish-after-save transaction logic;
 - governance types and governance blocker evaluation;
 - foundation validation, economy blocker evaluation, and immutable economy acquisition coverage and cross-pack duplicate analysis;
+- typed transient adapter declarations, strict semantic-version compatibility, capability evaluation, and permission/proof readiness analysis;
 - the source/evidence registry.
 
 Core depends publicly on `AZ::AzCore`. Core must not depend on Framework, Editor, Qt, AzToolsFramework, runtime adapters, deployment, or game APIs.
@@ -34,7 +35,7 @@ Framework depends publicly on Core and privately on the host-tool facilities nee
 
 Remains the Tool Gem module and owns only composition and presentation:
 
-- Qt widgets, including the read-only economy acquisition and duplicate-report dashboards;
+- Qt widgets, including the read-only economy acquisition, duplicate-report, and adapter-capability matrix panes;
 - the Editor system component;
 - the Gem Editor module.
 
@@ -68,6 +69,8 @@ This correction changes build ownership, not include paths or public C++ namespa
 
 Qt-dependent services are deliberately Framework-owned rather than being labelled Core while retaining hidden Qt coupling. Moving one of those services into Core later requires first removing its Qt and host-tool dependencies under a separate reviewed change. New Core analysis services must follow the same pure dependency boundary.
 
+The adapter declaration registry is deliberately transient Core state. It has no persistence service, document schema, filesystem path, loader integration, process access, or runtime implementation. Editor shutdown clears the registry.
+
 ## Enforcement
 
 `validate_core_framework_build_graph.py` fails when:
@@ -84,10 +87,19 @@ Qt-dependent services are deliberately Framework-owned rather than being labelle
 
 Feature-specific validators add stricter contracts for individual Core analyses and Editor views. The economy coverage validator rejects Qt or mutation dependencies in the coverage service and editing controls in its dashboard. The economy duplicate validator additionally enforces exact case-sensitive signals, distinct-pack gating, no display-name or fuzzy identity matching, pure Core ownership, and a non-editable report.
 
+The adapter-contract validator additionally enforces:
+
+- typed adapter identity, strict semantic versions, exact runtime targets, and all eleven capabilities;
+- deterministic `unsupported`, `version_mismatch`, `permission_missing`, `proof_missing`, and `supported` results;
+- transient declaration storage with no adapter persistence document;
+- exact profile-bound adapter, permission, and validation proof;
+- a non-editable matrix;
+- no work-order generation or runtime behavior in Slice 8.
+
 ## Runtime boundary
 
-No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, deployment, injection, telemetry, game launch, or save mutation code is introduced or authorized. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
+No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, deployment, injection, telemetry, game launch, save mutation, or work-order execution code is introduced or authorized. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
 
 ## Rollback
 
-Revert the implementing pull request. No durable documents or user state require migration because these slices change build ownership and add derived read-only analysis only.
+Revert the implementing pull request. No durable documents or user state require migration because these slices change build ownership and add transient or derived read-only analysis only.

@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate catalog, governance, economy, preview-smoke, workspace, and linked-target coverage."""
+"""Validate catalog, governance, economy, adapter, preview-smoke, workspace, and linked-target coverage."""
 
 from __future__ import annotations
 
@@ -77,6 +77,7 @@ def main() -> int:
 
         test_entries = manifest_entries(test_manifest_path)
         expected_tests = {
+            "Tests/AdapterContractTests.cpp",
             "Tests/CatalogDatabaseTests.cpp",
             "Tests/CatalogGovernanceHardeningTests.cpp",
             "Tests/CatalogGovernanceServiceTests.cpp",
@@ -94,6 +95,8 @@ def main() -> int:
 
         core_entries = manifest_entries(core_manifest_path)
         required_core = {
+            "Source/AdapterCompatibilityService.cpp",
+            "Source/AdapterContractRegistry.cpp",
             "Source/CatalogDatabase.cpp",
             "Source/CatalogGovernanceBlockerService.cpp",
             "Source/CatalogGovernanceTypes.cpp",
@@ -107,7 +110,10 @@ def main() -> int:
             "Source/SourceEvidenceRegistry.cpp",
         }
         if not required_core.issubset(core_entries):
-            fail("Core manifest is missing catalog/economy ownership: " + ", ".join(sorted(required_core - core_entries)))
+            fail(
+                "Core manifest is missing catalog/economy/adapter ownership: "
+                + ", ".join(sorted(required_core - core_entries))
+            )
 
         framework_entries = manifest_entries(framework_manifest_path)
         required_framework = {
@@ -128,6 +134,19 @@ def main() -> int:
             )
 
         checks = {
+            "AdapterContractTests.cpp": (
+                "SemanticVersionsAndTypedCapabilitiesAreStrict",
+                "EmptyRegistryAndMissingCapabilitiesFailClosed",
+                "VersionMismatchPrecedesPermissionAndProofChecks",
+                "PermissionMissingAndProofMissingRemainDistinct",
+                "SupportedResultIsDeterministicAndDoesNotMutateInputs",
+                'EXPECT_EQ(row->m_status, "version_mismatch")',
+                'EXPECT_EQ(row->m_status, "permission_missing")',
+                'EXPECT_EQ(row->m_status, "proof_missing")',
+                'EXPECT_EQ(row->m_status, "supported")',
+                "declarationCountBefore",
+                "recordCountBefore",
+            ),
             "CatalogDatabaseTests.cpp": (
                 "SameDisplayNameDoesNotMergeDistinctRecordIds",
                 "DuplicateExactNativeReferenceIsRejected",
@@ -304,6 +323,26 @@ def main() -> int:
                 "packIds.size() >= 2",
             ),
         )
+        require_fragments(
+            source_root / "AdapterCompatibilityService.cpp",
+            (
+                "BuildCapabilityMatrix",
+                '"supported"',
+                '"unsupported"',
+                '"version_mismatch"',
+                '"permission_missing"',
+                '"proof_missing"',
+            ),
+        )
+        require_fragments(
+            source_root / "AdapterContractRegistry.cpp",
+            (
+                "TryParseAdapterSemanticVersion",
+                "IsAdapterVersionCompatible",
+                '"item_grant"',
+                '"rollback"',
+            ),
+        )
 
         compatibility = require_fragments(
             source_root / "PersistenceJsonUtils.h",
@@ -335,14 +374,14 @@ def main() -> int:
         )
     except (OSError, RuntimeError) as exc:
         print(
-            f"Tainted Grail catalog/governance/economy/workspace validation failed: {exc}",
+            f"Tainted Grail catalog/governance/economy/adapter/workspace validation failed: {exc}",
             file=sys.stderr,
         )
         return 1
 
     print(
-        "Tainted Grail catalog, governance, economy analysis, atomic workspace, linked-target, and "
-        "persistence-smoke contract passed."
+        "Tainted Grail catalog, governance, economy analysis, adapter contracts, atomic workspace, "
+        "linked-target, and persistence-smoke contract passed."
     )
     return 0
 

@@ -8,6 +8,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Added
 
+- Pure-Core `AdapterContractRegistry` and `AdapterCompatibilityService` with typed adapter identity, strict semantic versions, exact runtime targets, eleven explicit capabilities, and deterministic compatibility evaluation.
+- Read-only **Tainted Grail Adapter Capability Matrix** editor pane with `supported`, `unsupported`, `version_mismatch`, `permission_missing`, and `proof_missing` rows plus subject, evidence, validation-proof, and reason details.
+- Adapter contract C++ tests, focused validator and negative tests, CI integration, public Phase 7 documentation, and ninth-pane Windows manual UI coverage with no runtime adapter implementation.
 - Pure-Core `EconomyDuplicateDetectionService` analysis for exact, case-sensitive cross-pack economy `subjectRef` and recipe `duplicateKey` candidate groups, evidence health, governance state, and open blockers.
 - Read-only **Tainted Grail Economy Cross-Pack Duplicates** editor pane with exact signals, owner packs, canonical records, `review_required`, `partial`, and `blocked` states, evidence, blockers, and reasons.
 - Economy duplicate C++ tests, focused contract validator and unit tests, CI integration, public design documentation, and eighth-pane Windows manual UI checklist coverage.
@@ -88,16 +91,16 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
-- Phase 6 now records the economy cross-pack duplicate report as implemented; economy work-order generation remains gated on adapter contracts.
-- The Windows manual UI checklist now opens all eight TG SDK panes and verifies exact synthetic cross-pack duplicate candidates and non-editability.
+- Phase 7 is now active with the adapter capability contract foundation implemented; deterministic work-order generation is the next ordered slice and remains plans only.
+- The focused TG SDK workflow and catalog-test validator now enforce the adapter registry, compatibility matrix, production-linked Core tests, and no-runtime/no-work-order boundary.
+- The Windows manual UI checklist now opens all nine TG SDK panes and verifies deterministic `unsupported` adapter rows when no transient declaration is registered.
+- Phase 6 records both economy acquisition coverage and exact cross-pack duplicate reporting as implemented; economy work-order generation remains gated on typed adapter contracts.
 - Duplicate detection uses only exact, case-sensitive subject references and recipe duplicate keys across distinct owner packs; it performs no display-name or fuzzy matching.
-- Phase 6 now records the economy acquisition coverage dashboard as implemented; cross-pack duplicate detection is the next ordered economy slice.
-- The Windows manual UI checklist now opens all seven TG SDK panes and verifies synthetic economy acquisition coverage data and non-editability.
-- Production implementation files are compiled exactly once by Core, Framework, or Editor; catalog and path-policy tests now link `Framework.Static` instead of recompiling private copies of production `.cpp` files.
-- The Editor Gem target now owns only Qt views, the Editor system component, and module composition; persistence, path policy, loading, and Foundation orchestration are owned by `Framework.Static`.
-- The focused TG SDK workflow now runs the Core/Framework validator and its focused unit tests before the existing Developer Preview and foundation contracts.
-- Workspace loading now builds and validates a complete candidate before publishing any workspace, canonical path, registry, import issue, catalog, catalog path, or snapshot state.
-- Workspace persistence now emits explicit schema-1 JSON; unversioned schema-0 documents are migrated only when every current invariant can be validated safely.
+- Production implementation files are compiled exactly once by Core, Framework, or Editor; catalog and path-policy tests link `Framework.Static` instead of recompiling private copies of production `.cpp` files.
+- The Editor Gem target owns only Qt views, the Editor system component, and module composition; persistence, path policy, loading, and Foundation orchestration are owned by `Framework.Static`.
+- The focused TG SDK workflow runs the Core/Framework validator and its focused unit tests before the existing Developer Preview and foundation contracts.
+- Workspace loading builds and validates a complete candidate before publishing any workspace, canonical path, registry, import issue, catalog, catalog path, or snapshot state.
+- Workspace persistence emits explicit schema-1 JSON; unversioned schema-0 documents are migrated only when every current invariant can be validated safely.
 - The focused TG SDK workflow runs the atomic workspace/schema contract validator in addition to Developer Preview, path-policy, governance, catalog, and source-policy checks.
 - The focused TG SDK workflow runs Developer Preview command, project-integration, opener, fixture, launch, diagnostics, and manual UI evidence tests; command/project/fixture/persistence/launch-diagnostics/manual-evidence contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before existing foundation, governance, catalog, and source-policy checks.
 - A dedicated Windows workflow validates the product-host project, icon assets, command-line opener, low-level shortcut generator, hardened clickable entry, dry-run plan, and a real COM-created `.lnk`.
@@ -118,6 +121,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Security
 
+- Adapter declarations are transient metadata only; Slice 8 adds no adapter document, loader, process access, BepInEx/Harmony execution, deployment, game launch, save mutation, work-order generation, or runtime adapter implementation.
+- Adapter compatibility is fail-closed and ordered as support → version → permission → proof; `supported` never authorizes execution and requires exact active-profile source/evidence and same-subject permission/validation proof.
 - Economy duplicate analysis is immutable and fail-closed; the report cannot merge records, reject packs, select a winner, author governance, persist changes, or expose runtime/deployment actions.
 - Exact duplicate signals are case-sensitive and pack-gated; display names, aliases, localisation, tags, asset paths, inferred semantics, and fuzzy similarity cannot create a duplicate group.
 - Economy coverage analysis is immutable and fail-closed; the dashboard exposes no editing, governance, persistence, deployment, launch, injection, vendor/loot/reward mutation, recipe learning, or save behavior.
@@ -138,7 +143,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Generated screenshots must remain beneath `build/` or outside the repository and are not release package contents.
 - Developer Preview commands do not install dependencies silently, use shell command strings, launch FoA, invoke runtime adapters, deploy files, modify saves, or collect telemetry.
 - Preview build-directory validation rejects the repository root, directories containing the checkout, `.git` paths, unrelated non-empty directories, and CMake caches bound to another source tree.
-- Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, and typed economy workflows.
+- Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, typed economy, and adapter-contract workflows.
 - Source intake rejects missing or mismatched profile and fingerprint bindings.
 - Structured imports are size-limited and fail closed on malformed schemas.
 - Catalog promotion cannot grant allowed usages and adds `no_unvalidated_runtime_use`.
@@ -156,6 +161,8 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Known limitations
 
+- Adapter declarations are transient and cleared on Editor shutdown; Slice 8 provides no declaration persistence or registration UI, so normal Developer Preview sessions display `unsupported` rows by default.
+- `supported` adapter rows are compatibility findings only; deterministic work-order plans, runtime adapters, execution, deployment, and runtime proof capture are not implemented.
 - Cross-pack duplicate groups are review candidates only; they do not confirm semantic equivalence, choose a canonical winner, authorize deletion, or prove a runtime conflict.
 - Economy acquisition coverage is research-only: it does not prove actual vendor stock, loot tables, reward delivery, recipe learning, crafting availability, runtime registration, persistence, cleanup, or rollback.
 - The Windows manual UI checklist and evidence verifier are implemented, but the actual Windows screenshot pass remains pending.
@@ -165,7 +172,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - The Item and Recipe Editor does not yet generate adapter work orders.
 - The evidence view reports station visibility and recipe learnability research but does not append, learn, register, persist, clean up, roll back, or prove runtime behavior.
 - Runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.
-- Permission usage names remain free-form pending typed adapter-capability contracts; the decision operation itself is strongly typed.
+- Catalog permission usage names remain schema-compatible strings; Slice 8 maps exact typed adapter capabilities to the reviewed economy usage vocabulary without changing schema 1.
 - Remaining actor, spawn, world, faction, quest/state, asset, and localisation authoring tools are not implemented.
 - FoA runtime adapters and production deployment are not implemented.
 - The project has not published a supported binary release.

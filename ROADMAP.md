@@ -192,10 +192,49 @@ Exit criteria:
 
 ## Phase 7 — FoA adapter contracts
 
-- Typed handoffs for item grants, recipe learning, recipe append, custom registration, spawns, routes, asset loading, vendors, loot, rewards, quest/state operations, persistence, and rollback.
-- Adapter capability and version declarations.
-- Work-order generation from reviewed catalog records.
-- Runtime proof returned as new evidence, not silently promoted permission.
+Status: active development.
+
+### Adapter capability contract foundation
+
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Typed lowercase namespaced adapter identity and strict semantic-version declarations.
+- Exact `Mono` and `IL2CPP` runtime-target declarations.
+- Typed capabilities for item grants, recipe learning/appending, custom item/recipe registration, vendors, loot, rewards, persistence, cleanup, and rollback.
+- Existing pack `RequiredAdapterVersion` compatibility without a durable schema change.
+- Conservative same-major semantic-version policy, with same-minor gating for major version zero.
+- Exact adapter identity and capability evidence bound to active profile, game version, branch, runtime target, and source fingerprint.
+- Catalog permission and same-subject validation-proof checks for governed capabilities.
+- Deterministic `supported`, `unsupported`, `version_mismatch`, `permission_missing`, and `proof_missing` rows.
+- Transient Core declaration registry cleared on Editor shutdown.
+- Read-only **Tainted Grail Adapter Capability Matrix**.
+- Focused Core tests, static validator, CI integration, public documentation, and Windows manual UI coverage.
+- No runtime adapter implementation, BepInEx/Harmony execution, process access, deployment, game launch, save mutation, or work-order generation.
+
+Exit criteria:
+
+- malformed IDs, versions, runtime targets, and duplicate capabilities fail at the typed registry boundary;
+- all eleven capability identifiers round-trip through the typed boundary;
+- empty registries and undeclared capabilities fail closed as `unsupported`;
+- version incompatibility is reported before permission or proof readiness;
+- permission absence remains distinct from broken permission or adapter proof;
+- valid same-subject permission, validation, source, and adapter proof can produce `supported`;
+- matrix generation is deterministic and does not mutate declarations, packs, sources, evidence, catalog, or governance state;
+- the matrix remains read-only and exposes no registration, execution, work-order, deployment, launch, or save action;
+- the Windows manual UI checklist includes all nine panes and the no-declaration fail-closed state.
+
+### Next ordered slice — deterministic work-order generation
+
+Slice 9 is deterministic work-order generation from reviewed catalog records against typed adapter contracts. It produces **plans only** and must not execute them.
+
+- Stable work-order identities and canonical subject bindings.
+- Required adapter identity, version, runtime target, and capability references.
+- Exact input evidence, permission evidence, and validation-proof references.
+- Deterministic ordering and canonical plan serialization.
+- Refusal when any compatibility row is not `supported`.
+- No process access, loader execution, deployment, game launch, save mutation, or runtime action.
+
+Later runtime proof must return as new evidence, not silently promote validation or permission.
 
 ## Phase 8 — Build, package, deploy, and test
 

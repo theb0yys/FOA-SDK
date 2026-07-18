@@ -6,6 +6,10 @@
 #
 
 set(FILES
+    Source/AdapterCompatibilityService.cpp
+    Source/AdapterCompatibilityService.h
+    Source/AdapterContractRegistry.cpp
+    Source/AdapterContractRegistry.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
     Source/CatalogGovernanceBlockerService.cpp

@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/AdapterCapabilityMatrixWidget.cpp
+    Source/AdapterCapabilityMatrixWidget.h
     Source/CatalogBrowserWidget.cpp
     Source/CatalogBrowserWidget.h
     Source/CatalogGovernanceWidget.cpp

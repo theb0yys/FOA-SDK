@@ -14,7 +14,7 @@ Use only the project-owned synthetic Developer Preview 0 fixture and the project
 
 - proprietary game files, assets, saves, identifiers, or screenshots;
 - credentials, tokens, user names, private absolute paths, or unrelated desktop content;
-- FoA, BepInEx, Harmony, Avalon Core, runtime adapters, deployment, injection, or save-mutation tooling.
+- FoA, BepInEx, Harmony, Avalon Core, runtime adapters, work-order execution, deployment, injection, or save-mutation tooling.
 
 The evidence tool does not capture the screen and does not inspect screenshot pixels. The tester must review each image before attaching it.
 
@@ -52,6 +52,8 @@ Copy-Item `
 ```
 
 The canonical fixture verifier intentionally covers the unchanged generated fixture only. The copied companion is separately repository-owned and must match the reviewed source commit. Follow `Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/README.md` during the duplicate-report step.
+
+Slice 8 does not register an adapter declaration. The expected Adapter Capability Matrix state for this manual pass is therefore the deterministic fail-closed no-declaration state.
 
 ## Launch the Editor
 
@@ -94,9 +96,10 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Catalog Governance;
 - Tainted Grail Item and Recipe Editor;
 - Tainted Grail Economy Acquisition Coverage;
-- Tainted Grail Economy Cross-Pack Duplicates.
+- Tainted Grail Economy Cross-Pack Duplicates;
+- Tainted Grail Adapter Capability Matrix.
 
-Confirm every pane opens without an error and remains interactive. All eight TG SDK panes must be present.
+Confirm every pane opens without an error and remains interactive. **All nine TG SDK panes** must be present.
 
 Record:
 
@@ -105,7 +108,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All eight TG SDK panes opened from the Tools menu."
+  --notes "All nine TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
@@ -127,7 +130,7 @@ Use `Tab`, `Shift+Tab`, arrow keys, and activation keys where appropriate. Confi
 
 A screenshot is not mandatory because focus traversal is temporal, but detailed notes are required.
 
-### 4. Preview workspace, catalog, acquisition coverage, and duplicates
+### 4. Preview workspace, economy analyses, and adapter readiness
 
 Open the generated synthetic workspace after the companion pack has been copied. Confirm both owner packs load:
 
@@ -153,7 +156,11 @@ Confirm:
 - the group shows `partial`, because neither promoted candidate has a typed item profile;
 - exact signal, exact match key, owner packs, canonical records, evidence, blockers, and status are visible;
 - same-pack repeats, case-different keys, and display-name similarity do not appear as duplicate groups;
-- both economy analysis panes remain non-editable.
+- the Adapter Capability Matrix lists all eleven typed capabilities for each loaded pack;
+- the matrix shows **unsupported rows when no adapter declaration is registered**;
+- required adapter version, active runtime target, capability, status, and actionable reason are visible;
+- no adapter declaration, registration, work-order, execution, deployment, launch, or save control exists;
+- all three analysis panes remain **non-editable**.
 
 Record this observation under `preview-data-displayed`. Screenshot required.
 
@@ -200,6 +207,8 @@ Confirm the reviewed state survives:
 - derived economy acquisition coverage rows and statuses;
 - the derived partial cross-pack duplicate group, exact key, candidate health, and status.
 
+Also confirm the Adapter Capability Matrix returns to the same deterministic `unsupported` state after relaunch because its declaration registry is transient and no declaration is registered.
+
 Screenshot required after reopen.
 
 ### 8. Actionable failure message
@@ -212,7 +221,7 @@ Screenshot required.
 
 ### 9. Runtime boundary remains absent
 
-Inspect every TG SDK pane and confirm no runtime, deployment, injection, save-mutation, automatic duplicate merge, pack rejection, or winner-selection action is exposed.
+Inspect every TG SDK pane and confirm no runtime, deployment, injection, save-mutation, work-order generation/execution, adapter loading/registration, automatic duplicate merge, pack rejection, or winner-selection action is exposed.
 
 Record detailed notes. A screenshot is optional because absence is established across the full pass, not by a single image.
 
@@ -228,8 +237,8 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attach
   --screenshot C:\Evidence\catalog-and-governance.png `
   --check all-panes-open `
   --check preview-data-displayed `
-  --title "Catalog, governance, acquisition coverage, and duplicate-report panes" `
-  --description "Project-owned synthetic preview data displayed after opening the TG SDK panes." `
+  --title "Catalog, economy analysis, and adapter-capability panes" `
+  --description "Project-owned synthetic preview data and fail-closed adapter rows in the O3DE Editor." `
   --privacy-reviewed `
   --project-owned-only
 ```

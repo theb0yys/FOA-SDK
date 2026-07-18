@@ -28,6 +28,7 @@ Run the repository validators first:
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_contracts.py
 ```
 
 After launching the O3DE Editor, open **Tools → Tainted Grail SDK**.
@@ -42,6 +43,7 @@ Current tools:
 - **Tainted Grail Item and Recipe Editor**
 - **Tainted Grail Economy Acquisition Coverage**
 - **Tainted Grail Economy Cross-Pack Duplicates**
+- **Tainted Grail Adapter Capability Matrix**
 
 ## Recommended workflow
 
@@ -57,7 +59,8 @@ Use the tools in this order:
 8. record validation proof;
 9. allow or forbid one named usage lane explicitly;
 10. review economy acquisition coverage and exact cross-pack duplicate candidates;
-11. review the shared status window before downstream planning.
+11. review adapter capability, version, permission, and proof readiness;
+12. review the shared status window before downstream planning.
 
 ## Workspace and game profile
 
@@ -95,7 +98,7 @@ Configure:
 - diagnostics and extracted-data locations;
 - installed DLC/content scopes.
 
-Imported evidence, catalogs, validation events, and governance decisions are bound to the exact active profile. Changing profiles does not re-authorise older data.
+Imported evidence, catalogs, validation events, governance decisions, and adapter evidence are bound to the exact active profile. Changing profiles does not re-authorise older data.
 
 ### Apply and save
 
@@ -119,6 +122,8 @@ A pack requires:
 - save-impact declaration;
 - content, asset, and localisation declarations;
 - build configuration and release channel.
+
+`RequiredAdapterVersion` is the pack’s minimum adapter contract version. Slice 8 interprets it through a conservative semantic-version policy: the declared adapter must be at least that version, use the same major version, and use the same minor version while the major version is zero.
 
 Synthetic catalog records require an existing pack owner. Do not reuse native game identities for custom content.
 
@@ -146,6 +151,20 @@ Sources/<source-id>/evidence.tgevidence.json
 The importer computes a SHA-256 fingerprint and deterministic source ID. The same fingerprint cannot be imported twice for one profile. The in-memory registry is published only after both documents save.
 
 Parsing success does not make a claim reviewed or permitted.
+
+Adapter identity evidence uses the exact subject:
+
+```text
+adapter:<adapter-id>
+```
+
+Adapter capability evidence uses:
+
+```text
+adapter:<adapter-id>:capability:<capability>
+```
+
+These evidence records still require the normal exact source fingerprint, profile, game version, branch, and runtime-target bindings.
 
 ## Canonical catalog browser
 
@@ -260,7 +279,15 @@ To allow one named usage, the subject must be:
 
 The decision also requires evidence and at least one `validated` proof event for the same subject.
 
-Examples of usage names include `display_only`, `planning_only`, `grant_existing_item`, `spawn_static`, or `quest_read`. Later adapter contracts will formalise the vocabulary.
+Phase 7 formalises the economy adapter-facing usage names:
+
+- `existing_item_grant`;
+- `existing_recipe_learn`;
+- `runtime_recipe_append`;
+- `custom_item_registration`;
+- `custom_recipe_registration`;
+- `vendor_or_loot_injection`;
+- `quest_or_contract_reward_injection`.
 
 ### Forbid a usage
 
@@ -304,6 +331,38 @@ A `review_required` group has current validated candidates with usable exact-sub
 
 The report does not merge records, reject a pack, choose a winner, author governance, or prove a runtime conflict. Review the exact canonical records and evidence before making any separate catalog decision.
 
+## Adapter capability matrix
+
+Open **Tainted Grail Adapter Capability Matrix** to inspect Phase 7 readiness across packs, typed adapter declarations, the active runtime target, catalog permissions, validation proof, and adapter evidence.
+
+Slice 8 defines these capabilities:
+
+- `item_grant`;
+- `recipe_learn`;
+- `recipe_append`;
+- `custom_item_registration`;
+- `custom_recipe_registration`;
+- `vendor_mutation`;
+- `loot_mutation`;
+- `reward_mutation`;
+- `persistence`;
+- `cleanup`;
+- `rollback`.
+
+The matrix statuses are:
+
+- `unsupported` — no declaration is registered, the capability is undeclared, or the active runtime target is not declared;
+- `version_mismatch` — the declaration fails the pack’s semantic-version requirement;
+- `permission_missing` — no eligible pack-owned subject has the mapped allowed usage;
+- `proof_missing` — the allowed usage exists without a valid same-subject permission/validation chain, or adapter identity/capability evidence is invalid;
+- `supported` — declaration, runtime, version, permission, and proof gates pass.
+
+The evaluation order is support, version, permission, proof, then `supported`. A more fundamental failure therefore cannot be hidden by a later proof state.
+
+The adapter declaration registry is transient and cleared when the Editor shuts down. There is no adapter declaration document or registration control in Slice 8. With no declaration registered, the matrix deliberately shows `unsupported` rows for all eleven capabilities for each pack.
+
+**`supported` means contract readiness only.** It does not load or execute an adapter, generate a work order, deploy files, launch FoA, or mutate a save.
+
 ## Foundation status and blockers
 
 The status window reports:
@@ -340,6 +399,8 @@ MyWorkspace/
 └── Reports/
 ```
 
+There is no adapter declaration file in the workspace layout in Slice 8.
+
 ## Safe-use rules
 
 - Back up workspaces and saves before testing future adapter/deployment features.
@@ -352,6 +413,7 @@ MyWorkspace/
 - Do not assume a validated claim is permitted for every usage.
 - Do not assume clearing staleness restores permission.
 - Do not treat a duplicate candidate group as an automatic merge or deletion instruction.
+- Do not treat a `supported` adapter row as permission to execute runtime behavior.
 - Review generated output before any future deployment.
 
 ## Troubleshooting
@@ -360,7 +422,7 @@ MyWorkspace/
 
 - confirm the Gem is registered in `engine.json`;
 - confirm a host-tool target was built;
-- run both TG validators;
+- run the focused validators;
 - inspect Editor logs for module-load errors.
 
 ### Workspace or pack save fails
@@ -400,6 +462,22 @@ MyWorkspace/
 - confirm at least two distinct owner packs use the same exact case-sensitive subject reference or recipe duplicate key;
 - do not expect display names or fuzzy similarity to create a group;
 - confirm typed profiles and exact-subject evidence exist for candidate health details.
+
+### Adapter matrix shows only `unsupported`
+
+- this is the expected fail-closed state when no transient adapter declaration is registered;
+- confirm the pack has a non-empty strict semantic `RequiredAdapterVersion`;
+- confirm the declaration includes the active `Mono` or `IL2CPP` runtime target;
+- confirm the capability is explicitly declared;
+- confirm adapter identity and capability evidence use the exact documented subjects and active-profile bindings.
+
+### Adapter matrix shows `permission_missing` or `proof_missing`
+
+- confirm an eligible pack-owned catalog subject exists for the capability;
+- confirm the mapped usage is allowed through Catalog Governance;
+- confirm the subject remains validated, current, reference-complete, conflict-free, and non-superseded;
+- confirm the permission event and its validation IDs target that same record;
+- confirm all permission, validation, adapter identity, and capability evidence resolves to active-profile-bound sources.
 
 ## Getting help
 

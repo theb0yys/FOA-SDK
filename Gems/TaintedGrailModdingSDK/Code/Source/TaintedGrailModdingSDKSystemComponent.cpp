@@ -7,6 +7,8 @@
 
 #include "TaintedGrailModdingSDKSystemComponent.h"
 
+#include "AdapterCapabilityMatrixWidget.h"
+#include "AdapterContractRegistry.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
 #include "EconomyCoverageDashboardWidget.h"
@@ -39,6 +41,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
         constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
         constexpr const char* EconomyDuplicateReportViewPaneName = "Tainted Grail Economy Cross-Pack Duplicates";
+        constexpr const char* AdapterCapabilityMatrixViewPaneName = "Tainted Grail Adapter Capability Matrix";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -106,9 +109,11 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyDuplicateReportViewPaneName);
+            AzToolsFramework::UnregisterViewPane(AdapterCapabilityMatrixViewPaneName);
             m_viewRegistered = false;
         }
 
+        AdapterContractRegistry::Get().Clear();
         AzToolsFramework::EditorEvents::Bus::Handler::BusDisconnect();
         FoundationService::Get().Shutdown();
         AZ_Printf("TaintedGrailModdingSDK", "Editor foundation deactivated.\n");
@@ -208,6 +213,17 @@ namespace TaintedGrailModdingSDK
             EconomyDuplicateReportViewPaneName,
             "Tainted Grail SDK",
             economyDuplicateOptions);
+
+        AzToolsFramework::ViewPaneOptions adapterMatrixOptions;
+        adapterMatrixOptions.paneRect = QRect(260, 260, 1320, 920);
+        adapterMatrixOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
+        adapterMatrixOptions.isDeletable = true;
+        adapterMatrixOptions.isPreview = true;
+        adapterMatrixOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.AdapterCapabilityMatrix");
+        AzToolsFramework::RegisterViewPane<AdapterCapabilityMatrixWidget>(
+            AdapterCapabilityMatrixViewPaneName,
+            "Tainted Grail SDK",
+            adapterMatrixOptions);
 
         m_viewRegistered = true;
     }

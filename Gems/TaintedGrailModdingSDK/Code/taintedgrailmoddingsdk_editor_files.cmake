@@ -48,7 +48,6 @@ set(FILES
     Source/PackManagerWidget.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
-    Source/PersistenceJsonUtils.h
     Source/SourceEvidenceIntakeWidget.cpp
     Source/SourceEvidenceIntakeWidget.h
     Source/SourceEvidencePersistenceService.cpp

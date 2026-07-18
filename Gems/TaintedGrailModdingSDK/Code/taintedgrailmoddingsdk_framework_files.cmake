@@ -6,8 +6,14 @@
 #
 
 set(FILES
+    Source/CatalogGovernanceService.cpp
+    Source/CatalogGovernanceService.h
     Source/CatalogPersistenceService.cpp
     Source/CatalogPersistenceService.h
+    Source/CatalogPromotionService.cpp
+    Source/CatalogPromotionService.h
+    Source/EconomyAuthoringService.cpp
+    Source/EconomyAuthoringService.h
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
     Source/FoundationGovernanceService.cpp

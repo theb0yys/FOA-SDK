@@ -32,8 +32,8 @@ Confirm the dedicated project contract:
 python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
 ```
 
-The command must report that the dedicated project, icons, opener, and shortcut
-contract are complete.
+The command must report that the dedicated project, icons, opener, and hardened
+clickable-entry contract are complete.
 
 ## 2. Check prerequisites
 
@@ -62,16 +62,22 @@ build/tg-sdk-developer-preview-0-windows-profile/bin/profile/Editor.exe
 
 ## 4. Create the clickable entry
 
+Use the hardened entry command:
+
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py create
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create
 ```
 
-This creates:
+This creates and immediately verifies:
 
 ```text
 build/Tainted Grail Modding Editor.lnk
 build/Tainted Grail Modding Editor.shortcut.json
 ```
+
+The command checks the generated file hash and inspects the real Windows
+shortcut through `WScript.Shell`. It confirms the target, project argument,
+working directory, icon, and description before reporting success.
 
 The shortcut has the project-owned icon and launches the source-built
 `Editor.exe` with:
@@ -85,22 +91,29 @@ Double-click **Tainted Grail Modding Editor.lnk**.
 To inspect the shortcut plan without writing files:
 
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py create `
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
   --dry-run
 ```
 
 To replace an existing generated shortcut deliberately:
 
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py create `
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
   --replace
 ```
 
-Verify the generated shortcut hash manifest:
+Replacement is allowed only when the existing `.lnk` and sidecar manifest pass
+both hash and semantic verification. An unrelated or modified shortcut is not
+deleted.
+
+Verify the clickable entry again at any time:
 
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py verify
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py verify
 ```
+
+`developer_preview_shortcut.py` is the lower-level generator used by the
+hardened command. It is not the supported user entry point.
 
 ## 5. Command-line fallback
 

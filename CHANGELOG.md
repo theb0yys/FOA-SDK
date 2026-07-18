@@ -24,6 +24,10 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Service-level Developer Preview persistence smoke coverage using the real workspace, pack, source/evidence, catalog, registry, database, and economy evidence services.
 - Canonical-state comparison across load, save, close-equivalent state disposal, and reopen, including governance history, economy profiles/joins, and station/learnability evidence rows.
 - Compatibility tests proving reviewed proof-backed allowances survive catalog load while unproven allowances are cleared fail-closed.
+- Controlled Windows x64 `Editor.exe` launch wrapper with explicit executable/build selection, O3DE `--project-path` support, dry-run output, wrapper-owned logs, pane-registration guidance, and exact process exit-code propagation.
+- Redacted local diagnostics collector and verifier with tool/build summaries, supplied validation and launch summaries, tail-limited Editor log excerpts, workspace-relative durable-document hashes, an allow-listed file set, SHA-256 manifest verification, and review-before-sharing guidance.
+- Twenty-five launch and diagnostics unit tests covering command restrictions, host checks, project validation, exit propagation, path/secret redaction, inventory limits, symlinks, overwrite protection, tamper detection, traversal rejection, and collect→verify behavior.
+- Developer Preview troubleshooting documentation for missing Editor output, absent TG SDK panes, native O3DE log locations, diagnostics failures, verification, and disclosure review.
 - Workspace and exact FoA game-profile management with durable `*.tgworkspace.json` documents.
 - Mod/content-pack project management with durable `*.tgpack.json` manifests.
 - Pack ownership, compatibility, dependency, save-impact, resource, build, and release declarations.
@@ -64,7 +68,7 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Changed
 
-- The focused TG SDK workflow now runs Developer Preview command tests, fixture tests, command/fixture/persistence-smoke contract validators, and a clean generate→verify fixture cycle before the existing foundation, governance, catalog, and source-policy checks.
+- The focused TG SDK workflow now runs Developer Preview command, fixture, launch, and diagnostics tests; command/fixture/persistence/launch-diagnostics contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before the existing foundation, governance, catalog, and source-policy checks.
 - The catalog test target now compiles the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
 - Catalog compatibility loading now preserves current validated allowances only when the latest reviewed permission event has valid proof for the same subject; unproven legacy allowances still fail closed.
 - Catalog records now carry an explicit staleness state.
@@ -83,6 +87,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 - Developer Preview fixture generation performs no network access or process launch and refuses silent overwrite of unrelated, partial, modified, or symlink-containing output directories.
 - Fixture verification rejects absolute/private paths, secret-like material, path traversal, borrowed native identities, ownership mismatches, unknown evidence, malformed relationships, and binding drift.
 - The persistence smoke uses temporary workspace roots only, performs no runtime or deployment action, and verifies proof-backed permission preservation separately from legacy fail-closed cleanup.
+- The Editor launch wrapper accepts only `Editor.exe`, constructs only the documented optional `--project-path` argument, uses no shell command strings or arbitrary passthrough arguments, and never launches FoA or runtime tooling.
+- Diagnostics collection is explicit and local-only, excludes source artifact contents, game files, saves, environment variables, credentials, binary logs, and unrestricted filesystem listings, and performs no automatic upload.
+- Diagnostics verification enforces relative allow-listed paths, size limits, UTF-8 text, SHA-256 hashes, symlink/traversal rejection, and path/secret redaction before a bundle can be replaced or shared.
 - Developer Preview commands do not install dependencies silently, use shell command strings, launch FoA, invoke runtime adapters, deploy files, modify saves, or collect telemetry.
 - Preview build-directory validation rejects the repository root, directories containing the checkout, `.git` paths, unrelated non-empty directories, and CMake caches bound to another source tree.
 - Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, and typed economy workflows.
@@ -103,8 +110,9 @@ The project follows the principles of Keep a Changelog. Version numbers follow S
 
 ### Known limitations
 
-- Developer Preview 0 does not yet include the launch wrapper, diagnostics bundle, manual UI evidence, or verified preview archive.
-- The service-level smoke proves persistence round-trip behavior but does not itself prove manual Editor UI behavior or FoA runtime compatibility.
+- Developer Preview 0 does not yet include completed Windows manual UI evidence or a verified preview archive.
+- The controlled Editor process path and service-level persistence smoke do not themselves prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.
+- The diagnostics verifier reduces accidental disclosure risk but does not replace the user’s responsibility to review every generated file before sharing it.
 - The Item and Recipe Editor does not yet generate adapter work orders.
 - The evidence view reports station visibility and recipe learnability research but does not append, learn, register, persist, clean up, roll back, or prove runtime behavior.
 - Runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.

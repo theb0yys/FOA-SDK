@@ -52,7 +52,9 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             encoding="utf-8",
         )
         (repo / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py").write_text(
-            'parser.add_argument("--project")\ncommand.extend(("--project-path", str(project)))\nvalidate_project_path(project)\n',
+            'parser.add_argument("--project")\n'
+            'command.extend(("--project-path", str(project)))\n'
+            "validate_project_path(project)\n",
             encoding="utf-8",
         )
         return repo

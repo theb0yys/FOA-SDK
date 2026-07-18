@@ -109,7 +109,8 @@
         "SceneProcessing"
     ],
     "projects": [
-        "AutomatedTesting"
+        "AutomatedTesting",
+        "TaintedGrailModdingEditor"
     ],
     "templates": [
         "Templates/AssetGem",

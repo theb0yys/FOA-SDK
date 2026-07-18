@@ -1,0 +1,24 @@
+{
+    "project_name": "TaintedGrailModdingEditor",
+    "product_name": "Tainted Grail Modding Editor",
+    "version": "0.1.0",
+    "project_id": "{8DAF4E4C-814C-4CB1-9EC4-2A16C11C0C9A}",
+    "display_name": "Tainted Grail Modding Editor",
+    "summary": "Source-built O3DE host project for the Tainted Grail Modding SDK editor tools.",
+    "canonical_tags": [
+        "Project",
+        "Tool"
+    ],
+    "user_tags": [
+        "Tainted Grail",
+        "Modding",
+        "Editor"
+    ],
+    "icon_path": "preview.png",
+    "engine": "o3de",
+    "executable_name": "TaintedGrailModdingEditor",
+    "modules": [],
+    "gem_names": [
+        "TaintedGrailModdingSDK"
+    ]
+}

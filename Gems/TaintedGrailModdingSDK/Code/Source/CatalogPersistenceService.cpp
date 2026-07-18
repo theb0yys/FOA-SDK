@@ -7,6 +7,8 @@
 
 #include "CatalogPersistenceService.h"
 
+#include "PersistenceJsonUtils.h"
+
 #include <AzCore/Serialization/Json/JsonUtils.h>
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
@@ -468,7 +470,8 @@ namespace TaintedGrailModdingSDK
         }
 
         CatalogDocument document;
-        const AZ::Outcome<void, AZStd::string> loadResult = AZ::JsonSerializationUtils::LoadObjectFromFile(document, path);
+        const AZ::Outcome<void, AZStd::string> loadResult =
+            PersistenceJsonUtils::LoadObjectFromFile(document, path);
         if (!loadResult.IsSuccess())
         {
             return AZ::Failure(AZStd::string(loadResult.GetError()));

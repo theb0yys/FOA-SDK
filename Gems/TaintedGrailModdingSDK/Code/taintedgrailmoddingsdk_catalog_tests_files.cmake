@@ -24,6 +24,7 @@ set(FILES
     Source/FoundationModels.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
+    Source/PersistenceJsonUtils.h
     Source/SourceEvidencePersistenceService.cpp
     Source/SourceEvidencePersistenceService.h
     Source/SourceEvidenceRegistry.cpp

@@ -1,44 +1,8 @@
 name: Tainted Grail SDK Foundation
 
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. Run this workflow manually only after Actions is restored.
 on:
-  pull_request:
-    paths:
-      - "Gems/TaintedGrailModdingSDK/**"
-      - "docs/tainted-grail-sdk/**"
-      - "AutomatedTesting/project.json"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "CODE_OF_CONDUCT.md"
-      - "SECURITY.md"
-      - "SUPPORT.md"
-      - "GOVERNANCE.md"
-      - "ROADMAP.md"
-      - "CHANGELOG.md"
-      - ".github/CODEOWNERS"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - "engine.json"
-      - ".github/workflows/tainted-grail-sdk-foundation.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "Gems/TaintedGrailModdingSDK/**"
-      - "docs/tainted-grail-sdk/**"
-      - "AutomatedTesting/project.json"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "CODE_OF_CONDUCT.md"
-      - "SECURITY.md"
-      - "SUPPORT.md"
-      - "GOVERNANCE.md"
-      - "ROADMAP.md"
-      - "CHANGELOG.md"
-      - ".github/CODEOWNERS"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - "engine.json"
-      - ".github/workflows/tainted-grail-sdk-foundation.yml"
   workflow_dispatch:
 
 concurrency:

@@ -28,6 +28,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Post-Deployment Verification Reports](FOA_POST_DEPLOYMENT_VERIFICATION_REPORTS.md) — deterministic candidate-evidence aggregation, target and rollback analysis, explicit compatibility/release blockers, and no independent verifier or publication path.
 - [FoA Independent Post-Deployment Verifier Results](FOA_POST_DEPLOYMENT_VERIFIER_RESULTS.md) — separately reviewed verifier identity, exact report/check binding, independent observations, failures, safe diagnostics, and candidate evidence with no verifier execution.
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — preserved report blockers, adverse verifier observations, separate compatibility/release/human-review axes, explicit dispositions, and no automatic approval or publication.
+- [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact approved reconciliation/package binding, declared checksums, provenance, legal review, signing intent, publication targets, and no performed release operations.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -58,6 +59,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Post-Deployment Verification Reports](FOA_POST_DEPLOYMENT_VERIFICATION_REPORTS.md) — exact current-work-order/evidence binding, deterministic status precedence, explicit blockers, non-mutation, and no-verifier/no-release enforcement.
 - [FoA Independent Post-Deployment Verifier Results](FOA_POST_DEPLOYMENT_VERIFIER_RESULTS.md) — deterministic report serialization, reviewed-verifier capabilities, exact final-state check coverage, failure/diagnostic binding, and no-verifier/no-release enforcement.
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — exact immutable binding, preserved blockers, typed human dispositions, deterministic compatibility/release decisions, non-mutation, and no-publication enforcement.
+- [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact content/checksum/provenance/legal/signing/publication declarations, deterministic fail-closed status, and no file or release operations.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -103,6 +105,7 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - deterministic post-deployment reports with exact current-work-order/candidate-evidence binding, target-verification and rollback analysis, explicit compatibility/release blockers, mandatory human review, and no independent verifier or release publication path;
 - typed transient independent-verifier result envelopes with exact canonical-report binding, reviewed verifier capabilities, one check per mutation step, independent observations, typed failures, safe diagnostics, and candidate evidence returned without automatic promotion;
 - deterministic transient verifier-evidence reconciliations with preserved blockers, separate compatibility/release/human-review axes, typed dispositions, canonical JSON, and no automatic approval, signing, or publication;
+- deterministic transient release-artifact envelopes with exact approved reconciliation and ready-package binding, declared checksums/provenance/legal review/signing intent/publication targets, and every file, archive, signing, upload, publication, adapter, launch, and deployment operation disabled;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.

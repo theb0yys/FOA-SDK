@@ -208,9 +208,15 @@ Production-linked tests cover strict vocabularies, duplicate request rejection, 
 
 The focused validator rejects filesystem/process/runtime operations, missing expiry or scope gates, mutable Editor controls, incomplete tests, missing CI/public contracts, and stale fourteen-pane acceptance.
 
+## Slice 15 handoff
+
+Slice 15 adds a typed deployment execution-result and verification envelope around one exact reviewed work order. It validates separately supplied attempted-step metadata, backup and restore outcomes, deployed fingerprints, target verification, rollback results, failures, and safe logs, then returns candidate evidence by value with **no executor or automatic evidence promotion**.
+
+The Slice 14 work order remains non-executable. Slice 15 does not reinterpret `review_ready` as deployment authority and does not add a deployment command, launch path, adapter call, filesystem mutation, acknowledgement, or dispatch control.
+
 ## Next ordered slice
 
-Correction Slice 15 is a typed deployment execution-result and verification envelope for a separately supplied executor: bind one exact reviewed work order to attempted step identities, backup/restore results, deployed fingerprints, rollback outcomes, logs, and evidence candidates without adding an executor, deployment command, launch path, or automatic evidence promotion.
+Correction Slice 16 is a deterministic post-deployment verification and release-blocker report over one accepted deployment execution-result envelope, candidate evidence, target-verification states, rollback completeness, failures, and diagnostics. It must not execute a verifier, launch FoA, promote evidence, publish a release, or call an adapter.
 
 ## Rollback
 

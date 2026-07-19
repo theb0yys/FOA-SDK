@@ -163,11 +163,6 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_code;
         AZStd::string m_targetPath;
         AZStd::string m_reason;
-
-        // True means the finding prevents downstream work-order generation.
-        // False preserves a visible safety notice without disguising it through
-        // container semantics.
-        bool m_blocksProgression = true;
     };
 
     struct AdapterStagingDeploymentPreviewRequest
@@ -206,9 +201,6 @@ namespace TaintedGrailModdingSDK
         bool m_rollbackExecutionAllowed = false;
         bool m_launchAllowed = false;
     };
-
-    bool HasBlockingDeploymentPreviewFinding(
-        const AdapterStagingDeploymentPreview& preview);
 
     class AdapterStagingDeploymentPreviewRegistry
     {

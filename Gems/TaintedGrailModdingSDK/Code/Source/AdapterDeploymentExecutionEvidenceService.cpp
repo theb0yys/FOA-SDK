@@ -16,4 +16,16 @@
 
 #include "AdapterDeploymentExecutionEvidenceServicePart1.inl"
 #include "AdapterDeploymentExecutionEvidenceServicePart2.inl"
+
+// Part 1 owns the validation subject helpers. Part 3 builds returned evidence
+// and intentionally uses distinct internal symbols so all split implementation
+// files compile in one translation unit without duplicate definitions.
+#define ResultSubject ExecutionEvidenceResultSubject
+#define WorkOrderSubject ExecutionEvidenceWorkOrderSubject
+#define StepSubject ExecutionEvidenceStepSubject
+#define RollbackSubject ExecutionEvidenceRollbackSubject
 #include "AdapterDeploymentExecutionEvidenceServicePart3.inl"
+#undef RollbackSubject
+#undef StepSubject
+#undef WorkOrderSubject
+#undef ResultSubject

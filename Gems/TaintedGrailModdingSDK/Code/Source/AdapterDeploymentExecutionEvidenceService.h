@@ -42,6 +42,7 @@ namespace TaintedGrailModdingSDK
         bool m_accepted = false;
     };
 
+    // Nothing is executed, imported, promoted, validated, or permitted here.
     class AdapterDeploymentExecutionEvidenceService
     {
     public:

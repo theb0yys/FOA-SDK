@@ -249,9 +249,36 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no registration, acknowledgement, copy, delete, backup, restore, deploy, launch, or execute action;
 - the Windows manual UI checklist includes all fifteen panes and the default zero-deployment-work-order-input state.
 
-### Next ordered slice — deployment execution-result and verification envelope
+### Typed deployment execution-result and verification envelope
 
-Define a typed result envelope for a separately supplied executor. Bind one exact reviewed deployment work order to attempted step identities, backup and restore outcomes, deployed fingerprints, rollback results, logs, and candidate evidence. The slice must add no executor, copy/delete/backup/restore/deployment command, launch path, adapter call, or automatic evidence promotion.
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact `review_ready` deployment work order, canonical JSON, preview, pack, target inventory, and lowercase SHA-256 fingerprints.
+- Require one accepted evidence-backed review of the separately supplied executor, with stable identity, strict semantic version, fingerprint, reviewer, and UTC review time.
+- Preserve exact attempted step identities, typed outcomes, attempted state, observed target presence, and deployed fingerprints.
+- Preserve exact backup/restore outcomes, target-verification states, rollback results, failures, and safe fingerprinted log references.
+- Keep operational success separate from structural contract validity: a failed execution can still be accepted as contract-valid candidate evidence.
+- Deterministic `work_order_not_ready`, `executor_unreviewed`, `work_order_binding_mismatch`, `envelope_invalid`, `step_binding_mismatch`, `backup_binding_mismatch`, `verification_binding_mismatch`, `rollback_binding_mismatch`, `failure_log_binding_mismatch`, and `accepted` states.
+- Return candidate source/evidence documents by value for work-order binding, executor review, steps, backup/restore outcomes, target verification, rollback, failures, and logs.
+- Transient registry and read-only **Tainted Grail Deployment Execution Result Evidence** pane.
+- Production-linked tests, focused validator and negative tests, CI integration, public documentation, and sixteen-pane Windows UI coverage.
+- **No executor, deployment command, launch path, adapter call, or automatic evidence promotion** is implemented or authorised.
+
+Exit criteria:
+
+- only a complete exact work-order and accepted reviewed-executor binding can reach `accepted`;
+- every canonical work-order step has exactly one typed result with exact identity, order, paths, and fingerprints;
+- every backup step has one exact backup result, and every mutation step has one verification and rollback result;
+- matched/mismatched verification and attempted/not-attempted/succeeded/failed/skipped outcomes remain distinct;
+- failures and safe log references bind to the same exact steps or rollback results;
+- accepted envelopes return candidate documents without registering, persisting, promoting, validating, permitting, or publishing them;
+- result validation and evidence return do not mutate work orders, envelopes, results, or registries;
+- the Editor pane remains non-editable and exposes no registration, import, promotion, deployment, launch, or execution action;
+- the Windows manual UI checklist includes all sixteen panes and the default zero-deployment-execution-result state.
+
+### Next ordered slice — post-deployment verification and release-blocker report
+
+Aggregate one accepted deployment execution-result envelope, returned candidate evidence, target-verification states, rollback completeness, failures, and referenced diagnostics into deterministic compatibility and release blockers. The report must not execute a verifier, launch FoA, promote evidence, publish a release, or call an adapter.
 
 Controlled pipeline:
 
@@ -259,7 +286,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, compatibility reports, result/log capture, release archives, checksums, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, independent result verification, compatibility reports, release archives, checksums, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

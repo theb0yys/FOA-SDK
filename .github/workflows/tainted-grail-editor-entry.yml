@@ -1,60 +1,8 @@
 name: Tainted Grail Editor Entry
 
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. Run this workflow manually only after Actions is restored.
 on:
-  pull_request:
-    paths:
-      - "TaintedGrailModdingEditor/**"
-      - "AutomatedTesting/project.json"
-      - "engine.json"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/FoundationPersistenceBoundary.*"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/FoundationService.h"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/FoundationServiceConstruction.cpp"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/PathPolicyService.*"
-      - "Gems/TaintedGrailModdingSDK/Code/Tests/PathPolicyServiceTests.cpp"
-      - "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
-      - "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_path_policy_*_files.cmake"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_path_policy.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_open.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_project.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_path_policy.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_shortcut.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_entry.py"
-      - "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
-      - "docs/tainted-grail-sdk/PATH_POLICY.md"
-      - ".github/workflows/tainted-grail-editor-entry.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "TaintedGrailModdingEditor/**"
-      - "AutomatedTesting/project.json"
-      - "engine.json"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/FoundationPersistenceBoundary.*"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/FoundationService.h"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/FoundationServiceConstruction.cpp"
-      - "Gems/TaintedGrailModdingSDK/Code/Source/PathPolicyService.*"
-      - "Gems/TaintedGrailModdingSDK/Code/Tests/PathPolicyServiceTests.cpp"
-      - "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
-      - "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_path_policy_*_files.cmake"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_path_policy.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_open.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_project.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_path_policy.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_shortcut.py"
-      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_entry.py"
-      - "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
-      - "docs/tainted-grail-sdk/PATH_POLICY.md"
-      - ".github/workflows/tainted-grail-editor-entry.yml"
   workflow_dispatch:
 
 permissions:

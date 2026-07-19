@@ -24,6 +24,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Adapter Package Assembly Preview](FOA_ADAPTER_PACKAGE_ASSEMBLY_PREVIEW.md) — reviewed manifests, project-owned staging inventory, derived package layout and output digests, omissions, collisions, redistribution blockers, and assembly prohibition.
 - [FoA Adapter Staging and Deployment Preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md) — reviewed target inventory, deterministic additions/replacements/removals, conflicts, backup requirements, inverse rollback steps, and deployment prohibition.
 - [FoA Adapter Deployment Confirmation and Work Orders](FOA_ADAPTER_DEPLOYMENT_CONFIRMATION_WORK_ORDERS.md) — named confirmation, typed scope and expiry, maintenance windows, preflight evidence, deterministic non-executable steps, and operator checklist.
+- [FoA Adapter Deployment Execution Results](FOA_ADAPTER_DEPLOYMENT_EXECUTION_RESULTS.md) — exact attempted work-order steps, backup/restore outcomes, deployed fingerprints, target verification, rollback results, safe logs, and candidate evidence with no executor.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -35,6 +36,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 - [Contributing](../../CONTRIBUTING.md) — contribution lifecycle and DCO requirements.
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
+- [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — current manual-only workflow state, authoritative local command, self-hosted runner boundary, token handling, and restoration conditions.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
 - [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, and separation from engine testing projects.
 - [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, and diagnostic overrides.
@@ -49,6 +51,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Adapter Package Assembly Preview](FOA_ADAPTER_PACKAGE_ASSEMBLY_PREVIEW.md) — accepted manifest reviews, staging-inventory trust, exact layout/digest derivation, omissions, collisions, redistribution policy, determinism, and no-assembly enforcement.
 - [FoA Adapter Staging and Deployment Preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md) — exact package/target binding, change classification, conflicts, backup and rollback completeness, determinism, and no-deployment enforcement.
 - [FoA Adapter Deployment Confirmation and Work Orders](FOA_ADAPTER_DEPLOYMENT_CONFIRMATION_WORK_ORDERS.md) — exact preview confirmation, scope, time/window, preflight, work-order coverage, checklist, determinism, and no-execution enforcement.
+- [FoA Adapter Deployment Execution Results](FOA_ADAPTER_DEPLOYMENT_EXECUTION_RESULTS.md) — exact work-order/executor binding, typed outcomes, backups, verification, rollback, failures/logs, candidate evidence, and no-executor enforcement.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -90,9 +93,12 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - deterministic transient package-assembly previews with accepted manifest reviews, project-owned staging inventories, exact package layouts and output digests, omissions, collisions, redistribution blockers, and all assembly/archive/deployment permissions disabled;
 - deterministic transient staging/deployment previews with accepted target reviews, exact target inventories, additions, replacements, removals, unchanged paths, conflicts, backups, rollback steps, and all mutation/launch permissions disabled;
 - typed transient deployment confirmations and work orders with exact scope, expiry, maintenance windows, preflight evidence, deterministic operator steps/checklists, and all execution/mutation permissions disabled;
+- typed transient deployment execution-result envelopes with exact work-order/executor binding, attempted steps, backup/restore outcomes, target verification, rollback, safe logs, and candidate evidence returned without automatic promotion;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
-The actual Windows screenshot pass remains pending. Trusted identity/time providers, independent preflight execution, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, runtime adapters, production deployment, live result capture, and remaining specialised domain tools are not complete.
+Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.
+
+The actual Windows screenshot pass remains pending. Trusted identity/time providers, independent preflight/result verification, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, runtime adapters, production deployment, live executor capture, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

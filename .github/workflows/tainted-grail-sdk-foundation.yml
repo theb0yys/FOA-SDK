@@ -1,44 +1,8 @@
 name: Tainted Grail SDK Foundation
 
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. Run this workflow manually only after Actions is restored.
 on:
-  pull_request:
-    paths:
-      - "Gems/TaintedGrailModdingSDK/**"
-      - "docs/tainted-grail-sdk/**"
-      - "AutomatedTesting/project.json"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "CODE_OF_CONDUCT.md"
-      - "SECURITY.md"
-      - "SUPPORT.md"
-      - "GOVERNANCE.md"
-      - "ROADMAP.md"
-      - "CHANGELOG.md"
-      - ".github/CODEOWNERS"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - "engine.json"
-      - ".github/workflows/tainted-grail-sdk-foundation.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "Gems/TaintedGrailModdingSDK/**"
-      - "docs/tainted-grail-sdk/**"
-      - "AutomatedTesting/project.json"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "CODE_OF_CONDUCT.md"
-      - "SECURITY.md"
-      - "SUPPORT.md"
-      - "GOVERNANCE.md"
-      - "ROADMAP.md"
-      - "CHANGELOG.md"
-      - ".github/CODEOWNERS"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/ISSUE_TEMPLATE/**"
-      - "engine.json"
-      - ".github/workflows/tainted-grail-sdk-foundation.yml"
   workflow_dispatch:
 
 concurrency:
@@ -152,6 +116,15 @@ jobs:
 
       - name: Validate deployment confirmation/work-order contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_work_orders.py
+
+      - name: Test deployment execution-result validator
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_validate_adapter_deployment_execution_results.py" -v
+
+      - name: Validate deployment execution-result evidence contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_execution_results.py
 
       - name: Test Developer Preview 0 command layer
         run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview.py" -v

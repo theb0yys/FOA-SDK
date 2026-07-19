@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, deployed fingerprints, target verification, rollback, failures, safe logs, and candidate evidence return.
+- Transient `AdapterDeploymentExecutionResultRegistry` and read-only **Tainted Grail Deployment Execution Result Evidence** pane; no executor is invoked and there is no automatic evidence promotion.
+- Deployment execution-result production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and sixteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterDeploymentWorkOrderService` for exact ready-preview binding, typed named confirmation, confirmation scope, expiry, UTC maintenance windows, required preflight evidence, deterministic non-executable work-order steps, and an operator-facing checklist.
 - Transient `AdapterDeploymentWorkOrderRegistry` and read-only **Tainted Grail Deployment Confirmation and Work Orders** pane with canonical JSON, pending acknowledgements, and `ExecutionAllowed`, copy, delete, backup, restore, deployment, and launch permissions permanently false.
 - Deployment confirmation/work-order production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and fifteen-pane Windows manual UI coverage.
@@ -39,18 +42,20 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Changed
 
-- Phase 8 now includes typed explicit confirmation and deterministic deployment work-order contracts; a typed deployment execution-result and verification envelope is the next ordered slice.
-- Focused validators enforce exact preview confirmation, named reviewers, typed scope, issue/expiry times, maintenance windows, typed preflight evidence, exact work-order coverage, pending operator checklist items, canonical sorting, non-mutation, and the no-execution boundary.
-- The Windows manual UI checklist now covers all fifteen panes and the default zero-deployment-confirmation/work-order-input state.
-- Phase 8 retains staging/deployment, package-assembly, and reproducible-build previews as prerequisite handoffs; `review_ready` never authorises copy, deletion, backup, restoration, deployment, rollback execution, launch, or adapter execution.
+- Phase 8 now includes typed deployment execution-result and verification envelopes; a deterministic post-deployment verification and release-blocker report is the next ordered slice.
+- Focused validators enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
+- The Windows manual UI checklist now covers all sixteen panes and the default zero-deployment-execution-result-envelope state.
+- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, and reproducible-build contracts as prerequisite handoffs; structural result acceptance never authorises execution or evidence promotion.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
 - Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
 - Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
-- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, and deployment-work-order workflows.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, and deployment-execution-result workflows.
 
 ### Security
 
+- Deployment execution-result envelopes are transient executor-supplied metadata. Exact work-order, step, backup, verification, rollback, failure, and safe-log bindings fail closed before candidate evidence is returned.
+- Contract-valid failed execution remains distinct from successful deployment; no result is automatically promoted into source/evidence, validation, permission, release, or another execution.
 - Deployment confirmations, maintenance windows, preflight records, work orders, and operator checklists are transient metadata only. Every execution, copy, delete, backup, restore, deployment, and launch permission remains false, and checklist acknowledgements are never recorded automatically.
 - Exact preview fingerprints, named reviewers, typed scope, confirmation expiry, reviewed UTC windows, evidence-backed preflight kinds, and complete change/backup/rollback coverage fail closed before `review_ready`.
 - No filesystem scan, file copy/replace/delete, backup/restore, archive writer, package assembler, deployment mutation, FoA launch, BepInEx/Harmony load, telemetry, save mutation, or adapter execution is added.
@@ -67,6 +72,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Known limitations
 
+- Executor review, step outcomes, fingerprints, backup/restore results, verification observations, rollback outcomes, failures, and logs are caller-supplied metadata; no executor, trusted target scanner, independent verifier, or automatic evidence promotion exists.
+- An `accepted` execution-result envelope proves contract shape only, not deployment success, safety, target existence, backup integrity, rollback correctness, or release readiness.
 - Confirmations, timestamps, maintenance-window evidence, preflight results, and reviewer identities are caller-supplied metadata; no trusted clock, identity provider, independent preflight runner, acknowledgement system, or deployment executor exists.
 - A `review_ready` work order does not prove that files exist, checks were independently reproduced, backup capacity exists, rollback was tested, or an operator acknowledged the checklist.
 - Deployment target inventories, fingerprints, ownership flags, backup paths, and review evidence are caller-supplied metadata; no trusted target scanner, hashing, backup writer, restore engine, or deployer exists.

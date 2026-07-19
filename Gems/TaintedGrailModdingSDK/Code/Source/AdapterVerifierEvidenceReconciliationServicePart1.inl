@@ -74,6 +74,22 @@ namespace TaintedGrailModdingSDK
                 == sorted.end();
         }
 
+        bool SameStableIdSet(
+            const AZStd::vector<AZStd::string>& left,
+            const AZStd::vector<AZStd::string>& right)
+        {
+            if (!HasStableUniqueIds(left, false)
+                || !HasStableUniqueIds(right, false))
+            {
+                return false;
+            }
+            AZStd::vector<AZStd::string> sortedLeft = left;
+            AZStd::vector<AZStd::string> sortedRight = right;
+            AZStd::sort(sortedLeft.begin(), sortedLeft.end());
+            AZStd::sort(sortedRight.begin(), sortedRight.end());
+            return sortedLeft == sortedRight;
+        }
+
         const AdapterPostDeploymentBlocker* FindReportBlockerForStep(
             const AdapterPostDeploymentVerificationReport& report,
             const AZStd::string& stepId)
@@ -223,6 +239,7 @@ namespace TaintedGrailModdingSDK
             const AdapterPostDeploymentVerificationReport& report,
             const AdapterPostDeploymentVerifierResultEnvelope& verifierEnvelope,
             const AdapterVerifierEvidenceReconciliationRequest& request,
+            const AdapterVerifierEvidenceReconciliationEnvelope& envelope,
             AdapterVerifierEvidenceReconciliationResult& result,
             ReconciliationFlags& flags)
         {
@@ -242,6 +259,12 @@ namespace TaintedGrailModdingSDK
                     != executionEnvelope.m_resultFingerprint
                 || review.m_verifierResultFingerprint
                     != verifierEnvelope.m_resultFingerprint
+                || !SameStableIdSet(
+                    review.m_candidateSourceIds,
+                    envelope.m_inputCandidateSourceIds)
+                || !SameStableIdSet(
+                    review.m_candidateEvidenceIds,
+                    envelope.m_inputCandidateEvidenceIds)
                 || verifierEnvelope.m_reportId != report.m_reportId
                 || verifierEnvelope.m_reportStatus != report.m_status
                 || verifierEnvelope.m_resultId != executionEnvelope.m_resultId
@@ -262,7 +285,8 @@ namespace TaintedGrailModdingSDK
                     "verifier_reconciliation.binding_mismatch",
                     "The reconciliation request and release review must bind to the exact "
                     "current report JSON, verifier result, execution result, work order, "
-                    "fingerprints, and profile/game/branch/runtime context.");
+                    "fingerprints, candidate identities, and profile/game/branch/runtime "
+                    "context.");
             }
         }
     } // namespace

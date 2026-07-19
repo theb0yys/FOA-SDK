@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Pure-Core `AdapterReleaseArtifactProvenanceService` and typed release-artifact contracts for exact approved-reconciliation/ready-package binding, complete content coverage, declared SHA-256 values, provenance, legal dispositions, signing intent, publication targets, deterministic canonical JSON, and candidate evidence return.
+- Transient `AdapterReleaseArtifactRegistry`, focused repository validator, required pane system component, and read-only **Tainted Grail Release Artifact Provenance and Signing Intent** pane; no file read/hash/copy, archive assembly, signing, upload, publication, launch, adapter call, or deployment mutation is performed.
+- Public release-artifact provenance/signing-intent documentation and twenty-pane Windows manual UI coverage.
 - Pure-Core `AdapterVerifierEvidenceReconciliationService` and typed Slice 18 reconciliation contracts for exact report/verifier/execution/work-order/context binding, preserved blockers, adverse verifier observations, separate compatibility/release/human-review axes, explicit dispositions, deterministic canonical JSON, and candidate evidence return.
 - Transient `AdapterVerifierEvidenceReconciliationRegistry` and read-only **Tainted Grail Verifier Evidence Reconciliation and Release Decision** pane; no blocker is silently cleared, no all-matched result automatically approves release, and no verifier, filesystem, signing, or publication action is performed.
 - Public Slice 18 contract documentation and nineteen-pane Windows manual UI coverage for verifier evidence reconciliation and human release decisions.
@@ -23,7 +26,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - CI/runner policy validator, negative regression tests, and public manual-validation documentation covering unavailable Actions, self-hosted runner isolation, registration-token handling, and restoration gates.
 - Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, deployed fingerprints, target verification, rollback, failures, safe logs, and candidate evidence return.
 - Transient `AdapterDeploymentExecutionResultRegistry` and read-only **Tainted Grail Deployment Execution Result Evidence** pane; no executor is invoked and there is no automatic evidence promotion.
-- Deployment execution-result production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and sixteen-pane Windows manual UI coverage.
+- Deployment execution-result production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and sixteen-pane Windows UI coverage.
 - Pure-Core `AdapterDeploymentWorkOrderService` for exact ready-preview binding, typed named confirmation, confirmation scope, expiry, UTC maintenance windows, required preflight evidence, deterministic non-executable work-order steps, and an operator-facing checklist.
 - Transient `AdapterDeploymentWorkOrderRegistry` and read-only **Tainted Grail Deployment Confirmation and Work Orders** pane with canonical JSON, pending acknowledgements, and `ExecutionAllowed`, copy, delete, backup, restore, deployment, and launch permissions permanently false.
 - Deployment confirmation/work-order production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and fifteen-pane Windows manual UI coverage.
@@ -58,20 +61,22 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.
 - The inherited full-engine `AR` workflow and generic upstream `Validation` workflow are removed from this fork so queued checks are not misrepresented as TG SDK test evidence.
 - Exact local validation evidence is the development merge gate until automatic Actions are safely restored; **no automated per-commit test result is claimed**.
-- Phase 8 now includes deterministic verifier-evidence reconciliation with preserved blockers and an explicit human release-decision envelope; release-artifact provenance, checksums, and signing intent are the next ordered slice.
+- Phase 8 now includes deterministic release-artifact provenance/signing-intent metadata; an externally supplied release-assembly and checksum-result envelope is the next ordered slice.
 - Focused execution-result validators continue to enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
-- The Windows manual UI checklist now covers all nineteen panes and the default zero-verifier-reconciliation-request state.
-- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, post-deployment-report, and independent-verifier contracts as prerequisite handoffs; structural acceptance never authorises execution, certification, promotion, signing, or publication.
+- The Windows manual UI checklist now covers all twenty panes and the default zero-release-artifact-envelope state.
+- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, post-deployment-report, independent-verifier, and reconciliation contracts as prerequisite handoffs; metadata readiness never authorises file, archive, signing, upload, publication, or runtime operations.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
 - Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
 - Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
-- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, post-deployment-report, independent-verifier-result, and verifier-reconciliation workflows.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, post-deployment-report, independent-verifier-result, verifier-reconciliation, and release-artifact workflows.
 
 ### Security
 
 - Public pull requests must not execute on a general-purpose self-hosted runner; any future self-hosted design requires disposable isolation, no secrets or personal files, narrow labels, restricted triggers, and explicit operator ownership.
 - Runner registration tokens exposed in screenshots, messages, logs, or shell history are treated as compromised and must be abandoned and regenerated.
+- Release-artifact envelopes are transient declared metadata. Exact reconciliation/package JSON, content coverage, checksum declarations, provenance, legal dispositions, signing intent, and publication targets fail closed before metadata becomes `ready`.
+- A declared checksum is not generated or verified, a signing identity intent is not a signature, and a publication target is not an upload or release.
 - Verifier-reconciliation requests are transient caller-supplied metadata. Exact report JSON, work-order/execution/verifier fingerprints, candidate identities, preserved blockers, adverse findings, named review, and per-finding dispositions fail closed before a contract is accepted.
 - A matched verifier observation never clears an existing report blocker automatically, and an all-matched verifier result never creates release approval without an exact named human approval that is consistent with every blocker and disposition.
 - Independent-verifier envelopes are transient caller-supplied metadata. Exact report JSON, work-order/result fingerprints, reviewed capabilities, expected checks, observations, failures, and safe diagnostics fail closed before candidate evidence is returned.
@@ -96,6 +101,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 ### Known limitations
 
 - Automatic GitHub Actions are unavailable in the current repository/account state; manual workflow definitions remain present, but full local and compiled validation must be run and recorded from a real checkout.
+- Release-artifact checksums, provenance, legal review, signing identities, publication targets, reviewer identities, and timestamps are caller-supplied metadata; no trusted filesystem reader, hasher, identity provider, signing service, uploader, or publication system exists.
+- A `ready` release-artifact envelope proves exact metadata shape only. It does not prove files exist, checksums match file bytes, legal rights exist, a signature was produced, or a target accepted a release.
 - Verifier-reconciliation reviewer identity, review time, decision, rationale, evidence IDs, and dispositions are caller-supplied metadata; no trusted identity provider, clock, signature, timestamp authority, or publication system exists.
 - An `accepted` reconciliation proves contract shape only. `clear` compatibility and `approved` release metadata are not trusted certification, signing, packaging, upload, or proof that any verifier ran.
 - Independent-verifier identity, capabilities, observations, failures, timestamps, fingerprints, and diagnostics are caller-supplied metadata; no verifier is discovered or run and no target file is independently read or hashed by the Editor.

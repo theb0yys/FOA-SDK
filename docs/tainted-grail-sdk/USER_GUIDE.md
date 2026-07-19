@@ -26,6 +26,7 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_build_manifests.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_package_assembly_preview.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_staging_deployment_preview.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_work_orders.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_execution_results.py
 ```
 
 These checks do not replace an O3DE configure/build and compiled test run.
@@ -47,6 +48,7 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail Package Assembly Preview**
 - **Tainted Grail Staging and Deployment Preview**
 - **Tainted Grail Deployment Confirmation and Work Orders**
+- **Tainted Grail Deployment Execution Result Evidence**
 
 ## Recommended workflow
 
@@ -66,13 +68,14 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 14. Review the package-assembly preview against a project-owned staging inventory.
 15. Review the staging/deployment preview against an accepted declared target inventory.
 16. Review the typed confirmation, maintenance window, preflight evidence, deployment work-order steps, and operator checklist.
-17. Review the shared status pane before later downstream work.
+17. Review any separately supplied deployment execution-result envelope and candidate evidence without treating it as execution authority or promoted truth.
+18. Review the shared status pane before later downstream work.
 
 ## Workspace and exact game profile
 
 The status pane configures workspace identity and root, output, staging, and deployment paths. A game profile records exact FoA installation, game version, branch, `Mono` or `IL2CPP` target, Unity version, BepInEx version and plugin path where applicable, managed assemblies, diagnostics, extracted data, and content scopes.
 
-Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, staging/deployment previews, confirmations, or deployment work orders.
+Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, staging/deployment previews, confirmations, deployment work orders, or deployment execution-result envelopes.
 
 ## Pack manager
 
@@ -91,7 +94,7 @@ adapter:<adapter-id>
 adapter:<adapter-id>:capability:<capability>
 ```
 
-Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, confirmation, or rollback proof.
+Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, confirmation, rollback proof, or deployment execution evidence.
 
 ## Canonical catalog and governance
 
@@ -257,6 +260,33 @@ Statuses are:
 
 The pane is non-editable and contains no registration, acknowledgement, save, export, copy, delete, backup, restore, deployment, launch, or adapter-execution control. The ordinary Developer Preview state has zero registered deployment confirmation/work-order inputs.
 
+## Deployment execution-result evidence
+
+Open **Tainted Grail Deployment Execution Result Evidence** to inspect metadata supplied by a separately reviewed executor for one exact current `review_ready` deployment work order.
+
+The contract binds the exact work-order ID, canonical JSON and fingerprint, preview and target-inventory identities, pack, profile, game version, branch, and runtime target. The executor metadata must have an accepted evidence-backed review with stable identity, strict semantic version, fingerprint, reviewer, and UTC review time.
+
+Typed step, backup, and rollback outcomes are `not_attempted`, `succeeded`, `failed`, and `skipped`. Every canonical work-order step requires exactly one result. Every backup step requires one backup outcome. Every add, replace, and remove step requires one target verification and one typed rollback result.
+
+Target-verification states are `not_checked`, `matched`, and `mismatched`. Exact deployed fingerprints and presence states remain distinct from the executor's operational outcome. A `failed execution can still be contract-valid evidence` when the failure, attempted step, rollback state, and safe log references are complete and exact.
+
+Envelope statuses are:
+
+- `work_order_not_ready`
+- `executor_unreviewed`
+- `work_order_binding_mismatch`
+- `envelope_invalid`
+- `step_binding_mismatch`
+- `backup_binding_mismatch`
+- `verification_binding_mismatch`
+- `rollback_binding_mismatch`
+- `failure_log_binding_mismatch`
+- `accepted`
+
+`accepted` means only that the supplied result metadata is structurally valid. Candidate source/evidence documents are returned by value with confidence `unrated`; **nothing is executed or promoted automatically**. The pane does not register sources, import or promote evidence, validate claims, grant permission, publish a release, invoke an executor, mutate files, launch FoA, or call an adapter.
+
+The ordinary Developer Preview state has zero registered deployment execution-result envelopes.
+
 ## Workspace layout
 
 ```text
@@ -274,7 +304,7 @@ MyWorkspace/
 └── Reports/
 ```
 
-There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, rollback-plan, confirmation, maintenance-window, preflight, deployment-work-order, or checklist file in this workflow.
+There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, rollback-plan, confirmation, maintenance-window, preflight, deployment-work-order, checklist, deployment-execution-result, or returned-candidate-evidence file in this workflow.
 
 ## Safe-use rules
 
@@ -283,7 +313,7 @@ There is no durable adapter declaration, work-order plan, runtime-result, build-
 - Do not assume imported or adapter-reported data is true because it parsed.
 - Do not assume validation grants permission.
 - Do not treat a duplicate candidate as an automatic merge instruction.
-- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, `ready` staging/deployment previews, or `review_ready` deployment work orders as authority to execute, build, assemble, deploy, restore, launch, or modify saves.
+- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, `ready` staging/deployment previews, `review_ready` deployment work orders, or `accepted` execution-result envelopes as authority to execute, build, assemble, deploy, restore, promote evidence, launch, publish, or modify saves.
 - Keep proprietary game files, private paths, credentials, and non-redistributable data out of project fixtures and public evidence.
 
 ## Troubleshooting
@@ -340,6 +370,19 @@ Resolve plan binding, toolchain declarations, required materials, fingerprints, 
 - For `preflight_failed`, correct failed, duplicate, stale, anonymous, evidence-free, or preview-mismatched preflight records.
 - For `work_order_incomplete`, restore exact backup/add/replace/remove and inverse rollback coverage.
 - Remember that `review_ready` records no acknowledgement and authorises no execution or filesystem mutation.
+
+### Deployment execution-result envelope is rejected
+
+- For `work_order_not_ready`, regenerate the exact `review_ready` work order with every execution and mutation flag false.
+- For `executor_unreviewed`, supply an accepted evidence-backed executor review with stable identity, strict version, fingerprint, reviewer, and UTC review time.
+- For `work_order_binding_mismatch`, bind the exact work-order ID, canonical JSON, fingerprint, preview, pack, and target inventory.
+- For `envelope_invalid`, correct contract version, result identity, profile/game/branch/runtime context, capture time, and lowercase fingerprints.
+- For `step_binding_mismatch`, supply exactly one typed result for every canonical step with exact sequence, kind, paths, fingerprints, attempted state, and outcome shape.
+- For `backup_binding_mismatch`, preserve the exact backup step, source fingerprint, backup path, and successful backup fingerprint.
+- For `verification_binding_mismatch`, report one exact `not_checked`, `matched`, or genuinely `mismatched` target verification for every mutation step.
+- For `rollback_binding_mismatch`, report one exact inverse rollback result for every addition, replacement, and removal, including `not_attempted`.
+- For `failure_log_binding_mismatch`, bind failures and safe fingerprinted logs back to the same exact step or rollback result.
+- Remember that `accepted` is contract validity only; nothing is executed, promoted, validated, permitted, or published automatically.
 
 ## Getting help
 

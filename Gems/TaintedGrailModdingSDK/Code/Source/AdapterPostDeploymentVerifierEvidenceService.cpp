@@ -8,6 +8,7 @@
 #include "AdapterPostDeploymentVerifierEvidenceService.h"
 
 #include "AdapterContractRegistry.h"
+#include "AdapterDeploymentExecutionResultCanonical.h"
 #include "AdapterPostDeploymentVerifierResultCanonical.h"
 #include "CanonicalFingerprint.h"
 #include "ResearchContractValidation.h"

@@ -1,0 +1,22 @@
+{
+    "gem_name": "ExternalToolchain",
+    "version": "0.1.0",
+    "display_name": "External Toolchain Host",
+    "license": "Apache-2.0 OR MIT",
+    "license_url": "https://github.com/theb0yys/o3de/blob/main/LICENSE.txt",
+    "origin": "theb0yys",
+    "origin_url": "https://github.com/theb0yys/o3de",
+    "type": "Tool",
+    "summary": "Host-side provider contracts and diagnostics for independently packaged external editor-tool integrations.",
+    "canonical_tags": [
+        "Gem"
+    ],
+    "user_tags": [
+        "Editor",
+        "External Tools",
+        "Toolchain"
+    ],
+    "requirements": "Host tools build required.",
+    "documentation_url": "https://github.com/theb0yys/o3de/tree/main/Gems/ExternalToolchain",
+    "dependencies": []
+}

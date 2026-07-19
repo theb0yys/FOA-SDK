@@ -1,0 +1,13 @@
+{
+    "O3DE": {
+        "ExternalToolchain": {
+            "Host": {
+                "ApiVersion": "1.0.0",
+                "RegistrationFinalization": "OnPostActionManagerRegistrationHook",
+                "AllowShellCommands": false,
+                "ProcessExecutionEnabled": false,
+                "AssetHandoffEnabled": false
+            }
+        }
+    }
+}

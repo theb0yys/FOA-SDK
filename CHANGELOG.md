@@ -8,6 +8,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Host-only `ExternalToolchain` Gem with a versioned public provider API, deterministic registration and finalization, a read-only diagnostics pane, contract tests, repository validation, and no process or asset execution.
 - Repository-owned `run_local_validation.py` entry point for Python unit tests, contract validators, temporary fixture/diagnostics verification, tracked-path hygiene, O3DE source policy, and optional compiled catalog tests.
 - CI/runner policy validator, negative regression tests, and public manual-validation documentation covering unavailable Actions, self-hosted runner isolation, registration-token handling, and restoration gates.
 - Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, deployed fingerprints, target verification, rollback, failures, safe logs, and candidate evidence return.

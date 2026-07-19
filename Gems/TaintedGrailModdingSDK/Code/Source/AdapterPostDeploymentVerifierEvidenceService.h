@@ -64,7 +64,8 @@ namespace TaintedGrailModdingSDK
             const SourceEvidenceRegistry& sourceRegistry,
             const AdapterPostDeploymentVerifierResultEnvelope& verifierEnvelope) const;
 
-    private:
+        // Compatibility entry point. It cannot establish research-evidence binding and
+        // therefore deliberately resolves fail-closed as verifier_unreviewed.
         AdapterPostDeploymentVerifierEvidenceReturn BuildEvidenceReturn(
             const AdapterDeploymentWorkOrder& workOrder,
             const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,

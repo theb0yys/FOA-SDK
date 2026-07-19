@@ -7,6 +7,8 @@
 
 #include "AdapterVerifierEvidenceReconciliationContracts.h"
 
+#include <AzCore/std/algorithm.h>
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -142,6 +144,118 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+
+        bool HasStableUniqueRegistryIds(
+            const AZStd::vector<AZStd::string>& values,
+            bool requireNonEmpty)
+        {
+            if (requireNonEmpty && values.empty())
+            {
+                return false;
+            }
+            AZStd::vector<AZStd::string> sorted = values;
+            for (const AZStd::string& value : sorted)
+            {
+                if (!IsAdapterPostDeploymentVerifierStableId(value))
+                {
+                    return false;
+                }
+            }
+            AZStd::sort(sorted.begin(), sorted.end());
+            return AZStd::adjacent_find(sorted.begin(), sorted.end())
+                == sorted.end();
+        }
+
+        bool RegistryEvidenceIsCandidateBound(
+            const AZStd::vector<AZStd::string>& evidenceIds,
+            const AZStd::vector<AZStd::string>& candidateEvidenceIds)
+        {
+            if (!HasStableUniqueRegistryIds(evidenceIds, true))
+            {
+                return false;
+            }
+            for (const AZStd::string& evidenceId : evidenceIds)
+            {
+                if (AZStd::find(
+                        candidateEvidenceIds.begin(),
+                        candidateEvidenceIds.end(),
+                        evidenceId)
+                    == candidateEvidenceIds.end())
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool IsBoundedReleaseReview(
+            const AdapterVerifierEvidenceReconciliationRequest& request)
+        {
+            constexpr size_t MaxCanonicalJsonBytes = 1024 * 1024;
+            constexpr size_t MaxCandidates = 4096;
+            constexpr size_t MaxDispositions = 4096;
+            constexpr size_t MaxTextBytes = 16 * 1024;
+
+            const AdapterVerifierReleaseReview& review = request.m_releaseReview;
+            if (!IsAdapterPostDeploymentVerifierStableId(review.m_reviewId)
+                || !IsAdapterPostDeploymentVerifierStableId(review.m_reportId)
+                || review.m_reportCanonicalJson.empty()
+                || review.m_reportCanonicalJson.size() > MaxCanonicalJsonBytes
+                || !IsAdapterPostDeploymentVerifierStableId(
+                    review.m_verifierResultId)
+                || !IsAdapterPostDeploymentVerifierFingerprint(
+                    review.m_workOrderFingerprint)
+                || !IsAdapterPostDeploymentVerifierFingerprint(
+                    review.m_executionResultFingerprint)
+                || !IsAdapterPostDeploymentVerifierFingerprint(
+                    review.m_verifierResultFingerprint)
+                || review.m_candidateSourceIds.size() > MaxCandidates
+                || review.m_candidateEvidenceIds.size() > MaxCandidates
+                || !HasStableUniqueRegistryIds(
+                    review.m_candidateSourceIds,
+                    true)
+                || !HasStableUniqueRegistryIds(
+                    review.m_candidateEvidenceIds,
+                    true)
+                || review.m_decision
+                    == AdapterVerifierReleaseReviewDecision::Unknown
+                || review.m_reviewer.empty()
+                || review.m_reviewer.size() > MaxTextBytes
+                || !RegistryEvidenceIsCandidateBound(
+                    review.m_evidenceIds,
+                    review.m_candidateEvidenceIds)
+                || !IsAdapterPostDeploymentVerifierUtcTimestamp(
+                    review.m_reviewedAtUtc)
+                || review.m_reviewedAtUtc > request.m_evaluatedAtUtc
+                || review.m_rationale.empty()
+                || review.m_rationale.size() > MaxTextBytes
+                || review.m_dispositions.size() > MaxDispositions)
+            {
+                return false;
+            }
+
+            AZStd::vector<AZStd::string> findingIds;
+            for (const AdapterVerifierFindingDisposition& disposition :
+                 review.m_dispositions)
+            {
+                findingIds.push_back(disposition.m_findingId);
+                if (!IsAdapterPostDeploymentVerifierStableId(
+                        disposition.m_findingId)
+                    || disposition.m_decision
+                        == AdapterVerifierFindingDispositionDecision::Unknown
+                    || disposition.m_rationale.empty()
+                    || disposition.m_rationale.size() > MaxTextBytes
+                    || !RegistryEvidenceIsCandidateBound(
+                        disposition.m_evidenceIds,
+                        review.m_candidateEvidenceIds))
+                {
+                    return false;
+                }
+            }
+            AZStd::sort(findingIds.begin(), findingIds.end());
+            return AZStd::adjacent_find(findingIds.begin(), findingIds.end())
+                == findingIds.end();
+        }
     } // namespace
 
     AZStd::string ToString(AdapterVerifierCompatibilityAssessment assessment)
@@ -254,13 +368,15 @@ namespace TaintedGrailModdingSDK
         if (!IsAdapterPostDeploymentVerifierStableId(
                 request.m_reconciliationId)
             || !IsAdapterPostDeploymentVerifierUtcTimestamp(
-                request.m_evaluatedAtUtc))
+                request.m_evaluatedAtUtc)
+            || !IsBoundedReleaseReview(request))
         {
             if (error)
             {
                 *error =
-                    "Verifier reconciliation registration requires stable identity "
-                    "and one explicit UTC evaluation time.";
+                    "Verifier reconciliation registration requires stable bounded identity, "
+                    "one explicit UTC evaluation time, and a structurally complete exact-"
+                    "bound human review whose evidence is contained in its candidate set.";
             }
             return false;
         }
@@ -273,8 +389,8 @@ namespace TaintedGrailModdingSDK
                 if (error)
                 {
                     *error =
-                        "A verifier reconciliation request with this identity "
-                        "already exists.";
+                        "A verifier reconciliation request with this identity already "
+                        "exists.";
                 }
                 return false;
             }

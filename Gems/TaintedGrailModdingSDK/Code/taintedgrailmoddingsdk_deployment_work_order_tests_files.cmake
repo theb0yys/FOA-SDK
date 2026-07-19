@@ -7,4 +7,5 @@
 
 set(FILES
     Tests/AdapterDeploymentWorkOrderTests.cpp
+    Tests/AdapterDeploymentPipelineHandoffTests.cpp
 )

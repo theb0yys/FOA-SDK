@@ -137,6 +137,8 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_workOrderFingerprint;
         AZStd::string m_executionResultFingerprint;
         AZStd::string m_verifierResultFingerprint;
+        AZStd::vector<AZStd::string> m_candidateSourceIds;
+        AZStd::vector<AZStd::string> m_candidateEvidenceIds;
         AdapterVerifierReleaseReviewDecision m_decision =
             AdapterVerifierReleaseReviewDecision::Unknown;
         AZStd::string m_reviewer;

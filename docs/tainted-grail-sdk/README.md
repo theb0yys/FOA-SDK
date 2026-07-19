@@ -25,6 +25,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Adapter Staging and Deployment Preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md) — reviewed target inventory, deterministic additions/replacements/removals, conflicts, backup requirements, inverse rollback steps, and deployment prohibition.
 - [FoA Adapter Deployment Confirmation and Work Orders](FOA_ADAPTER_DEPLOYMENT_CONFIRMATION_WORK_ORDERS.md) — named confirmation, typed scope and expiry, maintenance windows, preflight evidence, deterministic non-executable steps, and operator checklist.
 - [FoA Adapter Deployment Execution Results](FOA_ADAPTER_DEPLOYMENT_EXECUTION_RESULTS.md) — exact attempted work-order steps, backup/restore outcomes, deployed fingerprints, target verification, rollback results, safe logs, and candidate evidence with no executor.
+- [FoA Post-Deployment Verification Reports](FOA_POST_DEPLOYMENT_VERIFICATION_REPORTS.md) — deterministic candidate-evidence aggregation, target and rollback analysis, explicit compatibility/release blockers, and no independent verifier or publication path.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -52,6 +53,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Adapter Staging and Deployment Preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md) — exact package/target binding, change classification, conflicts, backup and rollback completeness, determinism, and no-deployment enforcement.
 - [FoA Adapter Deployment Confirmation and Work Orders](FOA_ADAPTER_DEPLOYMENT_CONFIRMATION_WORK_ORDERS.md) — exact preview confirmation, scope, time/window, preflight, work-order coverage, checklist, determinism, and no-execution enforcement.
 - [FoA Adapter Deployment Execution Results](FOA_ADAPTER_DEPLOYMENT_EXECUTION_RESULTS.md) — exact work-order/executor binding, typed outcomes, backups, verification, rollback, failures/logs, candidate evidence, and no-executor enforcement.
+- [FoA Post-Deployment Verification Reports](FOA_POST_DEPLOYMENT_VERIFICATION_REPORTS.md) — exact current-work-order/evidence binding, deterministic status precedence, explicit blockers, non-mutation, and no-verifier/no-release enforcement.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -94,6 +96,7 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - deterministic transient staging/deployment previews with accepted target reviews, exact target inventories, additions, replacements, removals, unchanged paths, conflicts, backups, rollback steps, and all mutation/launch permissions disabled;
 - typed transient deployment confirmations and work orders with exact scope, expiry, maintenance windows, preflight evidence, deterministic operator steps/checklists, and all execution/mutation permissions disabled;
 - typed transient deployment execution-result envelopes with exact work-order/executor binding, attempted steps, backup/restore outcomes, target verification, rollback, safe logs, and candidate evidence returned without automatic promotion;
+- deterministic post-deployment reports with exact current-work-order/candidate-evidence binding, target-verification and rollback analysis, explicit compatibility/release blockers, mandatory human review, and no independent verifier or release publication path;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.

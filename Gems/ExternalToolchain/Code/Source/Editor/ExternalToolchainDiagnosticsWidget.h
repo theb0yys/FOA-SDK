@@ -12,6 +12,7 @@
 #include <QWidget>
 
 class QLabel;
+class QPushButton;
 class QTableWidget;
 
 namespace ExternalToolchain
@@ -28,9 +29,15 @@ namespace ExternalToolchain
         void OnExternalToolProviderRegistered(
             const ExternalToolProviderDescriptor&) override;
         void OnExternalToolProviderRegistrationFinalized(AZ::u64) override;
+        void OnExternalToolConfigurationChanged(
+            const AZStd::string&) override;
+        void OnExternalToolDiscoveryRefreshed(AZ::u64) override;
         void Refresh();
+        void RefreshDiscovery();
 
         QLabel* m_statusLabel = nullptr;
+        QPushButton* m_refreshButton = nullptr;
         QTableWidget* m_providerTable = nullptr;
+        QTableWidget* m_configurationTable = nullptr;
     };
 } // namespace ExternalToolchain

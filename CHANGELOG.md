@@ -8,6 +8,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- `ExternalToolchain` API 1.1 discovery/configuration services with typed Settings Registry precedence, session overrides, bounded local file/directory probes, configured SemVer compatibility, deterministic diagnostics, and no process or asset execution.
 - Host-only `ExternalToolchain` Gem with a versioned public provider API, deterministic registration and finalization, a read-only diagnostics pane, contract tests, repository validation, and no process or asset execution.
 - Pure-Core `AdapterPostDeploymentVerifierEvidenceService` and typed independent-verifier contracts for exact canonical-report binding, accepted reviewed-verifier identity and capabilities, one exact final-state check per mutation step, typed observations, failures, safe diagnostics, deterministic status precedence, and candidate evidence return.
 - Transient `AdapterPostDeploymentVerifierResultRegistry` and read-only **Tainted Grail Independent Post-Deployment Verifier Results** pane; no verifier is discovered or invoked, no target file is read or mutated, and no evidence or release is promoted automatically.

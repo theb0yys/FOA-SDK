@@ -15,11 +15,12 @@ namespace TaintedGrailModdingSDK
         const CatalogPromotionRequest& request,
         AZStd::string* error)
     {
-        AZ::Outcome<CatalogRecord, AZStd::string> promotion = m_catalogPromotion.BuildReviewedRecord(
-            request,
-            m_workspace,
-            m_packs,
-            m_sourceRegistry);
+        AZ::Outcome<CatalogRecord, AZStd::string> promotion =
+            m_catalogPromotion.BuildReviewedRecord(
+                request,
+                m_workspace,
+                m_packs,
+                m_sourceRegistry);
         if (!promotion.IsSuccess())
         {
             if (error)
@@ -63,9 +64,23 @@ namespace TaintedGrailModdingSDK
         const CatalogValidationEvent& validation,
         AZStd::string* error)
     {
+        const GameProfile* profile = m_workspace.FindActiveGameProfile();
+        if (!profile || !profile->IsConfigured())
+        {
+            if (error)
+            {
+                *error = "An exact active game profile is required before adding catalog validation history.";
+            }
+            return false;
+        }
         CatalogDatabase candidate = m_catalog;
         AZStd::string catalogError;
-        if (!candidate.AddValidationEvent(validation, &catalogError))
+        if (!candidate.AddValidationEventBound(
+                validation,
+                m_workspace,
+                *profile,
+                m_sourceRegistry,
+                &catalogError))
         {
             if (error)
             {
@@ -111,7 +126,8 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        AZ::Outcome<CatalogDocument, AZStd::string> loadResult = m_catalogPersistence.Load(workspaceRoot);
+        AZ::Outcome<CatalogDocument, AZStd::string> loadResult =
+            m_catalogPersistence.Load(workspaceRoot);
         if (!loadResult.IsSuccess())
         {
             if (error)
@@ -121,22 +137,14 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        CatalogDocument document = loadResult.TakeValue();
-        if (document.m_workspaceId != m_workspace.m_workspaceId
-            || document.m_profileId != profile->m_profileId
-            || document.m_gameVersion != profile->m_gameVersion
-            || document.m_branch != profile->m_branch)
-        {
-            if (error)
-            {
-                *error = "The canonical catalog document is bound to a different workspace or game profile.";
-            }
-            return false;
-        }
-
         CatalogDatabase candidate;
         AZStd::string catalogError;
-        if (!candidate.ReplaceFromDocument(document, &catalogError))
+        if (!candidate.ReplaceFromBoundDocument(
+                loadResult.GetValue(),
+                m_workspace,
+                *profile,
+                m_sourceRegistry,
+                &catalogError))
         {
             if (error)
             {
@@ -191,11 +199,13 @@ namespace TaintedGrailModdingSDK
 
         WorkspaceModel persistenceWorkspace = m_workspace;
         persistenceWorkspace.m_rootPath = workspaceRoot;
-        AZ::Outcome<CatalogCommitResult, AZStd::string> commit = m_catalogTransaction.Commit(
-            candidate,
-            persistenceWorkspace,
-            *profile,
-            save);
+        AZ::Outcome<CatalogCommitResult, AZStd::string> commit =
+            m_catalogTransaction.Commit(
+                candidate,
+                persistenceWorkspace,
+                *profile,
+                m_sourceRegistry,
+                save);
         if (!commit.IsSuccess())
         {
             if (error)

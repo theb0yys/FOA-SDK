@@ -80,7 +80,8 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 AdapterDeploymentChecklistState::Blocked,
                 "Resolve contract blockers",
-                "Operator review cannot begin until every fail-closed confirmation, time, evidence, and work-order blocker is resolved.",
+                "Operator review cannot begin until every fail-closed confirmation, "
+                "time, evidence, and work-order blocker is resolved.",
                 AZStd::move(blockerCodes));
         }
     } // namespace
@@ -150,7 +151,8 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 "deployment_work_order.preview_not_ready",
                 workOrder.m_previewId,
-                "An exact ready staging/deployment preview with all mutation and launch permissions false is required.");
+                "An exact ready staging/deployment preview with all mutation and launch "
+                "permissions false is required.");
         }
 
         const AdapterDeploymentConfirmation& confirmation =
@@ -200,7 +202,8 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 "deployment_work_order.scope_mismatch",
                 confirmation.m_confirmationId,
-                "The typed confirmation scope does not cover every addition, replacement, and removal in the exact preview.");
+                "The typed confirmation scope does not cover every addition, replacement, "
+                "and removal in the exact preview.");
         }
         if (!IsUtcTimestamp(confirmation.m_issuedAtUtc)
             || !IsUtcTimestamp(confirmation.m_expiresAtUtc)
@@ -214,7 +217,8 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 "deployment_work_order.confirmation_expired",
                 confirmation.m_confirmationId,
-                "Confirmation times and evaluation time must use exact UTC seconds and the evaluation must occur before expiry.");
+                "Confirmation times and evaluation time must use exact UTC seconds and "
+                "the evaluation must occur before expiry.");
         }
 
         const AdapterDeploymentMaintenanceWindow& window =
@@ -234,7 +238,8 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 "deployment_work_order.maintenance_window_invalid",
                 window.m_windowId,
-                "The maintenance window must be evidence-backed, preview-bound, non-empty, and expressed as a valid increasing UTC interval.");
+                "The maintenance window must be evidence-backed, preview-bound, non-empty, "
+                "and expressed as a valid increasing UTC interval.");
         }
         else if (!IsUtcTimestamp(request.m_evaluatedAtUtc)
             || request.m_evaluatedAtUtc < window.m_startAtUtc
@@ -302,7 +307,8 @@ namespace TaintedGrailModdingSDK
                     workOrder,
                     "deployment_work_order.preflight_failed",
                     preflight.m_preflightId,
-                    "Preflight evidence must be passed, exact-preview-bound, evidence-backed, and checked between confirmation issue and evaluation.");
+                    "Preflight evidence must be passed, exact-preview-bound, evidence-backed, "
+                    "and checked between confirmation issue and evaluation.");
             }
         }
 
@@ -325,7 +331,8 @@ namespace TaintedGrailModdingSDK
                     workOrder,
                     "deployment_work_order.incomplete",
                     workOrder.m_previewId,
-                    "Every preview addition, replacement, removal, backup, and rollback inverse must have exact work-order coverage.");
+                    "Every preview addition, replacement, removal, backup, and rollback "
+                    "inverse must have exact work-order coverage.");
             }
         }
 

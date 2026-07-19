@@ -10,6 +10,8 @@
 #include <AzCore/base.h>
 #include <AzCore/std/containers/vector.h>
 
+#include <cstddef>
+
 namespace TaintedGrailModdingSDK
 {
     namespace

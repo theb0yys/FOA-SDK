@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
+#include "AdapterReleaseArtifactPaneSystemComponent.h"
 #include "TaintedGrailModdingSDKSystemComponent.h"
 
 #include <AzCore/Memory/SystemAllocator.h>
@@ -28,6 +29,7 @@ namespace TaintedGrailModdingSDK
                 m_descriptors.end(),
                 {
                     TaintedGrailModdingSDKSystemComponent::CreateDescriptor(),
+                    AdapterReleaseArtifactPaneSystemComponent::CreateDescriptor(),
                 });
         }
 
@@ -35,6 +37,7 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::ComponentTypeList{
                 azrtti_typeid<TaintedGrailModdingSDKSystemComponent>(),
+                azrtti_typeid<AdapterReleaseArtifactPaneSystemComponent>(),
             };
         }
     };

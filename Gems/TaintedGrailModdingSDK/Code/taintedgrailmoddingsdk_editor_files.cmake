@@ -20,6 +20,10 @@ set(FILES
     Source/AdapterPostDeploymentVerificationWidget.h
     Source/AdapterPostDeploymentVerifierWidget.cpp
     Source/AdapterPostDeploymentVerifierWidget.h
+    Source/AdapterReleaseArtifactPaneSystemComponent.cpp
+    Source/AdapterReleaseArtifactPaneSystemComponent.h
+    Source/AdapterReleaseArtifactWidget.cpp
+    Source/AdapterReleaseArtifactWidget.h
     Source/AdapterRuntimeResultEvidenceWidget.cpp
     Source/AdapterRuntimeResultEvidenceWidget.h
     Source/AdapterStagingDeploymentPreviewWidget.cpp

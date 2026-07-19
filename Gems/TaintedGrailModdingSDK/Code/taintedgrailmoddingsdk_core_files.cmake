@@ -48,6 +48,12 @@ set(FILES
     Source/AdapterPostDeploymentVerifierEvidenceServicePart3.inl
     Source/AdapterPostDeploymentVerifierEvidenceServicePart4.inl
     Source/AdapterPostDeploymentVerifierEvidenceServicePart5.inl
+    Source/AdapterReleaseArtifactContracts.cpp
+    Source/AdapterReleaseArtifactContracts.h
+    Source/AdapterReleaseArtifactProvenanceService.cpp
+    Source/AdapterReleaseArtifactProvenanceService.h
+    Source/AdapterReleaseArtifactProvenanceServicePart1.inl
+    Source/AdapterReleaseArtifactProvenanceServicePart2.inl
     Source/AdapterRuntimeResultContracts.cpp
     Source/AdapterRuntimeResultContracts.h
     Source/AdapterRuntimeResultEvidenceService.cpp

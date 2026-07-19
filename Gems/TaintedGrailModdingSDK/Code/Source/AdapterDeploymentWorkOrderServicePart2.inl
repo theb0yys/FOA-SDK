@@ -244,7 +244,8 @@ namespace TaintedGrailModdingSDK
                     workOrder,
                     AdapterDeploymentChecklistState::OperatorActionRequired,
                     "Confirm backup destination",
-                    "An operator must independently verify backup capacity, isolation, and retention before any future execution.",
+                    "An operator must independently verify backup capacity, isolation, "
+                    "and retention before any future execution.",
                     allEvidence);
             }
             AddChecklistItem(
@@ -257,7 +258,8 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 AdapterDeploymentChecklistState::OperatorActionRequired,
                 "Stop on drift",
-                "Any identity, path, fingerprint, inventory, scope, time, or evidence drift invalidates this work order.",
+                "Any identity, path, fingerprint, inventory, scope, time, or evidence "
+                "drift invalidates this work order.",
                 allEvidence);
             AddChecklistItem(
                 workOrder,
@@ -328,7 +330,8 @@ namespace TaintedGrailModdingSDK
             if (error)
             {
                 *error =
-                    "Deployment work-order registration requires stable confirmation identity and exact preview fingerprint.";
+                    "Deployment work-order registration requires stable confirmation "
+                    "identity and exact preview fingerprint.";
             }
             return false;
         }

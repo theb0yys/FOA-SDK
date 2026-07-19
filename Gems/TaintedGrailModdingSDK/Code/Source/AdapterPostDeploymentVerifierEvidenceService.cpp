@@ -8,6 +8,7 @@
 #include "AdapterPostDeploymentVerifierEvidenceService.h"
 
 #include "AdapterContractRegistry.h"
+#include "ResearchContractValidation.h"
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>

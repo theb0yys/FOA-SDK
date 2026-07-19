@@ -7,6 +7,13 @@
 
 namespace
 {
+        const GameProfile& FixtureProfile(const ReadyFixture& fixture)
+        {
+            const GameProfile* profile = fixture.m_workspace.FindActiveGameProfile();
+            EXPECT_NE(profile, nullptr);
+            return *profile;
+        }
+
         void AddRecordWithProof(
             ReadyFixture& fixture,
             const CatalogRecord& record,
@@ -14,20 +21,26 @@ namespace
         {
             AZStd::string error;
             EXPECT_TRUE(fixture.m_catalog.InsertNew(record, &error)) << error.c_str();
-            EXPECT_TRUE(fixture.m_catalog.AddValidationEvent(
+            EXPECT_TRUE(fixture.m_catalog.AddValidationEventBound(
                 MakeValidation(
                     "validation.record." + record.m_recordId,
                     "record",
                     record.m_recordId,
                     record.m_evidenceIds.front()),
+                fixture.m_workspace,
+                FixtureProfile(fixture),
+                fixture.m_sourceRegistry,
                 &error)) << error.c_str();
             for (const AZStd::string& usage : usages)
             {
-                EXPECT_TRUE(fixture.m_catalog.AddGovernanceEvent(
+                EXPECT_TRUE(fixture.m_catalog.AddGovernanceEventBound(
                     MakePermission(
                         "permission." + record.m_recordId + "." + usage,
                         record,
                         usage),
+                    fixture.m_workspace,
+                    FixtureProfile(fixture),
+                    fixture.m_sourceRegistry,
                     &error)) << error.c_str();
             }
         }
@@ -42,12 +55,15 @@ namespace
                 << error.c_str();
             if (includeValidationProof)
             {
-                EXPECT_TRUE(fixture.m_catalog.AddValidationEvent(
+                EXPECT_TRUE(fixture.m_catalog.AddValidationEventBound(
                     MakeValidation(
                         "validation.relationship." + relationship.m_relationshipId,
                         "relationship",
                         relationship.m_relationshipId,
                         relationship.m_evidenceIds.front()),
+                    fixture.m_workspace,
+                    FixtureProfile(fixture),
+                    fixture.m_sourceRegistry,
                     &error)) << error.c_str();
             }
         }

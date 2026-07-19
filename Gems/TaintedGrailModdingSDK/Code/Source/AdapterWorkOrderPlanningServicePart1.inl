@@ -131,7 +131,8 @@ namespace TaintedGrailModdingSDK
             AZStd::sort(
                 arguments.begin(),
                 arguments.end(),
-                [](const AdapterWorkOrderArgument& left, const AdapterWorkOrderArgument& right)
+                [](const AdapterWorkOrderArgument& left,
+                   const AdapterWorkOrderArgument& right)
                 {
                     if (left.m_key != right.m_key)
                     {
@@ -143,9 +144,11 @@ namespace TaintedGrailModdingSDK
                 AZStd::unique(
                     arguments.begin(),
                     arguments.end(),
-                    [](const AdapterWorkOrderArgument& left, const AdapterWorkOrderArgument& right)
+                    [](const AdapterWorkOrderArgument& left,
+                       const AdapterWorkOrderArgument& right)
                     {
-                        return left.m_key == right.m_key && left.m_value == right.m_value;
+                        return left.m_key == right.m_key
+                            && left.m_value == right.m_value;
                     }),
                 arguments.end());
         }
@@ -164,10 +167,11 @@ namespace TaintedGrailModdingSDK
             return nullptr;
         }
 
-
         AZ::u64 CapabilityRank(const AZStd::string& capability)
         {
-            for (AZ::u64 index = 0; index < sizeof(AllCapabilities) / sizeof(AllCapabilities[0]); ++index)
+            for (AZ::u64 index = 0;
+                 index < sizeof(AllCapabilities) / sizeof(AllCapabilities[0]);
+                 ++index)
             {
                 if (ToString(AllCapabilities[index]) == capability)
                 {
@@ -205,15 +209,31 @@ namespace TaintedGrailModdingSDK
             {
                 return false;
             }
+            AZStd::vector<AZStd::string> uniqueIds = evidenceIds;
+            SortUnique(uniqueIds);
+            if (uniqueIds.size() != evidenceIds.size())
+            {
+                return false;
+            }
             for (const AZStd::string& evidenceId : evidenceIds)
             {
-                const EvidenceRecord* evidence = sourceRegistry.FindEvidence(evidenceId);
-                if (!evidence || !Contains(allowedSubjectRefs, evidence->m_subjectRef))
+                const EvidenceRecord* evidence =
+                    sourceRegistry.FindEvidence(evidenceId);
+                if (!evidence
+                    || !Contains(allowedSubjectRefs, evidence->m_subjectRef)
+                    || evidence->m_claim.empty()
+                    || evidence->m_evidenceKind.empty()
+                    || evidence->m_locator.empty()
+                    || evidence->m_recordPath.empty()
+                    || !IsStrictUtcTimestamp(evidence->m_extractedAt)
+                    || !IsSha256Fingerprint(evidence->m_sourceFingerprint))
                 {
                     return false;
                 }
-                const SourceRecord* source = sourceRegistry.FindSource(evidence->m_sourceId);
+                const SourceRecord* source =
+                    sourceRegistry.FindSource(evidence->m_sourceId);
                 if (!source
+                    || !IsUsableImportStatus(source->m_importStatus)
                     || evidence->m_sourceFingerprint != source->m_fingerprint
                     || evidence->m_profileId != source->m_profileId
                     || evidence->m_gameVersion != source->m_gameVersion
@@ -228,4 +248,3 @@ namespace TaintedGrailModdingSDK
             }
             return true;
         }
-

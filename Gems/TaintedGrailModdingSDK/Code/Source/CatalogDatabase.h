@@ -14,6 +14,8 @@
 
 namespace TaintedGrailModdingSDK
 {
+    class CatalogGovernanceService;
+
     class CatalogDatabase
     {
     public:
@@ -110,6 +112,8 @@ namespace TaintedGrailModdingSDK
         const AZStd::vector<EconomyRecipeOutput>& GetRecipeOutputs() const;
 
     private:
+        friend class CatalogGovernanceService;
+
         CatalogRecord* FindMutableRecordById(const AZStd::string& recordId);
         CatalogRelationship* FindMutableRelationshipById(
             const AZStd::string& relationshipId);

@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented as Correction Slice 13, the third bounded Phase 8 preview. It compares one exact ready package layout with one accepted declared target inventory and derives a deterministic deployment and rollback description.
+Implemented as Correction Slice 13, the third bounded Phase 8 preview. It compares one exact **ready package layout** with one accepted **declared target inventory** and derives a deterministic deployment and rollback description.
 
 `StagingMutationAllowed`, `DeploymentMutationAllowed`, `RollbackExecutionAllowed`, and `LaunchAllowed` are always `false`.
 
@@ -112,7 +112,7 @@ Conflict rows preserve every involved target entry ID. The service does not choo
 
 ## Backup requirements
 
-Every replacement and removal requires a deterministic backup description containing:
+Every replacement and removal requires deterministic **backup requirements** containing:
 
 - backup ID;
 - target entry ID and target path;
@@ -131,7 +131,7 @@ Every addition, replacement, and removal requires exactly one inverse step:
 - `restore_replaced` — restore exact pre-replacement bytes from the declared backup;
 - `restore_removed` — restore exact removed bytes from the declared backup.
 
-Rollback steps use deterministic one-based sequence numbers and preserve target paths, backup paths, expected deployed fingerprints, restore fingerprints, and reasons.
+Typed **rollback steps** use deterministic one-based sequence numbers and preserve target paths, backup paths, expected deployed fingerprints, restore fingerprints, and reasons.
 
 The rollback order is the inverse of the described deployment categories: additions are removed first, then replacements are restored, then removals are restored. Missing inverse steps produce `rollback_incomplete`.
 
@@ -182,32 +182,24 @@ The pane is non-editable. The normal Developer Preview state contains zero regis
 
 ## No copying, deletion, deployment, launch, or execution
 
-Slice 13 adds no filesystem scan, hashing, copy, move, replace, delete, backup, restore, archive, staging mutation, deployment-directory mutation, FoA launch, BepInEx/Harmony loading, telemetry, save mutation, or adapter execution.
+Slice 13 adds **No copying, deletion, deployment, launch, or execution** path. It adds no filesystem scan, hashing, copy, move, replace, delete, backup, restore, archive, staging mutation, deployment-directory mutation, FoA launch, BepInEx/Harmony loading, telemetry, save mutation, or adapter execution.
 
 The transient registry accepts explicit metadata requests only. The pane contains no registration, import, save, export, copy, delete, backup, rollback, deploy, launch, or execute control.
 
 ## Tests and enforcement
 
-Production-linked tests cover:
-
-- strict review, status, change, and rollback vocabularies;
-- duplicate request rejection;
-- ready add/replace/remove/unchanged derivation;
-- status precedence;
-- exact review and inventory binding;
-- foreign ownership and duplicate-target conflicts;
-- backup and rollback incompleteness;
-- target and backup path containment;
-- exact inverse rollback sequencing;
-- canonical determinism;
-- complete input non-mutation.
+Production-linked tests cover strict review, status, change, and rollback vocabularies; duplicate request rejection; ready add/replace/remove/unchanged derivation; status precedence; exact review and inventory binding; foreign ownership and duplicate-target conflicts; backup and rollback incompleteness; target and backup path containment; exact inverse rollback sequencing; canonical determinism; and complete input non-mutation.
 
 The focused validator rejects filesystem or process mutation, missing backup/rollback gates, mutable Editor controls, incomplete tests, and missing CI, roadmap, release, architecture, user, or fourteen-pane Windows acceptance contracts.
 
-## Next ordered slice
+## Slice 14 handoff
 
-Correction Slice 14 is a typed explicit-confirmation and deployment work-order contract. It should bind one exact ready staging/deployment preview to a named reviewer, expiry, confirmation scope, maintenance window, preflight evidence, and operator-facing action checklist while keeping every execution flag false and adding no copy, delete, backup, restore, deploy, launch, or adapter call.
+**Slice 14** adds **explicit confirmation** and a deterministic **deployment work-order** contract on top of this exact ready preview. It binds a named reviewer, typed scope, issue and expiry times, a reviewed UTC maintenance window, preflight evidence, exact non-executable work-order coverage, and an operator-facing checklist.
+
+Slice 14 has **no execution authority**. It leaves every copy, delete, backup, restore, deployment, rollback-execution, launch, and adapter-call flag false. Any preview, fingerprint, scope, time, evidence, or work-order drift fails closed.
+
+The following separately reviewed step is a typed deployment execution-result and verification envelope for metadata supplied by a future executor; it does not add the executor itself.
 
 ## Rollback
 
-Revert the implementing pull request. Target inventories, reviews, previews, backups, and rollback descriptions are transient metadata, so no workspace, pack, catalog, source/evidence, adapter, work-order, runtime-result, build-manifest, staging, package, deployment, or rollback schema requires migration.
+Revert the implementing pull request. Target inventories, reviews, previews, backups, rollback descriptions, confirmations, preflight records, work orders, and checklists are transient metadata, so no workspace, pack, catalog, source/evidence, adapter, work-order, runtime-result, build-manifest, staging, package, deployment, rollback, or confirmation schema requires migration.

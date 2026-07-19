@@ -24,6 +24,8 @@ set(FILES
     Source/AdapterRuntimeResultEvidenceWidget.h
     Source/AdapterStagingDeploymentPreviewWidget.cpp
     Source/AdapterStagingDeploymentPreviewWidget.h
+    Source/AdapterVerifierEvidenceReconciliationWidget.cpp
+    Source/AdapterVerifierEvidenceReconciliationWidget.h
     Source/AdapterWorkOrderPlanWidget.cpp
     Source/AdapterWorkOrderPlanWidget.h
     Source/CatalogBrowserWidget.cpp

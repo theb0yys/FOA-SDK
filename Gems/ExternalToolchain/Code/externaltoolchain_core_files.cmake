@@ -1,4 +1,8 @@
 set(FILES
+    Source/ExternalToolchainConfigurationService.cpp
+    Source/ExternalToolchainConfigurationService.h
+    Source/ExternalToolchainDiscoveryService.cpp
+    Source/ExternalToolchainDiscoveryService.h
     Source/ExternalToolchainRegistry.cpp
     Source/ExternalToolchainRegistry.h
     Source/ExternalToolchainTypes.cpp

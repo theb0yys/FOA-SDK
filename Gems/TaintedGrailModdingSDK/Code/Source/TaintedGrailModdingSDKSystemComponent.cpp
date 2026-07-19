@@ -23,6 +23,8 @@
 #include "AdapterRuntimeResultEvidenceWidget.h"
 #include "AdapterStagingDeploymentPreviewService.h"
 #include "AdapterStagingDeploymentPreviewWidget.h"
+#include "AdapterVerifierEvidenceReconciliationContracts.h"
+#include "AdapterVerifierEvidenceReconciliationWidget.h"
 #include "AdapterWorkOrderPlanWidget.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
@@ -74,6 +76,8 @@ namespace TaintedGrailModdingSDK
             "Tainted Grail Post-Deployment Verification and Release Blockers";
         constexpr const char* AdapterPostDeploymentVerifierViewPaneName =
             "Tainted Grail Independent Post-Deployment Verifier Results";
+        constexpr const char* AdapterVerifierReconciliationViewPaneName =
+            "Tainted Grail Verifier Evidence Reconciliation and Release Decision";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -103,7 +107,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<TaintedGrailModdingSDKSystemComponent, AZ::Component>()
-                ->Version(16);
+                ->Version(17);
         }
     }
 
@@ -151,9 +155,11 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(AdapterDeploymentExecutionEvidenceViewPaneName);
             AzToolsFramework::UnregisterViewPane(AdapterPostDeploymentVerificationViewPaneName);
             AzToolsFramework::UnregisterViewPane(AdapterPostDeploymentVerifierViewPaneName);
+            AzToolsFramework::UnregisterViewPane(AdapterVerifierReconciliationViewPaneName);
             m_viewRegistered = false;
         }
 
+        AdapterVerifierEvidenceReconciliationRegistry::Get().Clear();
         AdapterPostDeploymentVerifierResultRegistry::Get().Clear();
         AdapterDeploymentExecutionResultRegistry::Get().Clear();
         AdapterDeploymentWorkOrderRegistry::Get().Clear();
@@ -380,6 +386,20 @@ namespace TaintedGrailModdingSDK
             AdapterPostDeploymentVerifierViewPaneName,
             "Tainted Grail SDK",
             postDeploymentVerifierOptions);
+
+        AzToolsFramework::ViewPaneOptions verifierReconciliationOptions;
+        verifierReconciliationOptions.paneRect = QRect(460, 460, 1540, 1120);
+        verifierReconciliationOptions.preferedDockingArea =
+            Qt::BottomDockWidgetArea;
+        verifierReconciliationOptions.isDeletable = true;
+        verifierReconciliationOptions.isPreview = true;
+        verifierReconciliationOptions.saveKeyName =
+            QStringLiteral("TaintedGrailModdingSDK.VerifierReconciliation");
+        AzToolsFramework::RegisterViewPane<
+            AdapterVerifierEvidenceReconciliationWidget>(
+            AdapterVerifierReconciliationViewPaneName,
+            "Tainted Grail SDK",
+            verifierReconciliationOptions);
 
         m_viewRegistered = true;
     }

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "ExternalToolchainConfigurationService.h"
+#include "ExternalToolchainDiscoveryService.h"
 #include "ExternalToolchainRegistry.h"
 
 #include <ExternalToolchain/ExternalToolchainBus.h>
@@ -29,6 +31,8 @@ namespace ExternalToolchain
             ExternalToolchainEditorSystemComponent,
             ExternalToolchainEditorSystemComponentTypeId);
 
+        ExternalToolchainEditorSystemComponent();
+
         static void Reflect(AZ::ReflectContext* context);
         static void GetProvidedServices(
             AZ::ComponentDescriptor::DependencyArrayType& provided);
@@ -47,11 +51,39 @@ namespace ExternalToolchain
             const AZStd::string& providerId,
             ExternalToolProviderDescriptor& descriptor) const override;
 
+        ProviderOperationResult SetSessionConfigurationOverride(
+            const AZStd::string& providerId,
+            const AZStd::string& key,
+            const AZStd::string& value) override;
+        ProviderOperationResult ClearSessionConfigurationOverride(
+            const AZStd::string& providerId,
+            const AZStd::string& key) override;
+        ProviderOperationResult SetSessionProviderEnabled(
+            const AZStd::string& providerId,
+            bool enabled) override;
+        ProviderOperationResult ClearSessionProviderEnabled(
+            const AZStd::string& providerId) override;
+        AZStd::vector<ExternalToolResolvedConfigurationValue>
+            EnumerateResolvedConfiguration(
+                const AZStd::string& providerId) const override;
+
+        ProviderOperationResult RefreshProviderDiscovery() override;
+        AZStd::vector<ExternalToolDiscoveryResult>
+            EnumerateDiscoveryResults() const override;
+        bool GetDiscoveryResult(
+            const AZStd::string& providerId,
+            ExternalToolDiscoveryResult& result) const override;
+
     private:
         void NotifyRegisterViews() override;
         void OnPostActionManagerRegistrationHook() override;
+        void NotifyConfigurationChanged(const AZStd::string& providerId);
 
         ExternalToolchainRegistry m_registry;
+        SettingsRegistryExternalToolchainSettingsSource m_settingsSource;
+        ExternalToolchainConfigurationService m_configurationService;
+        SystemFileExternalToolPathProbe m_pathProbe;
+        ExternalToolchainDiscoveryService m_discoveryService;
         bool m_viewRegistered = false;
     };
 } // namespace ExternalToolchain

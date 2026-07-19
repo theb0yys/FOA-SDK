@@ -60,6 +60,14 @@ set(FILES
     Source/AdapterStagingDeploymentPreviewServicePart1.inl
     Source/AdapterStagingDeploymentPreviewServicePart2.inl
     Source/AdapterStagingDeploymentPreviewServicePart3.inl
+    Source/AdapterVerifierEvidenceReconciliationContracts.cpp
+    Source/AdapterVerifierEvidenceReconciliationContracts.h
+    Source/AdapterVerifierEvidenceReconciliationService.cpp
+    Source/AdapterVerifierEvidenceReconciliationService.h
+    Source/AdapterVerifierEvidenceReconciliationServicePart1.inl
+    Source/AdapterVerifierEvidenceReconciliationServicePart2.inl
+    Source/AdapterVerifierEvidenceReconciliationServicePart3.inl
+    Source/AdapterVerifierEvidenceReconciliationServicePart4.inl
     Source/AdapterWorkOrderPlanningService.cpp
     Source/AdapterWorkOrderPlanningServicePart1.inl
     Source/AdapterWorkOrderPlanningServicePart2.inl

@@ -114,7 +114,7 @@ Identity kinds are:
 - `platform`;
 - `other`.
 
-The TG SDK does not load a key, contact a signing service, create a signature, or validate a certificate.
+The TG SDK does not load a key, contact a signing service, create a signature, or validate a certificate. No signature was produced.
 
 ## Publication targets
 
@@ -136,7 +136,7 @@ Target kinds are:
 - `internal_archive`;
 - `other`.
 
-A target declaration does not authenticate, upload, publish, create a release, or contact an external service.
+A target declaration does not authenticate, upload, publish, create a release, or contact an external service. No upload or publication occurred.
 
 ## Deterministic status precedence
 

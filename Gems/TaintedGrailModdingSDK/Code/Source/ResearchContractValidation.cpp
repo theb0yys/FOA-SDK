@@ -238,26 +238,36 @@ namespace TaintedGrailModdingSDK
 
     bool IsStrictUtcTimestamp(const AZStd::string& value)
     {
-        if (value.size() != 20
+        const bool hasMilliseconds = value.size() == 24
+            && value[19] == '.'
+            && value[23] == 'Z';
+        const bool secondsOnly = value.size() == 20 && value[19] == 'Z';
+        if ((!hasMilliseconds && !secondsOnly)
             || value[4] != '-'
             || value[7] != '-'
             || value[10] != 'T'
             || value[13] != ':'
-            || value[16] != ':'
-            || value[19] != 'Z')
+            || value[16] != ':')
         {
             return false;
         }
-        constexpr size_t DigitPositions[] = {
+        constexpr size_t RequiredDigitPositions[] = {
             0, 1, 2, 3, 5, 6, 8, 9,
             11, 12, 14, 15, 17, 18,
         };
-        for (size_t position : DigitPositions)
+        for (size_t position : RequiredDigitPositions)
         {
             if (!IsAsciiDigit(value[position]))
             {
                 return false;
             }
+        }
+        if (hasMilliseconds
+            && (!IsAsciiDigit(value[20])
+                || !IsAsciiDigit(value[21])
+                || !IsAsciiDigit(value[22])))
+        {
+            return false;
         }
         const int year = ParseFourDigits(value, 0);
         const int month = ParseTwoDigits(value, 5);

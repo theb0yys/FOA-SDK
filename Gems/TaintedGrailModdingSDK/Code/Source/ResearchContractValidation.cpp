@@ -280,7 +280,9 @@ namespace TaintedGrailModdingSDK
 
     bool IsUsableImportStatus(const AZStd::string& value)
     {
-        return value == "ok" || value == "warning";
+        return value == "imported"
+            || value == "ok"
+            || value == "warning";
     }
 
     bool IsFiniteNonNegative(double value)

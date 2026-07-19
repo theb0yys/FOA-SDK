@@ -24,8 +24,8 @@ Record:
 - supported operating systems, compilers, configuration, and dependency locks;
 - TG SDK schema versions;
 - supported FoA profile, Core, and adapter versions;
-- exact build manifest, package preview, staging/deployment preview, deployment work order, **generated package contents**, and test/validation results;
-- exact target-inventory review, additions, replacements, removals, conflicts, backups, rollback steps, confirmation, maintenance window, preflight evidence, operator checklist, licence, notices, and redistribution decisions.
+- exact build manifest, package preview, staging/deployment preview, deployment work order, deployment execution-result envelope, **generated package contents**, and test/validation results;
+- exact target-inventory review, additions, replacements, removals, conflicts, backups, rollback steps, confirmation, maintenance window, preflight evidence, operator checklist, backup, restore, target-verification, rollback, and log evidence, licence, notices, and redistribution decisions.
 
 ## Release readiness checklist
 
@@ -119,6 +119,22 @@ Before any future deployment executor may consume a work order:
 
 `review_ready` is not approval to execute. A future executor requires a separate design, implementation, review, validation, and evidence-return boundary; **execution remains separately prohibited**.
 
+### Deployment execution-result evidence gate
+
+Before any post-deployment compatibility or release claim can use executor-supplied results:
+
+- one deployment execution-result envelope binds to the exact current `review_ready` work-order ID, canonical JSON, fingerprint, preview, pack, and target inventory;
+- the separately supplied executor has an accepted evidence-backed review with stable identity, strict version, fingerprint, reviewer, and UTC review time;
+- every canonical work-order step has exactly one typed attempted result with exact sequence, kind, paths, and previous/desired fingerprints;
+- every backup step has one exact backup result, and successful backup fingerprints equal the exact pre-change fingerprints;
+- every addition, replacement, and removal has one exact target verification and one typed rollback result;
+- matched and mismatched target verification remain distinct, and successful rollback reports the exact inverse final presence and fingerprint;
+- failures and safe fingerprinted log references bind to the same exact steps or rollback results;
+- the envelope is structurally `accepted`; operational failures, skipped steps, mismatched targets, failed rollback, or unresolved diagnostics remain explicit release blockers rather than being hidden by contract acceptance;
+- returned candidate evidence remains unpromoted until a separate reviewed source/evidence import, validation, permission, compatibility, and release decision is completed.
+
+A structurally accepted deployment execution-result envelope is not proof of successful or safe deployment. The current contract does not invoke an executor, independently verify files, promote evidence, launch FoA, or publish a release.
+
 ## Controlled pipeline
 
 The eventual pipeline is:
@@ -127,13 +143,13 @@ The eventual pipeline is:
 validate → configure → build → test → package → inspect → checksum → publish
 ```
 
-Until each mutation step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview or work order.
+Until each mutation and verification step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview, work order, or result envelope.
 
 ## Package and deployment boundaries
 
 Release packages may contain only project-owned or legally redistributable output. Do not package game binaries/assets, extracted proprietary data, private workspace content, personal logs/paths, source trees or work-order plans not intended for distribution, or third-party binaries without redistribution rights.
 
-The current build-manifest, package-preview, staging/deployment-preview, and deployment-work-order contracts do not copy, replace, delete, back up, restore, create archives, deploy content, record acknowledgement, launch FoA, or publish releases.
+The current build-manifest, package-preview, staging/deployment-preview, deployment-work-order, and deployment execution-result contracts do not copy, replace, delete, back up, restore, create archives, deploy content, record acknowledgement, invoke an executor, promote candidate evidence, launch FoA, or publish releases.
 
 ## Artefacts
 

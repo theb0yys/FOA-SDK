@@ -15,10 +15,10 @@ namespace ExternalToolchain
     {
         bool m_exists = false;
         bool m_isDirectory = false;
+        AZStd::string m_message;
         bool m_timedOut = false;
         bool m_boundarySafe = false;
         AZStd::string m_resolvedPath;
-        AZStd::string m_message;
     };
 
     class ExternalToolPathProbe
@@ -33,7 +33,16 @@ namespace ExternalToolchain
             AZ::u32 timeoutMilliseconds) const
         {
             (void)timeoutMilliseconds;
-            return Inspect(path);
+            ExternalToolPathObservation observation = Inspect(path);
+            if (!observation.m_timedOut)
+            {
+                observation.m_boundarySafe = true;
+                if (observation.m_resolvedPath.empty())
+                {
+                    observation.m_resolvedPath = path;
+                }
+            }
+            return observation;
         }
     };
 

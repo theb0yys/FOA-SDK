@@ -2,11 +2,19 @@
     "O3DE": {
         "ExternalToolchain": {
             "Host": {
-                "ApiVersion": "1.0.0",
+                "ApiVersion": "1.1.0",
                 "RegistrationFinalization": "OnPostActionManagerRegistrationHook",
                 "AllowShellCommands": false,
                 "ProcessExecutionEnabled": false,
-                "AssetHandoffEnabled": false
+                "AssetHandoffEnabled": false,
+                "Discovery": {
+                    "Enabled": true,
+                    "MaximumProviders": 64,
+                    "MaximumProbesPerProvider": 16,
+                    "ProviderBudgetMilliseconds": 250,
+                    "LocalPathsOnly": true,
+                    "ProbeExecutionEnabled": false
+                }
             }
         }
     }

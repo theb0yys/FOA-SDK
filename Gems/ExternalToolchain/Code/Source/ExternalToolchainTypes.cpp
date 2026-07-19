@@ -7,6 +7,7 @@
 
 #include <ExternalToolchain/ExternalToolchainTypes.h>
 
+#include <AzCore/std/algorithm.h>
 #include <AzCore/std/limits.h>
 #include <AzCore/std/string/string_view.h>
 
@@ -14,6 +15,14 @@ namespace ExternalToolchain
 {
     namespace
     {
+        struct SemanticVersionParts
+        {
+            AZ::u32 m_major = 0;
+            AZ::u32 m_minor = 0;
+            AZ::u32 m_patch = 0;
+            AZStd::vector<AZStd::string> m_prerelease;
+        };
+
         bool IsIdentifierCharacter(char value)
         {
             return (value >= '0' && value <= '9')
@@ -22,49 +31,18 @@ namespace ExternalToolchain
                 || value == '-';
         }
 
-        bool IsValidIdentifierList(
-            AZStd::string_view value,
-            bool enforceNumericLeadingZero)
+        bool IsNumericIdentifier(AZStd::string_view value)
         {
             if (value.empty())
             {
                 return false;
             }
-
-            size_t start = 0;
-            while (start < value.size())
+            for (char character : value)
             {
-                const size_t end = value.find('.', start);
-                const size_t length = end == AZStd::string_view::npos
-                    ? value.size() - start
-                    : end - start;
-                if (length == 0)
+                if (character < '0' || character > '9')
                 {
                     return false;
                 }
-
-                bool numeric = true;
-                for (size_t index = start; index < start + length; ++index)
-                {
-                    if (!IsIdentifierCharacter(value[index]))
-                    {
-                        return false;
-                    }
-                    numeric = numeric && value[index] >= '0' && value[index] <= '9';
-                }
-                if (enforceNumericLeadingZero
-                    && numeric
-                    && length > 1
-                    && value[start] == '0')
-                {
-                    return false;
-                }
-
-                if (end == AZStd::string_view::npos)
-                {
-                    break;
-                }
-                start = end + 1;
             }
             return true;
         }
@@ -91,6 +69,145 @@ namespace ExternalToolchain
                 result = result * 10 + digit;
             }
             return true;
+        }
+
+        bool ParseIdentifierList(
+            AZStd::string_view value,
+            bool enforceNumericLeadingZero,
+            AZStd::vector<AZStd::string>* output)
+        {
+            if (value.empty())
+            {
+                return false;
+            }
+
+            size_t start = 0;
+            while (start < value.size())
+            {
+                const size_t end = value.find('.', start);
+                const size_t length = end == AZStd::string_view::npos
+                    ? value.size() - start
+                    : end - start;
+                if (length == 0)
+                {
+                    return false;
+                }
+
+                const AZStd::string_view identifier = value.substr(start, length);
+                for (char character : identifier)
+                {
+                    if (!IsIdentifierCharacter(character))
+                    {
+                        return false;
+                    }
+                }
+
+                const bool numeric = IsNumericIdentifier(identifier);
+                if (enforceNumericLeadingZero
+                    && numeric
+                    && identifier.size() > 1
+                    && identifier.front() == '0')
+                {
+                    return false;
+                }
+
+                if (output)
+                {
+                    output->emplace_back(identifier.data(), identifier.size());
+                }
+
+                if (end == AZStd::string_view::npos)
+                {
+                    break;
+                }
+                start = end + 1;
+            }
+            return true;
+        }
+
+        bool ParseSemanticVersion(
+            const AZStd::string& value,
+            SemanticVersionParts& result)
+        {
+            if (value.empty())
+            {
+                return false;
+            }
+
+            const AZStd::string_view version(value);
+            const size_t buildPosition = version.find('+');
+            const AZStd::string_view withoutBuild = version.substr(0, buildPosition);
+            if (buildPosition != AZStd::string_view::npos)
+            {
+                const AZStd::string_view build = version.substr(buildPosition + 1);
+                if (!ParseIdentifierList(build, false, nullptr))
+                {
+                    return false;
+                }
+            }
+
+            const size_t prereleasePosition = withoutBuild.find('-');
+            const AZStd::string_view core = withoutBuild.substr(0, prereleasePosition);
+            result.m_prerelease.clear();
+            if (prereleasePosition != AZStd::string_view::npos)
+            {
+                const AZStd::string_view prerelease =
+                    withoutBuild.substr(prereleasePosition + 1);
+                if (!ParseIdentifierList(prerelease, true, &result.m_prerelease))
+                {
+                    return false;
+                }
+            }
+
+            const size_t firstDot = core.find('.');
+            const size_t secondDot = firstDot == AZStd::string_view::npos
+                ? AZStd::string_view::npos
+                : core.find('.', firstDot + 1);
+            if (firstDot == AZStd::string_view::npos
+                || secondDot == AZStd::string_view::npos
+                || core.find('.', secondDot + 1) != AZStd::string_view::npos)
+            {
+                return false;
+            }
+
+            return ParseNumber(core.substr(0, firstDot), result.m_major)
+                && ParseNumber(
+                    core.substr(firstDot + 1, secondDot - firstDot - 1),
+                    result.m_minor)
+                && ParseNumber(core.substr(secondDot + 1), result.m_patch);
+        }
+
+        int CompareUnsigned(AZ::u32 left, AZ::u32 right)
+        {
+            return left < right ? -1 : (left > right ? 1 : 0);
+        }
+
+        int CompareNumericIdentifier(
+            const AZStd::string& left,
+            const AZStd::string& right)
+        {
+            if (left.size() != right.size())
+            {
+                return left.size() < right.size() ? -1 : 1;
+            }
+            return left < right ? -1 : (left > right ? 1 : 0);
+        }
+
+        int ComparePrereleaseIdentifier(
+            const AZStd::string& left,
+            const AZStd::string& right)
+        {
+            const bool leftNumeric = IsNumericIdentifier(left);
+            const bool rightNumeric = IsNumericIdentifier(right);
+            if (leftNumeric && rightNumeric)
+            {
+                return CompareNumericIdentifier(left, right);
+            }
+            if (leftNumeric != rightNumeric)
+            {
+                return leftNumeric ? -1 : 1;
+            }
+            return left < right ? -1 : (left > right ? 1 : 0);
         }
     } // namespace
 
@@ -124,6 +241,74 @@ namespace ExternalToolchain
         return "unknown";
     }
 
+    AZStd::string ToString(ConfigurationValueKind kind)
+    {
+        switch (kind)
+        {
+        case ConfigurationValueKind::String:
+            return "string";
+        case ConfigurationValueKind::Path:
+            return "path";
+        case ConfigurationValueKind::SemanticVersion:
+            return "semantic_version";
+        }
+        return "unknown";
+    }
+
+    AZStd::string ToString(ConfigurationLayer layer)
+    {
+        switch (layer)
+        {
+        case ConfigurationLayer::ProviderDefault:
+            return "provider_default";
+        case ConfigurationLayer::Project:
+            return "project";
+        case ConfigurationLayer::User:
+            return "user";
+        case ConfigurationLayer::Session:
+            return "session";
+        }
+        return "unknown";
+    }
+
+    AZStd::string ToString(DiscoveryProbeKind kind)
+    {
+        switch (kind)
+        {
+        case DiscoveryProbeKind::File:
+            return "file";
+        case DiscoveryProbeKind::Directory:
+            return "directory";
+        }
+        return "unknown";
+    }
+
+    AZStd::string ToString(DiscoveryStatus status)
+    {
+        switch (status)
+        {
+        case DiscoveryStatus::NotRun:
+            return "not_run";
+        case DiscoveryStatus::Disabled:
+            return "disabled";
+        case DiscoveryStatus::UnsupportedPlatform:
+            return "unsupported_platform";
+        case DiscoveryStatus::NotInstalled:
+            return "not_installed";
+        case DiscoveryStatus::Installed:
+            return "installed";
+        case DiscoveryStatus::UnsupportedVersion:
+            return "unsupported_version";
+        case DiscoveryStatus::Misconfigured:
+            return "misconfigured";
+        case DiscoveryStatus::ProbeFailed:
+            return "probe_failed";
+        case DiscoveryStatus::Ambiguous:
+            return "ambiguous";
+        }
+        return "unknown";
+    }
+
     AZStd::string ToString(const ExternalToolchainApiVersion& version)
     {
         return AZStd::string::format(
@@ -148,50 +333,64 @@ namespace ExternalToolchain
 
     bool IsValidSemanticVersion(const AZStd::string& value)
     {
-        if (value.empty())
+        SemanticVersionParts parsed;
+        return ParseSemanticVersion(value, parsed);
+    }
+
+    bool TryCompareSemanticVersions(
+        const AZStd::string& left,
+        const AZStd::string& right,
+        int& comparison)
+    {
+        SemanticVersionParts leftParts;
+        SemanticVersionParts rightParts;
+        if (!ParseSemanticVersion(left, leftParts)
+            || !ParseSemanticVersion(right, rightParts))
         {
             return false;
         }
 
-        const AZStd::string_view version(value);
-        const size_t buildPosition = version.find('+');
-        const AZStd::string_view withoutBuild = version.substr(0, buildPosition);
-        if (buildPosition != AZStd::string_view::npos)
+        comparison = CompareUnsigned(leftParts.m_major, rightParts.m_major);
+        if (comparison == 0)
         {
-            const AZStd::string_view build = version.substr(buildPosition + 1);
-            if (!IsValidIdentifierList(build, false))
+            comparison = CompareUnsigned(leftParts.m_minor, rightParts.m_minor);
+        }
+        if (comparison == 0)
+        {
+            comparison = CompareUnsigned(leftParts.m_patch, rightParts.m_patch);
+        }
+        if (comparison != 0)
+        {
+            return true;
+        }
+
+        if (leftParts.m_prerelease.empty() != rightParts.m_prerelease.empty())
+        {
+            comparison = leftParts.m_prerelease.empty() ? 1 : -1;
+            return true;
+        }
+
+        const size_t sharedCount = AZStd::min(
+            leftParts.m_prerelease.size(),
+            rightParts.m_prerelease.size());
+        for (size_t index = 0; index < sharedCount; ++index)
+        {
+            comparison = ComparePrereleaseIdentifier(
+                leftParts.m_prerelease[index],
+                rightParts.m_prerelease[index]);
+            if (comparison != 0)
             {
-                return false;
+                return true;
             }
         }
 
-        const size_t prereleasePosition = withoutBuild.find('-');
-        const AZStd::string_view core = withoutBuild.substr(0, prereleasePosition);
-        if (prereleasePosition != AZStd::string_view::npos)
-        {
-            const AZStd::string_view prerelease = withoutBuild.substr(prereleasePosition + 1);
-            if (!IsValidIdentifierList(prerelease, true))
-            {
-                return false;
-            }
-        }
-
-        const size_t firstDot = core.find('.');
-        const size_t secondDot = firstDot == AZStd::string_view::npos
-            ? AZStd::string_view::npos
-            : core.find('.', firstDot + 1);
-        if (firstDot == AZStd::string_view::npos
-            || secondDot == AZStd::string_view::npos
-            || core.find('.', secondDot + 1) != AZStd::string_view::npos)
-        {
-            return false;
-        }
-
-        AZ::u32 major = 0;
-        AZ::u32 minor = 0;
-        AZ::u32 patch = 0;
-        return ParseNumber(core.substr(0, firstDot), major)
-            && ParseNumber(core.substr(firstDot + 1, secondDot - firstDot - 1), minor)
-            && ParseNumber(core.substr(secondDot + 1), patch);
+        comparison = leftParts.m_prerelease.size()
+                < rightParts.m_prerelease.size()
+            ? -1
+            : (leftParts.m_prerelease.size()
+                    > rightParts.m_prerelease.size()
+                ? 1
+                : 0);
+        return true;
     }
 } // namespace ExternalToolchain

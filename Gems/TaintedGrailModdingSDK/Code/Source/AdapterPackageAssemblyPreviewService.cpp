@@ -7,6 +7,8 @@
 
 #include "AdapterPackageAssemblyPreviewService.h"
 
+#include "PackagePathValidation.h"
+
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
 

@@ -64,6 +64,10 @@ set(FILES
     Source/AdapterVerifierEvidenceReconciliationContracts.h
     Source/AdapterVerifierEvidenceReconciliationService.cpp
     Source/AdapterVerifierEvidenceReconciliationService.h
+    Source/AdapterVerifierEvidenceReconciliationServicePart1.inl
+    Source/AdapterVerifierEvidenceReconciliationServicePart2.inl
+    Source/AdapterVerifierEvidenceReconciliationServicePart3.inl
+    Source/AdapterVerifierEvidenceReconciliationServicePart4.inl
     Source/AdapterWorkOrderPlanningService.cpp
     Source/AdapterWorkOrderPlanningServicePart1.inl
     Source/AdapterWorkOrderPlanningServicePart2.inl

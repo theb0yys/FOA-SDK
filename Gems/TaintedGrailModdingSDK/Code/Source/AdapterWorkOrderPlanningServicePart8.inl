@@ -179,5 +179,6 @@
         AppendJsonString(output, canonicalPlan.m_branch);
         output += ",\"RuntimeTarget\":";
         AppendJsonString(output, canonicalPlan.m_runtimeTarget);
-        output += ",\"ExecutionAllowed\":false,\"Steps\":[";
-
+        output += ",\"ExecutionAllowed\":";
+        output += canonicalPlan.m_executionAllowed ? "true" : "false";
+        output += ",\"Steps\":[";

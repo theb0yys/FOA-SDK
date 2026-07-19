@@ -183,7 +183,7 @@
             AZStd::vector<AZStd::string>& validationIds)
         {
             const AZStd::vector<AZStd::string> allowedSubjectRefs = {
-                relationship.m_relationshipId,
+                "relationship:" + relationship.m_relationshipId,
             };
             if (!EvidenceSetIsValidForSubjects(
                     relationship.m_evidenceIds,

@@ -22,11 +22,17 @@ namespace TaintedGrailModdingSDK
         bool UpsertRelationship(
             const CatalogRelationship& relationship,
             AZStd::string* error = nullptr);
-        bool AddValidationEvent(
+        bool AddValidationEventBound(
             const CatalogValidationEvent& validation,
+            const WorkspaceModel& workspace,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
             AZStd::string* error = nullptr);
-        bool AddGovernanceEvent(
+        bool AddGovernanceEventBound(
             const CatalogGovernanceEvent& event,
+            const WorkspaceModel& workspace,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
             AZStd::string* error = nullptr);
         bool UpsertEconomyItem(
             const EconomyItemProfile& profile,
@@ -107,7 +113,13 @@ namespace TaintedGrailModdingSDK
         CatalogRecord* FindMutableRecordById(const AZStd::string& recordId);
         CatalogRelationship* FindMutableRelationshipById(
             const AZStd::string& relationshipId);
-        bool ReplaceFromDocumentUnchecked(
+        bool AddValidationEvent(
+            const CatalogValidationEvent& validation,
+            AZStd::string* error);
+        bool AddGovernanceEvent(
+            const CatalogGovernanceEvent& event,
+            AZStd::string* error);
+        bool ReplaceFromDocument(
             const CatalogDocument& document,
             AZStd::string* error);
         bool ValidateRecord(

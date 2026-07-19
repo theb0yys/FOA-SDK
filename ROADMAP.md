@@ -359,9 +359,39 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no review-authoring, verifier, filesystem, deployment, launch, adapter, promotion, archive, signing, publication, or release action;
 - the Windows manual UI checklist includes all nineteen panes and the default zero-verifier-reconciliation-request state.
 
-### Next ordered slice — release-artifact provenance and signing-intent contract
+### Release-artifact provenance and signing-intent contract
 
-Bind one exact approved reconciliation to declared release contents, checksums, provenance, signing identity intent, and publication targets. The contract must preserve the distinction between declared metadata and performed operations and must not assemble an archive, hash files, sign artefacts, upload content, or publish a release.
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact accepted reconciliation with `clear` compatibility, `approved` release decision, and complete review to one exact `ready` package layout.
+- Require one declared release-content row for every package-layout entry with exact identity, path, role, media type, byte size, project ownership, redistribution eligibility, provenance, legal disposition, and expected checksum.
+- Treat lowercase SHA-256 values as declarations bound to existing reviewed package-layout output digests; no file is opened or hashed.
+- Require stable evidence-backed provenance for every content row and one exact approved legal/redistribution disposition per content.
+- Require one reviewed `unsigned` or `sign_externally` intent; external signing intent preserves typed identity kind, signer, locator, and fingerprint without loading a key or producing a signature.
+- Require at least one reviewed typed publication-target declaration without authenticating, uploading, or publishing.
+- Deterministic status precedence is `reconciliation_not_approved`, `package_not_ready`, `binding_mismatch`, `content_invalid`, `checksum_declaration_invalid`, `provenance_incomplete`, `legal_disposition_incomplete`, `signing_intent_invalid`, `publication_target_invalid`, and `ready`.
+- Return exact binding, content declarations, signing intent, and publication targets as candidate evidence by value without automatic registration or promotion.
+- Transient `AdapterReleaseArtifactRegistry` and read-only **Tainted Grail Release Artifact Provenance and Signing Intent** pane.
+- Focused repository validator, public contract documentation, and twenty-pane Windows manual UI coverage.
+- **No file read/hash/copy, checksum generation, archive assembly, signing, upload, publication, FoA launch, adapter call, or deployment mutation** is implemented or authorised.
+
+Exit criteria:
+
+- only an exact approved reconciliation and exact ready package layout can reach `ready` metadata;
+- every reviewed package-layout entry has exactly one declaration and no missing, duplicate, or extra content can pass;
+- every expected checksum equals the exact reviewed package-layout digest while remaining explicitly ungenerated and unverified;
+- provenance and legal dispositions are complete, exact-bound, evidence-backed, named, and time-bounded;
+- unsigned intent cannot carry a signing identity and external-signing intent cannot omit reviewed identity metadata;
+- publication targets remain declarations only and cannot trigger network or release actions;
+- equivalent inputs produce identical sorted content, provenance, disposition, target, blocker, status, and canonical JSON output;
+- envelope construction does not mutate reconciliation, package, request, evidence, or registries;
+- all file, checksum-generation, archive, signing, upload, publication, launch, adapter, and deployment flags remain false, including for `ready`;
+- the Editor pane remains non-editable and exposes no registration, review-authoring, file, archive, signing, upload, publication, launch, adapter, or deployment action;
+- the Windows manual UI checklist includes all twenty panes and the default zero-release-artifact-envelope state.
+
+### Next ordered slice — release-assembly and checksum-result envelope
+
+Bind one exact ready release-artifact envelope to a separately reviewed external assembler/checksummer result. Preserve attempted archive assembly, per-content checksum observations, archive identity/fingerprint, failures, and safe diagnostics as supplied evidence while keeping signing, upload, publication, FoA launch, adapter calls, and deployment mutation outside the contract.
 
 Controlled pipeline:
 
@@ -369,7 +399,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, release-artifact provenance, release archives, checksums, signing, publication, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, release-assembly/checksum result evidence, signing results, publication results, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

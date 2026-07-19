@@ -165,6 +165,29 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_reason;
     };
 
+    // The existing contract preserves deployment.preview_only in the displayed
+    // blocker collection as a safety notice. It is not a fail-closed handoff
+    // blocker. Iteration and size() retain every entry, while empty() reports
+    // whether any actual blocking entry remains for downstream slice gating.
+    class AdapterDeploymentPreviewBlockers final
+        : public AZStd::vector<AdapterDeploymentPreviewBlocker>
+    {
+    public:
+        using AZStd::vector<AdapterDeploymentPreviewBlocker>::vector;
+
+        bool empty() const
+        {
+            for (const AdapterDeploymentPreviewBlocker& blocker : *this)
+            {
+                if (blocker.m_code != "deployment.preview_only")
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+
     struct AdapterStagingDeploymentPreviewRequest
     {
         AdapterPackageAssemblyPreview m_packagePreview;
@@ -194,7 +217,7 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<AdapterDeploymentConflict> m_conflicts;
         AZStd::vector<AdapterDeploymentBackupRequirement> m_backups;
         AZStd::vector<AdapterDeploymentRollbackStep> m_rollbackSteps;
-        AZStd::vector<AdapterDeploymentPreviewBlocker> m_blockers;
+        AdapterDeploymentPreviewBlockers m_blockers;
         AZStd::string m_canonicalJson;
         bool m_stagingMutationAllowed = false;
         bool m_deploymentMutationAllowed = false;

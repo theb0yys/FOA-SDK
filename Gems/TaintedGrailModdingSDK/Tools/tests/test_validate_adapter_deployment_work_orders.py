@@ -59,13 +59,19 @@ class AdapterDeploymentWorkOrderValidatorTests(unittest.TestCase):
         service = """
 enum class AdapterDeploymentConfirmationDecision Unknown Confirmed Rejected
 enum class AdapterDeploymentConfirmationScope AdditionsOnly AdditionsAndReplacements FullPreview
-enum class AdapterDeploymentPreflightKind PackageIntegrity TargetInventory BackupReadiness RollbackReadiness OperatorReadiness
+enum class AdapterDeploymentPreflightKind PackageIntegrity TargetInventory
+BackupReadiness RollbackReadiness OperatorReadiness
 enum class AdapterDeploymentPreflightStatus Unknown Passed Failed
-enum class AdapterDeploymentWorkOrderStepKind VerifyPreflight ConfirmMaintenanceWindow Backup Add Replace Remove VerifyDeployment PreserveRollback
+enum class AdapterDeploymentWorkOrderStepKind VerifyPreflight ConfirmMaintenanceWindow
+Backup Add Replace Remove VerifyDeployment PreserveRollback
 enum class AdapterDeploymentChecklistState ContractSatisfied OperatorActionRequired Blocked
-enum class AdapterDeploymentWorkOrderStatus PreviewNotReady ConfirmationMissing ConfirmationRejected ConfirmationBindingMismatch ScopeMismatch ConfirmationExpired MaintenanceWindowInvalid OutsideMaintenanceWindow PreflightMissing PreflightFailed WorkOrderIncomplete ReviewReady
+enum class AdapterDeploymentWorkOrderStatus PreviewNotReady ConfirmationMissing
+ConfirmationRejected ConfirmationBindingMismatch ScopeMismatch ConfirmationExpired
+MaintenanceWindowInvalid OutsideMaintenanceWindow PreflightMissing PreflightFailed
+WorkOrderIncomplete ReviewReady
 "additions_only" "additions_and_replacements" "full_preview"
-"package_integrity" "target_inventory" "backup_readiness" "rollback_readiness" "operator_readiness"
+"package_integrity" "target_inventory" "backup_readiness"
+"rollback_readiness" "operator_readiness"
 struct AdapterDeploymentConfirmation
 struct AdapterDeploymentMaintenanceWindow
 struct AdapterDeploymentPreflightEvidence
@@ -169,13 +175,15 @@ additionCount preflightCount
             encoding="utf-8",
         )
         (docs / "FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md").write_text(
-            "Slice 14 explicit confirmation deployment work-order no execution authority",
+            "Slice 14 explicit confirmation deployment work-order "
+            "no execution authority",
             encoding="utf-8",
         )
         (docs / "USER_GUIDE.md").write_text(
             "Tainted Grail Deployment Confirmation and Work Orders "
             "confirmation_expired outside_maintenance_window preflight_missing "
-            "review_ready nothing is copied, deleted, backed up, restored, deployed, or launched",
+            "review_ready nothing is copied, deleted, backed up, restored, "
+            "deployed, or launched",
             encoding="utf-8",
         )
         (docs / "DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md").write_text(
@@ -196,7 +204,8 @@ additionCount preflightCount
         (repo / "ROADMAP.md").write_text(
             "Typed deployment confirmation and work-order contract\n"
             "Status: implemented, continuing hardening and Windows UI verification.\n"
-            "confirmation scope, expiry, maintenance window, preflight evidence, and operator checklist\n"
+            "confirmation scope, expiry, maintenance window, preflight evidence, "
+            "and operator checklist\n"
             "No copy, delete, backup, restore, deployment, launch, or adapter call",
             encoding="utf-8",
         )
@@ -210,7 +219,9 @@ additionCount preflightCount
 
     def test_complete_contract_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            validate_adapter_deployment_work_orders(self.make_repo(Path(temporary)))
+            validate_adapter_deployment_work_orders(
+                self.make_repo(Path(temporary))
+            )
 
     def test_runtime_or_file_mutation_code_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -220,8 +231,14 @@ additionCount preflightCount
                 / "Gems/TaintedGrailModdingSDK/Code/Source"
                 / "AdapterDeploymentWorkOrderService.cpp"
             )
-            path.write_text(path.read_text() + "\nCopyFile\n", encoding="utf-8")
-            with self.assertRaisesRegex(AdapterDeploymentWorkOrderContractError, "CopyFile"):
+            path.write_text(
+                path.read_text() + "\nCopyFile\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                AdapterDeploymentWorkOrderContractError,
+                "CopyFile",
+            ):
                 validate_adapter_deployment_work_orders(repo)
 
     def test_missing_expiry_gate_is_rejected(self) -> None:
@@ -234,9 +251,16 @@ additionCount preflightCount
                 "AdapterDeploymentWorkOrderServicePart2.inl",
                 "AdapterDeploymentWorkOrderServicePart3.inl",
             ):
-                path = repo / "Gems/TaintedGrailModdingSDK/Code/Source" / name
+                path = (
+                    repo
+                    / "Gems/TaintedGrailModdingSDK/Code/Source"
+                    / name
+                )
                 path.write_text(
-                    path.read_text().replace("m_expiresAtUtc", "expiry omitted"),
+                    path.read_text().replace(
+                        "m_expiresAtUtc",
+                        "expiry omitted",
+                    ),
                     encoding="utf-8",
                 )
             with self.assertRaisesRegex(
@@ -253,7 +277,10 @@ additionCount preflightCount
                 / "Gems/TaintedGrailModdingSDK/Code/Source"
                 / "AdapterDeploymentWorkOrderWidget.cpp"
             )
-            path.write_text(path.read_text() + "\nQPushButton\n", encoding="utf-8")
+            path.write_text(
+                path.read_text() + "\nQPushButton\n",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(
                 AdapterDeploymentWorkOrderContractError,
                 "QPushButton",
@@ -275,7 +302,10 @@ additionCount preflightCount
                 ),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(AdapterDeploymentWorkOrderContractError, "Scope"):
+            with self.assertRaisesRegex(
+                AdapterDeploymentWorkOrderContractError,
+                "Scope",
+            ):
                 validate_adapter_deployment_work_orders(repo)
 
     def test_missing_fifteen_pane_contract_is_rejected(self) -> None:
@@ -286,7 +316,10 @@ additionCount preflightCount
                 / "docs/tainted-grail-sdk"
                 / "DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md"
             )
-            path.write_text("All fourteen TG SDK panes", encoding="utf-8")
+            path.write_text(
+                "All fourteen TG SDK panes",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(
                 AdapterDeploymentWorkOrderContractError,
                 "fifteen",

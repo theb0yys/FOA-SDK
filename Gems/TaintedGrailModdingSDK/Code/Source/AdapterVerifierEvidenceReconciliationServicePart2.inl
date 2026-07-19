@@ -198,6 +198,45 @@ namespace TaintedGrailModdingSDK
             }
         }
 
+        const AdapterVerifierFindingDisposition* FindDisposition(
+            const AdapterVerifierReleaseReview& review,
+            const AZStd::string& findingId)
+        {
+            for (const AdapterVerifierFindingDisposition& disposition :
+                 review.m_dispositions)
+            {
+                if (disposition.m_findingId == findingId)
+                {
+                    return &disposition;
+                }
+            }
+            return nullptr;
+        }
+
+        bool AllRequiredDispositionsAccepted(
+            const AdapterVerifierEvidenceReconciliationEnvelope& envelope)
+        {
+            for (const AdapterVerifierReconciliationFinding& finding :
+                 envelope.m_findings)
+            {
+                if (!finding.m_requiresHumanDisposition)
+                {
+                    continue;
+                }
+                const AdapterVerifierFindingDisposition* disposition =
+                    FindDisposition(
+                        envelope.m_releaseReview,
+                        finding.m_findingId);
+                if (!disposition
+                    || disposition.m_decision
+                        != AdapterVerifierFindingDispositionDecision::Accepted)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         void ValidateReconciliationReleaseReview(
             const AdapterVerifierEvidenceReconciliationRequest& request,
             AdapterVerifierEvidenceReconciliationResult& result,
@@ -232,6 +271,7 @@ namespace TaintedGrailModdingSDK
                 || review.m_rationale.empty();
 
             AZStd::vector<AZStd::string> dispositionIds;
+            AZStd::vector<AZStd::string> providedIds;
             AZStd::vector<AZStd::string> completedIds;
             for (const AdapterVerifierFindingDisposition& disposition :
                  review.m_dispositions)
@@ -250,7 +290,22 @@ namespace TaintedGrailModdingSDK
                 invalid = invalid || !dispositionValid;
                 if (dispositionValid)
                 {
-                    completedIds.push_back(disposition.m_findingId);
+                    providedIds.push_back(disposition.m_findingId);
+                    if (disposition.m_decision
+                        == AdapterVerifierFindingDispositionDecision::Deferred)
+                    {
+                        AddReconciliationIssue(
+                            result,
+                            flags.m_dispositionIncomplete,
+                            "verifier_reconciliation.disposition_deferred",
+                            "A deferred finding disposition keeps the human review "
+                            "incomplete.",
+                            disposition.m_findingId);
+                    }
+                    else
+                    {
+                        completedIds.push_back(disposition.m_findingId);
+                    }
                 }
                 else
                 {
@@ -282,6 +337,7 @@ namespace TaintedGrailModdingSDK
                     "A reconciliation finding may have at most one human disposition.");
             }
 
+            SortUniqueReconciliationValues(providedIds);
             SortUniqueReconciliationValues(completedIds);
             envelope.m_completedDispositionCount =
                 static_cast<AZ::u64>(completedIds.size());
@@ -290,10 +346,10 @@ namespace TaintedGrailModdingSDK
             {
                 if (finding.m_requiresHumanDisposition
                     && AZStd::find(
-                           completedIds.begin(),
-                           completedIds.end(),
+                           providedIds.begin(),
+                           providedIds.end(),
                            finding.m_findingId)
-                        == completedIds.end())
+                        == providedIds.end())
                 {
                     AddReconciliationIssue(
                         result,
@@ -367,7 +423,8 @@ namespace TaintedGrailModdingSDK
                     || !report.m_compatibilityClear
                     || !report.m_releaseBlockerFree
                     || envelope.m_humanReviewState
-                        != AdapterVerifierHumanReviewState::Complete))
+                        != AdapterVerifierHumanReviewState::Complete
+                    || !AllRequiredDispositionsAccepted(envelope)))
             {
                 AddReconciliationIssue(
                     result,
@@ -375,8 +432,9 @@ namespace TaintedGrailModdingSDK
                     "verifier_reconciliation.approval_inconsistent",
                     "Approval is invalid while any preserved report blocker, adverse or "
                     "incomplete verifier observation, compatibility uncertainty, release "
-                    "blocker, or incomplete human disposition remains. Matching metadata "
-                    "never grants approval automatically.");
+                    "blocker, incomplete human disposition, or non-accepted required "
+                    "disposition remains. Matching metadata never grants approval "
+                    "automatically.");
             }
         }
 

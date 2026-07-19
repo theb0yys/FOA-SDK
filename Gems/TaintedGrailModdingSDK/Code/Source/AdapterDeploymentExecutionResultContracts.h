@@ -62,13 +62,6 @@ namespace TaintedGrailModdingSDK
         Diagnostic,
     };
 
-    enum class AdapterDeploymentRollbackAction : AZ::u8
-    {
-        RemoveAdded,
-        RestoreReplaced,
-        RestoreRemoved,
-    };
-
     enum class AdapterDeploymentExecutionEnvelopeStatus : AZ::u8
     {
         Accepted,
@@ -88,7 +81,6 @@ namespace TaintedGrailModdingSDK
     AZStd::string ToString(AdapterDeploymentVerificationStatus status);
     AZStd::string ToString(AdapterDeploymentExecutionFailureKind kind);
     AZStd::string ToString(AdapterDeploymentExecutionLogKind kind);
-    AZStd::string ToString(AdapterDeploymentRollbackAction action);
     AZStd::string ToString(AdapterDeploymentExecutionEnvelopeStatus status);
 
     bool TryParseAdapterDeploymentExecutorReviewDecision(
@@ -106,9 +98,6 @@ namespace TaintedGrailModdingSDK
     bool TryParseAdapterDeploymentExecutionLogKind(
         const AZStd::string& value,
         AdapterDeploymentExecutionLogKind& kind);
-    bool TryParseAdapterDeploymentRollbackAction(
-        const AZStd::string& value,
-        AdapterDeploymentRollbackAction& action);
     bool TryParseAdapterDeploymentExecutionEnvelopeStatus(
         const AZStd::string& value,
         AdapterDeploymentExecutionEnvelopeStatus& status);

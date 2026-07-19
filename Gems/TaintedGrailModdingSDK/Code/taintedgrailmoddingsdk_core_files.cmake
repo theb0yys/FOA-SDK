@@ -39,6 +39,15 @@ set(FILES
     Source/AdapterPostDeploymentVerificationServicePart1.inl
     Source/AdapterPostDeploymentVerificationServicePart2.inl
     Source/AdapterPostDeploymentVerificationServicePart3.inl
+    Source/AdapterPostDeploymentVerifierContracts.cpp
+    Source/AdapterPostDeploymentVerifierContracts.h
+    Source/AdapterPostDeploymentVerifierEvidenceService.cpp
+    Source/AdapterPostDeploymentVerifierEvidenceService.h
+    Source/AdapterPostDeploymentVerifierEvidenceServicePart1.inl
+    Source/AdapterPostDeploymentVerifierEvidenceServicePart2.inl
+    Source/AdapterPostDeploymentVerifierEvidenceServicePart3.inl
+    Source/AdapterPostDeploymentVerifierEvidenceServicePart4.inl
+    Source/AdapterPostDeploymentVerifierEvidenceServicePart5.inl
     Source/AdapterRuntimeResultContracts.cpp
     Source/AdapterRuntimeResultContracts.h
     Source/AdapterRuntimeResultEvidenceService.cpp

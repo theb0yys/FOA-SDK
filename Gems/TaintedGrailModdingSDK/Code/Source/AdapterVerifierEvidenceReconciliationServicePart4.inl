@@ -178,6 +178,7 @@ namespace TaintedGrailModdingSDK
             report,
             verifierEnvelope,
             request,
+            envelope,
             result,
             flags);
         ValidateReconciliationReleaseReview(request, result, flags);

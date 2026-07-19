@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Pure-Core `AdapterVerifierEvidenceReconciliationService` and typed Slice 18 reconciliation contracts for exact report/verifier/execution/work-order/context binding, preserved blockers, adverse verifier observations, separate compatibility/release/human-review axes, explicit dispositions, deterministic canonical JSON, and candidate evidence return.
+- Transient `AdapterVerifierEvidenceReconciliationRegistry` and read-only **Tainted Grail Verifier Evidence Reconciliation and Release Decision** pane; no blocker is silently cleared, no all-matched result automatically approves release, and no verifier, filesystem, signing, or publication action is performed.
+- Public Slice 18 contract documentation and nineteen-pane Windows manual UI coverage for verifier evidence reconciliation and human release decisions.
 - `ExternalToolchain` API 1.1 discovery/configuration services with typed Settings Registry precedence, session overrides, bounded local file/directory probes, configured SemVer compatibility, deterministic diagnostics, and no process or asset execution.
 - Host-only `ExternalToolchain` Gem with a versioned public provider API, deterministic registration and finalization, a read-only diagnostics pane, contract tests, repository validation, and no process or asset execution.
 - Pure-Core `AdapterPostDeploymentVerifierEvidenceService` and typed independent-verifier contracts for exact canonical-report binding, accepted reviewed-verifier identity and capabilities, one exact final-state check per mutation step, typed observations, failures, safe diagnostics, deterministic status precedence, and candidate evidence return.
@@ -55,20 +58,22 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.
 - The inherited full-engine `AR` workflow and generic upstream `Validation` workflow are removed from this fork so queued checks are not misrepresented as TG SDK test evidence.
 - Exact local validation evidence is the development merge gate until automatic Actions are safely restored; **no automated per-commit test result is claimed**.
-- Phase 8 now includes deterministic post-deployment compatibility/release blockers and an independent-verifier evidence contract; verifier evidence reconciliation and a human release-decision envelope are the next ordered slice.
+- Phase 8 now includes deterministic verifier-evidence reconciliation with preserved blockers and an explicit human release-decision envelope; release-artifact provenance, checksums, and signing intent are the next ordered slice.
 - Focused execution-result validators continue to enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
-- The Windows manual UI checklist now covers all eighteen panes and the default zero-independent-verifier-envelope state.
-- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, and post-deployment-report contracts as prerequisite handoffs; structural acceptance never authorises execution, certification, promotion, signing, or publication.
+- The Windows manual UI checklist now covers all nineteen panes and the default zero-verifier-reconciliation-request state.
+- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, post-deployment-report, and independent-verifier contracts as prerequisite handoffs; structural acceptance never authorises execution, certification, promotion, signing, or publication.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
 - Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
 - Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
-- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, post-deployment-report, and independent-verifier-result workflows.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, post-deployment-report, independent-verifier-result, and verifier-reconciliation workflows.
 
 ### Security
 
 - Public pull requests must not execute on a general-purpose self-hosted runner; any future self-hosted design requires disposable isolation, no secrets or personal files, narrow labels, restricted triggers, and explicit operator ownership.
 - Runner registration tokens exposed in screenshots, messages, logs, or shell history are treated as compromised and must be abandoned and regenerated.
+- Verifier-reconciliation requests are transient caller-supplied metadata. Exact report JSON, work-order/execution/verifier fingerprints, candidate identities, preserved blockers, adverse findings, named review, and per-finding dispositions fail closed before a contract is accepted.
+- A matched verifier observation never clears an existing report blocker automatically, and an all-matched verifier result never creates release approval without an exact named human approval that is consistent with every blocker and disposition.
 - Independent-verifier envelopes are transient caller-supplied metadata. Exact report JSON, work-order/result fingerprints, reviewed capabilities, expected checks, observations, failures, and safe diagnostics fail closed before candidate evidence is returned.
 - A structurally valid verifier mismatch remains adverse evidence, never compatibility certification or release permission; the Editor performs no verifier execution or target access.
 - Post-deployment reports are deterministic read-only aggregations. Existing execution failures, target mismatches, unchecked states, rollback incompleteness, and diagnostics remain explicit compatibility or release blockers and cannot be cleared automatically.
@@ -91,9 +96,11 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 ### Known limitations
 
 - Automatic GitHub Actions are unavailable in the current repository/account state; manual workflow definitions remain present, but full local and compiled validation must be run and recorded from a real checkout.
+- Verifier-reconciliation reviewer identity, review time, decision, rationale, evidence IDs, and dispositions are caller-supplied metadata; no trusted identity provider, clock, signature, timestamp authority, or publication system exists.
+- An `accepted` reconciliation proves contract shape only. `clear` compatibility and `approved` release metadata are not trusted certification, signing, packaging, upload, or proof that any verifier ran.
 - Independent-verifier identity, capabilities, observations, failures, timestamps, fingerprints, and diagnostics are caller-supplied metadata; no verifier is discovered or run and no target file is independently read or hashed by the Editor.
 - `accepted` independent-verifier metadata means exact contract shape and all-matched supplied observations only; it is not compatibility certification, release approval, trusted attestation, or proof that a verifier actually ran.
-- Post-deployment reports aggregate supplied execution evidence and blockers only; they do not independently verify a target or make a release decision.
+- Post-deployment reports aggregate supplied execution evidence and blockers only; they do not independently verify a target or publish a release decision.
 - Executor review, step outcomes, fingerprints, backup/restore results, verification observations, rollback outcomes, failures, and logs are caller-supplied metadata; no executor, trusted target scanner, or automatic evidence promotion exists.
 - An `accepted` execution-result envelope proves contract shape only, not deployment success, safety, target existence, backup integrity, rollback correctness, or release readiness.
 - Confirmations, timestamps, maintenance-window evidence, preflight results, and reviewer identities are caller-supplied metadata; no trusted clock, identity provider, independent preflight runner, acknowledgement system, or deployment executor exists.

@@ -20,6 +20,8 @@ set(FILES
     Source/AdapterDeploymentExecutionEvidenceServicePart1.inl
     Source/AdapterDeploymentExecutionEvidenceServicePart2.inl
     Source/AdapterDeploymentExecutionEvidenceServicePart3.inl
+    Source/AdapterDeploymentExecutionResultCanonical.cpp
+    Source/AdapterDeploymentExecutionResultCanonical.h
     Source/AdapterDeploymentExecutionResultContracts.cpp
     Source/AdapterDeploymentExecutionResultContracts.h
     Source/AdapterDeploymentWorkOrderService.cpp
@@ -54,6 +56,8 @@ set(FILES
     Source/AdapterReleaseArtifactProvenanceService.h
     Source/AdapterReleaseArtifactProvenanceServicePart1.inl
     Source/AdapterReleaseArtifactProvenanceServicePart2.inl
+    Source/AdapterRuntimeResultCanonical.cpp
+    Source/AdapterRuntimeResultCanonical.h
     Source/AdapterRuntimeResultContracts.cpp
     Source/AdapterRuntimeResultContracts.h
     Source/AdapterRuntimeResultEvidenceService.cpp
@@ -87,6 +91,7 @@ set(FILES
     Source/AdapterWorkOrderPlanningService.h
     Source/CanonicalFingerprint.cpp
     Source/CanonicalFingerprint.h
+    Source/DeterministicContractJson.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
     Source/CatalogDatabaseIntegrity.cpp

@@ -276,9 +276,35 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no registration, import, promotion, deployment, launch, or execution action;
 - the Windows manual UI checklist includes all sixteen panes and the default zero-deployment-execution-result state.
 
-### Next ordered slice — post-deployment verification and release-blocker report
+### Post-deployment verification and release-blocker report
 
-Aggregate one accepted deployment execution-result envelope, returned candidate evidence, target-verification states, rollback completeness, failures, and referenced diagnostics into deterministic compatibility and release blockers. The report must not execute a verifier, launch FoA, promote evidence, publish a release, or call an adapter.
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact current `review_ready` deployment work order, accepted execution-result envelope, and returned candidate evidence set.
+- Fail closed for canonical-work-order drift, preview/pack/target drift, result or work-order fingerprint drift, typed-count drift, duplicate or malformed candidate identities, and exact profile/game/branch/runtime mismatch.
+- Aggregate work-order step outcomes, backup completeness, target `matched`/`mismatched`/`not_checked` states, rollback requirements and outcomes, failures, and safe referenced diagnostics.
+- Emit stable typed compatibility and release blockers with exact subjects, step/rollback identities, evidence IDs, and log-reference IDs.
+- Deterministic `evidence_rejected`, `evidence_incomplete`, `verification_incomplete`, `compatibility_blocked`, `rollback_incomplete`, `release_blocked`, and `review_ready` states.
+- Keep `HumanReviewRequired: true`; `VerifierExecuted`, `EvidencePromoted`, `ReleasePublished`, `LaunchPerformed`, and `AdapterCalled` remain false.
+- Read-only **Tainted Grail Post-Deployment Verification and Release Blockers** pane with candidate-evidence, step, verification, rollback, failure/diagnostic, compatibility-blocker, and release-blocker columns.
+- Public contract documentation and seventeen-pane Windows manual UI coverage.
+- **No independent verifier, executor, adapter call, FoA launch, evidence promotion, release archive, signing, or publication path** is implemented or authorised.
+
+Exit criteria:
+
+- only the exact current review-ready work order and accepted exact-bound evidence return can be aggregated as accepted execution evidence;
+- evidence rejection and incomplete binding remain distinct from operational failures and target mismatches;
+- unchecked and mismatched target states block compatibility and release review without claiming independent verification;
+- failed/skipped steps, incomplete backups, rollback incompleteness, successful rollback of the attempted candidate, failures, and missing diagnostics remain explicit release blockers;
+- equivalent inputs produce identical report identities, statuses, counts, sorted candidate/diagnostic IDs, blocker IDs, blocker ordering, and associations;
+- report construction does not mutate the work order, execution-result envelope, evidence return, or registries;
+- `review_ready` remains an operator-review state, not compatibility certification, execution authority, or release permission;
+- the Editor pane remains non-editable and exposes no verifier, import, promotion, deployment, rollback, launch, archive, signing, publication, or adapter action;
+- the Windows manual UI checklist includes all seventeen panes and the default zero-post-deployment-report state.
+
+### Next ordered slice — independent post-deployment verifier contract
+
+Define a separately reviewed verifier identity, exact input binding, deterministic result envelope, failures, and safe diagnostics for independent checking of the deployed target. The contract must not launch FoA, deploy or mutate files, call a runtime adapter, promote evidence, sign an archive, or publish a release.
 
 Controlled pipeline:
 
@@ -286,7 +312,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, independent result verification, compatibility reports, release archives, checksums, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, independent result verification, release archives, checksums, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

@@ -2,251 +2,133 @@
 
 ## Status
 
-The project is pre-alpha and has not published a supported binary release. This process defines the required controls before public tags and packages are produced.
+The project is pre-alpha and has not published a supported binary release. This process defines the controls required before tags and packages are produced.
 
 ## Release principles
 
-A release must be:
-
-- traceable to a reviewed `main` commit;
-- reproducible from documented inputs;
-- explicit about compatibility and known limitations;
-- free of proprietary game assets and secrets;
-- validated against documented schemas and security boundaries;
-- accompanied by checksums, changelog, migration guidance, and rollback information.
+A release must be traceable to a reviewed `main` commit, reproducible from documented inputs, explicit about compatibility and limitations, free of proprietary content and secrets, validated against security/schema boundaries, and accompanied by checksums, migration guidance, and rollback information.
 
 A green build alone does not make a release safe.
 
-## Versioning
+## Versioning and channels
 
-Use Semantic Versioning:
+Use Semantic Versioning. While below `1.0.0`, breaking changes still require explicit migration and release notes.
 
-```text
-MAJOR.MINOR.PATCH
-```
-
-- **MAJOR** — incompatible public API, schema, workspace, pack, adapter, or catalog changes.
-- **MINOR** — backward-compatible features and new capabilities.
-- **PATCH** — backward-compatible fixes, documentation, and security corrections.
-
-Pre-release identifiers may be used:
-
-```text
-0.1.0-alpha.1
-0.1.0-beta.1
-0.1.0-rc.1
-```
-
-While the project remains below `1.0.0`, breaking changes still require explicit migration and release notes.
-
-## Release channels
-
-- `development` — active source state; not a supported release.
-- `alpha` — incomplete feature set; data formats may change with documented migration.
-- `beta` — feature-complete for the stated scope; compatibility and reliability testing continues.
-- `release-candidate` — no known release-blocking defects for the stated scope.
-- `stable` — supported public release for documented profiles and workflows.
-
-Pack manifest release channels are pack declarations and do not automatically match SDK release readiness.
+Channels are `development`, `alpha`, `beta`, `release-candidate`, and `stable`. Pack release channels do not automatically indicate SDK release readiness.
 
 ## Release inputs
 
 Record:
 
-- source commit and tag;
-- O3DE base revision;
-- supported operating systems and compilers;
-- build configuration;
-- third-party package source and lock information;
+- source commit/tag and O3DE revision;
+- supported operating systems, compilers, configuration, and dependency locks;
 - TG SDK schema versions;
-- supported FoA profile versions/branches where applicable;
-- supported Avalon Core and adapter versions;
-- generated package contents;
-- test and validation results.
+- supported FoA profile, Core, and adapter versions;
+- exact build manifest, package preview, **generated package contents**, and test/validation results;
+- licence, notices, redistribution decisions, and rollback plan.
 
 ## Release readiness checklist
 
 ### Governance
 
 - release scope approved;
-- changelog complete;
-- roadmap status updated;
-- licence and notices reviewed;
-- no unresolved blocking review threads;
-- no unresolved high-severity security report.
+- changelog and roadmap updated;
+- licence/notices reviewed;
+- no unresolved blocking review or high-severity security issue.
 
 ### Code and CI
 
-- release commit is on `main`;
-- `foa-development` synchronized;
-- focused validator passes;
-- repository validation passes;
-- supported host builds pass;
-- unit, persistence, importer, migration, and integration tests pass;
-- warnings and flaky failures are understood and documented.
+- release commit is on `main` and `foa-development` is synchronized;
+- focused and repository validators pass;
+- supported host builds and compiled tests pass;
+- warnings/flaky failures are understood and documented.
 
 ### Schemas and compatibility
 
-- all durable schema versions documented;
+- all durable versions documented;
 - migrations tested or unsupported versions explicitly rejected;
-- compatibility matrix published;
-- breaking changes highlighted;
-- pack/Core/adapter constraints documented;
+- compatibility matrix and pack/Core/adapter constraints published;
 - save and deployment impact documented.
 
 ### Security and privacy
 
-- dependency and vulnerability review complete;
-- no secrets, credentials, private paths, or proprietary game content;
+- dependency/vulnerability review complete;
+- no credentials, private paths, proprietary game content, or unapproved third-party binaries;
 - import limits and path containment tested;
 - generated packages inspected;
 - security notes prepared where required.
 
 ### Documentation
 
-- README and User Guide match the release;
+- README/User Guide match the release;
 - Data Formats match serialized output;
-- installation/build instructions verified;
-- known limitations and troubleshooting updated;
-- release notes include migration and rollback.
+- build/install instructions verified;
+- limitations, migration, upgrade, troubleshooting, and rollback updated.
 
 ### Windows manual UI evidence
 
-Developer Preview and later Windows claims require a completed manual UI evidence directory for the exact reviewed `main` commit.
+Developer Preview and later Windows claims require completed **Windows manual UI evidence** for the **exact reviewed `main` commit**.
 
-Confirm:
+Confirm every checklist item passed; Editor launch and activation log are confirmed; required screenshots are present; screenshot hashes, dimensions, and sizes verify; the tester completed the privacy attestation and runtime-boundary attestation; no game files, saves, credentials, or private paths are visible; and the verifier passed for the exact commit.
 
-- the checklist was executed on Windows x64 Profile;
-- every required item is recorded as `pass`;
-- the source commit matches the release commit exactly;
-- the Editor launch result and TG SDK activation log are confirmed;
-- required screenshot coverage is present;
-- screenshot hashes, sizes, and PNG dimensions pass the screenshot verifier;
-- the tester completed the privacy attestation and runtime-boundary attestation;
-- no game files, saves, credentials, private paths, or unrelated desktop content are visible;
-- the evidence verifier passed with the exact expected commit;
-- screenshots and evidence are stored in the approved release record and **must not be committed** to the repository.
+Screenshots and evidence are review material and **must not be committed**.
 
-A successful verifier result does not inspect screenshot pixels. Human privacy review remains mandatory.
+### Package-preview gate
 
-## Build and package
+Before any future package assembler or release step is enabled:
 
-The release pipeline should eventually implement:
+- the build manifest has an accepted evidence-backed review;
+- the staging inventory binds to the exact manifest fingerprint, pack, and package root;
+- every included entry is project-owned and has a lowercase SHA-256 digest;
+- every expected manifest output maps to exactly one staged output;
+- there are no omissions, collisions, unsafe paths, undeclared outputs, or redistribution blockers;
+- the package preview is `ready` while `AssemblyAllowed`, `ArchiveAllowed`, and `DeploymentAllowed` remain false;
+- a human confirms every **redistributable output** and exclusion before a separately reviewed assembler can run.
+
+A ready preview is not proof that files exist, were copied, or were archived.
+
+## Controlled pipeline
+
+The eventual pipeline is:
 
 ```text
 validate → configure → build → test → package → inspect → checksum → publish
 ```
 
-Until automated release tooling exists, maintainers must document every manual command and input.
+Until each mutation step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview.
 
-Release packages must contain only project-owned or legally redistributable output. Do not package:
+## Package boundaries
 
-- game binaries;
-- game assets;
-- extracted proprietary data;
-- private workspace content;
-- personal logs or paths;
-- third-party binaries without redistribution rights.
+Release packages may contain only project-owned or legally redistributable output. Do not package game binaries/assets, extracted proprietary data, private workspace content, personal logs/paths, source trees or work-order plans not intended for distribution, or third-party binaries without redistribution rights.
+
+The current build-manifest and package-preview contracts do not copy files, create archives, deploy content, or publish releases.
 
 ## Artefacts
 
-A public release should include, as applicable:
+A public release may include source tag/archive, editor/SDK package, schema package, checksums, SBOM when available, licence/notices, release notes, compatibility matrix, migration, and rollback instructions.
 
-- source tag;
-- source archive generated by the hosting platform;
-- editor/SDK package;
-- schema or SDK package;
-- checksums;
-- software bill of materials when tooling is available;
-- licence and notices;
-- release notes;
-- compatibility matrix;
-- migration and rollback instructions.
-
-Manual UI evidence is release-review material, not a redistributable product payload. Screenshot hashes and the accepted evidence result may be recorded in release notes without publishing the screenshots publicly.
+Manual UI evidence is not a redistributable product payload.
 
 ## Checksums
 
-Publish SHA-256 checksums for distributed binary archives and generated release packages.
-
-Checksums prove archive integrity, not runtime safety or trustworthiness.
+Publish SHA-256 **checksums** for every distributed binary archive and generated release package. Checksums prove integrity, not runtime safety or trustworthiness.
 
 ## Release notes
 
-Release notes must include:
-
-- summary;
-- user-visible additions and fixes;
-- security changes;
-- schema and migration changes;
-- compatibility changes;
-- known limitations;
-- upgrade steps;
-- rollback steps;
-- checksums and artefact list.
-
-Do not describe planned features as shipped.
+Include summary, user-visible changes, security notes, schema/migration changes, compatibility changes, known limitations, upgrade/rollback steps, checksums, and artefact list. Do not describe planned features as shipped.
 
 ## Signing
 
-When release signing is introduced, document:
-
-- signing identity;
-- key custody;
-- verification commands;
-- rotation and revocation process;
-- compromised-key response.
-
-Do not claim signed releases before the process is implemented and verifiable.
+Do not claim signed releases until signing identity, key custody, verification commands, rotation/revocation, and compromise response are implemented and verifiable.
 
 ## Publishing
 
-Only a maintainer may create an official tag or release.
+Only a maintainer may publish. Verify the tag points to the approved commit, artefacts were produced in a clean environment, checksums match, the release page is reviewed, and no restricted/private file is attached.
 
-Before publishing:
+## Post-release, rollback, and hotfixes
 
-1. verify the tag points to the approved `main` commit;
-2. verify artefacts in a clean environment;
-3. compare checksums;
-4. review the final release page;
-5. confirm no private or restricted files are attached.
+After publishing, verify downloads/checksums, monitor issues/security reports, preserve logs/results, and begin a patch release for confirmed release-blocking defects.
 
-## Post-release
+A release may be withdrawn for security exposure, data/save corruption, unsafe deployment, incorrect runtime permission, severe compatibility failure, or restricted/private content. Preserve an audit record where safe, identify affected versions, provide safe removal/rollback, and publish a corrected release when available.
 
-After publishing:
-
-- verify public downloads and checksums;
-- monitor issues and security reports;
-- record release status in the changelog;
-- preserve build logs and validation reports;
-- begin a patch release when a release-blocking defect is confirmed.
-
-## Rollback and yanking
-
-A release may be marked unsafe, withdrawn, or superseded when it causes:
-
-- security exposure;
-- data or save corruption;
-- unsafe deployment;
-- incorrect runtime permission;
-- severe compatibility failure;
-- inclusion of restricted or private material.
-
-When withdrawing a release:
-
-- keep an audit record when safe and legally possible;
-- state the reason without publishing exploit details prematurely;
-- identify affected versions;
-- provide safe removal or rollback steps;
-- publish a corrected release when available.
-
-## Hotfixes
-
-Security or data-loss hotfixes may use an accelerated private review, but must still include:
-
-- scoped change;
-- regression test;
-- DCO and provenance;
-- maintainer approval;
-- changelog and advisory update;
-- post-release full review when emergency timing prevented normal review.
+Emergency hotfixes still require a scoped change, regression test, DCO/provenance, maintainer approval, changelog/advisory update, and post-release review.

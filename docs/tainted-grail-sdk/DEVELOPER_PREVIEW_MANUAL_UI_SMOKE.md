@@ -4,73 +4,52 @@ Status: checklist and evidence tooling implemented; the actual Windows screensho
 
 ## Purpose
 
-This checklist proves the source-built Tainted Grail SDK panes are usable in a **real Windows x64 Profile** O3DE Editor session. It complements the automated service-level persistence smoke. It does not replace compiled tests, and it does not prove FoA runtime compatibility.
+This checklist proves the source-built TG SDK panes are usable in a **real Windows x64 Profile** Editor session. It complements automated and compiled tests and does not prove FoA runtime compatibility.
 
-The accepted evidence must be tied to the **exact source commit** being reviewed. Do not reuse screenshots from an older commit.
-
-Historical acceptance contracts referred to **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, and **All eleven TG SDK panes** as Slices 7–10 were added. The current Slice 11 pass requires **All twelve TG SDK panes**.
+Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, and **All twelve TG SDK panes** as earlier slices landed. Slice 12 requires **All thirteen TG SDK panes**.
 
 ## Safety and privacy boundary
 
-Use only the project-owned synthetic Developer Preview 0 fixture and the project-owned duplicate-review companion. Do not display or capture:
+Use only project-owned synthetic data. Do not display or capture game files/assets/saves, credentials, private paths, unrelated desktop content, FoA, BepInEx/Harmony runtime tooling, **work-order execution, deployment, injection, or save-mutation**.
 
-- proprietary game files, assets, saves, identifiers, or screenshots;
-- credentials, tokens, user names, private absolute paths, or unrelated desktop content;
-- FoA, BepInEx, Harmony, Avalon Core, runtime adapters, work-order execution, runtime-result capture, compiler invocation, package assembly, deployment, injection, or save-mutation tooling.
-
-The evidence tool does not capture the screen and does not inspect screenshot pixels. The tester must review each image before attaching it.
-
-Nothing is uploaded automatically. **Do not commit screenshots.** Keep the evidence directory beneath `build/` or outside the repository.
+The evidence tool does not capture the screen and does not inspect screenshot pixels. Nothing is uploaded automatically. **Do not commit screenshots.** Keep evidence beneath `build/` or outside the repository.
 
 ## Required environment
 
-- Windows x64;
-- Profile configuration;
-- source commit checked out exactly;
-- `Editor.exe` built successfully;
-- deterministic synthetic fixture generated and verified;
+- Windows x64 Profile;
+- exact reviewed commit;
+- successful `Editor.exe` build and launch;
+- verified synthetic fixture;
 - focused validators and compiled catalog tests green;
-- normal Windows display scaling between **100–200%**;
-- a project or engine setup that loads the `TaintedGrailModdingSDK` Gem.
+- **100–200%** display scaling;
+- a project loading `TaintedGrailModdingSDK`.
 
-Record the Windows version, display scale, tester alias, exact commit, Editor launch result, and TG SDK activation-log confirmation.
+Record Windows version, display scale, tester alias, exact commit, Editor launch result, and activation-log confirmation.
 
-## Prepare the fixture
+## Prepare and launch
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
   --output build/tg-sdk-developer-preview-0-fixture
-
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output build/tg-sdk-developer-preview-0-fixture
-```
-
-Prepare the project-owned duplicate-review companion before opening the workspace:
-
-```powershell
-Copy-Item `
-  Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/preview.duplicate-companion.tgpack.json `
-  build/tg-sdk-developer-preview-0-fixture/Packs/preview.duplicate-companion.tgpack.json
-```
-
-The canonical fixture verifier intentionally covers the unchanged generated fixture only. The copied companion is separately repository-owned and must match the reviewed source commit. Follow `Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/README.md` during the duplicate-report step.
-
-No adapter declaration is registered by the preview fixture. The expected Adapter Capability Matrix state is deterministic `unsupported` rows, the expected Adapter Work-Order Plans state is a refused candidate for each loaded pack with zero generated steps, the expected Adapter Runtime Result Evidence state is **zero registered runtime-result envelopes**, and the expected Adapter Build Manifests state is **zero ready build definitions**.
-
-## Launch the Editor
-
-```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
   --build-dir build/tg-sdk-developer-preview-0-windows-profile `
   --project C:\O3DE\Projects\MyProject `
   --log-dir build/tg-sdk-developer-preview-0-launch
 ```
 
-Confirm the launch result is zero and the native Editor log contains the TG SDK activation message.
+Prepare `preview.duplicate-companion`, then import `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion` exactly as documented in `Preview/DuplicateReview/README.md`.
 
-## Initialize the evidence directory
+The normal fixture has no adapter declaration, runtime-result envelope, or package-preview input. Expected defaults are:
 
-Use a non-personal tester alias and the exact 40-character commit SHA:
+- the Adapter Capability Matrix shows `unsupported` rows when no adapter declaration is registered;
+- Work-Order Plans shows **one refused plan group and zero generated steps** per loaded pack;
+- Runtime Result Evidence shows zero registered envelopes;
+- Adapter Build Manifests shows zero ready build definitions;
+- Package Assembly Preview shows **zero registered package-preview inputs**.
+
+## Initialize evidence
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py init `
@@ -81,11 +60,9 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py init `
   --display-scale 125
 ```
 
-Initialization creates a pending checklist. It does not claim a pass and does not create screenshots.
+Initialization creates pending evidence and captures nothing.
 
 ## Manual checklist
-
-Complete every item in order.
 
 ### 1. All panes open
 
@@ -102,167 +79,80 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Adapter Capability Matrix;
 - Tainted Grail Adapter Work-Order Plans;
 - Tainted Grail Adapter Runtime Result Evidence;
-- Tainted Grail Adapter Build Manifests.
+- Tainted Grail Adapter Build Manifests;
+- Tainted Grail Package Assembly Preview.
 
-Confirm every pane opens without an error and remains interactive. **All twelve TG SDK panes** must be present.
-
-Record:
+Confirm every pane opens and remains interactive. **All thirteen TG SDK panes** must be present.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All twelve TG SDK panes opened from the Tools menu."
+  --notes "All thirteen TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
 
 ### 2. Readability at normal scaling
 
-At the configured **100–200%** Windows display scale, confirm:
-
-- labels are not clipped;
-- tables and form fields remain readable;
-- primary buttons are visible;
-- no pane requires extreme resizing to expose core controls.
-
-Screenshot required.
+At **100–200%**, confirm labels, tables, fields, and primary controls remain readable without extreme resizing. Screenshot required.
 
 ### 3. Keyboard traversal
 
-Use `Tab`, `Shift+Tab`, arrow keys, and activation keys where appropriate. Confirm keyboard traversal reaches primary controls in each pane and the current focus is visible.
+Use `Tab`, `Shift+Tab`, arrows, and activation keys. Confirm keyboard traversal reaches primary controls and focus remains visible. Notes required.
 
-A screenshot is not mandatory because focus traversal is temporal, but detailed notes are required.
+### 4. Preview data and pipeline views
 
-### 4. Preview workspace, economy analyses, adapter readiness, plans, result evidence, and build manifests
+Open the synthetic workspace and duplicate companion. Confirm:
 
-Open the generated synthetic workspace after the companion pack has been copied. Confirm both owner packs load:
+- catalog/economy data and blockers are visible;
+- coverage lanes are correct;
+- **cross-pack duplicate candidates** include the exact `preview.duplicate-companion` subjects produced from `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion`;
+- no display-name/fuzzy candidates appear;
+- the Adapter Capability Matrix shows `unsupported` rows when no adapter declaration is registered;
+- Work-Order Plans shows **one refused plan group and zero generated steps** per pack;
+- Runtime Result Evidence shows zero envelopes;
+- Adapter Build Manifests shows **zero ready build definitions**;
+- **Tainted Grail Package Assembly Preview** shows **zero registered package-preview inputs**;
+- package-preview columns expose reviewed manifest, staging inventory, status, package root, derived layout/output digests, omissions, collisions, redistribution/trust blockers, and canonical JSON;
+- every analysis/planning/result/build/package pane is **non-editable** and exposes no registration, import, save/export, compiler, copy, archive, deploy, launch, execution, or save-mutation action.
 
-- `preview.developer-preview-0`;
-- `preview.duplicate-companion`.
-
-Import `Gems/TaintedGrailModdingSDK/Preview/DuplicateReview/preview-duplicate-source.json` through **Tainted Grail Source Intake** using the structured JSON importer. Then promote the two project-owned claims exactly as documented in `Preview/DuplicateReview/README.md`:
-
-- `preview.evidence.duplicate.primary` → `preview.item.duplicate.primary`, owner `preview.developer-preview-0`;
-- `preview.evidence.duplicate.companion` → `preview.item.duplicate.companion`, owner `preview.duplicate-companion`;
-- domain `economy`, kind `item`, subject `subject:preview:item:duplicate-review`, identity `synthetic` for both.
-
-Confirm:
-
-- the active preview profile is visible;
-- source and evidence documents are present;
-- the catalog shows the expected synthetic records and relationships;
-- blocked, stale, allowed, forbidden, and unresolved states are distinguishable;
-- the Economy Acquisition Coverage pane lists canonical economy items and recipes;
-- vendor, loot, reward, learnability, and crafting columns show only applicable lanes;
-- relationship, evidence, blocker, and reason details are visible without an editing control;
-- the Economy Cross-Pack Duplicates pane displays one exact `subject_ref` group for the two promoted cross-pack duplicate candidates;
-- the group shows `partial`, because neither promoted candidate has a typed item profile;
-- exact signal, exact match key, owner packs, canonical records, evidence, blockers, and status are visible;
-- same-pack repeats, case-different keys, and display-name similarity do not appear as duplicate groups;
-- the Adapter Capability Matrix lists all eleven typed capabilities for each loaded pack;
-- the matrix shows `unsupported` rows when no adapter declaration is registered;
-- required adapter version, active runtime target, capability, status, and actionable reason are visible;
-- the Adapter Work-Order Plans pane shows **one refused plan group and zero generated steps** for each loaded pack;
-- the refusal displays failed capabilities, compatibility statuses, subjects, and reasons;
-- no canonical JSON is presented as executable, and no plan or step reports execution as allowed;
-- the Adapter Runtime Result Evidence pane shows **zero registered runtime-result envelopes**, zero accepted/rejected contracts, and zero candidate source/evidence records;
-- outcome, failure, cleanup/rollback, logs/fingerprints, evidence-candidate, and issue columns are visible;
-- the Adapter Build Manifests pane shows the refused plan state and **zero ready build definitions**;
-- manifest, exact plan, profile/runtime, status, builder/toolchain, plugin metadata, resolved materials, expected package outputs, and canonical JSON/reason columns are visible;
-- no manifest reports `BuildAllowed=true`;
-- no runtime-result file picker, registration, import, save, promotion, plan or manifest export, compiler/build/package action, dispatch, execution, deployment, launch, or save-mutation control exists;
-- all six analysis, planning, result-evidence, and build-manifest panes remain **non-editable**.
-
-Record this observation under `preview-data-displayed`. Screenshot required.
+Record under `preview-data-displayed`. Screenshot required.
 
 ### 5. Item and Recipe Editor
 
-Confirm the Item and Recipe Editor displays:
-
-- two original synthetic item profiles;
-- one original synthetic recipe profile;
-- the ingredient and output joins;
-- the expected station and unlock references;
-- read-only action-lane status.
-
-The two duplicate-review records intentionally have no typed profiles and must not be mistaken for the two original typed items.
-
-Screenshot required.
+Confirm typed items/recipe, joins, station/unlock references, and read-only action lanes. Screenshot required.
 
 ### 6. Station visibility and learnability
 
-Select the synthetic recipe and confirm the station visibility and learnability rows show:
+Confirm resolved and intentionally unresolved station/learnability rows, evidence, governance, blockers, and reasons. Screenshot required.
 
-- the resolved workbench association;
-- the resolved learnability source;
-- the explicitly unresolved learnability source;
-- status, governance, evidence, blockers, and reasons.
+### 7. Save, close, reopen
 
-Screenshot required.
-
-### 7. Save, close, reopen, and reload
-
-This step proves the full save, close, reopen sequence on the accepted commit.
-
-Save durable documents, close the Editor, relaunch the same commit, reopen the workspace, and reload the catalog.
-
-Confirm the reviewed state survives:
-
-- workspace and profile;
-- both packs;
-- source and evidence;
-- catalog records and relationships;
-- governance and validation history;
-- economy profiles and joins;
-- station and learnability evidence rows;
-- derived economy acquisition coverage rows and statuses;
-- the derived partial cross-pack duplicate group, exact key, candidate health, and status.
-
-Also confirm:
-
-- the Adapter Capability Matrix returns to the same deterministic `unsupported` state after relaunch because its declaration registry is transient;
-- the Adapter Work-Order Plans pane deterministically rebuilds the same refused candidates with zero generated steps;
-- the Adapter Runtime Result Evidence pane returns to zero envelopes because its registry is transient;
-- the Adapter Build Manifests pane returns to zero ready definitions and does not create a manifest file;
-- no adapter declaration, work-order plan, runtime-result, or build-manifest file appears in the workspace.
-
-Screenshot required after reopen.
+Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, and package-preview registries must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview file may appear. Screenshot required.
 
 ### 8. Actionable failure message
 
-Trigger one safe, reversible validation failure using synthetic data, such as an invalid path or a missing synthetic subject reference.
+Trigger a safe reversible validation failure. Confirm the **failure message** identifies the affected subject/path without exposing private data. Screenshot required.
 
-Confirm the failure message identifies the affected path or subject and does not expose a private path or secret.
+### 9. Runtime/deployment boundary absent
 
-Screenshot required.
-
-### 9. Runtime and build boundary remain absent
-
-Inspect every TG SDK pane and confirm no runtime, compiler invocation, package assembly, archive creation, file copy, dependency download, deployment, injection, save-mutation, plan save/export/dispatch/execution, result capture/import/promotion, adapter loading/registration, automatic duplicate merge, pack rejection, or winner-selection action is exposed.
-
-Record detailed notes. A screenshot is optional because absence is established across the full pass, not by a single image.
+Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, compiler, file copy/delete, archive creation, package assembly, or deployment action exists. Record under `runtime-deployment-absent`.
 
 ## Attach reviewed screenshots
-
-Capture screenshots manually with Windows tools. Crop to the O3DE Editor content when practical. Review each image before attaching it.
-
-A single screenshot may cover multiple checks:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attach `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
-  --screenshot C:\Evidence\catalog-and-governance.png `
+  --screenshot C:\Evidence\tg-sdk-panes.png `
   --check all-panes-open `
   --check preview-data-displayed `
-  --title "Catalog, economy, adapter, planning, result-evidence, and build-manifest panes" `
-  --description "Synthetic preview data with fail-closed adapter rows, refused plans, zero result envelopes, and zero ready build definitions." `
+  --title "TG SDK governed authoring and previews" `
+  --description "Project-owned synthetic data and fail-closed pipeline states." `
   --privacy-reviewed `
   --project-owned-only
 ```
-
-The tool accepts PNG files only, requires at least 800×600 pixels, records dimensions, size, and SHA-256, and copies the reviewed image beneath `screenshots/`.
 
 Required screenshot coverage:
 
@@ -276,12 +166,10 @@ Required screenshot coverage:
 
 ## Final attestation
 
-After every checklist item is recorded as `pass` and every image has been reviewed:
-
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attest `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
-  --tested-at 2026-07-18T12:00:00Z `
+  --tested-at 2026-07-19T12:00:00Z `
   --launch-exit-code 0 `
   --activation-log-confirmed `
   --reviewed-for-private-data `
@@ -292,7 +180,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attest
   --tester-confirmed
 ```
 
-## Verify the evidence
+## Verify evidence
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py verify `
@@ -300,32 +188,10 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py verify
   --expected-commit <40-character-commit>
 ```
 
-Verification checks:
+Verification checks exact commit binding, Windows/Profile metadata, launch, checklist results, screenshot coverage, PNG integrity/dimensions/hashes, allow-listed relative paths, traversal/symlink rejection, textual privacy checks, and attestations.
 
-- exact commit binding;
-- Windows x64 Profile metadata;
-- successful Editor launch and activation-log confirmation;
-- every checklist item recorded as `pass`;
-- required screenshot coverage;
-- PNG signature, dimensions, sizes, and SHA-256 hashes;
-- relative paths, exact file allow-list, traversal rejection, and symlink rejection;
-- textual metadata for private paths and secret-like material;
-- disclosure and runtime-boundary attestations.
-
-Verification does not inspect screenshot pixels. A successful result therefore requires both machine checks and the tester’s privacy review.
+Verification does not inspect screenshot pixels. Human privacy review remains mandatory.
 
 ## Evidence handling
 
-The evidence directory may be attached privately to a review or release record after verification and human review. It must not be committed to the repository.
-
-The PR or release record should state:
-
-- exact source commit;
-- Windows version and display scale;
-- tester alias;
-- checklist result;
-- screenshot count and hashes;
-- evidence verifier result;
-- any limitations or blocked observations.
-
-A checklist failure or privacy concern blocks acceptance. Correct the issue, start a new evidence directory, and repeat the pass.
+Verified evidence may be attached privately to a review/release record and **must not be committed**. Record exact source commit, Windows version/scale, tester alias, screenshot hashes, verifier result, limitations, and blocked observations.

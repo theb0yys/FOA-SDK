@@ -165,25 +165,18 @@ The contract does not create a durable build-manifest schema. A future builder m
 
 ## Tests and enforcement
 
-Production-linked tests cover:
-
-- strict status and dependency vocabularies;
-- complete definitions reaching `ready` while `BuildAllowed` stays false;
-- status precedence;
-- unresolved toolchains;
-- missing materials and missing fingerprints remaining distinct;
-- path traversal and duplicate output rejection;
-- redistribution blocking;
-- deterministic canonical serialization;
-- input non-mutation;
-- preservation of BepInEx metadata and resolved inputs.
+Production-linked tests cover strict vocabularies, complete definitions with `BuildAllowed: false`, status precedence, unresolved toolchains, distinct material/fingerprint failures, path traversal and duplicate-output rejection, redistribution blocking, deterministic serialization, input non-mutation, and BepInEx metadata preservation.
 
 The focused validator rejects build execution, runtime/process access, persistence, mutable Editor controls, missing containment and redistribution gates, incomplete tests, and missing public documentation.
 
-## Next ordered slice
+## Slice 12 package-assembly preview
 
-The next Phase 8 slice is a deterministic package-assembly preview. It should compare declared expected outputs with a synthetic, project-owned staging inventory and produce a package layout plus checksums without copying, archiving, deploying, launching, or executing anything.
+Slice 12 implements the next bounded contract as a deterministic **package-assembly preview**. It compares this exact reviewed build manifest with a project-owned staging inventory and derives a sorted package layout, exact output digests, omissions, collisions, trust failures, and redistribution blockers.
+
+The preview requires exact manifest ID/fingerprint, pack, package-root, accepted-review, role, media-type, project-ownership, path, digest, and redistribution bindings. It does not infer missing outputs or choose a winner when multiple staged entries target the same package path.
+
+The preview retains `AssemblyAllowed: false`, `ArchiveAllowed: false`, and `DeploymentAllowed: false`. It performs **no file copying**, filesystem scan, archive creation, deployment, launch, or adapter execution. See [FoA Adapter Package Assembly Preview](FOA_ADAPTER_PACKAGE_ASSEMBLY_PREVIEW.md).
 
 ## Rollback
 
-Revert the implementing pull request. Build manifests are transient derived state and no durable workspace, pack, catalog, source/evidence, adapter, work-order, runtime-result, or build schema requires migration.
+Revert the implementing pull request. Build manifests and package previews are transient derived state, and no durable workspace, pack, catalog, source/evidence, adapter, work-order, runtime-result, build, or package schema requires migration.

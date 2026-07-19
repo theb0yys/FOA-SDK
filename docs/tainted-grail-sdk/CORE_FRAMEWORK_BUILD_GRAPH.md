@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted correction contract for Slice 5 and extended by Slices 6, 7, 8, 9, 10, and 11. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
+Accepted correction contract for Slice 5 and extended by Slices 6–12. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
 
 ## Targets
 
@@ -11,42 +11,43 @@ Accepted correction contract for Slice 5 and extended by Slices 6, 7, 8, 9, 10, 
 Owns shared domain state and services that are free of Qt and host-tool dependencies:
 
 - workspace, pack, source, evidence, catalog, governance, and economy models;
-- catalog database and publish-after-save transaction logic;
-- governance types and governance blocker evaluation;
-- foundation validation, economy blocker evaluation, and immutable economy acquisition coverage and cross-pack duplicate analysis;
-- typed transient adapter declarations, strict semantic-version compatibility, capability evaluation, and permission/proof readiness analysis;
-- deterministic, canonical, execution-prohibited adapter work-order planning;
-- typed runtime-result contract validation and candidate source/evidence return;
-- reproducible adapter build-manifest generation with exact toolchain, material, path, and redistribution checks;
+- catalog database, transactions, governance types, blockers, and validation;
+- immutable economy acquisition coverage and cross-pack duplicate analysis;
+- typed transient adapter declarations, semantic-version compatibility, capability and proof evaluation;
+- deterministic execution-prohibited work-order planning;
+- typed runtime-result validation and candidate evidence return;
+- reproducible adapter build-manifest generation;
+- deterministic package-assembly preview derivation from reviewed metadata;
 - the source/evidence registry.
 
 Core depends publicly on `AZ::AzCore`. Core must not depend on Framework, Editor, Qt, AzToolsFramework, runtime adapters, deployment, or game APIs.
 
 ### `TaintedGrailModdingSDK.Framework.Static`
 
-Owns editor-side orchestration, persistence, and services that currently require host-tool or Qt facilities:
+Owns editor-side orchestration and services that require host-tool or Qt facilities:
 
-- `FoundationService` composition and domain command implementations;
-- governance decision, evidence promotion, and economy authoring services that use Qt-backed timestamps or normalisation;
-- workspace candidate loading and atomic publication support;
+- `FoundationService` composition and domain commands;
+- governance, promotion, and economy authoring services with Qt-backed timestamps or normalisation;
+- atomic workspace candidate loading;
 - workspace schema, canonical path, pack, catalog, source/evidence, and workspace persistence;
 - source import and the Foundation notification contract.
 
-Framework depends publicly on Core and privately on the host-tool facilities needed by persistence and editor-side orchestration. Framework must not own widgets, the Editor module, or the Editor system component.
+Framework depends publicly on Core and privately on host-tool facilities. Framework must not own widgets, the Editor module, or the Editor system component.
 
 ### `TaintedGrailModdingSDK.Editor`
 
-Remains the Tool Gem module and owns only composition and presentation:
+Owns only composition and presentation:
 
-- Qt widgets, including the read-only economy acquisition, duplicate-report, adapter-capability, work-order-plan, runtime-result-evidence, and adapter-build-manifest panes;
+- Qt widgets, including the read-only economy acquisition, duplicate-report, adapter-capability, and work-order-plan panes;
+- runtime-result, build-manifest, and package-assembly-preview panes;
 - the Editor system component;
 - the Gem Editor module.
 
-Editor depends privately on Framework. It does not recompile Core or Framework sources.
+Editor depends privately on Framework and does not recompile Core or Framework sources.
 
 ## Tests
 
-Tests link Framework and receive Core transitively. Test manifests contain test translation units and included test fragments only. Production `.cpp` files are compiled exactly once by Core, Framework, or Editor; tests do not compile private copies of production implementation files.
+Tests link Framework and receive Core transitively. Test manifests contain tests and included test fragments only. Every production `.cpp` has exactly one production owner.
 
 ## Dependency direction
 
@@ -64,81 +65,39 @@ Framework.Static
 Catalog.Tests
 ```
 
-The test arrow means the test target links Framework; it does not reverse the production dependency direction.
+Tests link Framework; they do not reverse the production dependency direction.
 
-## Source-location policy
+## Source-location and transient-state policy
 
-This correction changes build ownership, not include paths or public C++ namespaces. Existing files remain under `Code/Source` so the split does not create an unrelated filesystem migration. The CMake manifests are the authoritative ownership map.
+Existing files remain under `Code/Source`; CMake manifests are the authoritative ownership map. Qt-dependent services remain Framework-owned until their host dependencies are removed under separate review.
 
-Qt-dependent services are deliberately Framework-owned rather than being labelled Core while retaining hidden Qt coupling. Moving one of those services into Core later requires first removing its Qt and host-tool dependencies under a separate reviewed change. New Core analysis services must follow the same pure dependency boundary.
+Adapter declarations, work-order plans, runtime-result envelopes, build manifests, and package-preview requests are transient Core state. They have no durable schema, persistence service, filesystem loader, process access, or runtime implementation. Editor shutdown clears the transient registries.
 
-The adapter declaration registry is deliberately transient Core state. It has no persistence service, document schema, filesystem path, loader integration, process access, or runtime implementation. Editor shutdown clears the registry.
+Work-order planning reads immutable governed inputs and returns plans/refusals by value with `ExecutionAllowed=false`.
 
-Work-order planning is also transient Core state. It reads immutable packs, declarations, catalog state, source/evidence, governance history, and blockers; returns plans or refusals by value; and performs no filesystem, persistence, process, deployment, launch, telemetry, or save operation.
+Runtime-result contracts validate externally supplied metadata against exact plans and return candidate evidence by value without registering evidence or changing governance.
 
-Runtime-result contracts remain transient Core state. They validate externally supplied metadata against an exact canonical plan and return candidate source/evidence documents by value. They do not register evidence, open logs, persist files, invoke adapters, promote governance, or create an execution path.
+Build manifests bind exact plans to caller-supplied toolchain, material, dependency, output, path, and redistribution declarations. `BuildAllowed=false` for every status.
 
-Adapter build manifests are transient Core state. They bind an exact plan to caller-supplied build definitions, resolved materials, BepInEx metadata, expected outputs, safe package paths, and redistribution decisions. Even a `ready` definition retains `BuildAllowed=false` and performs no toolchain resolution, compilation, package assembly, persistence, deployment, launch, or execution.
+Package previews compare an accepted evidence-backed manifest review with a project-owned staging inventory and derive layout rows, output digests, omissions, collisions, trust failures, and redistribution blockers. `AssemblyAllowed=false`, `ArchiveAllowed=false`, and `DeploymentAllowed=false` for every status. The service does not scan staging or touch files.
 
 ## Enforcement
 
-`validate_core_framework_build_graph.py` fails when:
+`validate_core_framework_build_graph.py` rejects duplicate or missing production ownership, production code in test manifests, reverse dependencies, Core Qt/AzToolsFramework/Framework-header coupling, UI in Framework, non-composition production code in Editor, exposed internal aliases, and obsolete manifests.
 
-- a production `.cpp` is unowned or owned by more than one target;
-- a test manifest recompiles production sources;
-- Core owns persistence, path, import, orchestration, UI, or Editor files;
-- Core includes Qt, AzToolsFramework, or a Framework-owned header;
-- Framework owns UI or Editor-module files;
-- Editor owns non-composition production sources;
-- CMake reverses or bypasses the Core → Framework → Editor direction;
-- Tool or Builder aliases expose internal static targets;
-- the obsolete path-policy Editor manifest returns.
+Feature-specific validators additionally enforce:
 
-Feature-specific validators add stricter contracts for individual Core analyses and Editor views. The economy coverage validator rejects Qt or mutation dependencies in the coverage service and editing controls in its dashboard. The economy duplicate validator additionally enforces exact case-sensitive signals, distinct-pack gating, no display-name or fuzzy identity matching, pure Core ownership, and a non-editable report.
-
-The adapter-contract validator additionally enforces:
-
-- typed adapter identity, strict semantic versions, exact runtime targets, and all eleven capabilities;
-- deterministic `unsupported`, `version_mismatch`, `permission_missing`, `proof_missing`, and `supported` results;
-- transient declaration storage with no adapter persistence document;
-- exact profile-bound adapter, permission, and validation proof;
-- a non-editable matrix;
-- no runtime behavior in the contract foundation.
-
-The work-order-plan validator additionally enforces:
-
-- all-eleven-capability support before a candidate can generate;
-- independent exact subject, permission, proof, payload, relationship, target, and blocker rebuilding;
-- stable plan and step identities;
-- canonical sorting and JSON serialization;
-- `ExecutionAllowed: false` at plan and step level;
-- no work-order persistence, export, dispatch, adapter invocation, runtime code, or mutable UI control;
-- production-linked failure, determinism, and non-mutation tests.
-
-The runtime-result validator additionally enforces:
-
-- exact attempted plan and step bindings;
-- typed outcomes, failures, cleanup, rollback, and log kinds;
-- safe relative log references and lowercase SHA-256 fingerprints;
-- candidate source/evidence return without automatic registration, persistence, validation, or permission;
-- a non-editable runtime-result evidence pane;
-- no adapter call, process access, deployment, launch, telemetry, save mutation, or execution path.
-
-The adapter build-manifest validator additionally enforces:
-
-- exact plan, pack, adapter, profile, source revision, O3DE revision, and toolchain binding;
-- required resolved materials and lowercase SHA-256 fingerprints;
-- BepInEx plugin metadata plus exact hard and soft dependency declarations;
-- safe expected-output containment beneath the package root;
-- explicit redistribution gates;
-- deterministic canonical serialization with `BuildAllowed=false`;
-- a non-editable build-manifest pane;
-- no compiler, package assembler, archive, copy, deployment, launch, telemetry, save mutation, or execution path.
+- exact case-sensitive economy signals, deterministic aggregation, non-mutation, and non-editable views;
+- typed adapter identity/capability/version/proof gates and no runtime behavior;
+- all-capability work-order refusal, exact payload rebuilding, canonical JSON, and `ExecutionAllowed=false`;
+- exact runtime-result bindings, typed outcomes/recovery/logs, candidate evidence-only output, and no execution path;
+- exact build-manifest plan/toolchain/material/output/redistribution bindings and `BuildAllowed=false`;
+- accepted manifest review, project-owned staging inventory, exact package layout/digests, explicit omissions/collisions, path and redistribution gates, `AssemblyAllowed=false`, and a non-editable package preview.
 
 ## Runtime boundary
 
-No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, compiler invocation, package assembly, deployment, injection, telemetry, game launch, save mutation, work-order execution, or result capture code is introduced or authorized. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
+No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, compiler invocation, file copy, package assembly, archive creation, deployment, injection, telemetry, game launch, save mutation, work-order execution, or result capture code is introduced or authorised. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
 
 ## Rollback
 
-Revert the implementing pull request. No durable documents or user state require migration because these slices change build ownership and add transient or derived read-only analysis, planning, evidence candidates, and build definitions only.
+Revert the implementing pull request. No durable documents or user state require migration because these slices add transient or derived analysis, planning, evidence candidates, build definitions, and package previews only.

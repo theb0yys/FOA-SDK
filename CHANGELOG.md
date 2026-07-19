@@ -2,201 +2,70 @@
 
 All notable changes to the Tainted Grail Modding Editor and SDK are documented here.
 
-The project follows the principles of Keep a Changelog. Version numbers follow Semantic Versioning once public releases begin. During pre-alpha development, entries may describe capability slices before a tagged release exists.
+The project follows Keep a Changelog principles. Version numbers will follow Semantic Versioning once public releases begin. During pre-alpha development, entries may describe reviewed capability slices before a tag exists.
 
 ## Unreleased
 
 ### Added
 
-- Pure-Core `AdapterBuildManifestService` for exact plan binding, reproducible build definitions, resolved material fingerprints, BepInEx plugin metadata, dependency declarations, expected package outputs, path containment, and redistribution gates.
-- Read-only **Tainted Grail Adapter Build Manifests** editor pane with deterministic `ready`, `plan_mismatch`, `toolchain_unresolved`, `input_missing`, `fingerprint_missing`, `path_invalid`, and `redistribution_blocked` states plus canonical JSON with `BuildAllowed: false`.
-- Adapter build-manifest C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and twelve-pane Windows manual UI coverage; no build or package operation is introduced.
+- Pure-Core `AdapterPackageAssemblyPreviewService` for exact reviewed-manifest and staging-inventory binding, project ownership, deterministic package layout and output digests, explicit omissions/collisions, path containment, and redistribution blockers.
+- Transient `AdapterPackageAssemblyPreviewRegistry` and read-only **Tainted Grail Package Assembly Preview** pane with canonical JSON and `AssemblyAllowed`, `ArchiveAllowed`, and `DeploymentAllowed` permanently false.
+- Package-preview production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and thirteen-pane Windows manual UI coverage.
+- Pure-Core `AdapterBuildManifestService` for exact plan/toolchain/material binding, BepInEx metadata, dependencies, expected outputs, path containment, redistribution gates, and canonical JSON with `BuildAllowed: false`.
+- Read-only **Tainted Grail Adapter Build Manifests** pane plus production-linked tests, focused validation, documentation, and twelve-pane acceptance coverage.
 - Pure-Core `AdapterRuntimeResultRegistry` and typed runtime-result contracts for exact attempted plan/step identities, outcomes, failures, cleanup, rollback, safe log references, and SHA-256 fingerprints.
-- Pure-Core `AdapterRuntimeResultEvidenceService` that fail-closes mismatched envelopes and returns deterministic candidate source/evidence documents without registering, persisting, validating, or permitting them.
-- Read-only **Tainted Grail Adapter Runtime Result Evidence** editor pane, production-linked tests, focused negative validation, CI integration, public documentation, and eleven-pane Windows manual UI coverage; the contract does not promote validation or permission.
-- Pure-Core `AdapterWorkOrderPlanningService` for whole-plan compatibility gating, exact reviewed subject rebuilding, typed record and relationship steps, deterministic refusals, stable identities, and canonical JSON with execution disabled.
-- Read-only **Tainted Grail Adapter Work-Order Plans** editor pane with generated steps, exact bindings, typed arguments, evidence and validation proof, canonical JSON, and explicit refusal reasons.
-- Adapter work-order C++ tests, focused validator and negative tests, CI integration, public Phase 7 documentation, and tenth-pane Windows manual UI coverage; execution remains prohibited.
-- Pure-Core `AdapterContractRegistry` and `AdapterCompatibilityService` with typed adapter identity, strict semantic versions, exact runtime targets, eleven explicit capabilities, and deterministic compatibility evaluation.
-- Read-only **Tainted Grail Adapter Capability Matrix** editor pane with `supported`, `unsupported`, `version_mismatch`, `permission_missing`, and `proof_missing` rows plus subject, evidence, validation-proof, and reason details.
-- Adapter contract C++ tests, focused validator and negative tests, CI integration, public Phase 7 documentation, and ninth-pane Windows manual UI coverage with no runtime adapter implementation.
-- Pure-Core `EconomyDuplicateDetectionService` analysis for exact, case-sensitive cross-pack economy `subjectRef` and recipe `duplicateKey` candidate groups, evidence health, governance state, and open blockers.
-- Read-only **Tainted Grail Economy Cross-Pack Duplicates** editor pane with exact signals, owner packs, canonical records, `review_required`, `partial`, and `blocked` states, evidence, blockers, and reasons.
-- Economy duplicate C++ tests, focused contract validator and unit tests, CI integration, public design documentation, and eighth-pane Windows manual UI checklist coverage.
-- Pure-Core `EconomyCoverageService` analysis for deterministic vendor, loot, reward, learnability, and crafting coverage over canonical economy relationships, exact evidence bindings, governance state, and open blockers.
-- Read-only **Tainted Grail Economy Acquisition Coverage** editor pane with per-lane `covered`, `partial`, `blocked`, and `missing` states plus relationship, evidence, blocker, and reason details.
-- Economy coverage C++ tests, focused contract validator and unit tests, CI integration, public design documentation, and Windows manual UI checklist coverage.
-- Internal `TaintedGrailModdingSDK.Core.Static` and `TaintedGrailModdingSDK.Framework.Static` targets with explicit Core → Framework → Editor dependency direction.
-- Core/Framework build-graph validation and unit tests for unique production-source ownership, test-only manifests, target dependencies, internal aliases, and Core isolation from Qt, AzToolsFramework, and Framework headers.
-- Durable workspace schema 1 with explicit legacy schema-0 migration, unknown-version rejection, stable workspace/profile identities, unique profile bindings, and project-owned fixture round-trip tests.
-- `FoundationWorkspaceLoadService` and `FoundationWorkspaceLoadCandidate` for all-or-nothing workspace, source/evidence, catalog, canonical-path, and active-profile transitions.
-- Direct `FoundationService` integration tests for workspace document, active-profile, path, source, import-issue, registry, catalog-load, catalog-binding, and catalog-validation failures.
-- O3DE `TaintedGrailModdingSDK` editor Gem and host-tool registration.
-- Foundation contract validator and focused GitHub Actions workflow.
-- Approved Developer Preview 0 design for a source-built Windows x64 usability milestone with deterministic fixtures, smoke verification, diagnostics, and a legally reviewed artifact path.
-- Developer Preview 0 prerequisite, configure, build, and ordered validation command layer for Windows x64 Profile.
-- Non-installing checks for Python, CMake, Git, Git LFS, Visual Studio C++ tools, repository identity, build-directory ownership, and expected Editor output.
-- Dry-run CMake wrappers for the approved `windows-vs-unity` x64 configure path and Profile `Editor` plus `TaintedGrailModdingSDK.Catalog.Tests` build targets.
-- Machine-readable Developer Preview prerequisite and validation results with original child-process exit-code propagation.
-- Developer Preview command contract validator and unit coverage for argument construction, path safety, dry runs, deterministic validation order, JSON output, unsupported hosts, and failure propagation.
-- Dedicated repository-owned `TaintedGrailModdingEditor` O3DE project with `TaintedGrailModdingSDK` enabled, deterministic sibling-engine resolution, and project-owned preview PNG and Windows shortcut ICO.
-- `developer_preview_open.py` command-line Editor opener that selects the dedicated project and delegates to the restricted launch wrapper.
-- Low-level `developer_preview_shortcut.py` Windows `.lnk` generator with a project-owned icon, fixed `--project-path`, explicit replacement, SHA-256 manifest output, and verification.
-- Supported `developer_preview_entry.py` clickable-entry command with semantic Windows shortcut inspection and verified-before-replace behavior.
-- Dedicated-entry project, opener, shortcut, and hardened-entry contract validation with twenty-one focused unit tests and a Windows workflow.
-- Deterministic Developer Preview 0 fixture generator containing only project-owned synthetic `preview.*` identities, portable paths, runtime-disabled pack data, source/evidence, catalog, governance, and economy documents.
-- Canonical `preview-fixture.manifest.json` output with relative paths, byte sizes, and SHA-256 digests for all fixture payloads.
-- Fixture verification for canonical JSON, exact file sets, hashes, path traversal, symlinks, private paths, source/evidence binding, catalog identity and ownership, relationship targets, governance proof links, and economy joins.
-- Seventeen fixture tests covering byte-for-byte determinism, safe replacement, tamper detection, manifest safety, bindings, reserved namespaces, and allowed, forbidden, blocked, stale, and unresolved example states.
-- Shared persistence compatibility loading for documented plain schema-1 documents and existing O3DE `JsonSerialization` envelopes.
-- Service-level Developer Preview persistence smoke coverage using the real workspace, pack, source/evidence, catalog, registry, database, and economy evidence services.
-- Canonical-state comparison across load, save, close-equivalent state disposal, and reopen, including governance history, economy profiles/joins, and station/learnability evidence rows.
-- Compatibility tests proving reviewed proof-backed allowances survive catalog load while unproven allowances are cleared fail-closed.
-- Controlled Windows x64 `Editor.exe` launch wrapper with explicit executable/build selection, O3DE `--project-path` support, dry-run output, wrapper-owned logs, pane-registration guidance, and exact process exit-code propagation.
-- Redacted local diagnostics collector and verifier with tool/build summaries, supplied validation and launch summaries, tail-limited Editor log excerpts, workspace-relative durable-document hashes, an allow-listed file set, SHA-256 manifest verification, and review-before-sharing guidance.
-- Twenty-five launch and diagnostics unit tests covering command restrictions, host checks, project validation, exit propagation, path/secret redaction, inventory limits, symlinks, overwrite protection, tamper detection, traversal rejection, and collect→verify behavior.
-- Developer Preview troubleshooting documentation for missing Editor output, clickable-entry failures, absent TG SDK panes, native log locations, diagnostics failures, verification, and disclosure review.
-- Windows manual UI checklist covering all TG SDK panes, normal scaling, keyboard traversal, synthetic data display, Item and Recipe Editor state, station/learnability evidence, save-close-reopen behavior, actionable failure messages, and the runtime boundary.
-- Screenshot-evidence initializer, recorder, PNG attachment helper, final attestation, and verifier bound to an exact source commit.
-- Screenshot evidence checks for PNG integrity, dimensions, size limits, SHA-256 hashes, required coverage, path traversal, symlinks, unexpected files, textual private paths, secret-like material, privacy review, and no-runtime attestations.
-- Sixteen manual UI evidence unit tests covering pending initialization, output containment, note privacy, PNG validation, evidence completion, tampering, missing coverage, symlinks, unexpected files, and commit mismatch.
-- Workspace and exact FoA game-profile management with durable `*.tgworkspace.json` documents.
-- Mod/content-pack project management with durable `*.tgpack.json` manifests.
-- Pack ownership, compatibility, dependency, save-impact, resource, build, and release declarations.
-- Source and evidence intake with structured JSON/CSV import, generic fingerprinted artifacts, SHA-256 provenance, exact profile binding, and durable source/evidence documents.
-- Canonical catalog browser and record inspector.
-- Durable `Catalog/catalog.tgcatalog.json` documents bound to workspace and exact game profile.
-- Exact-reference/GUID, alias, subject, domain, kind, pack, evidence, maturity, confidence, risk, validation, staleness, permission, blocker, and supersession search.
-- First-class catalog relationships, validation history, and governance history.
-- Evidence-backed claim promotion into reviewed-but-unvalidated, staleness-unknown records.
-- Native exact-reference uniqueness and synthetic pack-ownership rules.
-- **Tainted Grail Catalog Governance** editor pane.
-- Independent maturity, confidence, operational-risk, validation, staleness, permission, prohibition, and supersession authoring for records and relationships.
-- Validation decisions bound to exact profile/version/branch, evidence, method, and named validator.
-- Proof-backed named usage permissions with separate allow, forbid, and clear outcomes.
-- Automatic permission revocation for stale, failed, blocked, and superseded subjects.
-- Durable governance events containing previous/new values, evidence, validation proof IDs, reviewer, time, and notes.
-- Governance blockers for unknown assessments, stale state, missing permission proof, missing history references, and profile mismatch.
-- Strong internal governance types for subject kind, axis, maturity, confidence, risk, validation, staleness, and permission decisions while retaining schema-1 string compatibility.
-- Shared `GovernedSubjectState` transition handling for records and relationships.
-- Intrinsically atomic governance and validation services that return complete candidates without mutating caller-owned catalogs.
-- Testable publish-after-save catalog transaction coordination.
-- Governance hardening tests for malformed or mismatched evidence, wrong profiles, duplicate audit IDs, persistence failure, rollback, corrupted documents, and typed-value misspellings.
-- Governance Reliability Baseline contributor documentation.
-- **Tainted Grail Item and Recipe Editor** editor pane.
-- Typed economy item profiles keyed to canonical `economy/item` records.
-- Typed recipe profiles keyed to canonical `economy/recipe` records.
-- Canonical station references and typed ingredient, output, and by-product joins.
-- Item quest/unique/hidden flags plus localisation, icon, asset, value, weight, quality, rarity, stack, and durability fields.
-- Recipe type, tab, unlock, duplicate-key, persistence-description, and hidden-state fields.
-- First-class economy acquisition relationships: `sold_by`, `dropped_by`, `found_at`, `rewarded_by`, `learned_from`, `granted_by`, and `crafted_at`.
-- Read-only item and recipe action-lane matrices derived from catalog governance.
-- Read-only recipe station visibility and learnability evidence rows combining exact station IDs, profile declarations, `crafted_at` and `learned_from` relationships, evidence health, governance state, and blockers.
-- Economy blockers for missing profiles/evidence/stations/outputs, unresolved joins, quest/unique risks, and identity-incompatible lanes.
-- Economy authoring unit tests covering profile identity, station references, joins, quantity/chance constraints, canonical round trips, acquisition defaults, lane status, deterministic evidence rows, fail-closed evidence/governance, and non-mutation.
-- Item and Recipe Editor user guide, recipe station evidence guide, and typed economy data-format documentation.
-- Full public project README, user, catalog, governance-engine, architecture, development, data-format, quality, review, governance, security, support, conduct, legal/content, privacy, accessibility, release, roadmap, glossary, changelog, and maintainer documentation.
-- GitHub issue forms, pull-request template, TG SDK CODEOWNERS rules, and CI-enforced documentation contracts.
+- Pure-Core `AdapterRuntimeResultEvidenceService`, which returns deterministic candidate evidence by value and **does not promote validation or permission**.
+- Read-only **Tainted Grail Adapter Runtime Result Evidence** pane and eleven-pane acceptance coverage.
+- Pure-Core `AdapterWorkOrderPlanningService` for whole-plan compatibility gating, exact reviewed payload rebuilding, stable identities, deterministic refusals, canonical JSON, and execution disabled.
+- Read-only **Tainted Grail Adapter Work-Order Plans** pane; **execution remains prohibited**.
+- Pure-Core `AdapterContractRegistry` and `AdapterCompatibilityService` with typed identities, semantic versions, exact runtime targets, eleven capabilities, and deterministic `unsupported`, `version_mismatch`, `permission_missing`, `proof_missing`, and `supported` results; there is **no runtime adapter implementation**.
+- Read-only **Tainted Grail Adapter Capability Matrix**.
+- Pure-Core `EconomyCoverageService` and read-only **Tainted Grail Economy Acquisition Coverage** pane.
+- Pure-Core `EconomyDuplicateDetectionService` and read-only **Tainted Grail Economy Cross-Pack Duplicates** pane using exact case-sensitive signals only, with no display-name or fuzzy matching.
+- Internal `TaintedGrailModdingSDK.Core.Static` and `Framework.Static` targets with Core → Framework → Editor dependency direction and unique source ownership.
+- Durable workspace schema 1, validated schema-0 migration, atomic workspace candidates, canonical path policy, and rollback tests.
+- O3DE host-tool Gem registration, workspace/pack/source/evidence/catalog/governance/economy tools, focused validators, and CI.
+- Developer Preview command layer, dedicated Editor project/entry, deterministic synthetic fixture, service-level persistence smoke, controlled Editor launch, redacted diagnostics, and project-owned duplicate-review companion.
+- Windows manual UI checklist covering all TG SDK panes, normal scaling, keyboard traversal, synthetic data, save/close/reopen, actionable failures, and runtime boundaries.
+- **Screenshot-evidence initializer**, recorder, PNG attachment helper, attestation, and exact-commit verifier.
+- Screenshot checks for **PNG integrity**, dimensions, limits, SHA-256, required coverage, traversal/symlink rejection, privacy review, and no-runtime attestations.
+- Public user, contributor, architecture, data-format, governance, security, privacy, accessibility, release, roadmap, changelog, and support documentation.
 
 ### Changed
 
-- Phase 8 is now active with reproducible adapter build-manifest definitions; deterministic package-assembly preview is the next ordered slice.
-- The focused workflow and contract validators now enforce exact plan/toolchain/material binding, path containment, redistribution decisions, deterministic canonical build definitions, and the no-build boundary.
-- The Windows manual UI checklist now covers all twelve panes and the default zero-ready-build-definition state.
-- Phase 7 includes typed runtime-result evidence returns; actual adapter execution remains separately gated and unimplemented.
-- The focused workflow and contract validators enforce exact attempted plan/step bindings, typed outcomes/failures, cleanup/rollback matching, safe log references, fingerprints, candidate evidence-only output, and the no-execution boundary.
-- Phase 7 includes deterministic work-order plan generation and the typed capability matrix as prerequisite gates.
-- Phase 6 records both economy acquisition coverage and exact cross-pack duplicate reporting as implemented.
-- Duplicate detection uses only exact, case-sensitive subject references and recipe duplicate keys across distinct owner packs; it performs no display-name or fuzzy matching.
-- Production implementation files are compiled exactly once by Core, Framework, or Editor; catalog and path-policy tests link `Framework.Static` instead of recompiling private copies of production `.cpp` files.
-- The Editor Gem target owns only Qt views, the Editor system component, and module composition; persistence, path policy, loading, and Foundation orchestration are owned by `Framework.Static`.
-- The focused TG SDK workflow runs the Core/Framework validator and its focused unit tests before the existing Developer Preview and foundation contracts.
-- Workspace loading builds and validates a complete candidate before publishing any workspace, canonical path, registry, import issue, catalog, catalog path, or snapshot state.
-- Workspace persistence emits explicit schema-1 JSON; unversioned schema-0 documents are migrated only when every current invariant can be validated safely.
-- The focused TG SDK workflow runs the atomic workspace/schema contract validator in addition to Developer Preview, path-policy, governance, catalog, and source-policy checks.
-- The focused TG SDK workflow runs Developer Preview command, project-integration, opener, fixture, launch, diagnostics, and manual UI evidence tests; command/project/fixture/persistence/launch-diagnostics/manual-evidence contract validators; clean fixture generation/verification; and a clean diagnostics collect→verify cycle before existing foundation, governance, catalog, and source-policy checks.
-- A dedicated Windows workflow validates the product-host project, icon assets, command-line opener, low-level shortcut generator, hardened clickable entry, dry-run plan, and a real COM-created `.lnk`.
-- `AutomatedTesting` is restored to its upstream engine-testing role and no longer enables or hosts the TG SDK preview product.
-- The catalog test target links the real persistence services and receives the reviewed fixture-template path for service-level smoke coverage.
-- Catalog compatibility loading preserves current validated allowances only when the latest reviewed permission event has valid proof for the same subject; unproven legacy allowances still fail closed.
-- Release and maintainer procedures require exact-commit Windows manual UI evidence, screenshot hashes, privacy review, verifier success, and non-commit handling before a Developer Preview claim.
-- Catalog records carry an explicit staleness state.
-- Catalog relationships use the same independent maturity, confidence, risk, validation, staleness, permission, prohibition, conflict, missing-reference, and supersession model as records.
-- Record and relationship governance transitions execute through one typed state machine instead of duplicated branches.
-- Governance and validation APIs accept immutable catalog inputs and return complete state-plus-history candidates only after all in-memory checks succeed.
-- Catalog publication occurs only from a successful `CatalogTransactionService` result after persistence completes.
-- Validation events can target records or relationships while retaining the legacy record-only binding for schema-1 compatibility.
-- Canonical catalog schema 1 accepts optional governance-history, typed economy arrays, and extended state fields without reinterpreting existing identity data.
-- Foundation status snapshots count relationships, validation events, governance decisions, typed item/recipe profiles, recipe joins, stale subjects, allowed usages, and prohibitions.
-- Catalog blockers cover missing evidence, missing pack ownership, conflicts, missing refs, unvalidated state, permission-before-validation, invalid supersession, relationship evidence, validation-profile mismatches, governance proof gaps, and economy authoring gaps.
-- The roadmap advances Phase 6 with the Item and Recipe Editor and its first station/learnability evidence coverage view.
+- Phase 8 now includes deterministic package-assembly preview; deterministic staging and deployment preview is the next ordered slice.
+- Focused validators enforce accepted manifest reviews, exact inventory binding, project ownership, expected-output coverage, output digests, omissions, collisions, path containment, redistribution decisions, canonical sorting, non-mutation, and the no-assembly boundary.
+- The Windows manual UI checklist now covers all thirteen panes and the default zero-package-preview-input state.
+- Phase 8 retains reproducible adapter build manifests as the prerequisite handoff; `ready` never authorises a build.
+- Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
+- Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
+- Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
+- Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, and package-preview workflows.
 
 ### Security
 
-- Build manifests are transient definitions only; `BuildAllowed` is false for every status, including `ready`, and no compiler, package assembler, archive writer, file copier, dependency downloader, deployment, launch, telemetry, save mutation, or adapter execution is added.
-- Exact source/O3DE revisions, fingerprints, safe package-relative paths, and redistribution decisions fail closed before a definition can be `ready`.
-- Runtime-result envelopes are transient typed metadata; accepted contracts return source/evidence candidates by value and do not automatically register, persist, promote, validate, permit, dispatch, execute, deploy, launch, or mutate saves.
-- Exact plan/step/recovery/log bindings fail closed, and Slice 10 does not open referenced logs or add an actual FoA adapter implementation or execution path.
-- Work-order plans are transient, immutable descriptions only; `ExecutionAllowed` is false on every plan and step, and no save, export, dispatch, adapter invocation, code generation, process access, deployment, launch, telemetry, or save mutation is added.
-- Whole-plan refusal and independent exact-subject rebuilding prevent a partially compatible adapter or unreviewed aggregate subject from producing a plan step.
-- Adapter declarations are transient metadata only; Slice 8 adds no adapter document, loader, process access, BepInEx/Harmony execution, deployment, game launch, save mutation, or runtime adapter implementation.
-- Adapter compatibility is fail-closed and ordered as support → version → permission → proof; `supported` never authorizes execution and requires exact active-profile source/evidence and same-subject permission/validation proof.
-- Economy duplicate analysis is immutable and fail-closed; the report cannot merge records, reject packs, select a winner, author governance, persist changes, or expose runtime/deployment actions.
-- Exact duplicate signals are case-sensitive and pack-gated; display names, aliases, localisation, tags, asset paths, inferred semantics, and fuzzy similarity cannot create a duplicate group.
-- Economy coverage analysis is immutable and fail-closed; the dashboard exposes no editing, governance, persistence, deployment, launch, injection, vendor/loot/reward mutation, recipe learning, or save behavior.
-- The Core/Framework split remains host-tool-only and exposes no internal static target through Tool or Builder aliases; it adds no runtime adapter, deployment, launch, injection, telemetry, or save behavior.
-- Failed workspace candidates cannot publish partial objects, change the live canonical workspace path, redirect pack containment, or replace the previous Foundation snapshot.
-- Workspace root, output, staging, deployment, diagnostics, extracted-data, managed-assembly, and Mono plugin paths are validated before publication and save.
-- Developer Preview fixture generation performs no network access or process launch and refuses silent overwrite of unrelated, partial, modified, or symlink-containing output directories.
-- Fixture verification rejects absolute/private paths, secret-like material, path traversal, borrowed native identities, ownership mismatches, unknown evidence, malformed relationships, and binding drift.
-- The persistence smoke uses temporary workspace roots only, performs no runtime or deployment action, and verifies proof-backed permission preservation separately from legacy fail-closed cleanup.
-- The Editor launch wrapper accepts only `Editor.exe`, constructs only the documented optional `--project-path` argument, uses no shell command strings or arbitrary passthrough arguments, and never launches FoA or runtime tooling.
-- The project opener selects only `TaintedGrailModdingEditor`, validates the dedicated project contract before launch, and delegates to the existing restricted launch wrapper.
-- The low-level shortcut generator uses a fixed PowerShell COM script with explicit environment values, creates no desktop entry silently, exposes no arbitrary Editor arguments, and records the generated `.lnk` size and SHA-256.
-- The supported clickable-entry command inspects the real Windows shortcut target, project arguments, working directory, icon, and description, and verifies an existing generated entry before `--replace` can remove it.
-- Diagnostics collection is explicit and local-only, excludes source artifact contents, game files, saves, environment variables, credentials, binary logs, and unrestricted filesystem listings, and performs no automatic upload.
-- Diagnostics verification enforces relative allow-listed paths, size limits, UTF-8 text, SHA-256 hashes, symlink/traversal rejection, and path/secret redaction before a bundle can be replaced or shared.
-- Manual UI evidence tooling does not capture screenshots, automate UI coordinates, inspect screenshot pixels, perform OCR, access the network, or upload evidence.
-- Screenshot attachment requires explicit privacy and project-owned-content review; final verification requires exact commit binding, successful launch, activation-log confirmation, all checklist items passing, required screenshot coverage, and disclosure/runtime attestations.
-- Generated screenshots must remain beneath `build/` or outside the repository and are not release package contents.
-- Developer Preview commands do not install dependencies silently, use shell command strings, launch FoA, invoke runtime adapters, deploy files, modify saves, or collect telemetry.
-- Preview build-directory validation rejects the repository root, directories containing the checkout, `.git` paths, unrelated non-empty directories, and CMake caches bound to another source tree.
-- Runtime execution remains disabled in editor-owned workspace, pack, source/evidence, catalog, validation, governance, typed economy, adapter-contract, work-order-planning, runtime-result-evidence, and build-manifest workflows.
-- Source intake rejects missing or mismatched profile and fingerprint bindings.
-- Structured imports are size-limited and fail closed on malformed schemas.
-- Catalog promotion cannot grant allowed usages and adds `no_unvalidated_runtime_use`.
-- Validation never grants permission automatically.
-- Allowed usage requires a separate reviewed permission event backed by validated proof for the same subject.
-- Stale, failed, blocked, and superseded transitions remove existing allowed usages.
-- A failed governance-history append cannot leave changed state in a caller-owned catalog.
-- A failed catalog save cannot publish a candidate into the live editor state.
-- Item/recipe profile and join writes reject missing or unrelated evidence before persistence.
-- Native and synthetic item/recipe lanes are checked independently.
-- Quest-sensitive and unique item distribution lanes receive explicit blockers.
-- The Item and Recipe Editor exposes governance lanes and recipe station/learnability research as read-only status and cannot grant permission.
-- Missing, mismatched, unresolved, stale, blocked, conflicted, missing-reference, and superseded station/learnability inputs fail closed.
-- Public contribution rules require design review, pre-commit self-review, required CI, resolved review threads, and maintainer approval before merge.
+- Package previews are transient metadata only. Included entries must be project-owned, declared by the reviewed manifest, safely contained, fingerprinted, and redistributable; all assembly/archive/deployment permissions remain false.
+- No filesystem scan, file copy/delete, archive writer, package assembler, deployment, FoA launch, BepInEx/Harmony load, telemetry, save mutation, or adapter execution is added.
+- Build manifests remain transient definitions with exact source/O3DE revisions, toolchain declarations, fingerprints, safe package paths, redistribution decisions, and `BuildAllowed: false`.
+- Runtime-result envelopes return candidate evidence only; they do not automatically register, persist, promote, validate, permit, dispatch, execute, deploy, launch, or mutate saves.
+- Work-order plans are immutable descriptions with `ExecutionAllowed: false` at plan and step level.
+- Adapter compatibility is fail-closed; `supported` never authorises execution.
+- Economy analyses are immutable and cannot grant permission, mutate acquisition state, merge duplicates, reject packs, or select winners.
+- Failed workspace candidates cannot publish partial state or redirect canonical pack containment.
+- Developer Preview fixture, launch, diagnostics, and screenshot tooling perform no automatic upload or runtime mutation and reject unsafe paths, secrets, and unreviewed outputs.
+- Public contribution rules require design review, DCO, focused/compiled tests, resolved review threads, and maintainer approval.
 
 ### Known limitations
 
-- Build-manifest previews are transient and accept caller-supplied toolchain and fingerprint declarations; no trusted toolchain resolver, build invocation, output digest, provenance statement, package assembly, archive, or SBOM is implemented.
-- A `ready` build definition does not prove the compiler, dependency cache, source tree, or expected output exists and does not authorize a build.
-- Runtime-result envelopes and evidence returns are transient; Slice 10 adds no file loader, transport, automatic import, durable runtime-result schema, or actual runtime proof capture.
-- Generated candidate evidence remains unreviewed and unrated until a separate ordinary source/evidence, validation, and permission workflow accepts it.
-- Generated work-order plans are planning evidence only; they are not persisted, exported, dispatched, executed, deployed, or returned to an adapter.
-- Actual runtime adapters, execution, cleanup/rollback behavior, and live proof capture are not implemented.
-- Adapter declarations are transient and cleared on Editor shutdown; there is no declaration persistence or registration UI, so normal Developer Preview sessions display `unsupported` rows and refused plans by default.
-- Cross-pack duplicate groups are review candidates only; they do not confirm semantic equivalence, choose a canonical winner, authorize deletion, or prove a runtime conflict.
-- Economy acquisition coverage is research-only: it does not prove actual vendor stock, loot tables, reward delivery, recipe learning, crafting availability, runtime registration, persistence, cleanup, or rollback.
-- The Windows manual UI checklist and evidence verifier are implemented, but the actual Windows screenshot pass remains pending.
-- Developer Preview 0 does not include a prebuilt or verified preview archive; the Editor must be built from source before the clickable `.lnk` is generated.
-- The service-level smoke and controlled Editor process path do not themselves prove every pane visually on a real Windows desktop or prove FoA runtime compatibility.
-- The UI evidence verifier checks metadata and file integrity but cannot inspect screenshot pixels; human privacy review remains mandatory.
-- The evidence view reports station visibility and recipe learnability research but does not append, learn, register, persist, clean up, roll back, or prove runtime behavior.
-- Runtime append, custom registration, vendor/loot mutation, reward mutation, persistence, cleanup, and rollback remain adapter-side research or implementation work.
-- Catalog permission usage names remain schema-compatible strings; typed adapter capabilities map to the reviewed economy usage vocabulary without changing schema 1.
-- Remaining actor, spawn, world, faction, quest/state, asset, and localisation authoring tools are not implemented.
-- FoA runtime adapters and production deployment are not implemented.
+- Package-preview inventories and output fingerprints are caller-supplied reviewed metadata; no trusted staging scanner, file hashing, copy, archive, package assembly, or deployment exists.
+- A `ready` package preview does not prove files exist or a package was created.
+- Build-manifest previews do not resolve/install toolchains, invoke compilers, generate output digests, provenance, SBOMs, or signed artefacts.
+- Runtime-result envelopes are transient and add no file loader, transport, automatic import, or live proof capture.
+- Adapter declarations and work-order plans are transient and are not dispatched or executed.
+- FoA runtime adapters, cleanup/rollback behavior, production deployment, and save integration are not implemented.
+- Remaining actor, spawn, world, faction, narrative/state, asset, and localisation authoring tools are not implemented.
+- The **actual Windows screenshot pass remains pending**.
 - The project has not published a supported binary release.
 
 ## Release history

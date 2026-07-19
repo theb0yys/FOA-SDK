@@ -10,6 +10,8 @@ set(FILES
     Source/AdapterBuildManifestWidget.h
     Source/AdapterCapabilityMatrixWidget.cpp
     Source/AdapterCapabilityMatrixWidget.h
+    Source/AdapterPackageAssemblyPreviewWidget.cpp
+    Source/AdapterPackageAssemblyPreviewWidget.h
     Source/AdapterRuntimeResultEvidenceWidget.cpp
     Source/AdapterRuntimeResultEvidenceWidget.h
     Source/AdapterWorkOrderPlanWidget.cpp

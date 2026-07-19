@@ -15,6 +15,11 @@ set(FILES
     Source/AdapterCompatibilityService.h
     Source/AdapterContractRegistry.cpp
     Source/AdapterContractRegistry.h
+    Source/AdapterPackageAssemblyPreviewService.cpp
+    Source/AdapterPackageAssemblyPreviewService.h
+    Source/AdapterPackageAssemblyPreviewServicePart1.inl
+    Source/AdapterPackageAssemblyPreviewServicePart2.inl
+    Source/AdapterPackageAssemblyPreviewServicePart3.inl
     Source/AdapterRuntimeResultContracts.cpp
     Source/AdapterRuntimeResultContracts.h
     Source/AdapterRuntimeResultEvidenceService.cpp

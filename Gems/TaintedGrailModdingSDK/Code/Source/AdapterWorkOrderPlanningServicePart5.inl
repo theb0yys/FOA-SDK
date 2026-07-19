@@ -7,7 +7,8 @@
 
             if (record.m_recordKind == "item")
             {
-                if (const EconomyItemProfile* itemProfile = catalog.FindEconomyItem(record.m_recordId))
+                if (const EconomyItemProfile* itemProfile =
+                        catalog.FindEconomyItem(record.m_recordId))
                 {
                     if (!EvidenceSetIsValid(
                             itemProfile->m_evidenceIds,
@@ -15,7 +16,8 @@
                             profile,
                             sourceRegistry))
                     {
-                        reason = "The typed item profile lacks exact profile-bound input evidence.";
+                        reason =
+                            "The typed item profile lacks exact profile-bound input evidence.";
                         return false;
                     }
                 }
@@ -31,56 +33,39 @@
                             profile,
                             sourceRegistry))
                     {
-                        reason = "The typed recipe profile lacks exact profile-bound input evidence.";
+                        reason =
+                            "The typed recipe profile lacks exact profile-bound input evidence.";
                         return false;
                     }
                 }
 
-                for (const EconomyRecipeIngredient& ingredient
-                    : catalog.FindIngredientsForRecipe(record.m_recordId))
+                for (const EconomyRecipeIngredient& ingredient :
+                     catalog.FindIngredientsForRecipe(record.m_recordId))
                 {
-                    AZStd::vector<AZStd::string> allowedSubjects = { record.m_subjectRef };
-                    if (!ingredient.m_itemRecordId.empty())
-                    {
-                        if (const CatalogRecord* item =
-                                catalog.FindByRecordId(ingredient.m_itemRecordId))
-                        {
-                            AddUnique(allowedSubjects, item->m_subjectRef);
-                        }
-                    }
-                    AddUnique(allowedSubjects, ingredient.m_itemSubjectRef);
-                    if (!EvidenceSetIsValidForSubjects(
+                    if (!EvidenceSetIsValid(
                             ingredient.m_evidenceIds,
-                            allowedSubjects,
+                            "economy-recipe-ingredient:" + ingredient.m_linkId,
                             profile,
                             sourceRegistry))
                     {
-                        reason = "A typed recipe ingredient lacks exact profile-bound input evidence: "
+                        reason =
+                            "A typed recipe ingredient lacks evidence for the exact ingredient association, quantity, and direction: "
                             + ingredient.m_linkId;
                         return false;
                     }
                 }
 
-                for (const EconomyRecipeOutput& output
-                    : catalog.FindOutputsForRecipe(record.m_recordId))
+                for (const EconomyRecipeOutput& output :
+                     catalog.FindOutputsForRecipe(record.m_recordId))
                 {
-                    AZStd::vector<AZStd::string> allowedSubjects = { record.m_subjectRef };
-                    if (!output.m_itemRecordId.empty())
-                    {
-                        if (const CatalogRecord* item =
-                                catalog.FindByRecordId(output.m_itemRecordId))
-                        {
-                            AddUnique(allowedSubjects, item->m_subjectRef);
-                        }
-                    }
-                    AddUnique(allowedSubjects, output.m_itemSubjectRef);
-                    if (!EvidenceSetIsValidForSubjects(
+                    if (!EvidenceSetIsValid(
                             output.m_evidenceIds,
-                            allowedSubjects,
+                            "economy-recipe-output:" + output.m_linkId,
                             profile,
                             sourceRegistry))
                     {
-                        reason = "A typed recipe output lacks exact profile-bound input evidence: "
+                        reason =
+                            "A typed recipe output lacks evidence for the exact output association, quantity, and probability: "
                             + output.m_linkId;
                         return false;
                     }
@@ -120,20 +105,24 @@
             if (RequiresTypedItemProfile(capability)
                 && !catalog.FindEconomyItem(record.m_recordId))
             {
-                reason = "Custom item registration requires a typed item profile.";
+                reason =
+                    "Custom item registration requires a typed item profile.";
                 return false;
             }
             if (RequiresTypedRecipePayload(capability))
             {
-                const EconomyRecipeProfile* profile = catalog.FindEconomyRecipe(record.m_recordId);
+                const EconomyRecipeProfile* profile =
+                    catalog.FindEconomyRecipe(record.m_recordId);
                 if (!profile)
                 {
-                    reason = "Recipe append and custom registration require a typed recipe profile.";
+                    reason =
+                        "Recipe append and custom registration require a typed recipe profile.";
                     return false;
                 }
                 if (catalog.FindOutputsForRecipe(record.m_recordId).empty())
                 {
-                    reason = "Recipe append and custom registration require at least one typed output join.";
+                    reason =
+                        "Recipe append and custom registration require at least one typed output join.";
                     return false;
                 }
             }
@@ -182,7 +171,8 @@
             const ReadySubject& readySubject,
             const CatalogRelationship& relationship,
             const CatalogRecord& targetRecord,
-            const AZStd::vector<AZStd::string>& relationshipValidationEvidenceIds,
+            const AZStd::vector<AZStd::string>&
+                relationshipValidationEvidenceIds,
             const AZStd::vector<AZStd::string>& relationshipValidationIds,
             const AdapterCapabilityMatrixRow& matrixRow,
             const CatalogDatabase& catalog)
@@ -192,7 +182,7 @@
             step.m_capability = ToString(capability);
             step.m_subjectKind = "relationship";
             step.m_subjectId = relationship.m_relationshipId;
-            step.m_subjectRef = record.m_subjectRef;
+            step.m_subjectRef = "relationship:" + relationship.m_relationshipId;
             step.m_sourceRecordId = record.m_recordId;
             step.m_relationshipId = relationship.m_relationshipId;
             step.m_targetRecordId = targetRecord.m_recordId;
@@ -219,11 +209,26 @@
             step.m_validationProofIds = readySubject.m_validationIds;
             AddAllUnique(step.m_validationProofIds, relationshipValidationIds);
             AddRecordArguments(step, record, catalog);
-            AddArgument(step.m_arguments, "relationship_id", relationship.m_relationshipId);
-            AddArgument(step.m_arguments, "relationship_kind", relationship.m_relationshipKind);
-            AddArgument(step.m_arguments, "target_record_id", targetRecord.m_recordId);
-            AddArgument(step.m_arguments, "target_subject_ref", targetRecord.m_subjectRef);
-            AddArguments(step.m_arguments, "relationship_attribute", relationship.m_attributes);
+            AddArgument(
+                step.m_arguments,
+                "relationship_id",
+                relationship.m_relationshipId);
+            AddArgument(
+                step.m_arguments,
+                "relationship_kind",
+                relationship.m_relationshipKind);
+            AddArgument(
+                step.m_arguments,
+                "target_record_id",
+                targetRecord.m_recordId);
+            AddArgument(
+                step.m_arguments,
+                "target_subject_ref",
+                targetRecord.m_subjectRef);
+            AddArguments(
+                step.m_arguments,
+                "relationship_attribute",
+                relationship.m_attributes);
             SortArguments(step.m_arguments);
             SortUnique(step.m_inputEvidenceIds);
             SortUnique(step.m_declarationEvidenceIds);
@@ -232,4 +237,3 @@
             SortUnique(step.m_validationProofIds);
             return step;
         }
-

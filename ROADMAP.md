@@ -335,35 +335,33 @@ Exit criteria:
 
 Status: implemented, continuing hardening and Windows UI verification.
 
-- Bind one exact current post-deployment report to one structurally valid independent-verifier evidence return, including both `accepted` and `observation_mismatch` verifier states.
-- Preserve exact report, verifier-result, execution-result, work-order, pack, preview, target-inventory, profile, game, branch, runtime, fingerprint, canonical-JSON, and candidate source/evidence identities.
-- Keep reconciliation contract validity, compatibility assessment, human review state, and release decision as separate typed axes.
-- Preserve every existing report blocker and every adverse verifier observation; matching observations may support or contradict evidence but never clear a blocker automatically.
-- Emit deterministic `preserved`, `supporting`, `contradictory`, and `new_finding` relationships with exact subjects, blocker IDs, check IDs, evidence IDs, and diagnostic references.
-- Require one named evidence-backed human release review with explicit `hold`, `reject`, or `approve` decision and exact dispositions for every finding that requires human action.
-- Allow approval only when compatibility is `clear`, no release blocker remains, the verifier evidence is all-matched `accepted`, the report is blocker-free, and every required disposition is complete and accepted.
-- Deterministic envelope statuses are `report_not_ready`, `verifier_evidence_invalid`, `binding_mismatch`, `review_missing`, `review_invalid`, `disposition_incomplete`, `decision_inconsistent`, and `accepted`.
-- Produce fixed-order canonical JSON and candidate source/evidence documents by value without automatic registration or promotion.
+- Bind one exact post-deployment report, one structurally valid `accepted` or `observation_mismatch` verifier evidence return, and one named human release review to exact report JSON, work-order/execution/verifier fingerprints, profile/game/branch/runtime context, pack, preview, target inventory, and candidate source/evidence identities.
+- Keep contract validity, compatibility assessment, release decision, and human-review state as separate typed axes.
+- Preserve every existing report blocker and every adverse verifier observation; a matched observation cannot silently clear a blocker and an all-matched verifier result cannot automatically approve release.
+- Emit deterministic preserved, supporting, contradictory, and new findings for every report blocker and verifier check.
+- Require explicit evidence-backed human dispositions for preserved blockers, contradictions, mismatches, failures, inconclusive checks, and not-run checks.
+- Derive deterministic `unassessed`, `clear`, `blocked`, and `inconclusive` compatibility states independently from `pending`, `hold`, `rejected`, and `approved` release decisions.
+- Deterministic contract status precedence is `report_not_ready`, `verifier_evidence_invalid`, `binding_mismatch`, `review_missing`, `review_invalid`, `disposition_incomplete`, `decision_inconsistent`, and `accepted`.
+- Return reconciliation binding, compatibility, human review, release decision, and every finding as candidate evidence by value without automatic registration or promotion.
 - Transient `AdapterVerifierEvidenceReconciliationRegistry` and read-only **Tainted Grail Verifier Evidence Reconciliation and Release Decision** pane.
 - Public contract documentation and nineteen-pane Windows manual UI coverage.
-- **No verifier execution, target access, file mutation, deployment, rollback, FoA launch, adapter call, evidence promotion, archive assembly, signing, upload, or release publication** is implemented or authorised.
+- **No verifier execution, target access, file mutation, deployment, rollback execution, FoA launch, adapter call, evidence promotion, archive assembly, checksum generation, signing, upload, or release publication** is implemented or authorised.
 
 Exit criteria:
 
-- report and verifier evidence must remain bound to the exact current work order, execution result, canonical report, fingerprints, context, and candidate identities;
-- structurally valid adverse verifier evidence remains representable and cannot be filtered out or converted into success;
-- every report blocker remains present, including when a later matching observation contradicts it;
-- compatibility, human review, release decision, and envelope validity remain independent typed results;
-- every required finding has one unique explicit disposition before a review is complete;
-- approval cannot occur from matching metadata alone and cannot coexist with compatibility or release blockers;
-- equivalent inputs produce identical finding IDs, ordering, counts, axes, decisions, candidate associations, and canonical JSON;
-- reconciliation does not mutate reports, verifier envelopes, evidence returns, work orders, execution results, or registries;
-- the Editor pane remains non-editable and exposes no verifier, filesystem, deployment, rollback, launch, adapter, promotion, archive, signing, publication, or release action;
-- the Windows manual UI checklist includes all nineteen panes and the default zero-reconciliation-request state.
+- both all-matched and structurally valid adverse verifier evidence remain representable and exact-bound;
+- every upstream report blocker remains visible with its original effects and associations;
+- every contradictory or adverse finding receives one explicit human disposition before the review can be complete;
+- compatibility and release decisions remain independent and deterministic;
+- approval is impossible while compatibility is unclear, release blockers remain, verifier evidence is adverse, or required dispositions are unresolved or rejected;
+- equivalent inputs produce identical findings, disposition coverage, status, axes, canonical JSON, and candidate evidence ordering;
+- reconciliation does not mutate reports, verifier evidence, work orders, execution results, reviews, or registries;
+- the Editor pane remains non-editable and exposes no review-authoring, verifier, filesystem, deployment, launch, adapter, promotion, archive, signing, publication, or release action;
+- the Windows manual UI checklist includes all nineteen panes and the default zero-verifier-reconciliation-request state.
 
-### Next ordered slice — deterministic release-candidate artifact manifest
+### Next ordered slice — release-artifact provenance and signing-intent contract
 
-Bind one exact approved reconciliation envelope to the reviewed package layout and derive a deterministic, non-executable release-candidate artifact manifest with exact artifact identities, expected checksum declarations, redistribution and legal blockers, and human review metadata. The slice must not read or hash files, copy package contents, create an archive, sign anything, upload artifacts, publish a release, launch FoA, call an adapter, or mutate deployment state.
+Bind one exact approved reconciliation to declared release contents, checksums, provenance, signing identity intent, and publication targets. The contract must preserve the distinction between declared metadata and performed operations and must not assemble an archive, hash files, sign artefacts, upload content, or publish a release.
 
 Controlled pipeline:
 
@@ -371,7 +369,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, release-candidate artifact manifests, release archives, checksums, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, release-artifact provenance, release archives, checksums, signing, publication, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

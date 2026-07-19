@@ -6,6 +6,7 @@
  */
 
 #include "AdapterStagingDeploymentPreviewService.h"
+#include "CanonicalFingerprint.h"
 
 #include <AzTest/AzTest.h>
 
@@ -63,6 +64,17 @@ namespace TaintedGrailModdingSDK
             return entry;
         }
 
+        void RefreshPackageBinding(AdapterStagingDeploymentPreviewRequest& request)
+        {
+            AdapterPackageAssemblyPreviewService packageService;
+            request.m_packagePreview.m_canonicalJson =
+                packageService.SerializeCanonicalPreview(request.m_packagePreview);
+            request.m_packagePreviewFingerprint =
+                CalculateCanonicalSha256(request.m_packagePreview.m_canonicalJson);
+            request.m_targetInventory.m_packagePreviewFingerprint =
+                request.m_packagePreviewFingerprint;
+        }
+
         AdapterStagingDeploymentPreviewRequest MakeReadyRequest()
         {
             AdapterStagingDeploymentPreviewRequest request;
@@ -82,8 +94,6 @@ namespace TaintedGrailModdingSDK
                 "BepInEx/plugins/owner.preview-pack";
             request.m_packagePreview.m_status =
                 AdapterPackageAssemblyPreviewStatus::Ready;
-            request.m_packagePreview.m_canonicalJson =
-                "{\"AssemblyAllowed\":false,\"ArchiveAllowed\":false,\"DeploymentAllowed\":false}";
             request.m_packagePreview.m_assemblyAllowed = false;
             request.m_packagePreview.m_archiveAllowed = false;
             request.m_packagePreview.m_deploymentAllowed = false;
@@ -120,14 +130,11 @@ namespace TaintedGrailModdingSDK
                     "text/plain",
                     '5'),
             };
-            request.m_packagePreviewFingerprint = Fingerprint('a');
 
             request.m_targetInventory.m_inventoryId = "owner.target-inventory";
             request.m_targetInventory.m_inventoryFingerprint = Fingerprint('b');
             request.m_targetInventory.m_packagePreviewId =
                 request.m_packagePreview.m_previewId;
-            request.m_targetInventory.m_packagePreviewFingerprint =
-                request.m_packagePreviewFingerprint;
             request.m_targetInventory.m_packId = request.m_packagePreview.m_packId;
             request.m_targetInventory.m_targetRoot = request.m_packagePreview.m_packageRoot;
             request.m_targetInventory.m_backupRoot =
@@ -152,6 +159,8 @@ namespace TaintedGrailModdingSDK
                     "application/json",
                     'f'),
             };
+
+            RefreshPackageBinding(request);
 
             request.m_targetReview.m_reviewId = "owner.target-review";
             request.m_targetReview.m_inventoryId =
@@ -225,6 +234,28 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(
             preview.m_canonicalJson.find("\"DeploymentMutationAllowed\":false"),
             AZStd::string::npos);
+    }
+
+    TEST(AdapterStagingDeploymentPreviewTests, CallerSelectedPackageFingerprintIsRejected)
+    {
+        AdapterStagingDeploymentPreviewRequest request = MakeReadyRequest();
+        request.m_packagePreviewFingerprint = Fingerprint('a');
+        request.m_targetInventory.m_packagePreviewFingerprint =
+            request.m_packagePreviewFingerprint;
+        AdapterStagingDeploymentPreviewService service;
+        EXPECT_EQ(
+            service.BuildPreview(request).m_status,
+            AdapterStagingDeploymentPreviewStatus::PackageNotReady);
+    }
+
+    TEST(AdapterStagingDeploymentPreviewTests, PackageObjectDriftFromCanonicalJsonIsRejected)
+    {
+        AdapterStagingDeploymentPreviewRequest request = MakeReadyRequest();
+        request.m_packagePreview.m_layout.front().m_byteSize += 1;
+        AdapterStagingDeploymentPreviewService service;
+        EXPECT_EQ(
+            service.BuildPreview(request).m_status,
+            AdapterStagingDeploymentPreviewStatus::PackageNotReady);
     }
 
     TEST(AdapterStagingDeploymentPreviewTests, PackageNotReadyPrecedesTargetAndInventoryFailures)
@@ -349,6 +380,7 @@ namespace TaintedGrailModdingSDK
         AZStd::reverse(
             second.m_targetReview.m_evidenceIds.begin(),
             second.m_targetReview.m_evidenceIds.end());
+        RefreshPackageBinding(second);
 
         AdapterStagingDeploymentPreviewService service;
         const AdapterStagingDeploymentPreview firstPreview = service.BuildPreview(first);

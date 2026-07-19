@@ -102,6 +102,7 @@ namespace TaintedGrailModdingSDK
     private:
         FoundationService();
 
+        void ClearWorkspaceScopedState(bool clearWorkspaceLocation);
         bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
         bool PersistCatalogCandidate(const CatalogDatabase& candidate, AZStd::string* error);
         PackManifest* FindPackById(const AZStd::string& packId);

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted correction contract for Slice 5 and extended by Slices 6–13. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
+Accepted correction contract for Slice 5 and extended by Slices 6–14. The build graph decomposes editor-side implementation into real targets without changing durable schemas, runtime permissions, deployment, game launch, or save behavior.
 
 ## Targets
 
@@ -19,6 +19,7 @@ Owns shared domain state and services that are free of Qt and host-tool dependen
 - reproducible adapter build-manifest generation;
 - deterministic package-assembly preview derivation from reviewed metadata;
 - deterministic staging/deployment preview derivation with changes, conflicts, backups, and rollback;
+- deterministic deployment confirmation/work-order derivation with exact scope, expiry, window, preflight, step, and checklist contracts;
 - the source/evidence registry.
 
 Core depends publicly on `AZ::AzCore`. Core must not depend on Framework, Editor, Qt, AzToolsFramework, runtime adapters, deployment, or game APIs.
@@ -40,7 +41,7 @@ Framework depends publicly on Core and privately on host-tool facilities. Framew
 Owns only composition and presentation:
 
 - Qt widgets, including the read-only economy acquisition, duplicate-report, adapter-capability, and work-order-plan panes;
-- runtime-result, build-manifest, package-assembly-preview, and staging/deployment-preview panes;
+- runtime-result, build-manifest, package-assembly-preview, staging/deployment-preview, and deployment-confirmation/work-order panes;
 - the Editor system component;
 - the Gem Editor module.
 
@@ -72,7 +73,7 @@ Tests link Framework; they do not reverse the production dependency direction.
 
 Existing files remain under `Code/Source`; CMake manifests are the authoritative ownership map. Qt-dependent services remain Framework-owned until their host dependencies are removed under separate review.
 
-Adapter declarations, work-order plans, runtime-result envelopes, build manifests, package-preview requests, and staging/deployment-preview requests are transient Core state. They have no durable schema, persistence service, filesystem loader, process access, or runtime implementation. Editor shutdown clears the transient registries.
+Adapter declarations, work-order plans, runtime-result envelopes, build manifests, package-preview requests, staging/deployment-preview requests, confirmations, maintenance windows, preflight records, deployment work orders, and operator checklists are transient Core state. They have no durable schema, persistence service, filesystem loader, process access, or runtime implementation. Editor shutdown clears the transient registries.
 
 Work-order planning reads immutable governed inputs and returns plans/refusals by value with `ExecutionAllowed=false`.
 
@@ -83,6 +84,8 @@ Build manifests bind exact plans to caller-supplied toolchain, material, depende
 Package previews compare an accepted evidence-backed manifest review with a project-owned staging inventory and derive layout rows, output digests, omissions, collisions, trust failures, and redistribution blockers. `AssemblyAllowed=false`, `ArchiveAllowed=false`, and `DeploymentAllowed=false` for every status. The service does not scan staging or touch files.
 
 Staging/deployment previews compare one exact ready package layout with one reviewed target inventory and derive additions, replacements, removals, unchanged paths, conflicts, backup requirements, and typed inverse rollback steps. `StagingMutationAllowed=false`, `DeploymentMutationAllowed=false`, `RollbackExecutionAllowed=false`, and `LaunchAllowed=false` for every status. The service does not inspect or mutate a target directory.
+
+Deployment confirmation/work-order derivation binds one exact ready staging/deployment preview to a named evidence-backed reviewer decision, typed scope, explicit UTC issue/expiry/evaluation values, a reviewed maintenance window, typed preflight evidence, exact non-executable step coverage, and a pending operator checklist. `ExecutionAllowed=false`, `CopyAllowed=false`, `DeleteAllowed=false`, `BackupAllowed=false`, `RestoreAllowed=false`, `DeploymentAllowed=false`, and `LaunchAllowed=false` for every status. The service does not consult a host clock, record acknowledgement, or invoke any operation.
 
 ## Enforcement
 
@@ -96,12 +99,13 @@ Feature-specific validators additionally enforce:
 - exact runtime-result bindings, typed outcomes/recovery/logs, candidate evidence-only output, and no execution path;
 - exact build-manifest plan/toolchain/material/output/redistribution bindings and `BuildAllowed=false`;
 - accepted manifest review, project-owned staging inventory, exact package layout/digests, explicit omissions/collisions, path and redistribution gates, `AssemblyAllowed=false`, and a non-editable package preview;
-- exact package/target review binding, ownership and management gates, add/replace/remove/unchanged classification, conflicts, backup and rollback completeness, deterministic canonical output, `DeploymentMutationAllowed=false`, and a non-editable staging/deployment preview.
+- exact package/target review binding, ownership and management gates, add/replace/remove/unchanged classification, conflicts, backup and rollback completeness, deterministic canonical output, `DeploymentMutationAllowed=false`, and a non-editable staging/deployment preview;
+- exact deployment confirmation/work-order binding, typed scope and expiry, reviewed maintenance window, required preflight kinds, exact step/checklist coverage, deterministic canonical output, `ExecutionAllowed=false`, and a non-editable deployment work-order pane.
 
 ## Runtime boundary
 
-No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, compiler invocation, file copy, replacement, deletion, backup, restore, package assembly, archive creation, deployment, injection, telemetry, game launch, save mutation, work-order execution, or result capture code is introduced or authorised. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
+No runtime adapter is added. No FoA, Unity, BepInEx, Harmony, compiler invocation, file copy, replacement, deletion, backup, restore, package assembly, archive creation, deployment, injection, telemetry, game launch, save mutation, work-order execution, acknowledgement, or result capture code is introduced or authorised. Core and Framework remain host-tool implementation targets inside the existing Tool Gem.
 
 ## Rollback
 
-Revert the implementing pull request. No durable documents or user state require migration because these slices add transient or derived analysis, planning, evidence candidates, build definitions, package previews, and staging/deployment previews only.
+Revert the implementing pull request. No durable documents or user state require migration because these slices add transient or derived analysis, planning, evidence candidates, build definitions, package previews, staging/deployment previews, confirmations, preflight records, work orders, and checklists only.

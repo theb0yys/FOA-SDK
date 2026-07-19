@@ -24,8 +24,8 @@ Record:
 - supported operating systems, compilers, configuration, and dependency locks;
 - TG SDK schema versions;
 - supported FoA profile, Core, and adapter versions;
-- exact build manifest, package preview, staging/deployment preview, **generated package contents**, and test/validation results;
-- exact target-inventory review, additions, replacements, removals, conflicts, backups, rollback steps, licence, notices, and redistribution decisions.
+- exact build manifest, package preview, staging/deployment preview, deployment work order, **generated package contents**, and test/validation results;
+- exact target-inventory review, additions, replacements, removals, conflicts, backups, rollback steps, confirmation, maintenance window, preflight evidence, operator checklist, licence, notices, and redistribution decisions.
 
 ## Release readiness checklist
 
@@ -103,6 +103,22 @@ Before any future deployer or deployment work order can be enabled:
 
 The current contract **does not mutate deployment**. A ready staging/deployment preview does not prove that target files exist, backups were created, rollback was tested, or deployment is safe to execute.
 
+### Explicit deployment confirmation and work-order gate
+
+Before any future deployment executor may consume a work order:
+
+- one **explicit deployment confirmation** binds to the exact ready preview ID and lowercase SHA-256 fingerprint;
+- the decision is `confirmed`, names the reviewer, carries evidence, and uses a typed scope that covers every addition, replacement, and removal;
+- confirmation issue, expiry, and deterministic evaluation timestamps use exact UTC seconds and evaluation occurs before expiry;
+- one reviewed **maintenance window** binds to the same preview, has an increasing UTC interval, names the operator group, and contains the evaluation time;
+- exactly one passed `package_integrity`, `target_inventory`, `rollback_readiness`, and `operator_readiness` record is present, plus `backup_readiness` when backups exist;
+- all **preflight evidence** is preview-bound, named, evidence-backed, and checked between confirmation issue and evaluation;
+- every preview backup, addition, replacement, removal, and rollback inverse has exact deterministic work-order coverage;
+- the **operator checklist** exposes contract-satisfied, blocked, and operator-action-required items while acknowledgements remain unrecorded;
+- the work order is `review_ready` while `ExecutionAllowed`, copy, delete, backup, restore, deployment, and launch permissions remain false.
+
+`review_ready` is not approval to execute. A future executor requires a separate design, implementation, review, validation, and evidence-return boundary; **execution remains separately prohibited**.
+
 ## Controlled pipeline
 
 The eventual pipeline is:
@@ -111,13 +127,13 @@ The eventual pipeline is:
 validate → configure → build → test → package → inspect → checksum → publish
 ```
 
-Until each mutation step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview.
+Until each mutation step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview or work order.
 
 ## Package and deployment boundaries
 
 Release packages may contain only project-owned or legally redistributable output. Do not package game binaries/assets, extracted proprietary data, private workspace content, personal logs/paths, source trees or work-order plans not intended for distribution, or third-party binaries without redistribution rights.
 
-The current build-manifest, package-preview, and staging/deployment-preview contracts do not copy, replace, delete, back up, restore, create archives, deploy content, launch FoA, or publish releases.
+The current build-manifest, package-preview, staging/deployment-preview, and deployment-work-order contracts do not copy, replace, delete, back up, restore, create archives, deploy content, record acknowledgement, launch FoA, or publish releases.
 
 ## Artefacts
 

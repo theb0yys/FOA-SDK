@@ -25,6 +25,7 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_runtime_results.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_build_manifests.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_package_assembly_preview.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_staging_deployment_preview.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_work_orders.py
 ```
 
 These checks do not replace an O3DE configure/build and compiled test run.
@@ -45,6 +46,7 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail Adapter Build Manifests**
 - **Tainted Grail Package Assembly Preview**
 - **Tainted Grail Staging and Deployment Preview**
+- **Tainted Grail Deployment Confirmation and Work Orders**
 
 ## Recommended workflow
 
@@ -63,13 +65,14 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 13. Review the reproducible adapter build definition.
 14. Review the package-assembly preview against a project-owned staging inventory.
 15. Review the staging/deployment preview against an accepted declared target inventory.
-16. Review the shared status pane before later downstream work.
+16. Review the typed confirmation, maintenance window, preflight evidence, deployment work-order steps, and operator checklist.
+17. Review the shared status pane before later downstream work.
 
 ## Workspace and exact game profile
 
 The status pane configures workspace identity and root, output, staging, and deployment paths. A game profile records exact FoA installation, game version, branch, `Mono` or `IL2CPP` target, Unity version, BepInEx version and plugin path where applicable, managed assemblies, diagnostics, extracted data, and content scopes.
 
-Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, or staging/deployment previews.
+Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, staging/deployment previews, confirmations, or deployment work orders.
 
 ## Pack manager
 
@@ -88,7 +91,7 @@ adapter:<adapter-id>
 adapter:<adapter-id>:capability:<capability>
 ```
 
-Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, or rollback proof.
+Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, confirmation, or rollback proof.
 
 ## Canonical catalog and governance
 
@@ -217,6 +220,43 @@ Every replacement and removal requires an exact current fingerprint and a safe d
 
 The ordinary Developer Preview state has zero registered staging/deployment-preview inputs.
 
+## Deployment confirmation and work orders
+
+Open **Tainted Grail Deployment Confirmation and Work Orders** after one exact `ready` staging/deployment preview has a named evidence-backed confirmation and a typed preflight set supplied to the transient registry.
+
+The confirmation binds to the exact preview ID and lowercase SHA-256 fingerprint. It records `confirmed` or `rejected`, the named reviewer, issue and expiry timestamps, evidence, and one scope:
+
+- `additions_only`;
+- `additions_and_replacements`;
+- `full_preview`.
+
+A narrow scope that does not cover the preview produces `scope_mismatch`. Evaluation must occur after issue and before expiry; otherwise the result is `confirmation_expired`.
+
+The maintenance-window contract records an exact preview-bound UTC start/end, operator group, and evidence. Invalid intervals produce `maintenance_window_invalid`; an otherwise valid request evaluated outside the window produces `outside_maintenance_window`.
+
+Required typed preflight kinds are `package_integrity`, `target_inventory`, `rollback_readiness`, and `operator_readiness`, plus `backup_readiness` whenever backups are required. A missing kind produces `preflight_missing`; duplicate, failed, stale, anonymous, evidence-free, or preview-mismatched preflight metadata produces `preflight_failed`.
+
+The service derives deterministic non-executable steps for preflight verification, window confirmation, backups, additions, replacements, removals, deployment verification, and rollback preservation. It also derives an operator-facing checklist with `contract_satisfied`, `operator_action_required`, and `blocked` states.
+
+Statuses are:
+
+- `preview_not_ready`
+- `confirmation_missing`
+- `confirmation_rejected`
+- `confirmation_binding_mismatch`
+- `scope_mismatch`
+- `confirmation_expired`
+- `maintenance_window_invalid`
+- `outside_maintenance_window`
+- `preflight_missing`
+- `preflight_failed`
+- `work_order_incomplete`
+- `review_ready`
+
+`review_ready` means the metadata is complete enough for operator review only. `AcknowledgementRecorded` remains false. `ExecutionAllowed`, `CopyAllowed`, `DeleteAllowed`, `BackupAllowed`, `RestoreAllowed`, `DeploymentAllowed`, and `LaunchAllowed` remain false on every work order; **nothing is copied, deleted, backed up, restored, deployed, or launched**.
+
+The pane is non-editable and contains no registration, acknowledgement, save, export, copy, delete, backup, restore, deployment, launch, or adapter-execution control. The ordinary Developer Preview state has zero registered deployment confirmation/work-order inputs.
+
 ## Workspace layout
 
 ```text
@@ -234,7 +274,7 @@ MyWorkspace/
 └── Reports/
 ```
 
-There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, or rollback-plan file in this workflow.
+There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, rollback-plan, confirmation, maintenance-window, preflight, deployment-work-order, or checklist file in this workflow.
 
 ## Safe-use rules
 
@@ -243,7 +283,7 @@ There is no durable adapter declaration, work-order plan, runtime-result, build-
 - Do not assume imported or adapter-reported data is true because it parsed.
 - Do not assume validation grants permission.
 - Do not treat a duplicate candidate as an automatic merge instruction.
-- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, or `ready` staging/deployment previews as authority to execute, build, assemble, deploy, restore, launch, or modify saves.
+- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, `ready` staging/deployment previews, or `review_ready` deployment work orders as authority to execute, build, assemble, deploy, restore, launch, or modify saves.
 - Keep proprietary game files, private paths, credentials, and non-redistributable data out of project fixtures and public evidence.
 
 ## Troubleshooting
@@ -286,6 +326,20 @@ Resolve plan binding, toolchain declarations, required materials, fingerprints, 
 - For `backup_incomplete`, provide the exact current target fingerprint and a contained backup path for every replacement/removal.
 - For `rollback_incomplete`, ensure every addition, replacement, and removal has exactly one typed inverse step.
 - Remember that `ready` remains preview-only and does not authorise copying, deletion, backup, restoration, deployment, launch, or execution.
+
+### Deployment work order is not review ready
+
+- For `preview_not_ready`, resolve every staging/deployment-preview conflict and blocker first.
+- For `confirmation_missing` or `confirmation_rejected`, provide one named evidence-backed `confirmed` decision.
+- For `confirmation_binding_mismatch`, bind the confirmation to the exact preview ID and fingerprint.
+- For `scope_mismatch`, use a scope that covers all additions, replacements, and removals.
+- For `confirmation_expired`, use valid UTC issue/expiry/evaluation timestamps and evaluate before expiry.
+- For `maintenance_window_invalid`, provide a preview-bound increasing UTC window, named operator group, and evidence.
+- For `outside_maintenance_window`, evaluate inside the accepted UTC window.
+- For `preflight_missing`, provide every required typed preflight kind exactly once.
+- For `preflight_failed`, correct failed, duplicate, stale, anonymous, evidence-free, or preview-mismatched preflight records.
+- For `work_order_incomplete`, restore exact backup/add/replace/remove and inverse rollback coverage.
+- Remember that `review_ready` records no acknowledgement and authorises no execution or filesystem mutation.
 
 ## Getting help
 

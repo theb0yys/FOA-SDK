@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Pure-Core `AdapterDeploymentWorkOrderService` for exact ready-preview binding, typed named confirmation, confirmation scope, expiry, UTC maintenance windows, required preflight evidence, deterministic non-executable work-order steps, and an operator-facing checklist.
+- Transient `AdapterDeploymentWorkOrderRegistry` and read-only **Tainted Grail Deployment Confirmation and Work Orders** pane with canonical JSON, pending acknowledgements, and `ExecutionAllowed`, copy, delete, backup, restore, deployment, and launch permissions permanently false.
+- Deployment confirmation/work-order production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and fifteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterStagingDeploymentPreviewService` for exact ready-package and reviewed target-inventory binding, deterministic additions/replacements/removals/unchanged paths, ownership and type conflicts, backup requirements, and typed inverse rollback steps.
 - Transient `AdapterStagingDeploymentPreviewRegistry` and read-only **Tainted Grail Staging and Deployment Preview** pane with canonical JSON and `StagingMutationAllowed`, `DeploymentMutationAllowed`, `RollbackExecutionAllowed`, and `LaunchAllowed` permanently false.
 - Staging/deployment-preview production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and fourteen-pane Windows manual UI coverage.
@@ -36,20 +39,22 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Changed
 
-- Phase 8 now includes deterministic staging and deployment preview; typed explicit confirmation and a deployment work-order contract are the next ordered slice.
-- Focused validators enforce exact package/target review binding, ownership and management state, add/replace/remove/unchanged classification, conflicts, backup paths/fingerprints, inverse rollback completeness, canonical sorting, non-mutation, and the no-deployment boundary.
-- The Windows manual UI checklist now covers all fourteen panes and the default zero-staging/deployment-preview-input state.
-- Phase 8 retains package-assembly preview and reproducible adapter build manifests as prerequisite handoffs; `ready` never authorises build, assembly, deployment, rollback execution, or launch.
+- Phase 8 now includes typed explicit confirmation and deterministic deployment work-order contracts; a typed deployment execution-result and verification envelope is the next ordered slice.
+- Focused validators enforce exact preview confirmation, named reviewers, typed scope, issue/expiry times, maintenance windows, typed preflight evidence, exact work-order coverage, pending operator checklist items, canonical sorting, non-mutation, and the no-execution boundary.
+- The Windows manual UI checklist now covers all fifteen panes and the default zero-deployment-confirmation/work-order-input state.
+- Phase 8 retains staging/deployment, package-assembly, and reproducible-build previews as prerequisite handoffs; `review_ready` never authorises copy, deletion, backup, restoration, deployment, rollback execution, launch, or adapter execution.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
 - Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
 - Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
-- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, and staging/deployment-preview workflows.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, and deployment-work-order workflows.
 
 ### Security
 
-- Staging/deployment previews are transient metadata only. Target inventories require exact review, ownership, management, fingerprint, path, replacement/removal, backup, and rollback declarations; every mutation and launch permission remains false.
+- Deployment confirmations, maintenance windows, preflight records, work orders, and operator checklists are transient metadata only. Every execution, copy, delete, backup, restore, deployment, and launch permission remains false, and checklist acknowledgements are never recorded automatically.
+- Exact preview fingerprints, named reviewers, typed scope, confirmation expiry, reviewed UTC windows, evidence-backed preflight kinds, and complete change/backup/rollback coverage fail closed before `review_ready`.
 - No filesystem scan, file copy/replace/delete, backup/restore, archive writer, package assembler, deployment mutation, FoA launch, BepInEx/Harmony load, telemetry, save mutation, or adapter execution is added.
+- Staging/deployment previews are transient metadata only. Target inventories require exact review, ownership, management, fingerprint, path, replacement/removal, backup, and rollback declarations; every mutation and launch permission remains false.
 - Package previews are transient metadata only. Included entries must be project-owned, declared by the reviewed manifest, safely contained, fingerprinted, and redistributable; all assembly/archive/deployment permissions remain false.
 - Build manifests remain transient definitions with exact source/O3DE revisions, toolchain declarations, fingerprints, safe package paths, redistribution decisions, and `BuildAllowed: false`.
 - Runtime-result envelopes return candidate evidence only; they do not automatically register, persist, promote, validate, permit, dispatch, execute, deploy, launch, or mutate saves.
@@ -62,6 +67,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Known limitations
 
+- Confirmations, timestamps, maintenance-window evidence, preflight results, and reviewer identities are caller-supplied metadata; no trusted clock, identity provider, independent preflight runner, acknowledgement system, or deployment executor exists.
+- A `review_ready` work order does not prove that files exist, checks were independently reproduced, backup capacity exists, rollback was tested, or an operator acknowledged the checklist.
 - Deployment target inventories, fingerprints, ownership flags, backup paths, and review evidence are caller-supplied metadata; no trusted target scanner, hashing, backup writer, restore engine, or deployer exists.
 - A `ready` staging/deployment preview does not prove target files exist, backups were made, rollback was tested, or deployment is safe to execute.
 - Package-preview inventories and output fingerprints are caller-supplied reviewed metadata; no trusted staging scanner, file hashing, copy, archive, package assembly, or deployment exists.

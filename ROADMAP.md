@@ -218,9 +218,40 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no registration, copy, delete, backup, restore, deploy, launch, or execute action;
 - the Windows manual UI checklist includes all fourteen panes and the default zero-staging/deployment-input state.
 
-### Next ordered slice — explicit confirmation and deployment work-order contract
+### Typed deployment confirmation and work-order contract
 
-Bind one exact ready staging/deployment preview to a typed named reviewer, confirmation scope, expiry, maintenance window, preflight evidence, and operator-facing action checklist. Every execution flag remains false. The contract must add no copy, delete, backup, restore, deployment, launch, or adapter invocation.
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact ready staging/deployment preview and lowercase SHA-256 fingerprint to one named evidence-backed confirmation.
+- Require typed confirmation scope, expiry, maintenance window, preflight evidence, and operator checklist.
+- Scope values are `additions_only`, `additions_and_replacements`, and `full_preview`; a narrower scope cannot omit reviewed replacements or removals.
+- Require exact UTC issue, expiry, evaluation, maintenance-start, maintenance-end, and preflight-check timestamps without consulting the host clock.
+- Require exactly one passed `package_integrity`, `target_inventory`, `rollback_readiness`, and `operator_readiness` preflight record, plus `backup_readiness` when backups exist.
+- Derive deterministic typed steps for preflight verification, maintenance-window confirmation, backups, additions, replacements, removals, post-deployment verification, and rollback preservation.
+- Derive an operator-facing checklist with `contract_satisfied`, `operator_action_required`, and `blocked` states while `AcknowledgementRecorded` remains false.
+- Deterministic `preview_not_ready`, `confirmation_missing`, `confirmation_rejected`, `confirmation_binding_mismatch`, `scope_mismatch`, `confirmation_expired`, `maintenance_window_invalid`, `outside_maintenance_window`, `preflight_missing`, `preflight_failed`, `work_order_incomplete`, and `review_ready` states.
+- Canonical JSON with `ExecutionAllowed: false`, `CopyAllowed: false`, `DeleteAllowed: false`, `BackupAllowed: false`, `RestoreAllowed: false`, `DeploymentAllowed: false`, and `LaunchAllowed: false`.
+- Transient registry and read-only **Tainted Grail Deployment Confirmation and Work Orders** pane.
+- Production-linked tests, focused validator and negative tests, CI integration, public documentation, and fifteen-pane Windows UI coverage.
+- **No copy, delete, backup, restore, deployment, launch, or adapter call** is implemented or authorised.
+
+Exit criteria:
+
+- only a confirmed, evidence-backed, exact-preview-bound named reviewer decision can reach `review_ready`;
+- confirmation scope covers every addition, replacement, and removal in the preview;
+- evaluation occurs after issue and before expiry inside one valid evidence-backed UTC maintenance window;
+- every required preflight kind appears exactly once, passes, and is checked between confirmation issue and evaluation;
+- every backup, addition, replacement, removal, and rollback inverse has exact deterministic work-order coverage;
+- operator checklist acknowledgements remain pending and cannot be authored by the read-only pane;
+- equivalent reviewed inputs produce byte-identical canonical JSON;
+- work-order generation does not mutate previews, confirmations, windows, preflight evidence, changes, backups, or rollback rows;
+- all execution, copy, delete, backup, restore, deployment, and launch permissions remain false, including for `review_ready`;
+- the Editor pane remains non-editable and exposes no registration, acknowledgement, copy, delete, backup, restore, deploy, launch, or execute action;
+- the Windows manual UI checklist includes all fifteen panes and the default zero-deployment-work-order-input state.
+
+### Next ordered slice — deployment execution-result and verification envelope
+
+Define a typed result envelope for a separately supplied executor. Bind one exact reviewed deployment work order to attempted step identities, backup and restore outcomes, deployed fingerprints, rollback results, logs, and candidate evidence. The slice must add no executor, copy/delete/backup/restore/deployment command, launch path, adapter call, or automatic evidence promotion.
 
 Controlled pipeline:
 
@@ -228,7 +259,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, explicit confirmation, actual backup/restore implementations, compatibility reports, log/diagnostic capture, release archives, checksums, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, compatibility reports, result/log capture, release archives, checksums, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

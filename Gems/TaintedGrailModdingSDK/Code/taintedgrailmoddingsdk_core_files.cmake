@@ -32,6 +32,13 @@ set(FILES
     Source/AdapterPackageAssemblyPreviewServicePart1.inl
     Source/AdapterPackageAssemblyPreviewServicePart2.inl
     Source/AdapterPackageAssemblyPreviewServicePart3.inl
+    Source/AdapterPostDeploymentVerificationContracts.cpp
+    Source/AdapterPostDeploymentVerificationContracts.h
+    Source/AdapterPostDeploymentVerificationService.cpp
+    Source/AdapterPostDeploymentVerificationService.h
+    Source/AdapterPostDeploymentVerificationServicePart1.inl
+    Source/AdapterPostDeploymentVerificationServicePart2.inl
+    Source/AdapterPostDeploymentVerificationServicePart3.inl
     Source/AdapterRuntimeResultContracts.cpp
     Source/AdapterRuntimeResultContracts.h
     Source/AdapterRuntimeResultEvidenceService.cpp

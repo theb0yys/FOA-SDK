@@ -244,7 +244,15 @@ namespace TaintedGrailModdingSDK
     public:
         static AdapterDeploymentExecutionResultRegistry& Get();
 
+        // Unbound registration is intentionally refused. A deployment result may
+        // enter session state only after validation against the exact current work
+        // order and the complete execution-evidence contract.
         bool RegisterEnvelope(
+            const AdapterDeploymentExecutionResultEnvelope& envelope,
+            AZStd::string* error = nullptr);
+
+        bool RegisterEnvelope(
+            const AdapterDeploymentWorkOrder& workOrder,
             const AdapterDeploymentExecutionResultEnvelope& envelope,
             AZStd::string* error = nullptr);
         void Clear();

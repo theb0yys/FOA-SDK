@@ -19,4 +19,5 @@
 #include "AdapterPostDeploymentVerifierEvidenceServicePart2.inl"
 #include "AdapterPostDeploymentVerifierEvidenceServicePart3.inl"
 #include "AdapterPostDeploymentVerifierEvidenceServicePart4.inl"
+#include "AdapterPostDeploymentVerifierEvidenceServicePart6.inl"
 #include "AdapterPostDeploymentVerifierEvidenceServicePart5.inl"

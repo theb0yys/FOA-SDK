@@ -63,5 +63,12 @@ namespace TaintedGrailModdingSDK
             const AdapterPostDeploymentVerificationReport& report,
             const SourceEvidenceRegistry& sourceRegistry,
             const AdapterPostDeploymentVerifierResultEnvelope& verifierEnvelope) const;
+
+    private:
+        AdapterPostDeploymentVerifierEvidenceReturn BuildEvidenceReturn(
+            const AdapterDeploymentWorkOrder& workOrder,
+            const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,
+            const AdapterPostDeploymentVerificationReport& report,
+            const AdapterPostDeploymentVerifierResultEnvelope& verifierEnvelope) const;
     };
 } // namespace TaintedGrailModdingSDK

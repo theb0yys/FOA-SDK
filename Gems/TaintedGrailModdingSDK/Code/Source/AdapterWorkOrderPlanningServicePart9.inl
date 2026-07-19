@@ -32,7 +32,9 @@
             AppendJsonString(output, step.m_targetRecordId);
             output += ",\"TargetSubjectRef\":";
             AppendJsonString(output, step.m_targetSubjectRef);
-            output += ",\"ExecutionAllowed\":false,\"Arguments\":[";
+            output += ",\"ExecutionAllowed\":";
+            output += step.m_executionAllowed ? "true" : "false";
+            output += ",\"Arguments\":[";
             for (size_t argumentIndex = 0; argumentIndex < step.m_arguments.size(); ++argumentIndex)
             {
                 if (argumentIndex != 0)

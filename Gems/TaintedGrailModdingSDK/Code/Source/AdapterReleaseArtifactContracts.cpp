@@ -7,6 +7,10 @@
 
 #include "AdapterReleaseArtifactContracts.h"
 
+#include "AdapterReleaseArtifactProvenanceService.h"
+
+#include <AzCore/std/algorithm.h>
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -107,6 +111,29 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+
+        void SetError(AZStd::string* error, AZStd::string value)
+        {
+            if (error)
+            {
+                *error = AZStd::move(value);
+            }
+        }
+
+        bool HasOperationalMutation(const AdapterReleaseArtifactEnvelope& envelope)
+        {
+            return envelope.m_filesRead
+                || envelope.m_filesHashed
+                || envelope.m_checksumGenerated
+                || envelope.m_filesCopied
+                || envelope.m_archiveAssembled
+                || envelope.m_signingPerformed
+                || envelope.m_uploadPerformed
+                || envelope.m_releasePublished
+                || envelope.m_launchPerformed
+                || envelope.m_adapterCalled
+                || envelope.m_deploymentMutated;
+        }
     } // namespace
 
     AZStd::string ToString(AdapterReleaseArtifactEnvelopeStatus status)
@@ -191,17 +218,32 @@ namespace TaintedGrailModdingSDK
         const AdapterReleaseArtifactEnvelope& envelope,
         AZStd::string* error)
     {
+        AdapterReleaseArtifactProvenanceService service;
         if (!IsAdapterPostDeploymentVerifierStableId(envelope.m_artifactId)
             || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                 envelope.m_evaluatedAtUtc)
-            || envelope.m_canonicalJson.empty())
+            || envelope.m_status != AdapterReleaseArtifactEnvelopeStatus::Ready
+            || !envelope.m_metadataReady
+            || !envelope.m_humanReviewRequired
+            || !envelope.m_blockers.empty()
+            || envelope.m_contents.empty()
+            || envelope.m_publicationTargets.empty()
+            || envelope.m_contentCount
+                != static_cast<AZ::u64>(envelope.m_contents.size())
+            || envelope.m_provenanceCount
+                != static_cast<AZ::u64>(envelope.m_provenance.size())
+            || envelope.m_legalDispositionCount
+                != static_cast<AZ::u64>(envelope.m_legalDispositions.size())
+            || envelope.m_publicationTargetCount
+                != static_cast<AZ::u64>(envelope.m_publicationTargets.size())
+            || HasOperationalMutation(envelope)
+            || envelope.m_canonicalJson.empty()
+            || envelope.m_canonicalJson
+                != service.SerializeCanonicalEnvelope(envelope))
         {
-            if (error)
-            {
-                *error =
-                    "Release-artifact registration requires stable identity, explicit UTC "
-                    "evaluation time, and deterministic canonical JSON.";
-            }
+            SetError(
+                error,
+                "Release-artifact session registration requires one self-canonical, Ready, metadata-complete, blocker-free, operation-free envelope with exact counts and reviewed publication targets.");
             return false;
         }
 
@@ -209,16 +251,22 @@ namespace TaintedGrailModdingSDK
         {
             if (existing.m_artifactId == envelope.m_artifactId)
             {
-                if (error)
-                {
-                    *error =
-                        "A release-artifact envelope with this identity already exists.";
-                }
+                SetError(
+                    error,
+                    "A release-artifact envelope with this identity already exists.");
                 return false;
             }
         }
 
         m_envelopes.push_back(envelope);
+        AZStd::sort(
+            m_envelopes.begin(),
+            m_envelopes.end(),
+            [](const AdapterReleaseArtifactEnvelope& left,
+                const AdapterReleaseArtifactEnvelope& right)
+            {
+                return left.m_artifactId < right.m_artifactId;
+            });
         if (error)
         {
             error->clear();

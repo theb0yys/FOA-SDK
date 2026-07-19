@@ -31,6 +31,7 @@ namespace TaintedGrailModdingSDK
             const CatalogDatabase& candidate,
             const WorkspaceModel& workspace,
             const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
             const SaveCallback& save) const;
     };
 } // namespace TaintedGrailModdingSDK

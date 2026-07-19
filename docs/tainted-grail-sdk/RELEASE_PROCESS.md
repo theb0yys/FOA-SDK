@@ -4,11 +4,13 @@
 
 The project is pre-alpha and has not published a supported binary release. This process defines the controls required before tags and packages are produced.
 
+Automatic GitHub Actions triggers are currently suspended because exact-head jobs could not acquire GitHub-hosted runners. Development uses the documented local validation gate, but **no public release may proceed until automatic hosted CI is safely restored and passes on the exact release commit**.
+
 ## Release principles
 
 A release must be traceable to a reviewed `main` commit, reproducible from documented inputs, explicit about compatibility and limitations, free of proprietary content and secrets, validated against security/schema boundaries, and accompanied by checksums, migration guidance, and rollback information.
 
-A green build alone does not make a release safe.
+A green build alone does not make a release safe. A queued, skipped, waiting, absent, or manual-only workflow is not a green build.
 
 ## Versioning and channels
 
@@ -36,12 +38,16 @@ Record:
 - licence/notices reviewed;
 - no unresolved blocking review or high-severity security issue.
 
-### Code and CI
+### Code, local validation, and CI
 
 - release commit is on `main` and `foa-development` is synchronized;
-- focused and repository validators pass;
-- supported host builds and compiled tests pass;
-- warnings/flaky failures are understood and documented.
+- `run_local_validation.py --keep-going` passes on the exact release commit;
+- the complete command, tester, timestamp, exit result, and skipped checks are recorded;
+- supported host builds and compiled tests pass on the exact release commit;
+- automatic GitHub-hosted CI has been restored under the reviewed runner policy;
+- every required automatic check starts, completes successfully, and points to the exact release commit;
+- no unavailable, queued, skipped, approval-blocked, or stale workflow is configured as release proof;
+- warnings and flaky failures are understood and documented.
 
 ### Schemas and compatibility
 
@@ -53,23 +59,25 @@ Record:
 ### Security and privacy
 
 - dependency/vulnerability review complete;
-- no credentials, private paths, proprietary game content, or unapproved third-party binaries;
+- no credentials, runner registration tokens, private paths, proprietary game content, or unapproved third-party binaries;
 - import limits and path containment tested;
 - generated packages inspected;
-- security notes prepared where required.
+- security notes prepared where required;
+- no general-purpose public-repository self-hosted runner is used for untrusted pull-request code.
 
 ### Documentation
 
 - README/User Guide match the release;
 - Data Formats match serialized output;
 - build/install instructions verified;
+- CI, runner, and local-validation status is accurate;
 - limitations, migration, upgrade, troubleshooting, and rollback updated.
 
 ### Windows manual UI evidence
 
 Developer Preview and later Windows claims require completed **Windows manual UI evidence** for the **exact reviewed `main` commit**.
 
-Confirm every checklist item passed; Editor launch and activation log are confirmed; required screenshots are present; screenshot hashes, dimensions, and sizes verify; the tester completed the privacy attestation and runtime-boundary attestation; no game files, saves, credentials, or private paths are visible; and the verifier passed for the exact commit.
+Confirm every checklist item passed; Editor launch and activation log are confirmed; required screenshots are present; screenshot hashes, dimensions, and sizes verify; the tester completed the privacy attestation and runtime-boundary attestation; no game files, saves, credentials, runner tokens, or private paths are visible; and the verifier passed for the exact commit.
 
 Screenshots and evidence are review material and **must not be committed**.
 
@@ -143,7 +151,7 @@ The eventual pipeline is:
 validate → configure → build → test → package → inspect → checksum → publish
 ```
 
-Until each mutation and verification step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview, work order, or result envelope.
+Until each mutation and verification step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview, work order, result envelope, or queued workflow.
 
 ## Package and deployment boundaries
 
@@ -161,17 +169,13 @@ Manual UI evidence is not a redistributable product payload.
 
 Publish SHA-256 **checksums** for every distributed binary archive and generated release package. Checksums prove integrity, not runtime safety or trustworthiness.
 
-## Release notes
-
-Include summary, user-visible changes, security notes, schema/migration changes, compatibility changes, known limitations, upgrade/rollback steps, checksums, and artefact list. Do not describe planned features as shipped.
-
 ## Signing
 
 Do not claim signed releases until signing identity, key custody, verification commands, rotation/revocation, and compromise response are implemented and verifiable.
 
 ## Publishing
 
-Only a maintainer may publish. Verify the tag points to the approved commit, artefacts were produced in a clean environment, checksums match, the release page is reviewed, and no restricted/private file is attached.
+Only a maintainer may publish. Verify the tag points to the approved commit, artefacts were produced in a clean environment, checksums match, the release page is reviewed, automatic hosted CI passed the exact commit, and no restricted/private file is attached.
 
 ## Post-release, rollback, and hotfixes
 

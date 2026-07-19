@@ -96,7 +96,11 @@ class CiRunnerPolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
             policy = repo / "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
-            policy.write_text("manual-only run_local_validation.py\n", encoding="utf-8")
+            policy.write_text(
+                "manual-only run_local_validation.py self-hosted runner "
+                "No automated per-commit test result is claimed\n",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(CiRunnerPolicyError, "registration token"):
                 validate_ci_runner_policy(repo)
 

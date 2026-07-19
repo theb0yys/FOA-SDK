@@ -8,18 +8,20 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Repository-owned `run_local_validation.py` entry point for Python unit tests, contract validators, temporary fixture/diagnostics verification, tracked-path hygiene, O3DE source policy, and optional compiled catalog tests.
+- CI/runner policy validator, negative regression tests, and public manual-validation documentation covering unavailable Actions, self-hosted runner isolation, registration-token handling, and restoration gates.
 - Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, deployed fingerprints, target verification, rollback, failures, safe logs, and candidate evidence return.
 - Transient `AdapterDeploymentExecutionResultRegistry` and read-only **Tainted Grail Deployment Execution Result Evidence** pane; no executor is invoked and there is no automatic evidence promotion.
-- Deployment execution-result production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and sixteen-pane Windows manual UI coverage.
+- Deployment execution-result production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and sixteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterDeploymentWorkOrderService` for exact ready-preview binding, typed named confirmation, confirmation scope, expiry, UTC maintenance windows, required preflight evidence, deterministic non-executable work-order steps, and an operator-facing checklist.
 - Transient `AdapterDeploymentWorkOrderRegistry` and read-only **Tainted Grail Deployment Confirmation and Work Orders** pane with canonical JSON, pending acknowledgements, and `ExecutionAllowed`, copy, delete, backup, restore, deployment, and launch permissions permanently false.
-- Deployment confirmation/work-order production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and fifteen-pane Windows manual UI coverage.
+- Deployment confirmation/work-order production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and fifteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterStagingDeploymentPreviewService` for exact ready-package and reviewed target-inventory binding, deterministic additions/replacements/removals/unchanged paths, ownership and type conflicts, backup requirements, and typed inverse rollback steps.
 - Transient `AdapterStagingDeploymentPreviewRegistry` and read-only **Tainted Grail Staging and Deployment Preview** pane with canonical JSON and `StagingMutationAllowed`, `DeploymentMutationAllowed`, `RollbackExecutionAllowed`, and `LaunchAllowed` permanently false.
-- Staging/deployment-preview production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and fourteen-pane Windows manual UI coverage.
+- Staging/deployment-preview production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and fourteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterPackageAssemblyPreviewService` for exact reviewed-manifest and staging-inventory binding, project ownership, deterministic package layout and output digests, explicit omissions/collisions, path containment, and redistribution blockers.
 - Transient `AdapterPackageAssemblyPreviewRegistry` and read-only **Tainted Grail Package Assembly Preview** pane with canonical JSON and `AssemblyAllowed`, `ArchiveAllowed`, and `DeploymentAllowed` permanently false.
-- Package-preview production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and thirteen-pane Windows manual UI coverage.
+- Package-preview production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and thirteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterBuildManifestService` for exact plan/toolchain/material binding, BepInEx metadata, dependencies, expected outputs, path containment, redistribution gates, and canonical JSON with `BuildAllowed: false`.
 - Read-only **Tainted Grail Adapter Build Manifests** pane plus production-linked tests, focused validation, documentation, and twelve-pane acceptance coverage.
 - Pure-Core `AdapterRuntimeResultRegistry` and typed runtime-result contracts for exact attempted plan/step identities, outcomes, failures, cleanup, rollback, safe log references, and SHA-256 fingerprints.
@@ -33,7 +35,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Pure-Core `EconomyDuplicateDetectionService` and read-only **Tainted Grail Economy Cross-Pack Duplicates** pane using exact case-sensitive signals only, with no display-name or fuzzy matching.
 - Internal `TaintedGrailModdingSDK.Core.Static` and `Framework.Static` targets with Core → Framework → Editor dependency direction and unique source ownership.
 - Durable workspace schema 1, validated schema-0 migration, atomic workspace candidates, canonical path policy, and rollback tests.
-- O3DE host-tool Gem registration, workspace/pack/source/evidence/catalog/governance/economy tools, focused validators, and CI.
+- O3DE host-tool Gem registration, workspace/pack/source/evidence/catalog/governance/economy tools, focused validators, and manual workflow definitions.
 - Developer Preview command layer, dedicated Editor project/entry, deterministic synthetic fixture, service-level persistence smoke, controlled Editor launch, redacted diagnostics, and project-owned duplicate-review companion.
 - Windows manual UI checklist covering all TG SDK panes, normal scaling, keyboard traversal, synthetic data, save/close/reopen, actionable failures, and runtime boundaries.
 - **Screenshot-evidence initializer**, recorder, PNG attachment helper, attestation, and exact-commit verifier.
@@ -42,6 +44,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Changed
 
+- Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.
+- The inherited full-engine `AR` workflow and generic upstream `Validation` workflow are removed from this fork so queued checks are not misrepresented as TG SDK test evidence.
+- Exact local validation evidence is the development merge gate until automatic Actions are safely restored; **no automated per-commit test result is claimed**.
 - Phase 8 now includes typed deployment execution-result and verification envelopes; a deterministic post-deployment verification and release-blocker report is the next ordered slice.
 - Focused validators enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
 - The Windows manual UI checklist now covers all sixteen panes and the default zero-deployment-execution-result-envelope state.
@@ -54,6 +59,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Security
 
+- Public pull requests must not execute on a general-purpose self-hosted runner; any future self-hosted design requires disposable isolation, no secrets or personal files, narrow labels, restricted triggers, and explicit operator ownership.
+- Runner registration tokens exposed in screenshots, messages, logs, or shell history are treated as compromised and must be abandoned and regenerated.
 - Deployment execution-result envelopes are transient executor-supplied metadata. Exact work-order, step, backup, verification, rollback, failure, and safe-log bindings fail closed before candidate evidence is returned.
 - Contract-valid failed execution remains distinct from successful deployment; no result is automatically promoted into source/evidence, validation, permission, release, or another execution.
 - Deployment confirmations, maintenance windows, preflight records, work orders, and operator checklists are transient metadata only. Every execution, copy, delete, backup, restore, deployment, and launch permission remains false, and checklist acknowledgements are never recorded automatically.
@@ -72,6 +79,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Known limitations
 
+- Automatic GitHub Actions are unavailable in the current repository/account state; manual workflow definitions remain present, but full local and compiled validation must be run and recorded from a real checkout.
 - Executor review, step outcomes, fingerprints, backup/restore results, verification observations, rollback outcomes, failures, and logs are caller-supplied metadata; no executor, trusted target scanner, independent verifier, or automatic evidence promotion exists.
 - An `accepted` execution-result envelope proves contract shape only, not deployment success, safety, target existence, backup integrity, rollback correctness, or release readiness.
 - Confirmations, timestamps, maintenance-window evidence, preflight results, and reviewer identities are caller-supplied metadata; no trusted clock, identity provider, independent preflight runner, acknowledgement system, or deployment executor exists.

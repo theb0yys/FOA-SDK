@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Tainted Grail Modding Editor and SDK is an O3DE-hosted authoring environment for governed FoA mod projects. It records exact game-build context, pack ownership, source provenance, evidence, canonical identities, independent governance decisions, permissions, prohibitions, blockers, adapter contracts, plans, evidence-return contracts, and read-only Phase 8 previews.
+The Tainted Grail Modding Editor and SDK is an O3DE-hosted authoring environment for governed FoA mod projects. It records exact game-build context, pack ownership, source provenance, evidence, canonical identities, independent governance decisions, permissions, prohibitions, blockers, adapter contracts, plans, evidence-return contracts, and read-only Phase 8 previews, reports, and verifier-result contracts.
 
 The project is pre-alpha. It does not provide production runtime deployment or complete domain authoring tools.
 
@@ -49,6 +49,8 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail Staging and Deployment Preview**
 - **Tainted Grail Deployment Confirmation and Work Orders**
 - **Tainted Grail Deployment Execution Result Evidence**
+- **Tainted Grail Post-Deployment Verification and Release Blockers**
+- **Tainted Grail Independent Post-Deployment Verifier Results**
 
 ## Recommended workflow
 
@@ -69,13 +71,15 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 15. Review the staging/deployment preview against an accepted declared target inventory.
 16. Review the typed confirmation, maintenance window, preflight evidence, deployment work-order steps, and operator checklist.
 17. Review any separately supplied deployment execution-result envelope and candidate evidence without treating it as execution authority or promoted truth.
-18. Review the shared status pane before later downstream work.
+18. Review the deterministic post-deployment compatibility and release blockers.
+19. Review any separately supplied independent-verifier observations without treating contract validity as certification or release approval.
+20. Review the shared status pane before later downstream work.
 
 ## Workspace and exact game profile
 
 The status pane configures workspace identity and root, output, staging, and deployment paths. A game profile records exact FoA installation, game version, branch, `Mono` or `IL2CPP` target, Unity version, BepInEx version and plugin path where applicable, managed assemblies, diagnostics, extracted data, and content scopes.
 
-Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, staging/deployment previews, confirmations, deployment work orders, or deployment execution-result envelopes.
+Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, staging/deployment previews, confirmations, deployment work orders, deployment execution-result envelopes, derived post-deployment reports, or independent-verifier envelopes.
 
 ## Pack manager
 
@@ -94,7 +98,7 @@ adapter:<adapter-id>
 adapter:<adapter-id>:capability:<capability>
 ```
 
-Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, confirmation, rollback proof, or deployment execution evidence.
+Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, confirmation, rollback proof, deployment execution evidence, compatibility decision, independent verification, or release approval.
 
 ## Canonical catalog and governance
 
@@ -268,7 +272,7 @@ The contract binds the exact work-order ID, canonical JSON and fingerprint, prev
 
 Typed step, backup, and rollback outcomes are `not_attempted`, `succeeded`, `failed`, and `skipped`. Every canonical work-order step requires exactly one result. Every backup step requires one backup outcome. Every add, replace, and remove step requires one target verification and one typed rollback result.
 
-Target-verification states are `not_checked`, `matched`, and `mismatched`. Exact deployed fingerprints and presence states remain distinct from the executor's operational outcome. A `failed execution can still be contract-valid evidence` when the failure, attempted step, rollback state, and safe log references are complete and exact.
+Target-verification states are `not_checked`, `matched`, and `mismatched`. Exact deployed fingerprints and presence states remain distinct from the executor's operational outcome. A failed execution can still be contract-valid evidence when the failure, attempted step, rollback state, and safe log references are complete and exact.
 
 Envelope statuses are:
 
@@ -287,6 +291,55 @@ Envelope statuses are:
 
 The ordinary Developer Preview state has zero registered deployment execution-result envelopes.
 
+## Post-deployment verification and release blockers
+
+Open **Tainted Grail Post-Deployment Verification and Release Blockers** to inspect the deterministic report derived from one exact current work order, its deployment execution-result envelope, and the candidate evidence returned from that envelope.
+
+The report preserves exact work-order/result fingerprints and profile/game/branch/runtime context. It aggregates completed, failed, and incomplete steps; backup completeness; `matched`, `mismatched`, and `not_checked` target states; rollback requirements and outcomes; failures; and referenced diagnostics.
+
+Report statuses are:
+
+- `evidence_rejected`
+- `evidence_incomplete`
+- `verification_incomplete`
+- `compatibility_blocked`
+- `rollback_incomplete`
+- `release_blocked`
+- `review_ready`
+
+Every blocker keeps stable identity, type, severity, exact subject, step or rollback identity, evidence IDs, diagnostic references, and separate compatibility/release effects. `review_ready` remains a human-review state only. `HumanReviewRequired` stays true, while `VerifierExecuted`, `EvidencePromoted`, `ReleasePublished`, `LaunchPerformed`, and `AdapterCalled` stay false.
+
+The report does not run an independent verifier, access a target filesystem, clear adverse execution evidence, promote evidence, sign an archive, publish a release, launch FoA, or call an adapter. The ordinary Developer Preview state has zero reports because it has zero deployment execution-result envelopes.
+
+## Independent post-deployment verifier results
+
+Open **Tainted Grail Independent Post-Deployment Verifier Results** to inspect metadata supplied by one separately reviewed verifier for an exact current structurally eligible post-deployment report.
+
+The verifier review requires stable review/verifier identities, strict semantic version, lowercase SHA-256 fingerprint, a named reviewer, evidence, UTC review time, and the exact required capabilities: `target_presence`, `target_fingerprint`, and `target_absence` as demanded by the work-order changes.
+
+Every canonical add, replace, and remove step requires exactly one independent check with exact sequence, step, target path, expected presence, and expected fingerprint. Check outcomes are:
+
+- `not_run`
+- `matched`
+- `mismatched`
+- `failed`
+- `inconclusive`
+
+Envelope statuses are:
+
+- `report_not_ready`
+- `verifier_unreviewed`
+- `report_binding_mismatch`
+- `envelope_invalid`
+- `check_coverage_incomplete`
+- `failure_diagnostic_binding_mismatch`
+- `observation_mismatch`
+- `accepted`
+
+`accepted` means the supplied contract is exact and every supplied observation matches. A complete mismatch remains structurally valid and returns candidate evidence under `observation_mismatch`; it is not silently discarded or treated as success. Failed and inconclusive checks require typed same-check failures and safe fingerprinted diagnostics.
+
+The Editor does not discover or execute a verifier, read or hash a target file, mutate deployment state, launch FoA, call an adapter, import or promote evidence, sign an archive, or publish a release. The ordinary Developer Preview state has zero registered independent-verifier envelopes.
+
 ## Workspace layout
 
 ```text
@@ -304,7 +357,7 @@ MyWorkspace/
 └── Reports/
 ```
 
-There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, rollback-plan, confirmation, maintenance-window, preflight, deployment-work-order, checklist, deployment-execution-result, or returned-candidate-evidence file in this workflow.
+There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, rollback-plan, confirmation, maintenance-window, preflight, deployment-work-order, checklist, deployment-execution-result, post-deployment-report, independent-verifier-result, or returned-candidate-evidence file in this workflow.
 
 ## Safe-use rules
 
@@ -313,7 +366,7 @@ There is no durable adapter declaration, work-order plan, runtime-result, build-
 - Do not assume imported or adapter-reported data is true because it parsed.
 - Do not assume validation grants permission.
 - Do not treat a duplicate candidate as an automatic merge instruction.
-- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, `ready` staging/deployment previews, `review_ready` deployment work orders, or `accepted` execution-result envelopes as authority to execute, build, assemble, deploy, restore, promote evidence, launch, publish, or modify saves.
+- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, `ready` staging/deployment previews, `review_ready` deployment work orders or post-deployment reports, `accepted` execution-result envelopes, or `accepted`/`observation_mismatch` verifier envelopes as authority to execute, build, assemble, deploy, restore, certify compatibility, promote evidence, launch, sign, publish, release, or modify saves.
 - Keep proprietary game files, private paths, credentials, and non-redistributable data out of project fixtures and public evidence.
 
 ## Troubleshooting
@@ -383,6 +436,27 @@ Resolve plan binding, toolchain declarations, required materials, fingerprints, 
 - For `rollback_binding_mismatch`, report one exact inverse rollback result for every addition, replacement, and removal, including `not_attempted`.
 - For `failure_log_binding_mismatch`, bind failures and safe fingerprinted logs back to the same exact step or rollback result.
 - Remember that `accepted` is contract validity only; nothing is executed, promoted, validated, permitted, or published automatically.
+
+### Post-deployment report is blocked
+
+- For `evidence_rejected`, resolve the upstream execution-result contract before building the report.
+- For `evidence_incomplete`, restore the exact work-order/result/evidence-return bindings and candidate counts/identities.
+- For `verification_incomplete`, supply complete execution-result target-verification metadata; the report itself does not perform checks.
+- For `compatibility_blocked`, inspect mismatched targets, failed or incomplete steps, and their exact blocker subjects.
+- For `rollback_incomplete`, preserve the required inverse result and its exact outcome for every mutation step.
+- For `release_blocked`, inspect failures, diagnostics, backup state, rollback results, and existing adverse observations.
+- Remember that `review_ready` still requires human review and is not compatibility certification or release permission.
+
+### Independent-verifier envelope is rejected or mismatched
+
+- For `report_not_ready`, use the exact current report backed by accepted execution evidence and a `review_ready` work order.
+- For `verifier_unreviewed`, supply accepted evidence-backed verifier review with stable identity, strict version, fingerprint, reviewer, UTC review time, and every required capability.
+- For `report_binding_mismatch`, bind the exact report ID, typed status, canonical JSON, work-order/result fingerprints, and profile/game/branch/runtime context.
+- For `envelope_invalid`, correct contract version, stable identities, timestamps, fingerprints, canonical report JSON, and runtime context.
+- For `check_coverage_incomplete`, supply exactly one exact check for every canonical add, replace, and remove step, with no unknown, duplicate, missing, or extra checks.
+- For `failure_diagnostic_binding_mismatch`, use unique stable same-check failures and safe fingerprinted diagnostic references with no orphan or cross-check bindings.
+- For `observation_mismatch`, review the independently supplied mismatch, failed check, or inconclusive check; structurally valid adverse evidence is intentionally preserved and is not `accepted`.
+- Remember that `accepted` proves supplied contract shape and all-matched metadata only; the Editor did not run a verifier or make a release decision.
 
 ## Getting help
 

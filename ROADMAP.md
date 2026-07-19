@@ -276,9 +276,64 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no registration, import, promotion, deployment, launch, or execution action;
 - the Windows manual UI checklist includes all sixteen panes and the default zero-deployment-execution-result state.
 
-### Next ordered slice — post-deployment verification and release-blocker report
+### Post-deployment verification and release-blocker report
 
-Aggregate one accepted deployment execution-result envelope, returned candidate evidence, target-verification states, rollback completeness, failures, and referenced diagnostics into deterministic compatibility and release blockers. The report must not execute a verifier, launch FoA, promote evidence, publish a release, or call an adapter.
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact current `review_ready` deployment work order, accepted execution-result envelope, and returned candidate evidence set.
+- Fail closed for canonical-work-order drift, preview/pack/target drift, result or work-order fingerprint drift, typed-count drift, duplicate or malformed candidate identities, and exact profile/game/branch/runtime mismatch.
+- Aggregate work-order step outcomes, backup completeness, target `matched`/`mismatched`/`not_checked` states, rollback requirements and outcomes, failures, and safe referenced diagnostics.
+- Emit stable typed compatibility and release blockers with exact subjects, step/rollback identities, evidence IDs, and log-reference IDs.
+- Deterministic `evidence_rejected`, `evidence_incomplete`, `verification_incomplete`, `compatibility_blocked`, `rollback_incomplete`, `release_blocked`, and `review_ready` states.
+- Keep `HumanReviewRequired: true`; `VerifierExecuted`, `EvidencePromoted`, `ReleasePublished`, `LaunchPerformed`, and `AdapterCalled` remain false.
+- Read-only **Tainted Grail Post-Deployment Verification and Release Blockers** pane with candidate-evidence, step, verification, rollback, failure/diagnostic, compatibility-blocker, and release-blocker columns.
+- Public contract documentation and seventeen-pane Windows manual UI coverage.
+- **No independent verifier, executor, adapter call, FoA launch, evidence promotion, release archive, signing, or publication path** is implemented or authorised.
+
+Exit criteria:
+
+- only the exact current review-ready work order and accepted exact-bound evidence return can be aggregated as accepted execution evidence;
+- evidence rejection and incomplete binding remain distinct from operational failures and target mismatches;
+- unchecked and mismatched target states block compatibility and release review without claiming independent verification;
+- failed/skipped steps, incomplete backups, rollback incompleteness, successful rollback of the attempted candidate, failures, and missing diagnostics remain explicit release blockers;
+- equivalent inputs produce identical report identities, statuses, counts, sorted candidate/diagnostic IDs, blocker IDs, blocker ordering, and associations;
+- report construction does not mutate the work order, execution-result envelope, evidence return, or registries;
+- `review_ready` remains an operator-review state, not compatibility certification, execution authority, or release permission;
+- the Editor pane remains non-editable and exposes no verifier, import, promotion, deployment, rollback, launch, archive, signing, publication, or adapter action;
+- the Windows manual UI checklist includes all seventeen panes and the default zero-post-deployment-report state.
+
+### Independent post-deployment verifier contract
+
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact current structurally eligible post-deployment report, typed status, deterministic canonical JSON, execution-result identity/fingerprint, work-order identity/fingerprint, and exact profile/game/branch/runtime context.
+- Require one accepted evidence-backed review of the separately supplied verifier with stable identity, strict semantic version, lowercase SHA-256 fingerprint, named reviewer, UTC review time, and unique required capabilities.
+- Require exactly one check for every canonical add, replace, and remove work-order step with exact sequence, target path, expected presence, and expected fingerprint.
+- Preserve typed `not_run`, `matched`, `mismatched`, `failed`, and `inconclusive` outcomes, attempted and observation-recorded state, observed presence/fingerprint, and UTC check time.
+- Require reciprocal same-check failures and safe fingerprinted diagnostics for failed and inconclusive checks.
+- Deterministic `report_not_ready`, `verifier_unreviewed`, `report_binding_mismatch`, `envelope_invalid`, `check_coverage_incomplete`, `failure_diagnostic_binding_mismatch`, `observation_mismatch`, and `accepted` states.
+- Keep complete observation mismatches structurally contract-valid while distinguishing them from all-matched `accepted` results.
+- Return candidate source/evidence documents by value for report binding, verifier review, checks, failures, and diagnostics without automatic promotion.
+- Transient `AdapterPostDeploymentVerifierResultRegistry` and read-only **Tainted Grail Independent Post-Deployment Verifier Results** pane.
+- Public contract documentation and eighteen-pane Windows manual UI coverage.
+- **No verifier discovery or execution, target filesystem access, deployment mutation, FoA launch, adapter call, evidence promotion, archive signing, or release publication** is implemented or authorised.
+
+Exit criteria:
+
+- only an exact current eligible report and accepted capability-complete verifier review can reach a structurally valid result;
+- every canonical mutation step has exactly one exact independent check and no unknown, duplicate, missing, or extra check can pass;
+- matched observations reproduce the exact expected target state while mismatched observations actually differ;
+- not-run checks remain distinct from failed and inconclusive attempts;
+- failures and diagnostics are stable, safe, unique, reciprocal, same-check bound, and non-orphaned;
+- structurally valid observation mismatches return candidate evidence but never become `accepted`;
+- equivalent inputs produce identical canonical report JSON, statuses, issue ordering, candidate identities, and evidence ordering;
+- validation and evidence return do not mutate work orders, execution results, reports, verifier envelopes, or registries;
+- the Editor pane remains non-editable and exposes no verifier, filesystem, deployment, launch, adapter, promotion, archive, signing, publication, or release action;
+- the Windows manual UI checklist includes all eighteen panes and the default zero-independent-verifier-envelope state.
+
+### Next ordered slice — verifier evidence reconciliation and release-decision envelope
+
+Reconcile one exact post-deployment report with one structurally valid independent-verifier evidence return into explicit compatibility and release-decision states. The envelope must preserve existing blockers and adverse verifier observations, require human review, and must not execute a verifier, mutate files, launch FoA, call an adapter, promote evidence, sign an archive, or publish a release.
 
 Controlled pipeline:
 
@@ -286,7 +341,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, independent result verification, compatibility reports, release archives, checksums, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, verifier evidence reconciliation, release archives, checksums, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

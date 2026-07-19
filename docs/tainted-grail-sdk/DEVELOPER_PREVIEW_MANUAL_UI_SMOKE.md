@@ -6,7 +6,7 @@ Status: checklist and evidence tooling implemented; the actual Windows screensho
 
 This checklist proves the source-built TG SDK panes are usable in a **real Windows x64 Profile** Editor session. It complements automated and compiled tests and does not prove FoA runtime compatibility.
 
-Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**.
+Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**.
 
 ## Safety and privacy boundary
 
@@ -41,7 +41,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
 
 Prepare `preview.duplicate-companion`, then import `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion` exactly as documented in `Preview/DuplicateReview/README.md`.
 
-The normal fixture has no adapter declaration, runtime-result envelope, package-preview input, staging/deployment-preview input, deployment confirmation/work-order input, or deployment execution-result envelope. Expected defaults are:
+The normal fixture has no adapter declaration, runtime-result envelope, package-preview input, staging/deployment-preview input, deployment confirmation/work-order input, deployment execution-result envelope, or independent-verifier envelope. It therefore has no post-deployment report or independent-verifier result. Expected defaults are:
 
 - the Adapter Capability Matrix shows `unsupported` rows when no adapter declaration is registered;
 - Work-Order Plans shows **one refused plan group and zero generated steps** per loaded pack;
@@ -50,7 +50,9 @@ The normal fixture has no adapter declaration, runtime-result envelope, package-
 - Package Assembly Preview shows **zero registered package-preview inputs**;
 - Staging and Deployment Preview shows **zero registered staging/deployment-preview inputs**;
 - Deployment Confirmation and Work Orders shows **zero registered deployment confirmation/work-order inputs**;
-- Deployment Execution Result Evidence shows **zero registered deployment execution-result envelopes**.
+- Deployment Execution Result Evidence shows **zero registered deployment execution-result envelopes**;
+- Post-Deployment Verification and Release Blockers shows **zero reports**;
+- Independent Post-Deployment Verifier Results shows **zero registered verifier envelopes**.
 
 ## Initialize evidence
 
@@ -86,16 +88,18 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Package Assembly Preview;
 - Tainted Grail Staging and Deployment Preview;
 - Tainted Grail Deployment Confirmation and Work Orders;
-- Tainted Grail Deployment Execution Result Evidence.
+- Tainted Grail Deployment Execution Result Evidence;
+- Tainted Grail Post-Deployment Verification and Release Blockers;
+- Tainted Grail Independent Post-Deployment Verifier Results.
 
-Confirm every pane opens and remains interactive. **All sixteen TG SDK panes** must be present.
+Confirm every pane opens and remains interactive. **All eighteen TG SDK panes** must be present.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All sixteen TG SDK panes opened from the Tools menu."
+  --notes "All eighteen TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
@@ -128,7 +132,11 @@ Open the synthetic workspace and duplicate companion. Confirm:
 - confirmation/work-order columns expose exact preview and pack identity, named reviewer, typed scope and expiry, maintenance window, status, typed steps, operator checklist, blockers, prohibited permissions, and canonical JSON;
 - **Tainted Grail Deployment Execution Result Evidence** shows **zero registered deployment execution-result envelopes**;
 - deployment execution-result columns expose result/work-order identity, reviewed executor, attempted steps, outcomes, observed fingerprints, backup results, target verification, rollback/restore outcomes, failures/logs, candidate evidence counts, and contract issues;
-- every analysis/planning/result/build/package/deployment/work-order/evidence pane is **non-editable** and exposes no registration, acknowledgement, import, promotion, save/export, compiler, executor, copy, replace, delete, backup, restore, archive, deploy, launch, execution, or save-mutation action.
+- **Tainted Grail Post-Deployment Verification and Release Blockers** shows **zero reports**;
+- post-deployment report columns expose result/report/work-order identity, exact profile/game/branch/runtime context, candidate source/evidence IDs and counts, step outcomes, target-verification states, rollback completeness, failures/diagnostics, compatibility blockers, and release blockers;
+- **Tainted Grail Independent Post-Deployment Verifier Results** shows **zero registered verifier envelopes**;
+- independent-verifier columns expose verifier-result/report identity, structural status, reviewed verifier/capabilities, exact expected checks, independently supplied observations, failures/diagnostics, candidate evidence counts, exact context, safety boundary, and issues;
+- every analysis/planning/result/build/package/deployment/work-order/evidence/report/verifier pane is **non-editable** and exposes no registration, acknowledgement, import, promotion, save/export, compiler, executor, verifier, target-filesystem access, copy, replace, delete, backup, restore, archive, signing, publication, deploy, launch, execution, or save-mutation action.
 
 Record under `preview-data-displayed`. Screenshot required.
 
@@ -142,7 +150,7 @@ Confirm resolved and intentionally unresolved station/learnability rows, evidenc
 
 ### 7. Save, close, reopen
 
-Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, package-preview, staging/deployment-preview, deployment-work-order, and deployment-execution-result registries must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview/target-inventory/deployment-preview/backup/rollback/confirmation/window/preflight/checklist/deployment-execution-result file may appear. Screenshot required.
+Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, and independent-verifier registries and derived post-deployment reports must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview/target-inventory/deployment-preview/backup/rollback/confirmation/window/preflight/checklist/deployment-execution-result/post-deployment-report/independent-verifier-result file may appear. Screenshot required.
 
 ### 8. Actionable failure message
 
@@ -150,7 +158,7 @@ Trigger a safe reversible validation failure. Confirm the **failure message** id
 
 ### 9. Runtime/deployment boundary absent
 
-Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, executor invocation, compiler, file copy/replace/delete, backup/restore, archive creation, package assembly, deployment-directory mutation, checklist acknowledgement, rollback execution, automatic evidence promotion, or launch action exists. Record under `runtime-deployment-absent`.
+Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, executor invocation, independent verifier execution or target access, compiler, file copy/replace/delete, backup/restore, archive creation, package assembly, deployment-directory mutation, checklist acknowledgement, rollback execution, automatic evidence promotion, release signing/publication, or launch action exists. Record under `runtime-deployment-absent`.
 
 ## Attach reviewed screenshots
 

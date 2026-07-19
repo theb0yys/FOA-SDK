@@ -19,6 +19,7 @@
     "executable_name": "TaintedGrailModdingEditor",
     "modules": [],
     "gem_names": [
+        "ExternalToolchain",
         "TaintedGrailModdingSDK"
     ]
 }

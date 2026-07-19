@@ -218,9 +218,11 @@ namespace TaintedGrailModdingSDK
             previewService.BuildPreview(MakePipelinePreviewRequest());
 
         ASSERT_EQ(preview.m_status, AdapterStagingDeploymentPreviewStatus::Ready);
-        ASSERT_EQ(preview.m_blockers.size(), 1);
-        EXPECT_EQ(preview.m_blockers.front().m_code, "deployment.preview_only");
         EXPECT_TRUE(preview.m_blockers.empty());
+        EXPECT_FALSE(preview.m_stagingMutationAllowed);
+        EXPECT_FALSE(preview.m_deploymentMutationAllowed);
+        EXPECT_FALSE(preview.m_rollbackExecutionAllowed);
+        EXPECT_FALSE(preview.m_launchAllowed);
 
         AdapterDeploymentWorkOrderService workOrderService;
         const AdapterDeploymentWorkOrder workOrder =

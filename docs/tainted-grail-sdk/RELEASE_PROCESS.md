@@ -24,8 +24,8 @@ Record:
 - supported operating systems, compilers, configuration, and dependency locks;
 - TG SDK schema versions;
 - supported FoA profile, Core, and adapter versions;
-- exact build manifest, package preview, **generated package contents**, and test/validation results;
-- licence, notices, redistribution decisions, and rollback plan.
+- exact build manifest, package preview, staging/deployment preview, **generated package contents**, and test/validation results;
+- exact target-inventory review, additions, replacements, removals, conflicts, backups, rollback steps, licence, notices, and redistribution decisions.
 
 ## Release readiness checklist
 
@@ -87,6 +87,22 @@ Before any future package assembler or release step is enabled:
 
 A ready preview is not proof that files exist, were copied, or were archived.
 
+### Staging/deployment-preview gate
+
+Before any future deployer or deployment work order can be enabled:
+
+- the exact package preview is `ready`, fingerprinted, and retains all assembly/archive/deployment permissions as false;
+- the declared target inventory has an accepted evidence-backed review bound to its exact ID and fingerprint;
+- the package preview, target inventory, pack, target root, and package-preview fingerprint bind exactly;
+- every target entry has a stable identity, exact path, role, media type, owner pack, project-owned state, managed state, and current fingerprint;
+- **additions, replacements, removals, and conflicts** are reviewed explicitly rather than inferred from timestamps or names;
+- replacements and removals have a complete **backup and rollback preview** with contained backup paths and exact pre-change fingerprints;
+- every addition, replacement, and removal has one typed inverse rollback step;
+- no foreign, unmanaged, multiplicity, role/media-type, replaceability, removability, path, backup, or rollback conflict remains;
+- the staging/deployment preview is `ready` while `StagingMutationAllowed`, `DeploymentMutationAllowed`, `RollbackExecutionAllowed`, and `LaunchAllowed` remain false.
+
+The current contract **does not mutate deployment**. A ready staging/deployment preview does not prove that target files exist, backups were created, rollback was tested, or deployment is safe to execute.
+
 ## Controlled pipeline
 
 The eventual pipeline is:
@@ -97,11 +113,11 @@ validate → configure → build → test → package → inspect → checksum �
 
 Until each mutation step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview.
 
-## Package boundaries
+## Package and deployment boundaries
 
 Release packages may contain only project-owned or legally redistributable output. Do not package game binaries/assets, extracted proprietary data, private workspace content, personal logs/paths, source trees or work-order plans not intended for distribution, or third-party binaries without redistribution rights.
 
-The current build-manifest and package-preview contracts do not copy files, create archives, deploy content, or publish releases.
+The current build-manifest, package-preview, and staging/deployment-preview contracts do not copy, replace, delete, back up, restore, create archives, deploy content, launch FoA, or publish releases.
 
 ## Artefacts
 

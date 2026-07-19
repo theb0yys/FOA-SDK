@@ -24,6 +24,7 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_work_order_plans.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_runtime_results.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_build_manifests.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_package_assembly_preview.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_staging_deployment_preview.py
 ```
 
 These checks do not replace an O3DE configure/build and compiled test run.
@@ -43,6 +44,7 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail Adapter Runtime Result Evidence**
 - **Tainted Grail Adapter Build Manifests**
 - **Tainted Grail Package Assembly Preview**
+- **Tainted Grail Staging and Deployment Preview**
 
 ## Recommended workflow
 
@@ -60,13 +62,14 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 12. Review any externally supplied runtime-result envelope as candidate evidence only.
 13. Review the reproducible adapter build definition.
 14. Review the package-assembly preview against a project-owned staging inventory.
-15. Review the shared status pane before later downstream work.
+15. Review the staging/deployment preview against an accepted declared target inventory.
+16. Review the shared status pane before later downstream work.
 
 ## Workspace and exact game profile
 
 The status pane configures workspace identity and root, output, staging, and deployment paths. A game profile records exact FoA installation, game version, branch, `Mono` or `IL2CPP` target, Unity version, BepInEx version and plugin path where applicable, managed assemblies, diagnostics, extracted data, and content scopes.
 
-Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, or package previews.
+Workspace schema 1 uses lowercase namespaced stable IDs. Paths are canonicalised and checked before publication. Changing the active profile does not re-authorise older evidence, governance, adapter metadata, plans, runtime-result candidates, build manifests, package previews, or staging/deployment previews.
 
 ## Pack manager
 
@@ -85,7 +88,7 @@ adapter:<adapter-id>
 adapter:<adapter-id>:capability:<capability>
 ```
 
-Imported data does not automatically become a catalog record, validation decision, permission, build input, or package output.
+Imported data does not automatically become a catalog record, validation decision, permission, build input, package output, deployment target, or rollback proof.
 
 ## Canonical catalog and governance
 
@@ -188,6 +191,32 @@ An `output_missing` result includes explicit omissions. A `collision` lists ever
 
 The ordinary Developer Preview state has zero registered package-preview inputs.
 
+## Staging and deployment preview
+
+Open **Tainted Grail Staging and Deployment Preview** after an exact ready package preview and a separately accepted evidence-backed target inventory have been supplied to the transient registry.
+
+The pane compares one reviewed package layout with one exact target inventory and derives **additions, replacements, removals, and unchanged paths**. It also reports exact ownership/type/multiplicity conflicts, backup requirements, and one inverse rollback step for every hypothetical change.
+
+Statuses are:
+
+- `package_not_ready`
+- `target_unreviewed`
+- `inventory_binding_mismatch`
+- `inventory_untrusted`
+- `path_invalid`
+- `conflict`
+- `backup_incomplete`
+- `rollback_incomplete`
+- `ready`
+
+A replacement requires one managed project-owned target entry for the same pack, matching role/media type, a different exact fingerprint, and explicit replaceability. An obsolete same-pack managed entry becomes a removal only when explicitly removable. Foreign, unmanaged, multiplicity, role, media-type, and replaceability/removability problems remain conflicts; the preview never selects a winner.
+
+Every replacement and removal requires an exact current fingerprint and a safe deterministic path beneath the separate backup root. Rollback actions are typed as `remove_added`, `restore_replaced`, and `restore_removed`.
+
+`StagingMutationAllowed`, `DeploymentMutationAllowed`, `RollbackExecutionAllowed`, and `LaunchAllowed` are false for every state. The pane is non-editable and **nothing is copied or deleted**. It does not scan or hash the target, create a backup, restore a file, mutate staging/deployment directories, launch FoA, or execute an adapter.
+
+The ordinary Developer Preview state has zero registered staging/deployment-preview inputs.
+
 ## Workspace layout
 
 ```text
@@ -205,7 +234,7 @@ MyWorkspace/
 └── Reports/
 ```
 
-There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, or package-preview file in this workflow.
+There is no durable adapter declaration, work-order plan, runtime-result, build-manifest, staging-inventory, package-preview, target-inventory, deployment-preview, backup, or rollback-plan file in this workflow.
 
 ## Safe-use rules
 
@@ -214,7 +243,7 @@ There is no durable adapter declaration, work-order plan, runtime-result, build-
 - Do not assume imported or adapter-reported data is true because it parsed.
 - Do not assume validation grants permission.
 - Do not treat a duplicate candidate as an automatic merge instruction.
-- Do not treat `supported`, generated canonical JSON, `ready` build manifests, or `ready` package previews as authority to execute, build, assemble, deploy, or modify saves.
+- Do not treat `supported`, generated canonical JSON, `ready` build manifests, `ready` package previews, or `ready` staging/deployment previews as authority to execute, build, assemble, deploy, restore, launch, or modify saves.
 - Keep proprietary game files, private paths, credentials, and non-redistributable data out of project fixtures and public evidence.
 
 ## Troubleshooting
@@ -245,6 +274,18 @@ Resolve plan binding, toolchain declarations, required materials, fingerprints, 
 - For `path_invalid`, use safe relative staging paths and keep outputs beneath the package root.
 - For `collision`, resolve all duplicate target paths instead of choosing one automatically.
 - For `redistribution_blocked`, exclude restricted content or correct the reviewed redistribution policy.
+
+### Staging/deployment preview is not ready
+
+- For `package_not_ready`, resolve the upstream package-preview status and exact fingerprint first.
+- For `target_unreviewed`, provide an accepted evidence-backed review bound to the exact target inventory fingerprint.
+- For `inventory_binding_mismatch`, align package-preview ID/fingerprint, pack, target root, and target inventory.
+- For `inventory_untrusted`, fix entry identities, owner-pack IDs, role/media-type declarations, and duplicate entry IDs.
+- For `path_invalid`, keep every target beneath the reviewed target root and every backup beneath a separate safe backup root.
+- For `conflict`, resolve duplicate target entries, foreign ownership, unmanaged content, role/media drift, or non-replaceable/non-removable targets without selecting a winner automatically.
+- For `backup_incomplete`, provide the exact current target fingerprint and a contained backup path for every replacement/removal.
+- For `rollback_incomplete`, ensure every addition, replacement, and removal has exactly one typed inverse step.
+- Remember that `ready` remains preview-only and does not authorise copying, deletion, backup, restoration, deployment, launch, or execution.
 
 ## Getting help
 

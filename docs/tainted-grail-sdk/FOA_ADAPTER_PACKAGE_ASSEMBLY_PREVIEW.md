@@ -158,10 +158,16 @@ Production-linked tests cover typed vocabularies, duplicate inventory rejection,
 
 The focused validator rejects filesystem and process access, copy/archive/deploy code, automatic registration, mutable Editor controls, missing ownership/redistribution/path gates, incomplete tests, and missing public contracts.
 
+## Slice 13 handoff
+
+Correction **Slice 13** consumes one exact ready package layout through the read-only [staging and deployment preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md). It compares the layout with a reviewed declared target inventory and derives additions, replacements, removals, unchanged paths, conflicts, backup requirements, and inverse rollback steps with **no file mutation**.
+
+The handoff preserves the package preview ID, package-preview fingerprint, pack ID, package root, output digests, and all false mutation permissions. Slice 13 cannot reinterpret a non-ready package or silently repair an omission, collision, trust failure, unsafe path, or redistribution blocker from Slice 12.
+
 ## Next ordered slice
 
-The next Phase 8 slice is a deterministic staging and deployment preview. It should compare one ready package layout with a declared target inventory and derive additions, replacements, removals, conflicts, backup requirements, and rollback steps without copying or deleting files, mutating deployment directories, launching FoA, or executing an adapter.
+Correction Slice 14 is a typed explicit-confirmation and deployment work-order contract. It binds one exact ready staging/deployment preview to named review and preflight metadata while retaining all execution flags as false.
 
 ## Rollback
 
-Revert the implementing pull request. Preview requests and derived layouts are transient, and no durable workspace, pack, catalog, source/evidence, adapter, work-order, runtime-result, build-manifest, or package schema requires migration.
+Revert the implementing pull request. Preview requests and derived layouts are transient, and no durable workspace, pack, catalog, source/evidence, adapter, work-order, runtime-result, build-manifest, package, staging, deployment, or rollback schema requires migration.

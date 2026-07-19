@@ -6,7 +6,7 @@ Status: checklist and evidence tooling implemented; the actual Windows screensho
 
 This checklist proves the source-built TG SDK panes are usable in a **real Windows x64 Profile** Editor session. It complements automated and compiled tests and does not prove FoA runtime compatibility.
 
-Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, and **All twelve TG SDK panes** as earlier slices landed. Slice 12 requires **All thirteen TG SDK panes**.
+Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, and **All thirteen TG SDK panes** as earlier slices landed. Slice 13 requires **All fourteen TG SDK panes**.
 
 ## Safety and privacy boundary
 
@@ -41,13 +41,14 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
 
 Prepare `preview.duplicate-companion`, then import `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion` exactly as documented in `Preview/DuplicateReview/README.md`.
 
-The normal fixture has no adapter declaration, runtime-result envelope, or package-preview input. Expected defaults are:
+The normal fixture has no adapter declaration, runtime-result envelope, package-preview input, or staging/deployment-preview input. Expected defaults are:
 
 - the Adapter Capability Matrix shows `unsupported` rows when no adapter declaration is registered;
 - Work-Order Plans shows **one refused plan group and zero generated steps** per loaded pack;
 - Runtime Result Evidence shows zero registered envelopes;
-- Adapter Build Manifests shows zero ready build definitions;
-- Package Assembly Preview shows **zero registered package-preview inputs**.
+- Adapter Build Manifests shows **zero ready build definitions**;
+- Package Assembly Preview shows **zero registered package-preview inputs**;
+- Staging and Deployment Preview shows **zero registered staging/deployment-preview inputs**.
 
 ## Initialize evidence
 
@@ -80,16 +81,17 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Adapter Work-Order Plans;
 - Tainted Grail Adapter Runtime Result Evidence;
 - Tainted Grail Adapter Build Manifests;
-- Tainted Grail Package Assembly Preview.
+- Tainted Grail Package Assembly Preview;
+- Tainted Grail Staging and Deployment Preview.
 
-Confirm every pane opens and remains interactive. **All thirteen TG SDK panes** must be present.
+Confirm every pane opens and remains interactive. **All fourteen TG SDK panes** must be present.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All thirteen TG SDK panes opened from the Tools menu."
+  --notes "All fourteen TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
@@ -116,7 +118,9 @@ Open the synthetic workspace and duplicate companion. Confirm:
 - Adapter Build Manifests shows **zero ready build definitions**;
 - **Tainted Grail Package Assembly Preview** shows **zero registered package-preview inputs**;
 - package-preview columns expose reviewed manifest, staging inventory, status, package root, derived layout/output digests, omissions, collisions, redistribution/trust blockers, and canonical JSON;
-- every analysis/planning/result/build/package pane is **non-editable** and exposes no registration, import, save/export, compiler, copy, archive, deploy, launch, execution, or save-mutation action.
+- **Tainted Grail Staging and Deployment Preview** shows **zero registered staging/deployment-preview inputs**;
+- staging/deployment-preview columns expose package and target inventory identities, status, target/backup roots, additions, replacements, removals, unchanged paths, conflicts, backup requirements, rollback steps, blockers, and canonical JSON;
+- every analysis/planning/result/build/package/deployment pane is **non-editable** and exposes no registration, import, save/export, compiler, copy, replace, delete, backup, restore, archive, deploy, launch, execution, or save-mutation action.
 
 Record under `preview-data-displayed`. Screenshot required.
 
@@ -130,7 +134,7 @@ Confirm resolved and intentionally unresolved station/learnability rows, evidenc
 
 ### 7. Save, close, reopen
 
-Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, and package-preview registries must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview file may appear. Screenshot required.
+Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, package-preview, and staging/deployment-preview registries must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview/target-inventory/deployment-preview/backup/rollback file may appear. Screenshot required.
 
 ### 8. Actionable failure message
 
@@ -138,7 +142,7 @@ Trigger a safe reversible validation failure. Confirm the **failure message** id
 
 ### 9. Runtime/deployment boundary absent
 
-Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, compiler, file copy/delete, archive creation, package assembly, or deployment action exists. Record under `runtime-deployment-absent`.
+Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, compiler, file copy/replace/delete, backup/restore, archive creation, package assembly, deployment-directory mutation, rollback execution, or launch action exists. Record under `runtime-deployment-absent`.
 
 ## Attach reviewed screenshots
 

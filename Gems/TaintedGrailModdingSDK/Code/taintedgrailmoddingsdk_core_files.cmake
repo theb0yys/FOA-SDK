@@ -27,6 +27,11 @@ set(FILES
     Source/AdapterRuntimeResultEvidenceServicePart1.inl
     Source/AdapterRuntimeResultEvidenceServicePart2.inl
     Source/AdapterRuntimeResultEvidenceServicePart3.inl
+    Source/AdapterStagingDeploymentPreviewService.cpp
+    Source/AdapterStagingDeploymentPreviewService.h
+    Source/AdapterStagingDeploymentPreviewServicePart1.inl
+    Source/AdapterStagingDeploymentPreviewServicePart2.inl
+    Source/AdapterStagingDeploymentPreviewServicePart3.inl
     Source/AdapterWorkOrderPlanningService.cpp
     Source/AdapterWorkOrderPlanningServicePart1.inl
     Source/AdapterWorkOrderPlanningServicePart2.inl

@@ -14,6 +14,8 @@
 #include "AdapterPackageAssemblyPreviewWidget.h"
 #include "AdapterRuntimeResultContracts.h"
 #include "AdapterRuntimeResultEvidenceWidget.h"
+#include "AdapterStagingDeploymentPreviewService.h"
+#include "AdapterStagingDeploymentPreviewWidget.h"
 #include "AdapterWorkOrderPlanWidget.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
@@ -55,6 +57,8 @@ namespace TaintedGrailModdingSDK
             "Tainted Grail Adapter Build Manifests";
         constexpr const char* AdapterPackageAssemblyPreviewViewPaneName =
             "Tainted Grail Package Assembly Preview";
+        constexpr const char* AdapterStagingDeploymentPreviewViewPaneName =
+            "Tainted Grail Staging and Deployment Preview";
     }
 
     void TaintedGrailModdingSDKSystemComponent::Reflect(AZ::ReflectContext* context)
@@ -84,7 +88,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<TaintedGrailModdingSDKSystemComponent, AZ::Component>()
-                ->Version(11);
+                ->Version(12);
         }
     }
 
@@ -127,9 +131,11 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(AdapterRuntimeResultEvidenceViewPaneName);
             AzToolsFramework::UnregisterViewPane(AdapterBuildManifestViewPaneName);
             AzToolsFramework::UnregisterViewPane(AdapterPackageAssemblyPreviewViewPaneName);
+            AzToolsFramework::UnregisterViewPane(AdapterStagingDeploymentPreviewViewPaneName);
             m_viewRegistered = false;
         }
 
+        AdapterStagingDeploymentPreviewRegistry::Get().Clear();
         AdapterPackageAssemblyPreviewRegistry::Get().Clear();
         AdapterRuntimeResultRegistry::Get().Clear();
         AdapterContractRegistry::Get().Clear();
@@ -290,6 +296,18 @@ namespace TaintedGrailModdingSDK
             AdapterPackageAssemblyPreviewViewPaneName,
             "Tainted Grail SDK",
             packagePreviewOptions);
+
+        AzToolsFramework::ViewPaneOptions deploymentPreviewOptions;
+        deploymentPreviewOptions.paneRect = QRect(360, 360, 1440, 1020);
+        deploymentPreviewOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
+        deploymentPreviewOptions.isDeletable = true;
+        deploymentPreviewOptions.isPreview = true;
+        deploymentPreviewOptions.saveKeyName =
+            QStringLiteral("TaintedGrailModdingSDK.StagingDeploymentPreview");
+        AzToolsFramework::RegisterViewPane<AdapterStagingDeploymentPreviewWidget>(
+            AdapterStagingDeploymentPreviewViewPaneName,
+            "Tainted Grail SDK",
+            deploymentPreviewOptions);
 
         m_viewRegistered = true;
     }

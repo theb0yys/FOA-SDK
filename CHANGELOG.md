@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Pure-Core `AdapterStagingDeploymentPreviewService` for exact ready-package and reviewed target-inventory binding, deterministic additions/replacements/removals/unchanged paths, ownership and type conflicts, backup requirements, and typed inverse rollback steps.
+- Transient `AdapterStagingDeploymentPreviewRegistry` and read-only **Tainted Grail Staging and Deployment Preview** pane with canonical JSON and `StagingMutationAllowed`, `DeploymentMutationAllowed`, `RollbackExecutionAllowed`, and `LaunchAllowed` permanently false.
+- Staging/deployment-preview production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and fourteen-pane Windows manual UI coverage.
 - Pure-Core `AdapterPackageAssemblyPreviewService` for exact reviewed-manifest and staging-inventory binding, project ownership, deterministic package layout and output digests, explicit omissions/collisions, path containment, and redistribution blockers.
 - Transient `AdapterPackageAssemblyPreviewRegistry` and read-only **Tainted Grail Package Assembly Preview** pane with canonical JSON and `AssemblyAllowed`, `ArchiveAllowed`, and `DeploymentAllowed` permanently false.
 - Package-preview production-linked C++ tests, focused validator and negative tests, CI integration, public Phase 8 documentation, and thirteen-pane Windows manual UI coverage.
@@ -33,20 +36,21 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Changed
 
-- Phase 8 now includes deterministic package-assembly preview; deterministic staging and deployment preview is the next ordered slice.
-- Focused validators enforce accepted manifest reviews, exact inventory binding, project ownership, expected-output coverage, output digests, omissions, collisions, path containment, redistribution decisions, canonical sorting, non-mutation, and the no-assembly boundary.
-- The Windows manual UI checklist now covers all thirteen panes and the default zero-package-preview-input state.
-- Phase 8 retains reproducible adapter build manifests as the prerequisite handoff; `ready` never authorises a build.
+- Phase 8 now includes deterministic staging and deployment preview; typed explicit confirmation and a deployment work-order contract are the next ordered slice.
+- Focused validators enforce exact package/target review binding, ownership and management state, add/replace/remove/unchanged classification, conflicts, backup paths/fingerprints, inverse rollback completeness, canonical sorting, non-mutation, and the no-deployment boundary.
+- The Windows manual UI checklist now covers all fourteen panes and the default zero-staging/deployment-preview-input state.
+- Phase 8 retains package-assembly preview and reproducible adapter build manifests as prerequisite handoffs; `ready` never authorises build, assembly, deployment, rollback execution, or launch.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
 - Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
 - Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
-- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, and package-preview workflows.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, and staging/deployment-preview workflows.
 
 ### Security
 
+- Staging/deployment previews are transient metadata only. Target inventories require exact review, ownership, management, fingerprint, path, replacement/removal, backup, and rollback declarations; every mutation and launch permission remains false.
+- No filesystem scan, file copy/replace/delete, backup/restore, archive writer, package assembler, deployment mutation, FoA launch, BepInEx/Harmony load, telemetry, save mutation, or adapter execution is added.
 - Package previews are transient metadata only. Included entries must be project-owned, declared by the reviewed manifest, safely contained, fingerprinted, and redistributable; all assembly/archive/deployment permissions remain false.
-- No filesystem scan, file copy/delete, archive writer, package assembler, deployment, FoA launch, BepInEx/Harmony load, telemetry, save mutation, or adapter execution is added.
 - Build manifests remain transient definitions with exact source/O3DE revisions, toolchain declarations, fingerprints, safe package paths, redistribution decisions, and `BuildAllowed: false`.
 - Runtime-result envelopes return candidate evidence only; they do not automatically register, persist, promote, validate, permit, dispatch, execute, deploy, launch, or mutate saves.
 - Work-order plans are immutable descriptions with `ExecutionAllowed: false` at plan and step level.
@@ -58,6 +62,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Known limitations
 
+- Deployment target inventories, fingerprints, ownership flags, backup paths, and review evidence are caller-supplied metadata; no trusted target scanner, hashing, backup writer, restore engine, or deployer exists.
+- A `ready` staging/deployment preview does not prove target files exist, backups were made, rollback was tested, or deployment is safe to execute.
 - Package-preview inventories and output fingerprints are caller-supplied reviewed metadata; no trusted staging scanner, file hashing, copy, archive, package assembly, or deployment exists.
 - A `ready` package preview does not prove files exist or a package was created.
 - Build-manifest previews do not resolve/install toolchains, invoke compilers, generate output digests, provenance, SBOMs, or signed artefacts.

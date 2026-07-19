@@ -135,6 +135,15 @@ jobs:
       - name: Validate package-assembly preview contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_package_assembly_preview.py
 
+      - name: Test staging/deployment preview validator
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_validate_adapter_staging_deployment_preview.py" -v
+
+      - name: Validate staging/deployment preview contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_staging_deployment_preview.py
+
       - name: Test Developer Preview 0 command layer
         run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview.py" -v
 

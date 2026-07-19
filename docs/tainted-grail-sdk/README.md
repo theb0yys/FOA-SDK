@@ -22,6 +22,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Adapter Runtime Result Evidence](FOA_ADAPTER_RUNTIME_RESULT_EVIDENCE.md) — typed attempted plan/step outcomes, failures, cleanup/rollback, logs, fingerprints, and candidate evidence return with no execution path.
 - [FoA Adapter Build Manifests](FOA_ADAPTER_BUILD_MANIFESTS.md) — reproducible build definitions, resolved fingerprints, BepInEx metadata, dependency and package-layout declarations, redistribution gates, and build prohibition.
 - [FoA Adapter Package Assembly Preview](FOA_ADAPTER_PACKAGE_ASSEMBLY_PREVIEW.md) — reviewed manifests, project-owned staging inventory, derived package layout and output digests, omissions, collisions, redistribution blockers, and assembly prohibition.
+- [FoA Adapter Staging and Deployment Preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md) — reviewed target inventory, deterministic additions/replacements/removals, conflicts, backup requirements, inverse rollback steps, and deployment prohibition.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -45,6 +46,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Adapter Runtime Result Evidence](FOA_ADAPTER_RUNTIME_RESULT_EVIDENCE.md) — exact return bindings, typed outcomes/failures/recovery, safe log fingerprints, candidate evidence, and no-execution enforcement.
 - [FoA Adapter Build Manifests](FOA_ADAPTER_BUILD_MANIFESTS.md) — exact plan/toolchain/material binding, canonical build definitions, package containment, redistribution policy, determinism, and no-build enforcement.
 - [FoA Adapter Package Assembly Preview](FOA_ADAPTER_PACKAGE_ASSEMBLY_PREVIEW.md) — accepted manifest reviews, staging-inventory trust, exact layout/digest derivation, omissions, collisions, redistribution policy, determinism, and no-assembly enforcement.
+- [FoA Adapter Staging and Deployment Preview](FOA_ADAPTER_STAGING_DEPLOYMENT_PREVIEW.md) — exact package/target binding, change classification, conflicts, backup and rollback completeness, determinism, and no-deployment enforcement.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -84,9 +86,10 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed transient adapter declarations, capability compatibility, deterministic work-order plans, and typed runtime-result evidence candidates;
 - deterministic transient adapter build-manifest definitions with exact toolchain/material/output declarations and `BuildAllowed` disabled;
 - deterministic transient package-assembly previews with accepted manifest reviews, project-owned staging inventories, exact package layouts and output digests, omissions, collisions, redistribution blockers, and all assembly/archive/deployment permissions disabled;
+- deterministic transient staging/deployment previews with accepted target reviews, exact target inventories, additions, replacements, removals, unchanged paths, conflicts, backups, rollback steps, and all mutation/launch permissions disabled;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
-The actual Windows screenshot pass remains pending. Trusted toolchain resolution, compilation, file-backed staging inventory, package copying/archiving, runtime adapters, production deployment, live result capture, and remaining specialised domain tools are not complete.
+The actual Windows screenshot pass remains pending. Trusted toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, runtime adapters, production deployment, live result capture, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

@@ -190,22 +190,37 @@ Status: implemented, continuing hardening and Windows UI verification.
 - Production-linked tests, focused validator and negative tests, CI integration, public documentation, and thirteen-pane Windows UI coverage.
 - No file copying, archive creation, deployment, launch, or execution is implemented or authorised.
 
+### Deterministic staging and deployment preview
+
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Compare one exact ready package layout with one accepted evidence-backed declared target inventory.
+- Require exact package-preview ID/fingerprint, pack, target root, target inventory ID/fingerprint, and review binding.
+- Derive deterministic additions, replacements, removals, unchanged paths, exact conflicts, backup requirements, and inverse rollback steps.
+- Preserve previous/desired fingerprints, byte sizes, roles, media types, project ownership, managed/replaceable/removable state, and target entry identities.
+- Fail closed for non-ready packages, unreviewed targets, binding drift, untrusted entries, unsafe target/backup paths, ownership/type/multiplicity conflicts, incomplete backups, and incomplete rollback.
+- Deterministic `package_not_ready`, `target_unreviewed`, `inventory_binding_mismatch`, `inventory_untrusted`, `path_invalid`, `conflict`, `backup_incomplete`, `rollback_incomplete`, and `ready` states.
+- Canonical JSON with `StagingMutationAllowed: false`, `DeploymentMutationAllowed: false`, `RollbackExecutionAllowed: false`, and `LaunchAllowed: false`.
+- Transient registry and read-only **Tainted Grail Staging and Deployment Preview** pane.
+- Production-linked tests, focused validator and negative tests, CI integration, public documentation, and fourteen-pane Windows UI coverage.
+- **No copying, deletion, deployment, launch, or execution** is implemented or authorised.
+
 Exit criteria:
 
-- only an accepted evidence-backed review of an exact ready manifest can reach a package preview;
-- every expected output maps to exactly one declared, project-owned, redistributable staging entry;
-- output digests remain exact lowercase SHA-256 values supplied by the reviewed staging inventory;
-- omissions and collisions are explicit and deterministic;
-- unsafe paths and outputs outside the package root fail closed;
+- a non-ready package layout or unreviewed target inventory cannot produce a ready deployment preview;
+- exact package, target, fingerprint, ownership, role, media-type, and path bindings fail closed;
+- additions, replacements, removals, conflicts, backups, and rollback are explicit and deterministic;
+- a replacement or removal cannot be described without an exact current fingerprint and contained backup path;
+- every addition, replacement, and removal has one typed inverse rollback step;
 - equivalent inputs produce byte-identical canonical JSON;
-- package preview generation does not mutate the manifest, review, inventory, or entries;
-- all assembly, archive, and deployment permissions remain false, including for `ready`;
-- the Editor pane remains non-editable and exposes no copy, archive, deploy, launch, or execution control;
-- the Windows manual UI checklist includes all thirteen panes and the default zero-preview-input state.
+- preview generation does not mutate package or target metadata;
+- all staging, deployment, rollback-execution, and launch permissions remain false, including for `ready`;
+- the Editor pane remains non-editable and exposes no registration, copy, delete, backup, restore, deploy, launch, or execute action;
+- the Windows manual UI checklist includes all fourteen panes and the default zero-staging/deployment-input state.
 
-### Next ordered slice — deterministic staging and deployment preview
+### Next ordered slice — explicit confirmation and deployment work-order contract
 
-Compare one ready package layout with a declared target inventory and derive additions, replacements, removals, conflicts, backup requirements, and rollback steps. The preview must not copy or delete files, mutate deployment directories, launch FoA, or execute an adapter.
+Bind one exact ready staging/deployment preview to a typed named reviewer, confirmation scope, expiry, maintenance window, preflight evidence, and operator-facing action checklist. Every execution flag remains false. The contract must add no copy, delete, backup, restore, deployment, launch, or adapter invocation.
 
 Controlled pipeline:
 
@@ -213,7 +228,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes explicit user confirmation, restoration/rollback plans, compatibility reports, log/diagnostic capture, controlled package assembly, release archives, and checksums.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, explicit confirmation, actual backup/restore implementations, compatibility reports, log/diagnostic capture, release archives, checksums, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

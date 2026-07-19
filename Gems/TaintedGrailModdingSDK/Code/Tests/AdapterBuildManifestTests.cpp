@@ -6,6 +6,7 @@
  */
 
 #include "AdapterBuildManifestService.h"
+#include "CanonicalFingerprint.h"
 
 #include <AzTest/AzTest.h>
 
@@ -110,7 +111,8 @@ namespace TaintedGrailModdingSDK
             request.m_environment.m_continuousIntegrationBuild = true;
             request.m_environment.m_pathMapEnabled = true;
 
-            request.m_planFingerprint = Fingerprint('1');
+            request.m_planFingerprint =
+                CalculateCanonicalSha256(request.m_plan.m_canonicalJson);
             request.m_pluginGuid = "owner.preview-plugin";
             request.m_pluginName = "Preview Plugin";
             request.m_pluginVersion = "1.2.3";
@@ -143,6 +145,7 @@ namespace TaintedGrailModdingSDK
                     '4'),
                 Material("material.license", "license", "LICENSE", '5', true, true),
             };
+            request.m_materials.front().m_fingerprint = request.m_planFingerprint;
 
             const AZStd::string root = request.m_packageRoot + "/";
             request.m_expectedOutputs = {
@@ -180,6 +183,17 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(manifest.m_canonicalJson.find("BepInEx/plugins/owner.preview-pack"), AZStd::string::npos);
     }
 
+    TEST(AdapterBuildManifestTests, CallerSelectedPlanFingerprintIsRejected)
+    {
+        AdapterBuildManifestRequest request = MakeReadyRequest();
+        request.m_planFingerprint = Fingerprint('1');
+        request.m_materials.front().m_fingerprint = request.m_planFingerprint;
+        AdapterBuildManifestService service;
+        EXPECT_EQ(
+            service.BuildManifest(request).m_status,
+            AdapterBuildManifestStatus::FingerprintMissing);
+    }
+
     TEST(AdapterBuildManifestTests, PlanMismatchPrecedesOtherFailures)
     {
         AdapterBuildManifestRequest request = MakeReadyRequest();
@@ -214,6 +228,22 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(
             service.BuildManifest(missingFingerprint).m_status,
             AdapterBuildManifestStatus::FingerprintMissing);
+    }
+
+    TEST(AdapterBuildManifestTests, RequiredRoleCannotBeOptionalOrUnlocated)
+    {
+        AdapterBuildManifestService service;
+        AdapterBuildManifestRequest optional = MakeReadyRequest();
+        optional.m_materials.front().m_required = false;
+        EXPECT_EQ(
+            service.BuildManifest(optional).m_status,
+            AdapterBuildManifestStatus::InputMissing);
+
+        AdapterBuildManifestRequest unlocated = MakeReadyRequest();
+        unlocated.m_materials.front().m_locator.clear();
+        EXPECT_EQ(
+            service.BuildManifest(unlocated).m_status,
+            AdapterBuildManifestStatus::InputMissing);
     }
 
     TEST(AdapterBuildManifestTests, PathTraversalAndDuplicateOutputsAreRejected)

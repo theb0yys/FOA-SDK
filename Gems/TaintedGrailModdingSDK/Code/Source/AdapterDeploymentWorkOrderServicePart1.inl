@@ -167,6 +167,35 @@ namespace TaintedGrailModdingSDK
             return (value[offset] - '0') * 10 + (value[offset + 1] - '0');
         }
 
+        int FourDigitValue(const AZStd::string& value, size_t offset)
+        {
+            return (value[offset] - '0') * 1000
+                + (value[offset + 1] - '0') * 100
+                + (value[offset + 2] - '0') * 10
+                + (value[offset + 3] - '0');
+        }
+
+        bool IsLeapYear(int year)
+        {
+            return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+        }
+
+        int DaysInMonth(int year, int month)
+        {
+            constexpr int Days[] = {
+                0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+            };
+            if (month < 1 || month > 12)
+            {
+                return 0;
+            }
+            if (month == 2 && IsLeapYear(year))
+            {
+                return 29;
+            }
+            return Days[month];
+        }
+
         bool IsUtcTimestamp(const AZStd::string& value)
         {
             if (value.size() != 20
@@ -189,13 +218,15 @@ namespace TaintedGrailModdingSDK
                     return false;
                 }
             }
+            const int year = FourDigitValue(value, 0);
             const int month = TwoDigitValue(value, 5);
             const int day = TwoDigitValue(value, 8);
             const int hour = TwoDigitValue(value, 11);
             const int minute = TwoDigitValue(value, 14);
             const int second = TwoDigitValue(value, 17);
-            return month >= 1 && month <= 12
-                && day >= 1 && day <= 31
+            return year >= 1
+                && month >= 1 && month <= 12
+                && day >= 1 && day <= DaysInMonth(year, month)
                 && hour >= 0 && hour <= 23
                 && minute >= 0 && minute <= 59
                 && second >= 0 && second <= 59;
@@ -222,7 +253,7 @@ namespace TaintedGrailModdingSDK
             AZStd::string reason)
         {
             for (const AdapterDeploymentWorkOrderBlocker& blocker :
-                workOrder.m_blockers)
+                 workOrder.m_blockers)
             {
                 if (blocker.m_code == code
                     && blocker.m_subject == subject
@@ -248,7 +279,7 @@ namespace TaintedGrailModdingSDK
                 request.m_maintenanceWindow.m_evidenceIds.begin(),
                 request.m_maintenanceWindow.m_evidenceIds.end());
             for (const AdapterDeploymentPreflightEvidence& preflight :
-                request.m_preflightEvidence)
+                 request.m_preflightEvidence)
             {
                 evidence.insert(
                     evidence.end(),

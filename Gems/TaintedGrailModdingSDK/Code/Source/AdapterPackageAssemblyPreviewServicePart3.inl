@@ -28,6 +28,18 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        const AZStd::string derivedFingerprint =
+            ComputeCanonicalFingerprint(request.m_manifest.m_canonicalJson);
+        if (request.m_manifest.m_canonicalJson.empty()
+            || request.m_review.m_manifestFingerprint != derivedFingerprint
+            || request.m_inventory.m_manifestFingerprint != derivedFingerprint)
+        {
+            if (error)
+            {
+                *error = "Review and staging inventory must bind to SHA-256 of the exact canonical build manifest.";
+            }
+            return false;
+        }
         for (const AdapterPackageAssemblyPreviewRequest& existing : m_requests)
         {
             if (existing.m_inventory.m_inventoryId == request.m_inventory.m_inventoryId)
@@ -40,6 +52,10 @@ namespace TaintedGrailModdingSDK
             }
         }
         m_requests.push_back(request);
+        if (error)
+        {
+            error->clear();
+        }
         return true;
     }
 
@@ -61,16 +77,23 @@ namespace TaintedGrailModdingSDK
         const AdapterBuildManifest& manifest = request.m_manifest;
         const AdapterBuildManifestReview& review = request.m_review;
         const AdapterStagingInventory& inventory = request.m_inventory;
+        const AZStd::string derivedManifestFingerprint =
+            ComputeCanonicalFingerprint(manifest.m_canonicalJson);
 
         preview.m_manifestId = manifest.m_manifestId;
-        preview.m_manifestFingerprint = inventory.m_manifestFingerprint;
+        preview.m_manifestFingerprint = derivedManifestFingerprint;
         preview.m_packId = manifest.m_packId;
         preview.m_packVersion = manifest.m_packVersion;
         preview.m_adapterId = manifest.m_adapterId;
         preview.m_adapterVersion = manifest.m_adapterVersion;
         preview.m_planId = manifest.m_planId;
         preview.m_inventoryId = inventory.m_inventoryId;
-        preview.m_packageRoot = manifest.m_packageRoot;
+        PackagePathIdentity packageRootIdentity;
+        preview.m_packageRoot = TryBuildPackagePathIdentity(
+                manifest.m_packageRoot,
+                packageRootIdentity)
+            ? packageRootIdentity.m_normalizedPath
+            : manifest.m_packageRoot;
         preview.m_previewId = AZStd::string("packagepreview:")
             + manifest.m_manifestId + ":" + inventory.m_inventoryId;
         preview.m_assemblyAllowed = false;
@@ -82,14 +105,15 @@ namespace TaintedGrailModdingSDK
             || manifest.m_buildAllowed
             || manifest.m_manifestId.empty()
             || manifest.m_canonicalJson.empty()
-            || manifest.m_expectedOutputs.empty())
+            || manifest.m_expectedOutputs.empty()
+            || !IsSafePackageRelativePath(manifest.m_packageRoot))
         {
             manifestInvalid = true;
             AddBlocker(
                 preview.m_blockers,
                 "package_preview.manifest_not_ready",
                 {},
-                "A reviewed ready build manifest with BuildAllowed=false is required.");
+                "A reviewed ready build manifest with BuildAllowed=false, canonical JSON, outputs, and an unambiguous package root is required.");
         }
 
         bool reviewInvalid = false;
@@ -98,31 +122,30 @@ namespace TaintedGrailModdingSDK
             || review.m_reviewer.empty()
             || review.m_evidenceIds.empty()
             || review.m_manifestId != manifest.m_manifestId
-            || !IsSha256Fingerprint(review.m_manifestFingerprint))
+            || review.m_manifestFingerprint != derivedManifestFingerprint)
         {
             reviewInvalid = true;
             AddBlocker(
                 preview.m_blockers,
                 "package_preview.manifest_unreviewed",
                 {},
-                "An accepted evidence-backed review bound to the exact manifest is required.");
+                "An accepted evidence-backed review bound to SHA-256 of the exact canonical manifest is required.");
         }
 
         bool bindingInvalid = false;
         if (inventory.m_formatVersion != 1
             || !IsStableNamespacedId(inventory.m_inventoryId)
             || inventory.m_manifestId != manifest.m_manifestId
-            || inventory.m_manifestFingerprint != review.m_manifestFingerprint
+            || inventory.m_manifestFingerprint != derivedManifestFingerprint
             || inventory.m_packId != manifest.m_packId
-            || inventory.m_packageRoot != manifest.m_packageRoot
-            || !IsSha256Fingerprint(inventory.m_manifestFingerprint))
+            || !PackagePathsEqual(inventory.m_packageRoot, manifest.m_packageRoot))
         {
             bindingInvalid = true;
             AddBlocker(
                 preview.m_blockers,
                 "package_preview.inventory_binding_mismatch",
                 {},
-                "The staging inventory must bind to the exact reviewed manifest, pack, and package root.");
+                "The staging inventory must bind to the exact canonical manifest hash, pack, and Windows-stable package root identity.");
         }
 
         bool inventoryUntrusted = false;
@@ -132,8 +155,17 @@ namespace TaintedGrailModdingSDK
         bool collision = false;
         bool redistributionBlocked = false;
         AZStd::vector<AZStd::string> entryIds;
+        AZStd::vector<AZStd::string> packagePathIdentities;
         for (const AdapterStagingInventoryEntry& entry : inventory.m_entries)
         {
+            PackagePathIdentity stagingIdentity;
+            PackagePathIdentity packageIdentity;
+            const bool stagingPathValid = TryBuildPackagePathIdentity(
+                entry.m_stagingPath,
+                stagingIdentity);
+            const bool packagePathValid = TryBuildPackagePathIdentity(
+                entry.m_packagePath,
+                packageIdentity);
             if (entry.m_entryId.empty()
                 || entry.m_role.empty()
                 || entry.m_mediaType.empty())
@@ -155,6 +187,22 @@ namespace TaintedGrailModdingSDK
                     "Staging inventory entry IDs must be unique.");
             }
             entryIds.push_back(entry.m_entryId);
+
+            if (entry.m_includeInPackage && packagePathValid)
+            {
+                if (ContainsValue(
+                        packagePathIdentities,
+                        packageIdentity.m_windowsIdentity))
+                {
+                    collision = true;
+                    AddBlocker(
+                        preview.m_blockers,
+                        "package_preview.windows_path_collision",
+                        packageIdentity.m_normalizedPath,
+                        "Multiple staging entries resolve to the same Windows package-file identity.");
+                }
+                packagePathIdentities.push_back(packageIdentity.m_windowsIdentity);
+            }
             if (entry.m_includeInPackage && !entry.m_projectOwned)
             {
                 inventoryUntrusted = true;
@@ -172,7 +220,7 @@ namespace TaintedGrailModdingSDK
                     preview.m_blockers,
                     "package_preview.output_undeclared",
                     entry.m_packagePath,
-                    "Included staging output is not declared by the reviewed build manifest.");
+                    "Included staging output is not declared by the reviewed build manifest under the same Windows path identity.");
             }
             if (entry.m_includeInPackage
                 && !IsSha256Fingerprint(entry.m_outputFingerprint))
@@ -185,15 +233,18 @@ namespace TaintedGrailModdingSDK
                     "Every staged output requires a lowercase SHA-256 digest.");
             }
             if (entry.m_includeInPackage
-                && (!IsSafeRelativePath(entry.m_stagingPath)
-                    || !PathIsInsideRoot(manifest.m_packageRoot, entry.m_packagePath)))
+                && (!stagingPathValid
+                    || !packagePathValid
+                    || !IsPackagePathInsideRoot(
+                        manifest.m_packageRoot,
+                        entry.m_packagePath)))
             {
                 pathInvalid = true;
                 AddBlocker(
                     preview.m_blockers,
                     "package_preview.path_invalid",
                     entry.m_packagePath,
-                    "Staging paths must be safe and package outputs must remain under PackageRoot.");
+                    "Staging paths and package outputs must have unambiguous Windows-stable identities and remain below PackageRoot.");
             }
             if (entry.m_includeInPackage && !entry.m_redistributable)
             {
@@ -228,7 +279,12 @@ namespace TaintedGrailModdingSDK
             {
                 collision = true;
                 AdapterPackageAssemblyCollision conflict;
-                conflict.m_packagePath = output.m_relativePath;
+                PackagePathIdentity outputIdentity;
+                conflict.m_packagePath = TryBuildPackagePathIdentity(
+                        output.m_relativePath,
+                        outputIdentity)
+                    ? outputIdentity.m_normalizedPath
+                    : output.m_relativePath;
                 for (const AdapterStagingInventoryEntry* entry : matches)
                 {
                     conflict.m_inventoryEntryIds.push_back(entry->m_entryId);
@@ -238,15 +294,27 @@ namespace TaintedGrailModdingSDK
                     preview.m_blockers,
                     "package_preview.output_collision",
                     output.m_relativePath,
-                    "Multiple staging entries target the same package output.");
+                    "Multiple staging entries target the same Windows package output identity.");
                 continue;
             }
 
             const AdapterStagingInventoryEntry& entry = *matches.front();
+            PackagePathIdentity stagingIdentity;
+            PackagePathIdentity packageIdentity;
+            const bool stagingPathValid = TryBuildPackagePathIdentity(
+                entry.m_stagingPath,
+                stagingIdentity);
+            const bool packagePathValid = TryBuildPackagePathIdentity(
+                entry.m_packagePath,
+                packageIdentity);
             AdapterPackageLayoutEntry layout;
             layout.m_inventoryEntryId = entry.m_entryId;
-            layout.m_stagingPath = entry.m_stagingPath;
-            layout.m_packagePath = entry.m_packagePath;
+            layout.m_stagingPath = stagingPathValid
+                ? stagingIdentity.m_normalizedPath
+                : entry.m_stagingPath;
+            layout.m_packagePath = packagePathValid
+                ? packageIdentity.m_normalizedPath
+                : entry.m_packagePath;
             layout.m_role = entry.m_role;
             layout.m_mediaType = entry.m_mediaType;
             layout.m_outputDigest = entry.m_outputFingerprint;
@@ -274,15 +342,18 @@ namespace TaintedGrailModdingSDK
                     output.m_relativePath,
                     "Every staged output requires a lowercase SHA-256 digest.");
             }
-            if (!IsSafeRelativePath(entry.m_stagingPath)
-                || !PathIsInsideRoot(manifest.m_packageRoot, entry.m_packagePath))
+            if (!stagingPathValid
+                || !packagePathValid
+                || !IsPackagePathInsideRoot(
+                    manifest.m_packageRoot,
+                    entry.m_packagePath))
             {
                 pathInvalid = true;
                 AddBlocker(
                     preview.m_blockers,
                     "package_preview.path_invalid",
                     output.m_relativePath,
-                    "Staging paths must be safe and package outputs must remain under PackageRoot.");
+                    "Staging paths and package outputs must have unambiguous Windows-stable identities below PackageRoot.");
             }
             if (!entry.m_redistributable || !output.m_redistributable)
             {

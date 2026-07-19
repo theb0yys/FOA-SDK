@@ -11,24 +11,48 @@
 
 namespace TaintedGrailModdingSDK
 {
-    AZ::Outcome<CatalogCommitResult, AZStd::string> CatalogTransactionService::Commit(
+    AZ::Outcome<CatalogCommitResult, AZStd::string>
+    CatalogTransactionService::Commit(
         const CatalogDatabase& candidate,
         const WorkspaceModel& workspace,
         const GameProfile& profile,
+        const SourceEvidenceRegistry& sourceRegistry,
         const SaveCallback& save) const
     {
         if (!save)
         {
-            return AZ::Failure(AZStd::string("A catalog save callback is required."));
+            return AZ::Failure(AZStd::string(
+                "A catalog save callback is required."));
         }
-        if (workspace.m_workspaceId.empty() || workspace.m_rootPath.empty() || !profile.IsConfigured())
+        const GameProfile* activeProfile = workspace.FindActiveGameProfile();
+        if (workspace.m_workspaceId.empty()
+            || workspace.m_rootPath.empty()
+            || !profile.IsConfigured()
+            || !activeProfile
+            || activeProfile->m_profileId != profile.m_profileId
+            || activeProfile->m_gameVersion != profile.m_gameVersion
+            || activeProfile->m_branch != profile.m_branch
+            || activeProfile->m_runtimeTarget != profile.m_runtimeTarget)
         {
             return AZ::Failure(AZStd::string(
-                "A configured workspace and exact game profile are required before committing a catalog candidate."));
+                "The exact configured active workspace profile is required before committing a catalog candidate."));
+        }
+
+        AZStd::string integrityError;
+        if (!candidate.ValidateIntegrity(
+                workspace,
+                profile,
+                sourceRegistry,
+                &integrityError))
+        {
+            return AZ::Failure(
+                AZStd::string("Catalog commit-time integrity validation failed: ")
+                + integrityError);
         }
 
         const CatalogDocument document = candidate.BuildDocument(workspace, profile);
-        AZ::Outcome<AZStd::string, AZStd::string> saveResult = save(document, workspace.m_rootPath);
+        AZ::Outcome<AZStd::string, AZStd::string> saveResult =
+            save(document, workspace.m_rootPath);
         if (!saveResult.IsSuccess())
         {
             return AZ::Failure(AZStd::string(saveResult.GetError()));

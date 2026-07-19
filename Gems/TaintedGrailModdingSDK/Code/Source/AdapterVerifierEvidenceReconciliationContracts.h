@@ -15,6 +15,8 @@
 
 namespace TaintedGrailModdingSDK
 {
+    struct AdapterPostDeploymentVerifierEvidenceReturn;
+
     enum class AdapterVerifierCompatibilityAssessment : AZ::u8
     {
         Unassessed,
@@ -237,7 +239,19 @@ namespace TaintedGrailModdingSDK
     public:
         static AdapterVerifierEvidenceReconciliationRegistry& Get();
 
+        // Unbound registration is refused. Requests enter session state only
+        // after the complete reconciliation service accepts the exact upstream
+        // report, verifier evidence, bindings, review, and dispositions.
         bool RegisterRequest(
+            const AdapterVerifierEvidenceReconciliationRequest& request,
+            AZStd::string* error = nullptr);
+
+        bool RegisterRequest(
+            const AdapterDeploymentWorkOrder& workOrder,
+            const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,
+            const AdapterPostDeploymentVerificationReport& report,
+            const AdapterPostDeploymentVerifierResultEnvelope& verifierEnvelope,
+            const AdapterPostDeploymentVerifierEvidenceReturn& verifierEvidence,
             const AdapterVerifierEvidenceReconciliationRequest& request,
             AZStd::string* error = nullptr);
         void Clear();

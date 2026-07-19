@@ -7,6 +7,8 @@
 
 #include "SourceImportService.h"
 
+#include "ResearchContractValidation.h"
+
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QFile>
@@ -51,7 +53,9 @@ namespace TaintedGrailModdingSDK
                 const QChar character = line.at(index);
                 if (character == '"')
                 {
-                    if (quoted && index + 1 < line.size() && line.at(index + 1) == '"')
+                    if (quoted
+                        && index + 1 < line.size()
+                        && line.at(index + 1) == '"')
                     {
                         current.append('"');
                         ++index;
@@ -76,7 +80,9 @@ namespace TaintedGrailModdingSDK
             return values;
         }
 
-        int ColumnIndex(const QHash<QString, int>& columns, const QStringList& names)
+        int ColumnIndex(
+            const QHash<QString, int>& columns,
+            const QStringList& names)
         {
             for (const QString& name : names)
             {
@@ -91,10 +97,14 @@ namespace TaintedGrailModdingSDK
 
         QString CsvValue(const QStringList& values, int index)
         {
-            return index >= 0 && index < values.size() ? values.at(index).trimmed() : QString();
+            return index >= 0 && index < values.size()
+                ? values.at(index).trimmed()
+                : QString();
         }
 
-        bool HasSeverity(const AZStd::vector<ImportIssue>& issues, const char* severity)
+        bool HasSeverity(
+            const AZStd::vector<ImportIssue>& issues,
+            const char* severity)
         {
             for (const ImportIssue& issue : issues)
             {
@@ -105,6 +115,20 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+
+        bool FileIdentityIsUnchanged(
+            const QFileInfo& initialInfo,
+            const QString& canonicalPath)
+        {
+            QFileInfo finalInfo(canonicalPath);
+            finalInfo.refresh();
+            return finalInfo.exists()
+                && finalInfo.isFile()
+                && finalInfo.canonicalFilePath() == canonicalPath
+                && finalInfo.size() == initialInfo.size()
+                && finalInfo.lastModified().toMSecsSinceEpoch()
+                    == initialInfo.lastModified().toMSecsSinceEpoch();
+        }
     } // namespace
 
     AZStd::vector<SourceImporterContract> SourceImportService::GetContracts() const
@@ -112,14 +136,24 @@ namespace TaintedGrailModdingSDK
         SourceImporterContract json;
         json.m_importerId = JsonImporterId;
         json.m_displayName = "Structured JSON evidence";
-        json.m_supportedSourceKinds = { "template-diagnostics", "item-recipe-dump", "scene-world-observation", "json-register", "avalon-core-source-set" };
+        json.m_supportedSourceKinds = {
+            "template-diagnostics",
+            "item-recipe-dump",
+            "scene-world-observation",
+            "json-register",
+            "avalon-core-source-set",
+        };
         json.m_supportedExtensions = { ".json" };
         json.m_extractsEvidence = true;
 
         SourceImporterContract csv;
         csv.m_importerId = CsvImporterId;
         csv.m_displayName = "Structured CSV evidence";
-        csv.m_supportedSourceKinds = { "item-recipe-dump", "scene-world-observation", "csv-register" };
+        csv.m_supportedSourceKinds = {
+            "item-recipe-dump",
+            "scene-world-observation",
+            "csv-register",
+        };
         csv.m_supportedExtensions = { ".csv" };
         csv.m_extractsEvidence = true;
 
@@ -135,7 +169,7 @@ namespace TaintedGrailModdingSDK
             "screenshot",
             "csv-register",
             "json-register",
-            "avalon-core-source-set"
+            "avalon-core-source-set",
         };
         generic.m_supportedExtensions = { "*" };
         generic.m_extractsEvidence = false;
@@ -149,7 +183,8 @@ namespace TaintedGrailModdingSDK
     {
         if (!profile.IsConfigured())
         {
-            return AZ::Failure(AZStd::string("An exact configured FoA game profile is required before source intake."));
+            return AZ::Failure(AZStd::string(
+                "An exact configured FoA game profile is required before source intake."));
         }
         if (request.m_inputPath.empty())
         {
@@ -159,50 +194,103 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("A source kind is required."));
         }
+        if (!request.m_capturedAt.empty()
+            && !IsStrictUtcTimestamp(request.m_capturedAt))
+        {
+            return AZ::Failure(AZStd::string(
+                "CapturedAt must be an exact valid UTC timestamp at whole-second precision."));
+        }
 
         const QString inputPath = ToQString(request.m_inputPath);
-        QFileInfo fileInfo(inputPath);
-        if (!fileInfo.exists() || !fileInfo.isFile())
+        QFileInfo initialInfo(inputPath);
+        initialInfo.refresh();
+        if (!initialInfo.exists() || !initialInfo.isFile())
         {
-            return AZ::Failure(AZStd::string("The selected source file does not exist or is not a regular file."));
+            return AZ::Failure(AZStd::string(
+                "The selected source file does not exist or is not a regular file."));
         }
+        const QString canonicalPath = initialInfo.canonicalFilePath();
+        if (canonicalPath.isEmpty())
+        {
+            return AZ::Failure(AZStd::string(
+                "The selected source file could not be resolved to a stable filesystem identity."));
+        }
+        initialInfo = QFileInfo(canonicalPath);
+        initialInfo.refresh();
 
         const AZStd::string importerId = SelectImporterId(request);
-        if (importerId != GenericImporterId && importerId != JsonImporterId && importerId != CsvImporterId)
+        if (importerId != GenericImporterId
+            && importerId != JsonImporterId
+            && importerId != CsvImporterId)
         {
-            return AZ::Failure(AZStd::string("The requested importer contract is not supported."));
+            return AZ::Failure(AZStd::string(
+                "The requested importer contract is not supported."));
         }
 
-        QFile file(fileInfo.absoluteFilePath());
+        QFile file(canonicalPath);
         if (!file.open(QIODevice::ReadOnly))
         {
-            return AZ::Failure(AZStd::string("The selected source file could not be opened for reading."));
+            return AZ::Failure(AZStd::string(
+                "The selected source file could not be opened for reading."));
         }
 
+        const bool structuredImporter = importerId == JsonImporterId
+            || importerId == CsvImporterId;
+        const bool captureStructuredBytes = structuredImporter
+            && initialInfo.size() <= MaxStructuredImportBytes;
+        QByteArray structuredData;
         QCryptographicHash hash(QCryptographicHash::Sha256);
-        while (!file.atEnd())
+        if (captureStructuredBytes)
         {
-            const QByteArray chunk = file.read(1024 * 1024);
-            if (chunk.isEmpty() && file.error() != QFileDevice::NoError)
+            structuredData = file.readAll();
+            if (file.error() != QFileDevice::NoError
+                || structuredData.size() != initialInfo.size())
             {
-                return AZ::Failure(AZStd::string("The selected source file could not be read completely."));
+                return AZ::Failure(AZStd::string(
+                    "The selected structured source file could not be read as one complete immutable snapshot."));
             }
-            hash.addData(chunk);
+            hash.addData(structuredData);
+        }
+        else
+        {
+            while (!file.atEnd())
+            {
+                const QByteArray chunk = file.read(1024 * 1024);
+                if (chunk.isEmpty() && file.error() != QFileDevice::NoError)
+                {
+                    return AZ::Failure(AZStd::string(
+                        "The selected source file could not be read completely."));
+                }
+                hash.addData(chunk);
+            }
+        }
+        file.close();
+
+        if (!FileIdentityIsUnchanged(initialInfo, canonicalPath))
+        {
+            return AZ::Failure(AZStd::string(
+                "The source file identity, size, or modification time changed during import; no fingerprint or evidence was published."));
         }
 
         const QByteArray digest = hash.result().toHex();
         const QString digestText = QString::fromLatin1(digest);
-        const QString importedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
-        const QString profileToken = ToQString(SanitizeIdentifier(profile.m_profileId));
-        const QString sourceId = QStringLiteral("source.%1.%2").arg(profileToken, digestText.left(24));
+        const QString importedAt =
+            QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+        const QString profileToken =
+            ToQString(SanitizeIdentifier(profile.m_profileId));
+        const QString sourceId = QStringLiteral("source.%1.%2")
+            .arg(profileToken, digestText.left(24));
 
         SourceImportResult result;
         SourceRecord& source = result.m_sourceDocument.m_source;
         source.m_sourceId = ToAzString(sourceId);
-        source.m_title = request.m_title.empty() ? ToAzString(fileInfo.fileName()) : request.m_title;
+        source.m_title = request.m_title.empty()
+            ? ToAzString(initialInfo.fileName())
+            : request.m_title;
         source.m_sourceKind = request.m_sourceKind;
-        source.m_locator = ToAzString(fileInfo.absoluteFilePath());
-        source.m_fingerprint = ToAzString(QStringLiteral("sha256:%1").arg(digestText));
+        source.m_locator = ToAzString(canonicalPath);
+        source.m_fingerprint =
+            ToAzString(QStringLiteral("sha256:%1").arg(digestText));
         source.m_profileId = profile.m_profileId;
         source.m_gameVersion = profile.m_gameVersion;
         source.m_branch = profile.m_branch;
@@ -211,11 +299,13 @@ namespace TaintedGrailModdingSDK
         source.m_toolVersion = request.m_toolVersion;
         source.m_importerId = importerId;
         source.m_importerVersion = ImporterVersion;
-        source.m_capturedAt = request.m_capturedAt.empty() ? ToAzString(importedAt) : request.m_capturedAt;
+        source.m_capturedAt = request.m_capturedAt.empty()
+            ? ToAzString(importedAt)
+            : request.m_capturedAt;
         source.m_importedAt = ToAzString(importedAt);
         source.m_limitations = request.m_limitations;
         source.m_mediaType = MediaTypeForPath(source.m_locator);
-        source.m_byteSize = static_cast<AZ::u64>(fileInfo.size());
+        source.m_byteSize = static_cast<AZ::u64>(initialInfo.size());
 
         EvidenceDocument& evidenceDocument = result.m_evidenceDocument;
         evidenceDocument.m_sourceId = source.m_sourceId;
@@ -234,50 +324,48 @@ namespace TaintedGrailModdingSDK
                 "The artifact was fingerprinted and registered, but this importer contract does not infer evidence.",
                 source.m_locator);
         }
-        else if (fileInfo.size() > MaxStructuredImportBytes)
+        else if (initialInfo.size() > MaxStructuredImportBytes)
         {
             AddIssue(
                 evidenceDocument.m_issues,
                 source.m_sourceId,
                 "error",
                 "schema.structured-input-too-large",
-                "Structured evidence extraction is limited to 64 MiB; the source remains registered for manual review.",
+                "Structured evidence extraction is limited to 64 MiB; the source was not admitted to the active research registry.",
                 source.m_locator);
+        }
+        else if (importerId == JsonImporterId)
+        {
+            ExtractJsonEvidence(structuredData, source, evidenceDocument);
         }
         else
         {
-            if (!file.seek(0))
-            {
-                return AZ::Failure(AZStd::string("The selected source file could not be rewound for evidence extraction."));
-            }
-            const QByteArray data = file.readAll();
-            if (importerId == JsonImporterId)
-            {
-                ExtractJsonEvidence(data, source, evidenceDocument);
-            }
-            else
-            {
-                ExtractCsvEvidence(data, source, evidenceDocument);
-            }
+            ExtractCsvEvidence(structuredData, source, evidenceDocument);
         }
 
-        const bool hasErrors = HasSeverity(result.m_sourceDocument.m_issues, "error")
+        const bool hasErrors =
+            HasSeverity(result.m_sourceDocument.m_issues, "error")
             || HasSeverity(evidenceDocument.m_issues, "error");
-        const bool hasWarnings = HasSeverity(result.m_sourceDocument.m_issues, "warning")
+        const bool hasWarnings =
+            HasSeverity(result.m_sourceDocument.m_issues, "warning")
             || HasSeverity(evidenceDocument.m_issues, "warning");
-        source.m_importStatus = hasErrors ? "error" : (hasWarnings ? "warning" : "imported");
+        source.m_importStatus = hasErrors
+            ? "error"
+            : (hasWarnings ? "warning" : "imported");
 
         return AZ::Success(AZStd::move(result));
     }
 
-    AZStd::string SourceImportService::SelectImporterId(const SourceImportRequest& request)
+    AZStd::string SourceImportService::SelectImporterId(
+        const SourceImportRequest& request)
     {
         if (!request.m_preferredImporterId.empty())
         {
             return request.m_preferredImporterId;
         }
 
-        const QString suffix = QFileInfo(ToQString(request.m_inputPath)).suffix().toLower();
+        const QString suffix =
+            QFileInfo(ToQString(request.m_inputPath)).suffix().toLower();
         if (suffix == QStringLiteral("json"))
         {
             return JsonImporterId;
@@ -289,13 +377,17 @@ namespace TaintedGrailModdingSDK
         return GenericImporterId;
     }
 
-    AZStd::string SourceImportService::SanitizeIdentifier(const AZStd::string& value)
+    AZStd::string SourceImportService::SanitizeIdentifier(
+        const AZStd::string& value)
     {
         QString output = ToQString(value).toLower();
         for (qsizetype index = 0; index < output.size(); ++index)
         {
             const QChar character = output.at(index);
-            if (!character.isLetterOrNumber() && character != '.' && character != '-' && character != '_')
+            if (!character.isLetterOrNumber()
+                && character != '.'
+                && character != '-'
+                && character != '_')
             {
                 output[index] = '-';
             }
@@ -303,7 +395,8 @@ namespace TaintedGrailModdingSDK
         return ToAzString(output);
     }
 
-    AZStd::string SourceImportService::MediaTypeForPath(const AZStd::string& path)
+    AZStd::string SourceImportService::MediaTypeForPath(
+        const AZStd::string& path)
     {
         const QString suffix = QFileInfo(ToQString(path)).suffix().toLower();
         if (suffix == "json")
@@ -359,7 +452,8 @@ namespace TaintedGrailModdingSDK
         EvidenceDocument& evidenceDocument)
     {
         QJsonParseError parseError;
-        const QJsonDocument document = QJsonDocument::fromJson(data, &parseError);
+        const QJsonDocument document =
+            QJsonDocument::fromJson(data, &parseError);
         if (parseError.error != QJsonParseError::NoError)
         {
             AddIssue(
@@ -367,7 +461,9 @@ namespace TaintedGrailModdingSDK
                 source.m_sourceId,
                 "error",
                 "schema.invalid-json",
-                ToAzString(QStringLiteral("JSON parse error at byte %1: %2").arg(parseError.offset).arg(parseError.errorString())),
+                ToAzString(QStringLiteral("JSON parse error at byte %1: %2")
+                    .arg(parseError.offset)
+                    .arg(parseError.errorString())),
                 source.m_locator);
             return;
         }
@@ -387,7 +483,8 @@ namespace TaintedGrailModdingSDK
                 records = rootObject.value(QStringLiteral("evidence")).toArray();
                 rootPath = QStringLiteral("$.evidence");
             }
-            else if (rootObject.contains(QStringLiteral("subject_ref")) && rootObject.contains(QStringLiteral("claim")))
+            else if (rootObject.contains(QStringLiteral("subject_ref"))
+                && rootObject.contains(QStringLiteral("claim")))
             {
                 records.append(rootObject);
                 rootPath = QStringLiteral("$");
@@ -408,7 +505,8 @@ namespace TaintedGrailModdingSDK
         }
 
         QSet<QString> evidenceIds;
-        const QString fingerprintToken = ToQString(source.m_fingerprint).section(':', 1).left(16);
+        const QString fingerprintToken =
+            ToQString(source.m_fingerprint).section(':', 1).left(16);
         for (qsizetype index = 0; index < records.size(); ++index)
         {
             const QString recordPath = records.size() == 1 && rootPath == "$"
@@ -428,8 +526,14 @@ namespace TaintedGrailModdingSDK
             }
 
             const QJsonObject object = records.at(index).toObject();
-            const QString subjectRef = object.value(QStringLiteral("subject_ref")).toString().trimmed();
-            const QString claim = object.value(QStringLiteral("claim")).toString().trimmed();
+            const QString subjectRef = object
+                .value(QStringLiteral("subject_ref"))
+                .toString()
+                .trimmed();
+            const QString claim = object
+                .value(QStringLiteral("claim"))
+                .toString()
+                .trimmed();
             if (subjectRef.isEmpty() || claim.isEmpty())
             {
                 AddIssue(
@@ -443,10 +547,15 @@ namespace TaintedGrailModdingSDK
                 continue;
             }
 
-            QString evidenceId = object.value(QStringLiteral("evidence_id")).toString().trimmed();
+            QString evidenceId = object
+                .value(QStringLiteral("evidence_id"))
+                .toString()
+                .trimmed();
             if (evidenceId.isEmpty())
             {
-                evidenceId = QStringLiteral("evidence.%1.%2").arg(fingerprintToken).arg(index + 1);
+                evidenceId = QStringLiteral("evidence.%1.%2")
+                    .arg(fingerprintToken)
+                    .arg(index + 1);
             }
             if (evidenceIds.contains(evidenceId))
             {
@@ -455,7 +564,8 @@ namespace TaintedGrailModdingSDK
                     source.m_sourceId,
                     "error",
                     "schema.duplicate-evidence-id",
-                    ToAzString(QStringLiteral("Duplicate evidence ID: %1").arg(evidenceId)),
+                    ToAzString(QStringLiteral("Duplicate evidence ID: %1")
+                        .arg(evidenceId)),
                     source.m_locator,
                     ToAzString(recordPath));
                 continue;
@@ -471,9 +581,14 @@ namespace TaintedGrailModdingSDK
             evidence.m_branch = source.m_branch;
             evidence.m_subjectRef = ToAzString(subjectRef);
             evidence.m_claim = ToAzString(claim);
-            evidence.m_evidenceKind = ToAzString(object.value(QStringLiteral("kind")).toString(source.m_sourceKind.c_str()));
-            evidence.m_confidence = ToAzString(object.value(QStringLiteral("confidence")).toString(QStringLiteral("unrated")));
-            evidence.m_locator = object.value(QStringLiteral("locator")).toString().isEmpty()
+            evidence.m_evidenceKind = ToAzString(
+                object.value(QStringLiteral("kind"))
+                    .toString(source.m_sourceKind.c_str()));
+            evidence.m_confidence = ToAzString(
+                object.value(QStringLiteral("confidence"))
+                    .toString(QStringLiteral("unrated")));
+            evidence.m_locator =
+                object.value(QStringLiteral("locator")).toString().isEmpty()
                 ? source.m_locator
                 : ToAzString(object.value(QStringLiteral("locator")).toString());
             evidence.m_recordPath = ToAzString(recordPath);
@@ -508,10 +623,12 @@ namespace TaintedGrailModdingSDK
             columns.insert(header.at(index).trimmed().toLower(), index);
         }
 
-        const int subjectColumn = ColumnIndex(columns, { "subject_ref", "subject" });
+        const int subjectColumn =
+            ColumnIndex(columns, { "subject_ref", "subject" });
         const int claimColumn = ColumnIndex(columns, { "claim" });
         const int idColumn = ColumnIndex(columns, { "evidence_id", "id" });
-        const int kindColumn = ColumnIndex(columns, { "kind", "evidence_kind" });
+        const int kindColumn =
+            ColumnIndex(columns, { "kind", "evidence_kind" });
         const int confidenceColumn = ColumnIndex(columns, { "confidence" });
         const int locatorColumn = ColumnIndex(columns, { "locator" });
         if (subjectColumn < 0 || claimColumn < 0)
@@ -529,7 +646,8 @@ namespace TaintedGrailModdingSDK
         }
 
         QSet<QString> evidenceIds;
-        const QString fingerprintToken = ToQString(source.m_fingerprint).section(':', 1).left(16);
+        const QString fingerprintToken =
+            ToQString(source.m_fingerprint).section(':', 1).left(16);
         for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex)
         {
             QString line = lines.at(lineIndex);
@@ -543,7 +661,8 @@ namespace TaintedGrailModdingSDK
             const QString subjectRef = CsvValue(values, subjectColumn);
             const QString claim = CsvValue(values, claimColumn);
             const AZ::s64 sourceLine = static_cast<AZ::s64>(lineIndex + 2);
-            const QString recordPath = QStringLiteral("row[%1]").arg(sourceLine);
+            const QString recordPath =
+                QStringLiteral("row[%1]").arg(sourceLine);
             if (subjectRef.isEmpty() || claim.isEmpty())
             {
                 AddIssue(
@@ -561,7 +680,9 @@ namespace TaintedGrailModdingSDK
             QString evidenceId = CsvValue(values, idColumn);
             if (evidenceId.isEmpty())
             {
-                evidenceId = QStringLiteral("evidence.%1.%2").arg(fingerprintToken).arg(lineIndex + 1);
+                evidenceId = QStringLiteral("evidence.%1.%2")
+                    .arg(fingerprintToken)
+                    .arg(lineIndex + 1);
             }
             if (evidenceIds.contains(evidenceId))
             {
@@ -570,7 +691,8 @@ namespace TaintedGrailModdingSDK
                     source.m_sourceId,
                     "error",
                     "schema.duplicate-evidence-id",
-                    ToAzString(QStringLiteral("Duplicate evidence ID: %1").arg(evidenceId)),
+                    ToAzString(QStringLiteral("Duplicate evidence ID: %1")
+                        .arg(evidenceId)),
                     source.m_locator,
                     ToAzString(recordPath),
                     sourceLine);
@@ -588,17 +710,24 @@ namespace TaintedGrailModdingSDK
             evidence.m_subjectRef = ToAzString(subjectRef);
             evidence.m_claim = ToAzString(claim);
             const QString kind = CsvValue(values, kindColumn);
-            evidence.m_evidenceKind = kind.isEmpty() ? source.m_sourceKind : ToAzString(kind);
+            evidence.m_evidenceKind = kind.isEmpty()
+                ? source.m_sourceKind
+                : ToAzString(kind);
             const QString confidence = CsvValue(values, confidenceColumn);
-            evidence.m_confidence = confidence.isEmpty() ? "unrated" : ToAzString(confidence);
+            evidence.m_confidence = confidence.isEmpty()
+                ? "unrated"
+                : ToAzString(confidence);
             const QString locator = CsvValue(values, locatorColumn);
-            evidence.m_locator = locator.isEmpty() ? source.m_locator : ToAzString(locator);
+            evidence.m_locator = locator.isEmpty()
+                ? source.m_locator
+                : ToAzString(locator);
             evidence.m_recordPath = ToAzString(recordPath);
             evidence.m_extractedAt = source.m_importedAt;
             evidenceDocument.m_evidence.push_back(AZStd::move(evidence));
         }
 
-        if (evidenceDocument.m_evidence.empty() && evidenceDocument.m_issues.empty())
+        if (evidenceDocument.m_evidence.empty()
+            && evidenceDocument.m_issues.empty())
         {
             AddIssue(
                 evidenceDocument.m_issues,

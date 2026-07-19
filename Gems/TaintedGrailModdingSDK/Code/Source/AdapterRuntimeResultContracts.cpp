@@ -7,6 +7,10 @@
 
 #include "AdapterRuntimeResultContracts.h"
 
+#include "AdapterRuntimeResultCanonical.h"
+#include "CanonicalFingerprint.h"
+#include "ResearchContractValidation.h"
+
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
 
@@ -47,7 +51,7 @@ namespace TaintedGrailModdingSDK
         };
 
         template<class EnumType, size_t Count>
-        AZStd::string ToEnumString(
+        AZStd::string EnumToString(
             EnumType value,
             const EnumName<EnumType> (&names)[Count])
         {
@@ -89,7 +93,8 @@ namespace TaintedGrailModdingSDK
         {
             AZStd::vector<AZStd::string> sorted = values;
             AZStd::sort(sorted.begin(), sorted.end());
-            return AZStd::adjacent_find(sorted.begin(), sorted.end()) != sorted.end();
+            return AZStd::adjacent_find(sorted.begin(), sorted.end())
+                != sorted.end();
         }
 
         bool IsAsciiAlphaNumeric(char value)
@@ -99,15 +104,9 @@ namespace TaintedGrailModdingSDK
                 || (value >= '0' && value <= '9');
         }
 
-        bool IsLowerAlphaNumeric(char value)
-        {
-            return (value >= 'a' && value <= 'z')
-                || (value >= '0' && value <= '9');
-        }
-
         bool IsOpaqueIdentity(const AZStd::string& value)
         {
-            if (value.empty())
+            if (value.empty() || value.size() > 512)
             {
                 return false;
             }
@@ -124,17 +123,17 @@ namespace TaintedGrailModdingSDK
 
         bool IsLowerToken(const AZStd::string& value)
         {
-            if (value.empty() || !IsLowerAlphaNumeric(value.front())
-                || !IsLowerAlphaNumeric(value.back()))
+            if (value.empty() || value.size() > 160)
             {
                 return false;
             }
             for (char character : value)
             {
-                if (!IsLowerAlphaNumeric(character)
-                    && character != '.'
-                    && character != '-'
-                    && character != '_')
+                if (!((character >= 'a' && character <= 'z')
+                        || (character >= '0' && character <= '9')
+                        || character == '.'
+                        || character == '-'
+                        || character == '_'))
                 {
                     return false;
                 }
@@ -172,13 +171,13 @@ namespace TaintedGrailModdingSDK
                 return false;
             }
             if (outcome == AdapterRuntimeOutcome::Succeeded
-                && !IsAdapterRuntimeFingerprint(outputFingerprint))
+                && !IsSha256Fingerprint(outputFingerprint))
             {
                 error = "Succeeded step results require a lowercase SHA-256 output fingerprint.";
                 return false;
             }
             if (!outputFingerprint.empty()
-                && !IsAdapterRuntimeFingerprint(outputFingerprint))
+                && !IsSha256Fingerprint(outputFingerprint))
             {
                 error = "Step output fingerprints must use lowercase sha256:<64 hex>.";
                 return false;
@@ -200,13 +199,13 @@ namespace TaintedGrailModdingSDK
                 error = "Cleanup and rollback results require an exact step identity.";
                 return false;
             }
-            const bool attempted = OutcomeIsAttempted(recovery.m_outcome);
             return ValidateOutcomeShape(
                 recovery.m_outcome,
-                attempted,
+                OutcomeIsAttempted(recovery.m_outcome),
                 recovery.m_failureIds,
                 recovery.m_outputFingerprint,
-                error);
+                error)
+                && !HasDuplicate(recovery.m_logReferenceIds);
         }
 
         bool ValidateEnvelopeShape(
@@ -218,34 +217,37 @@ namespace TaintedGrailModdingSDK
                 error = "Adapter runtime result contract version must be 1.";
                 return false;
             }
-            if (!IsAdapterRuntimeStableId(envelope.m_resultId))
-            {
-                error = "ResultId must be a lowercase namespaced stable ID.";
-                return false;
-            }
-            if (!IsOpaqueIdentity(envelope.m_planId)
+            if (!IsStableContractId(envelope.m_resultId)
+                || !IsOpaqueIdentity(envelope.m_planId)
                 || envelope.m_planCanonicalJson.empty())
             {
-                error = "An exact plan ID and canonical plan JSON are required.";
+                error = "Stable result identity, exact plan identity, and canonical plan JSON are required.";
                 return false;
             }
-            if (!IsAdapterRuntimeFingerprint(envelope.m_planFingerprint)
-                || !IsAdapterRuntimeFingerprint(envelope.m_resultFingerprint))
+            if (!IsSha256Fingerprint(envelope.m_planFingerprint)
+                || !IsSha256Fingerprint(envelope.m_resultFingerprint))
             {
                 error = "Plan and result fingerprints must use lowercase sha256:<64 hex>.";
                 return false;
             }
-            if (envelope.m_packId.empty()
-                || envelope.m_packVersion.empty()
-                || envelope.m_adapterId.empty()
-                || envelope.m_adapterVersion.empty()
-                || envelope.m_profileId.empty()
+            if (!CanonicalSha256Matches(
+                    envelope.m_planCanonicalJson,
+                    envelope.m_planFingerprint))
+            {
+                error = "Plan fingerprint must be the SHA-256 of the exact canonical plan JSON.";
+                return false;
+            }
+            if (!IsStableContractId(envelope.m_packId)
+                || !IsStrictSemanticVersion(envelope.m_packVersion)
+                || !IsStableContractId(envelope.m_adapterId)
+                || !IsStrictSemanticVersion(envelope.m_adapterVersion)
+                || !IsStableContractId(envelope.m_profileId)
                 || envelope.m_gameVersion.empty()
                 || envelope.m_branch.empty()
-                || envelope.m_runtimeTarget.empty()
-                || envelope.m_capturedAt.empty())
+                || !IsSupportedRuntimeTarget(envelope.m_runtimeTarget)
+                || !IsStrictUtcTimestamp(envelope.m_capturedAt))
             {
-                error = "Pack, adapter, profile, build, branch, runtime target, and capture time are required.";
+                error = "Pack, adapter, profile, strict versions, supported runtime target, and a real UTC capture time are required.";
                 return false;
             }
             if (envelope.m_stepResults.empty())
@@ -255,7 +257,7 @@ namespace TaintedGrailModdingSDK
             }
 
             AZStd::vector<AZStd::string> stepIds;
-            stepIds.reserve(envelope.m_stepResults.size());
+            AZStd::vector<AZ::u64> sequences;
             for (const AdapterRuntimeStepResult& step : envelope.m_stepResults)
             {
                 if (!IsOpaqueIdentity(step.m_stepId)
@@ -285,32 +287,33 @@ namespace TaintedGrailModdingSDK
                     return false;
                 }
                 stepIds.push_back(step.m_stepId);
+                sequences.push_back(step.m_sequence);
             }
             if (HasDuplicate(stepIds))
             {
                 error = "Attempted step identities must be unique.";
                 return false;
             }
+            AZStd::sort(sequences.begin(), sequences.end());
+            if (AZStd::adjacent_find(sequences.begin(), sequences.end())
+                != sequences.end())
+            {
+                error = "Attempted step sequences must be unique.";
+                return false;
+            }
 
             AZStd::vector<AZStd::string> failureIds;
-            failureIds.reserve(envelope.m_failures.size());
             for (const AdapterRuntimeFailure& failure : envelope.m_failures)
             {
-                if (!IsAdapterRuntimeStableId(failure.m_failureId)
+                if (!IsStableContractId(failure.m_failureId)
+                    || failure.m_kind == AdapterRuntimeFailureKind::Unknown
                     || !IsLowerToken(failure.m_code)
-                    || failure.m_message.empty())
+                    || failure.m_message.empty()
+                    || (!failure.m_stepId.empty()
+                        && !Contains(stepIds, failure.m_stepId))
+                    || HasDuplicate(failure.m_logReferenceIds))
                 {
-                    error = "Failures require a stable ID, lowercase code, and non-empty message.";
-                    return false;
-                }
-                if (!failure.m_stepId.empty() && !Contains(stepIds, failure.m_stepId))
-                {
-                    error = failure.m_failureId + ": failure references an unknown step.";
-                    return false;
-                }
-                if (HasDuplicate(failure.m_logReferenceIds))
-                {
-                    error = failure.m_failureId + ": log references must be unique.";
+                    error = "Failures require stable identity, a known kind, lowercase code, message, exact step binding, and unique logs.";
                     return false;
                 }
                 failureIds.push_back(failure.m_failureId);
@@ -322,19 +325,14 @@ namespace TaintedGrailModdingSDK
             }
 
             AZStd::vector<AZStd::string> logIds;
-            logIds.reserve(envelope.m_logReferences.size());
             for (const AdapterRuntimeLogReference& log : envelope.m_logReferences)
             {
-                if (!IsAdapterRuntimeStableId(log.m_logId)
+                if (!IsStableContractId(log.m_logId)
                     || !IsAdapterRuntimeLogReference(log.m_reference)
-                    || !IsAdapterRuntimeFingerprint(log.m_fingerprint))
+                    || !IsSha256Fingerprint(log.m_fingerprint)
+                    || HasDuplicate(log.m_stepIds))
                 {
-                    error = "Log references require stable IDs, safe relative locators, and SHA-256 fingerprints.";
-                    return false;
-                }
-                if (HasDuplicate(log.m_stepIds))
-                {
-                    error = log.m_logId + ": step references must be unique.";
+                    error = "Log references require stable IDs, safe relative locators, SHA-256 fingerprints, and unique step references.";
                     return false;
                 }
                 for (const AZStd::string& stepId : log.m_stepIds)
@@ -415,23 +413,29 @@ namespace TaintedGrailModdingSDK
                     }
                 }
             }
+
+            if (!RuntimeResultFingerprintMatches(envelope))
+            {
+                error = "Result fingerprint must be the SHA-256 of the deterministic canonical runtime-result payload.";
+                return false;
+            }
             return true;
         }
     } // namespace
 
     AZStd::string ToString(AdapterRuntimeOutcome outcome)
     {
-        return ToEnumString(outcome, Outcomes);
+        return EnumToString(outcome, Outcomes);
     }
 
     AZStd::string ToString(AdapterRuntimeFailureKind kind)
     {
-        return ToEnumString(kind, FailureKinds);
+        return EnumToString(kind, FailureKinds);
     }
 
     AZStd::string ToString(AdapterRuntimeLogKind kind)
     {
-        return ToEnumString(kind, LogKinds);
+        return EnumToString(kind, LogKinds);
     }
 
     bool TryParseAdapterRuntimeOutcome(
@@ -445,6 +449,10 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& value,
         AdapterRuntimeFailureKind& kind)
     {
+        if (value == "unknown")
+        {
+            return false;
+        }
         return TryParseEnum(value, kind, FailureKinds);
     }
 
@@ -457,56 +465,22 @@ namespace TaintedGrailModdingSDK
 
     bool IsAdapterRuntimeStableId(const AZStd::string& value)
     {
-        if (value.size() < 3
-            || !IsLowerAlphaNumeric(value.front())
-            || !IsLowerAlphaNumeric(value.back())
-            || value.find('.') == AZStd::string::npos)
-        {
-            return false;
-        }
-        bool previousSeparator = false;
-        for (char character : value)
-        {
-            const bool separator = character == '.' || character == '-' || character == '_';
-            if (!IsLowerAlphaNumeric(character) && !separator)
-            {
-                return false;
-            }
-            if (separator && previousSeparator)
-            {
-                return false;
-            }
-            previousSeparator = separator;
-        }
-        return true;
+        return IsStableContractId(value);
     }
 
     bool IsAdapterRuntimeFingerprint(const AZStd::string& value)
     {
-        constexpr const char* Prefix = "sha256:";
-        constexpr size_t PrefixSize = 7;
-        if (value.size() != PrefixSize + 64 || value.compare(0, PrefixSize, Prefix) != 0)
-        {
-            return false;
-        }
-        for (size_t index = PrefixSize; index < value.size(); ++index)
-        {
-            const char character = value[index];
-            if (!((character >= '0' && character <= '9')
-                || (character >= 'a' && character <= 'f')))
-            {
-                return false;
-            }
-        }
-        return true;
+        return IsSha256Fingerprint(value);
     }
 
     bool IsAdapterRuntimeLogReference(const AZStd::string& value)
     {
         if (value.empty()
+            || value.size() > 1024
             || value.front() == '/'
             || value.front() == '\\'
-            || value.find("..") != AZStd::string::npos)
+            || value.find("..") != AZStd::string::npos
+            || (value.size() > 1 && value[1] == ':'))
         {
             return false;
         }
@@ -567,10 +541,15 @@ namespace TaintedGrailModdingSDK
         AZStd::sort(
             m_envelopes.begin(),
             m_envelopes.end(),
-            [](const AdapterRuntimeResultEnvelope& left, const AdapterRuntimeResultEnvelope& right)
+            [](const AdapterRuntimeResultEnvelope& left,
+                const AdapterRuntimeResultEnvelope& right)
             {
                 return left.m_resultId < right.m_resultId;
             });
+        if (error)
+        {
+            error->clear();
+        }
         return true;
     }
 
@@ -579,7 +558,8 @@ namespace TaintedGrailModdingSDK
         m_envelopes.clear();
     }
 
-    const AdapterRuntimeResultEnvelope* AdapterRuntimeResultRegistry::FindByResultId(
+    const AdapterRuntimeResultEnvelope*
+    AdapterRuntimeResultRegistry::FindByResultId(
         const AZStd::string& resultId) const
     {
         for (const AdapterRuntimeResultEnvelope& envelope : m_envelopes)

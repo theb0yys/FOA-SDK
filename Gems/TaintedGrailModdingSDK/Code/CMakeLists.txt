@@ -74,6 +74,10 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
             taintedgrailmoddingsdk_deployment_preview_tests_files.cmake
             taintedgrailmoddingsdk_deployment_work_order_tests_files.cmake
             taintedgrailmoddingsdk_deployment_execution_result_tests_files.cmake
+            taintedgrailmoddingsdk_post_deployment_verification_tests_files.cmake
+            taintedgrailmoddingsdk_post_deployment_verifier_tests_files.cmake
+            taintedgrailmoddingsdk_verifier_reconciliation_tests_files.cmake
+            taintedgrailmoddingsdk_release_artifact_tests_files.cmake
         INCLUDE_DIRECTORIES
             PRIVATE
                 Source

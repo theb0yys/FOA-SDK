@@ -7,6 +7,10 @@
 
 #include "AdapterPostDeploymentVerificationService.h"
 
+#include "AdapterDeploymentExecutionResultCanonical.h"
+#include "CanonicalFingerprint.h"
+#include "ResearchContractValidation.h"
+
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
 

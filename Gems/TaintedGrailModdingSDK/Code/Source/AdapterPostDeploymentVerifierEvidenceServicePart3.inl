@@ -70,7 +70,7 @@ namespace TaintedGrailModdingSDK
             AZStd::vector<AZStd::string> checkIds;
             AZStd::vector<AZStd::string> checkedStepIds;
             for (const AdapterPostDeploymentVerifierCheckResult& check :
-                envelope.m_checkResults)
+                 envelope.m_checkResults)
             {
                 checkIds.push_back(check.m_checkId);
                 checkedStepIds.push_back(check.m_stepId);
@@ -131,9 +131,11 @@ namespace TaintedGrailModdingSDK
                 case AdapterPostDeploymentVerifierCheckOutcome::NotRun:
                     AddVerifierIssue(
                         result,
-                        flags.m_checkCoverageIncomplete,
+                        flags.m_observationMismatch,
                         "post_deployment_verifier.check_not_run",
-                        "A required independent target check was not run.",
+                        "The required check is present and exactly bound but was not run. "
+                        "This remains structurally valid adverse evidence and never becomes "
+                        "an accepted all-matched verifier result.",
                         check.m_checkId);
                     break;
                 case AdapterPostDeploymentVerifierCheckOutcome::Matched:
@@ -237,6 +239,5 @@ namespace TaintedGrailModdingSDK
                 }
             }
         }
-
     } // namespace
 } // namespace TaintedGrailModdingSDK

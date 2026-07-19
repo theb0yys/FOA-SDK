@@ -15,6 +15,8 @@
 
 namespace TaintedGrailModdingSDK
 {
+    class SourceEvidenceRegistry;
+
     enum class AdapterPostDeploymentVerifierReviewDecision : AZ::u8
     {
         Unknown,
@@ -190,7 +192,18 @@ namespace TaintedGrailModdingSDK
     public:
         static AdapterPostDeploymentVerifierResultRegistry& Get();
 
+        // Unbound registration is refused. A verifier result may enter session
+        // state only after validation against the exact current work order,
+        // execution result, post-deployment report, and active research registry.
         bool RegisterEnvelope(
+            const AdapterPostDeploymentVerifierResultEnvelope& envelope,
+            AZStd::string* error = nullptr);
+
+        bool RegisterEnvelope(
+            const AdapterDeploymentWorkOrder& workOrder,
+            const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,
+            const AdapterPostDeploymentVerificationReport& report,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterPostDeploymentVerifierResultEnvelope& envelope,
             AZStd::string* error = nullptr);
         void Clear();

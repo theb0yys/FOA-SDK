@@ -22,24 +22,28 @@ namespace TaintedGrailModdingSDK
             finding.m_blocksCompatibility = blocker.m_blocksCompatibility;
             finding.m_blocksRelease = blocker.m_blocksRelease;
             finding.m_requiresHumanDisposition = true;
+            SortUniqueReconciliationValues(finding.m_evidenceIds);
+            SortUniqueReconciliationValues(finding.m_diagnosticReferenceIds);
             return finding;
         }
 
         AdapterVerifierReconciliationFinding MakeVerifierCheckFinding(
             const AdapterPostDeploymentVerificationReport& report,
+            const AZStd::string& verifierResultId,
             const AdapterPostDeploymentVerifierCheckResult& check)
         {
             AdapterVerifierReconciliationFinding finding;
             finding.m_findingId =
                 "verifier-reconciliation.finding.check." + check.m_checkId;
             finding.m_subjectRef =
-                "deployment-work-order-step:" + check.m_stepId;
+                "deployment-work-order:" + report.m_workOrderId
+                + ":step:" + check.m_stepId;
             finding.m_checkId = check.m_checkId;
             finding.m_stepId = check.m_stepId;
             finding.m_evidenceIds.push_back(
-                "evidence.post-deployment-verifier.check." + check.m_checkId);
-            finding.m_diagnosticReferenceIds =
-                check.m_diagnosticReferenceIds;
+                "evidence.post-deployment-verifier." + verifierResultId
+                + ".check." + ReconciliationUnsignedString(check.m_sequence));
+            finding.m_diagnosticReferenceIds = check.m_diagnosticReferenceIds;
 
             const AdapterPostDeploymentBlocker* relatedBlocker =
                 FindReportBlockerForStep(report, check.m_stepId);
@@ -105,6 +109,8 @@ namespace TaintedGrailModdingSDK
                 finding.m_requiresHumanDisposition = true;
                 break;
             }
+            SortUniqueReconciliationValues(finding.m_evidenceIds);
+            SortUniqueReconciliationValues(finding.m_diagnosticReferenceIds);
             return finding;
         }
 
@@ -115,14 +121,15 @@ namespace TaintedGrailModdingSDK
         {
             for (const AdapterPostDeploymentBlocker& blocker : report.m_blockers)
             {
-                envelope.m_findings.push_back(
-                    MakeReportBlockerFinding(blocker));
+                envelope.m_findings.push_back(MakeReportBlockerFinding(blocker));
             }
             for (const AdapterPostDeploymentVerifierCheckResult& check :
                  verifierEnvelope.m_checkResults)
             {
-                envelope.m_findings.push_back(
-                    MakeVerifierCheckFinding(report, check));
+                envelope.m_findings.push_back(MakeVerifierCheckFinding(
+                    report,
+                    verifierEnvelope.m_verifierResultId,
+                    check));
             }
 
             AZStd::sort(
@@ -213,6 +220,51 @@ namespace TaintedGrailModdingSDK
             return nullptr;
         }
 
+        bool EvidenceIdsAreCandidateBound(
+            const AZStd::vector<AZStd::string>& evidenceIds,
+            const AdapterVerifierEvidenceReconciliationEnvelope& envelope)
+        {
+            if (!HasStableUniqueIds(evidenceIds))
+            {
+                return false;
+            }
+            for (const AZStd::string& evidenceId : evidenceIds)
+            {
+                if (AZStd::find(
+                        envelope.m_inputCandidateEvidenceIds.begin(),
+                        envelope.m_inputCandidateEvidenceIds.end(),
+                        evidenceId)
+                    == envelope.m_inputCandidateEvidenceIds.end())
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool EvidenceIdsSupportFinding(
+            const AZStd::vector<AZStd::string>& evidenceIds,
+            const AdapterVerifierReconciliationFinding& finding,
+            const AdapterVerifierEvidenceReconciliationEnvelope& envelope)
+        {
+            if (!EvidenceIdsAreCandidateBound(evidenceIds, envelope)
+                || finding.m_evidenceIds.empty())
+            {
+                return false;
+            }
+            return AZStd::any_of(
+                evidenceIds.begin(),
+                evidenceIds.end(),
+                [&finding](const AZStd::string& evidenceId)
+                {
+                    return AZStd::find(
+                               finding.m_evidenceIds.begin(),
+                               finding.m_evidenceIds.end(),
+                               evidenceId)
+                        != finding.m_evidenceIds.end();
+                });
+        }
+
         bool AllRequiredDispositionsAccepted(
             const AdapterVerifierEvidenceReconciliationEnvelope& envelope)
         {
@@ -224,9 +276,7 @@ namespace TaintedGrailModdingSDK
                     continue;
                 }
                 const AdapterVerifierFindingDisposition* disposition =
-                    FindDisposition(
-                        envelope.m_releaseReview,
-                        finding.m_findingId);
+                    FindDisposition(envelope.m_releaseReview, finding.m_findingId);
                 if (!disposition
                     || disposition.m_decision
                         != AdapterVerifierFindingDispositionDecision::Accepted)
@@ -264,7 +314,7 @@ namespace TaintedGrailModdingSDK
             }
 
             bool invalid = !IsAdapterPostDeploymentVerifierStableId(review.m_reviewId)
-                || !HasStableUniqueIds(review.m_evidenceIds)
+                || !EvidenceIdsAreCandidateBound(review.m_evidenceIds, envelope)
                 || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                     review.m_reviewedAtUtc)
                 || review.m_reviewedAtUtc > request.m_evaluatedAtUtc
@@ -278,15 +328,16 @@ namespace TaintedGrailModdingSDK
             {
                 dispositionIds.push_back(disposition.m_findingId);
                 const AdapterVerifierReconciliationFinding* finding =
-                    FindReconciliationFinding(
-                        envelope,
-                        disposition.m_findingId);
+                    FindReconciliationFinding(envelope, disposition.m_findingId);
                 const bool dispositionValid = finding
                     && finding->m_requiresHumanDisposition
                     && disposition.m_decision
                         != AdapterVerifierFindingDispositionDecision::Unknown
                     && !disposition.m_rationale.empty()
-                    && HasStableUniqueIds(disposition.m_evidenceIds);
+                    && EvidenceIdsSupportFinding(
+                        disposition.m_evidenceIds,
+                        *finding,
+                        envelope);
                 invalid = invalid || !dispositionValid;
                 if (dispositionValid)
                 {
@@ -315,7 +366,7 @@ namespace TaintedGrailModdingSDK
                         "verifier_reconciliation.disposition_invalid",
                         "Every supplied disposition must bind to one exact finding that "
                         "requires human review and include an explicit decision, rationale, "
-                        "and stable evidence IDs.",
+                        "and candidate evidence that directly supports that finding.",
                         {},
                         {},
                         {},
@@ -370,8 +421,8 @@ namespace TaintedGrailModdingSDK
                     flags.m_reviewInvalid,
                     "verifier_reconciliation.review_invalid",
                     "The supplied release review requires stable identity, named reviewer, "
-                    "unique evidence, UTC review time no later than evaluation, rationale, "
-                    "and exact finding dispositions.");
+                    "candidate-bound evidence, UTC review time no later than evaluation, "
+                    "rationale, and exact finding-bound dispositions.");
             }
             else if (flags.m_dispositionIncomplete)
             {
@@ -400,8 +451,7 @@ namespace TaintedGrailModdingSDK
                     AdapterVerifierReleaseDecision::Pending;
                 return;
             case AdapterVerifierReleaseReviewDecision::Hold:
-                envelope.m_releaseDecision =
-                    AdapterVerifierReleaseDecision::Hold;
+                envelope.m_releaseDecision = AdapterVerifierReleaseDecision::Hold;
                 break;
             case AdapterVerifierReleaseReviewDecision::Reject:
                 envelope.m_releaseDecision =

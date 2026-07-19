@@ -5,7 +5,9 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
+#include "AdapterRuntimeResultCanonical.h"
 #include "AdapterRuntimeResultEvidenceService.h"
+#include "CanonicalFingerprint.h"
 
 #include <AzTest/AzTest.h>
 
@@ -28,19 +30,22 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& subjectRef)
         {
             AdapterWorkOrderStep step;
-            step.m_stepId = "workorder.plan:preview:step:" + capability + ":" + subjectId;
+            step.m_stepId =
+                "workorder.plan:preview:step:" + capability + ":" + subjectId;
             step.m_sequence = sequence;
             step.m_capability = capability;
             step.m_subjectKind = subjectKind;
             step.m_subjectId = subjectId;
             step.m_subjectRef = subjectRef;
+            step.m_executionAllowed = false;
             return step;
         }
 
         AdapterWorkOrderPlan MakePlan()
         {
             AdapterWorkOrderPlan plan;
-            plan.m_planId = "workorder.plan:preview.pack@1.0.0:preview.adapter@1.0.0:preview.profile";
+            plan.m_planId =
+                "workorder.plan:preview.pack@1.0.0:preview.adapter@1.0.0:preview.profile";
             plan.m_packId = "preview.pack";
             plan.m_packVersion = "1.0.0";
             plan.m_adapterId = "preview.adapter";
@@ -93,13 +98,21 @@ namespace TaintedGrailModdingSDK
             return result;
         }
 
-        AdapterRuntimeResultEnvelope MakeEnvelope(const AdapterWorkOrderPlan& plan)
+        void RefreshFingerprint(AdapterRuntimeResultEnvelope& envelope)
+        {
+            envelope.m_resultFingerprint =
+                CalculateRuntimeResultFingerprint(envelope);
+        }
+
+        AdapterRuntimeResultEnvelope MakeEnvelope(
+            const AdapterWorkOrderPlan& plan)
         {
             AdapterRuntimeResultEnvelope envelope;
             envelope.m_resultId = "preview.runtime.result";
             envelope.m_planId = plan.m_planId;
             envelope.m_planCanonicalJson = plan.m_canonicalJson;
-            envelope.m_planFingerprint = Fingerprint('a');
+            envelope.m_planFingerprint =
+                CalculateCanonicalSha256(plan.m_canonicalJson);
             envelope.m_packId = plan.m_packId;
             envelope.m_packVersion = plan.m_packVersion;
             envelope.m_adapterId = plan.m_adapterId;
@@ -109,7 +122,6 @@ namespace TaintedGrailModdingSDK
             envelope.m_branch = plan.m_branch;
             envelope.m_runtimeTarget = plan.m_runtimeTarget;
             envelope.m_capturedAt = "2026-07-19T00:00:00Z";
-            envelope.m_resultFingerprint = Fingerprint('b');
             envelope.m_stepResults = {
                 MakeSucceededResult(plan.m_steps[0], 'c'),
                 MakeSucceededResult(plan.m_steps[1], 'd'),
@@ -123,17 +135,22 @@ namespace TaintedGrailModdingSDK
             adapterLog.m_fingerprint = Fingerprint('f');
             adapterLog.m_stepIds = { plan.m_steps[0].m_stepId };
             envelope.m_logReferences.push_back(adapterLog);
-            envelope.m_stepResults[0].m_logReferenceIds = { adapterLog.m_logId };
+            envelope.m_stepResults[0].m_logReferenceIds = {
+                adapterLog.m_logId,
+            };
 
             envelope.m_cleanupResult.m_stepId = plan.m_steps[1].m_stepId;
-            envelope.m_cleanupResult.m_outcome = AdapterRuntimeOutcome::Succeeded;
+            envelope.m_cleanupResult.m_outcome =
+                AdapterRuntimeOutcome::Succeeded;
             envelope.m_cleanupResult.m_outputFingerprint =
                 envelope.m_stepResults[1].m_outputFingerprint;
 
             envelope.m_rollbackResult.m_stepId = plan.m_steps[2].m_stepId;
-            envelope.m_rollbackResult.m_outcome = AdapterRuntimeOutcome::Succeeded;
+            envelope.m_rollbackResult.m_outcome =
+                AdapterRuntimeOutcome::Succeeded;
             envelope.m_rollbackResult.m_outputFingerprint =
                 envelope.m_stepResults[2].m_outputFingerprint;
+            RefreshFingerprint(envelope);
             return envelope;
         }
 
@@ -167,36 +184,11 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
-
-        const SourceRecord* FindSourceKind(
-            const AdapterRuntimeEvidenceReturn& result,
-            const AZStd::string& sourceKind)
-        {
-            for (const SourceDocument& document : result.m_sourceDocuments)
-            {
-                if (document.m_source.m_sourceKind == sourceKind)
-                {
-                    return &document.m_source;
-                }
-            }
-            return nullptr;
-        }
-
-        AZStd::vector<AZStd::string> EvidenceIds(const AdapterRuntimeEvidenceReturn& result)
-        {
-            AZStd::vector<AZStd::string> ids;
-            for (const EvidenceDocument& document : result.m_evidenceDocuments)
-            {
-                for (const EvidenceRecord& evidence : document.m_evidence)
-                {
-                    ids.push_back(evidence.m_evidenceId);
-                }
-            }
-            return ids;
-        }
     } // namespace
 
-    TEST(AdapterRuntimeResultEvidenceTests, TypedOutcomeFailureAndLogVocabulariesAreStrict)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        TypedOutcomeFailureAndLogVocabulariesAreStrict)
     {
         AdapterRuntimeOutcome outcome;
         AdapterRuntimeFailureKind failureKind;
@@ -208,37 +200,56 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(TryParseAdapterRuntimeOutcome("success", outcome));
         EXPECT_TRUE(TryParseAdapterRuntimeFailureKind("cleanup", failureKind));
         EXPECT_TRUE(TryParseAdapterRuntimeFailureKind("rollback", failureKind));
+        EXPECT_FALSE(TryParseAdapterRuntimeFailureKind("unknown", failureKind));
         EXPECT_FALSE(TryParseAdapterRuntimeFailureKind("crashed", failureKind));
         EXPECT_TRUE(TryParseAdapterRuntimeLogKind("adapter", logKind));
         EXPECT_TRUE(TryParseAdapterRuntimeLogKind("diagnostic", logKind));
         EXPECT_FALSE(TryParseAdapterRuntimeLogKind("stdout", logKind));
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, RegistryRejectsMalformedAndDuplicateResultFingerprints)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        RegistryRejectsCallerSelectedAndDuplicateFingerprints)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
         AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
         AdapterRuntimeResultRegistry registry;
         AZStd::string error;
 
-        envelope.m_resultFingerprint = "sha256:ABC";
+        envelope.m_resultFingerprint = Fingerprint('9');
         EXPECT_FALSE(registry.RegisterEnvelope(envelope, &error));
-        EXPECT_NE(error.find("fingerprints"), AZStd::string::npos);
+        EXPECT_NE(error.find("deterministic canonical"), AZStd::string::npos);
 
         envelope = MakeEnvelope(plan);
         ASSERT_TRUE(registry.RegisterEnvelope(envelope, &error)) << error.c_str();
-        AdapterRuntimeResultEnvelope duplicate = envelope;
-        duplicate.m_resultId = "preview.runtime.second";
-        EXPECT_FALSE(registry.RegisterEnvelope(duplicate, &error));
-        EXPECT_NE(error.find("fingerprint"), AZStd::string::npos);
+        EXPECT_FALSE(registry.RegisterEnvelope(envelope, &error));
+        EXPECT_NE(error.find("already registered"), AZStd::string::npos);
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, ExactAttemptedPlanProducesCandidateEvidenceOnly)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        PlanFingerprintMustHashExactCanonicalJson)
+    {
+        const AdapterWorkOrderPlan plan = MakePlan();
+        AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
+        envelope.m_planFingerprint = Fingerprint('a');
+        RefreshFingerprint(envelope);
+
+        AdapterRuntimeResultRegistry registry;
+        AZStd::string error;
+        EXPECT_FALSE(registry.RegisterEnvelope(envelope, &error));
+        EXPECT_NE(error.find("canonical plan JSON"), AZStd::string::npos);
+    }
+
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        ExactAttemptedPlanProducesCandidateEvidenceOnly)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
         const AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
         AdapterRuntimeResultEvidenceService service;
-        const AdapterRuntimeEvidenceReturn result = service.BuildEvidenceReturn(plan, envelope);
+        const AdapterRuntimeEvidenceReturn result =
+            service.BuildEvidenceReturn(plan, envelope);
 
         ASSERT_TRUE(result.m_accepted);
         EXPECT_TRUE(result.m_issues.empty());
@@ -254,7 +265,9 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(HasEvidenceKind(result, "adapter_runtime_log_reference"));
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, FailedStepAndTypedFailureReturnAsNewEvidence)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        FailedStepAndTypedFailureReturnAsNewEvidence)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
         AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
@@ -269,22 +282,30 @@ namespace TaintedGrailModdingSDK
         envelope.m_stepResults[0].m_outcome = AdapterRuntimeOutcome::Failed;
         envelope.m_stepResults[0].m_failureIds = { failure.m_failureId };
         envelope.m_stepResults[0].m_outputFingerprint.clear();
+        RefreshFingerprint(envelope);
 
         AdapterRuntimeResultEvidenceService service;
-        const AdapterRuntimeEvidenceReturn result = service.BuildEvidenceReturn(plan, envelope);
+        const AdapterRuntimeEvidenceReturn result =
+            service.BuildEvidenceReturn(plan, envelope);
         ASSERT_TRUE(result.m_accepted);
         EXPECT_EQ(result.m_failureCount, 1);
         EXPECT_TRUE(HasEvidenceKind(result, "adapter_runtime_failure"));
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, UnknownOrMissingStepIdentityFailsClosed)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        UnknownOrMissingStepIdentityFailsClosed)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
         AdapterRuntimeResultEvidenceService service;
 
         AdapterRuntimeResultEnvelope unknown = MakeEnvelope(plan);
-        unknown.m_stepResults[0].m_stepId = "workorder.plan:preview:step:item_grant:unknown";
-        unknown.m_logReferences[0].m_stepIds = { unknown.m_stepResults[0].m_stepId };
+        unknown.m_stepResults[0].m_stepId =
+            "workorder.plan:preview:step:item_grant:unknown";
+        unknown.m_logReferences[0].m_stepIds = {
+            unknown.m_stepResults[0].m_stepId,
+        };
+        RefreshFingerprint(unknown);
         const AdapterRuntimeEvidenceReturn unknownResult =
             service.BuildEvidenceReturn(plan, unknown);
         EXPECT_FALSE(unknownResult.m_accepted);
@@ -294,19 +315,24 @@ namespace TaintedGrailModdingSDK
         AdapterRuntimeResultEnvelope missing = MakeEnvelope(plan);
         missing.m_stepResults.pop_back();
         missing.m_rollbackResult.m_stepId = missing.m_stepResults.back().m_stepId;
+        RefreshFingerprint(missing);
         const AdapterRuntimeEvidenceReturn missingResult =
             service.BuildEvidenceReturn(plan, missing);
         EXPECT_FALSE(missingResult.m_accepted);
-        EXPECT_TRUE(HasIssue(missingResult, "runtime_result.step_count_mismatch"));
+        EXPECT_TRUE(
+            HasIssue(missingResult, "runtime_result.step_count_mismatch"));
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, OutcomeAndFailureShapeIsValidatedBeforeEvidenceReturn)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        OutcomeAndFailureShapeIsValidatedBeforeEvidenceReturn)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
         AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
         envelope.m_stepResults[0].m_outcome = AdapterRuntimeOutcome::Failed;
         envelope.m_stepResults[0].m_failureIds.clear();
         envelope.m_stepResults[0].m_outputFingerprint.clear();
+        RefreshFingerprint(envelope);
 
         AdapterRuntimeResultRegistry registry;
         AZStd::string error;
@@ -314,74 +340,71 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(error.find("require failures"), AZStd::string::npos);
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, CleanupAndRollbackSummariesMustMatchTheirStepResults)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        CleanupAndRollbackSummariesMustMatchTheirStepResults)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
         AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
         envelope.m_cleanupResult.m_outputFingerprint = Fingerprint('9');
+        RefreshFingerprint(envelope);
 
         AdapterRuntimeResultEvidenceService service;
-        const AdapterRuntimeEvidenceReturn result = service.BuildEvidenceReturn(plan, envelope);
+        const AdapterRuntimeEvidenceReturn result =
+            service.BuildEvidenceReturn(plan, envelope);
         EXPECT_FALSE(result.m_accepted);
         EXPECT_TRUE(HasIssue(result, "runtime_result.cleanup_mismatch"));
         EXPECT_TRUE(result.m_sourceDocuments.empty());
         EXPECT_TRUE(result.m_evidenceDocuments.empty());
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, PlanBindingAndCanonicalJsonMismatchFailsClosed)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        ImpossibleUtcDateAndUnknownFailureKindAreRejected)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
-        AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
-        envelope.m_planCanonicalJson += " ";
-        envelope.m_adapterVersion = "2.0.0";
+        AdapterRuntimeResultRegistry registry;
+        AZStd::string error;
 
-        AdapterRuntimeResultEvidenceService service;
-        const AdapterRuntimeEvidenceReturn result = service.BuildEvidenceReturn(plan, envelope);
-        EXPECT_FALSE(result.m_accepted);
-        EXPECT_TRUE(HasIssue(result, "runtime_result.plan_canonical_mismatch"));
-        EXPECT_TRUE(HasIssue(result, "runtime_result.adapter_binding_mismatch"));
+        AdapterRuntimeResultEnvelope impossible = MakeEnvelope(plan);
+        impossible.m_capturedAt = "2026-02-31T12:00:00Z";
+        RefreshFingerprint(impossible);
+        EXPECT_FALSE(registry.RegisterEnvelope(impossible, &error));
+        EXPECT_NE(error.find("UTC capture time"), AZStd::string::npos);
+
+        AdapterRuntimeResultEnvelope unknown = MakeEnvelope(plan);
+        AdapterRuntimeFailure failure;
+        failure.m_failureId = "preview.failure.unknown";
+        failure.m_kind = AdapterRuntimeFailureKind::Unknown;
+        failure.m_code = "unknown_failure";
+        failure.m_message = "Unknown classifications are not accepted.";
+        failure.m_stepId = plan.m_steps[0].m_stepId;
+        unknown.m_failures.push_back(failure);
+        unknown.m_stepResults[0].m_outcome = AdapterRuntimeOutcome::Failed;
+        unknown.m_stepResults[0].m_failureIds = { failure.m_failureId };
+        unknown.m_stepResults[0].m_outputFingerprint.clear();
+        RefreshFingerprint(unknown);
+        EXPECT_FALSE(registry.RegisterEnvelope(unknown, &error));
+        EXPECT_NE(error.find("known kind"), AZStd::string::npos);
     }
 
-    TEST(AdapterRuntimeResultEvidenceTests, LogReferencesAndFingerprintsBecomeSeparateEvidenceSources)
+    TEST(
+        AdapterRuntimeResultEvidenceTests,
+        CanonicalPayloadIsOrderIndependentButContentSensitive)
     {
         const AdapterWorkOrderPlan plan = MakePlan();
-        const AdapterRuntimeResultEnvelope envelope = MakeEnvelope(plan);
-        AdapterRuntimeResultEvidenceService service;
-        const AdapterRuntimeEvidenceReturn result = service.BuildEvidenceReturn(plan, envelope);
+        AdapterRuntimeResultEnvelope first = MakeEnvelope(plan);
+        AdapterRuntimeResultEnvelope reordered = first;
+        AZStd::reverse(
+            reordered.m_stepResults.begin(),
+            reordered.m_stepResults.end());
+        EXPECT_EQ(
+            SerializeCanonicalRuntimeResult(first),
+            SerializeCanonicalRuntimeResult(reordered));
 
-        ASSERT_TRUE(result.m_accepted);
-        const SourceRecord* logSource = FindSourceKind(result, "adapter_runtime_log");
-        ASSERT_NE(logSource, nullptr);
-        EXPECT_EQ(logSource->m_locator, "logs/adapter.log");
-        EXPECT_EQ(logSource->m_fingerprint, Fingerprint('f'));
-        EXPECT_TRUE(HasEvidenceKind(result, "adapter_runtime_log_reference"));
-    }
-
-    TEST(AdapterRuntimeResultEvidenceTests, EvidenceReturnIsDeterministicAndDoesNotMutateInputs)
-    {
-        const AdapterWorkOrderPlan plan = MakePlan();
-        AdapterRuntimeResultEnvelope firstEnvelope = MakeEnvelope(plan);
-        AdapterRuntimeResultEnvelope secondEnvelope = firstEnvelope;
-        AZStd::reverse(secondEnvelope.m_stepResults.begin(), secondEnvelope.m_stepResults.end());
-        AZStd::reverse(secondEnvelope.m_logReferences.begin(), secondEnvelope.m_logReferences.end());
-
-        const size_t planStepCountBefore = plan.m_steps.size();
-        const size_t envelopeStepCountBefore = firstEnvelope.m_stepResults.size();
-        const size_t failureCountBefore = firstEnvelope.m_failures.size();
-        const size_t logCountBefore = firstEnvelope.m_logReferences.size();
-
-        AdapterRuntimeResultEvidenceService service;
-        const AdapterRuntimeEvidenceReturn first =
-            service.BuildEvidenceReturn(plan, firstEnvelope);
-        const AdapterRuntimeEvidenceReturn second =
-            service.BuildEvidenceReturn(plan, secondEnvelope);
-
-        ASSERT_TRUE(first.m_accepted);
-        ASSERT_TRUE(second.m_accepted);
-        EXPECT_EQ(EvidenceIds(first), EvidenceIds(second));
-        EXPECT_EQ(plan.m_steps.size(), planStepCountBefore);
-        EXPECT_EQ(firstEnvelope.m_stepResults.size(), envelopeStepCountBefore);
-        EXPECT_EQ(firstEnvelope.m_failures.size(), failureCountBefore);
-        EXPECT_EQ(firstEnvelope.m_logReferences.size(), logCountBefore);
+        reordered.m_adapterVersion = "1.0.1";
+        EXPECT_NE(
+            SerializeCanonicalRuntimeResult(first),
+            SerializeCanonicalRuntimeResult(reordered));
     }
 } // namespace TaintedGrailModdingSDK

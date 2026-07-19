@@ -7,6 +7,11 @@
 
 #include "AdapterDeploymentExecutionResultContracts.h"
 
+#include "AdapterDeploymentExecutionEvidenceService.h"
+#include "AdapterDeploymentExecutionResultCanonical.h"
+#include "CanonicalFingerprint.h"
+#include "ResearchContractValidation.h"
+
 #include <AzCore/std/algorithm.h>
 
 namespace TaintedGrailModdingSDK
@@ -119,15 +124,84 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        bool IsLowerHex(char value)
+        bool HasStableUniqueIds(const AZStd::vector<AZStd::string>& values)
         {
-            return (value >= '0' && value <= '9')
-                || (value >= 'a' && value <= 'f');
+            if (values.empty())
+            {
+                return false;
+            }
+            AZStd::vector<AZStd::string> sorted = values;
+            for (const AZStd::string& value : sorted)
+            {
+                if (!IsStableContractId(value))
+                {
+                    return false;
+                }
+            }
+            AZStd::sort(sorted.begin(), sorted.end());
+            return AZStd::adjacent_find(sorted.begin(), sorted.end())
+                == sorted.end();
         }
 
-        bool IsDigit(char value)
+        bool HasIntrinsicShape(
+            const AdapterDeploymentExecutionResultEnvelope& envelope,
+            AZStd::string& error)
         {
-            return value >= '0' && value <= '9';
+            if (envelope.m_contractVersion != 1
+                || !IsStableContractId(envelope.m_resultId)
+                || !IsStableContractId(envelope.m_workOrderId)
+                || envelope.m_workOrderCanonicalJson.empty()
+                || !IsSha256Fingerprint(envelope.m_workOrderFingerprint)
+                || !CanonicalSha256Matches(
+                    envelope.m_workOrderCanonicalJson,
+                    envelope.m_workOrderFingerprint)
+                || !IsStableContractId(envelope.m_previewId)
+                || !IsSha256Fingerprint(envelope.m_previewFingerprint)
+                || !IsStableContractId(envelope.m_packId)
+                || !IsStableContractId(envelope.m_targetInventoryId)
+                || !IsStableContractId(envelope.m_profileId)
+                || envelope.m_gameVersion.empty()
+                || envelope.m_branch.empty()
+                || !IsSupportedRuntimeTarget(envelope.m_runtimeTarget)
+                || !IsStrictUtcTimestamp(envelope.m_capturedAtUtc)
+                || !DeploymentExecutionResultFingerprintMatches(envelope))
+            {
+                error = "Deployment execution-result intrinsic shape, canonical hashes, context, or UTC capture time is invalid.";
+                return false;
+            }
+
+            const AdapterDeploymentExecutorReview& review = envelope.m_executorReview;
+            if (!IsStableContractId(review.m_reviewId)
+                || !IsStableContractId(review.m_executorId)
+                || !IsStrictSemanticVersion(review.m_executorVersion)
+                || !IsSha256Fingerprint(review.m_executorFingerprint)
+                || review.m_decision
+                    != AdapterDeploymentExecutorReviewDecision::Accepted
+                || review.m_reviewer.empty()
+                || !HasStableUniqueIds(review.m_evidenceIds)
+                || !IsStrictUtcTimestamp(review.m_reviewedAtUtc)
+                || review.m_reviewedAtUtc > envelope.m_capturedAtUtc)
+            {
+                error = "Deployment executor review is not exact, accepted, evidence-backed, and time-bound.";
+                return false;
+            }
+            for (const AdapterDeploymentExecutionFailure& failure : envelope.m_failures)
+            {
+                if (failure.m_kind == AdapterDeploymentExecutionFailureKind::Unknown)
+                {
+                    error = "Unknown deployment failure classifications are not accepted.";
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        void SetError(AZStd::string* error, AZStd::string value)
+        {
+            if (error)
+            {
+                *error = AZStd::move(value);
+            }
         }
     } // namespace
 
@@ -186,6 +260,10 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& value,
         AdapterDeploymentExecutionFailureKind& kind)
     {
+        if (value == "unknown")
+        {
+            return false;
+        }
         return TryParseEnum(value, kind, FailureKinds);
     }
 
@@ -205,63 +283,21 @@ namespace TaintedGrailModdingSDK
 
     bool IsAdapterDeploymentExecutionStableId(const AZStd::string& value)
     {
-        if (value.size() < 3)
-        {
-            return false;
-        }
-        bool hasNamespaceSeparator = false;
-        for (char character : value)
-        {
-            const bool allowed =
-                (character >= 'a' && character <= 'z')
-                || (character >= '0' && character <= '9')
-                || character == '.'
-                || character == '-'
-                || character == '_'
-                || character == ':';
-            if (!allowed)
-            {
-                return false;
-            }
-            hasNamespaceSeparator = hasNamespaceSeparator
-                || character == '.'
-                || character == ':';
-        }
-        const char first = value.front();
-        const char last = value.back();
-        const bool firstAllowed =
-            (first >= 'a' && first <= 'z') || (first >= '0' && first <= '9');
-        const bool lastAllowed =
-            (last >= 'a' && last <= 'z') || (last >= '0' && last <= '9');
-        return hasNamespaceSeparator && firstAllowed && lastAllowed;
+        return IsStableContractId(value);
     }
 
     bool IsAdapterDeploymentExecutionFingerprint(const AZStd::string& value)
     {
-        constexpr size_t PrefixLength = 7;
-        constexpr size_t DigestLength = 64;
-        if (value.size() != PrefixLength + DigestLength
-            || value.substr(0, PrefixLength) != "sha256:")
-        {
-            return false;
-        }
-        for (size_t index = PrefixLength; index < value.size(); ++index)
-        {
-            if (!IsLowerHex(value[index]))
-            {
-                return false;
-            }
-        }
-        return true;
+        return IsSha256Fingerprint(value);
     }
 
     bool IsAdapterDeploymentExecutionLogReference(const AZStd::string& value)
     {
-        if (value.empty() || value.front() == '/' || value.front() == '\\')
-        {
-            return false;
-        }
-        if (value.size() > 1 && value[1] == ':')
+        if (value.empty()
+            || value.size() > 1024
+            || value.front() == '/'
+            || value.front() == '\\'
+            || (value.size() > 1 && value[1] == ':'))
         {
             return false;
         }
@@ -303,33 +339,7 @@ namespace TaintedGrailModdingSDK
 
     bool IsAdapterDeploymentExecutionUtcTimestamp(const AZStd::string& value)
     {
-        if (value.size() != 20
-            || value[4] != '-'
-            || value[7] != '-'
-            || value[10] != 'T'
-            || value[13] != ':'
-            || value[16] != ':'
-            || value[19] != 'Z')
-        {
-            return false;
-        }
-        constexpr size_t DigitPositions[] = {
-            0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18,
-        };
-        for (size_t position : DigitPositions)
-        {
-            if (!IsDigit(value[position]))
-            {
-                return false;
-            }
-        }
-        return value.substr(5, 2) >= "01"
-            && value.substr(5, 2) <= "12"
-            && value.substr(8, 2) >= "01"
-            && value.substr(8, 2) <= "31"
-            && value.substr(11, 2) <= "23"
-            && value.substr(14, 2) <= "59"
-            && value.substr(17, 2) <= "59";
+        return IsStrictUtcTimestamp(value);
     }
 
     AdapterDeploymentExecutionResultRegistry&
@@ -340,39 +350,71 @@ namespace TaintedGrailModdingSDK
     }
 
     bool AdapterDeploymentExecutionResultRegistry::RegisterEnvelope(
+        const AdapterDeploymentExecutionResultEnvelope&,
+        AZStd::string* error)
+    {
+        SetError(
+            error,
+            "Unbound deployment execution-result registration is prohibited; supply the exact current work order.");
+        return false;
+    }
+
+    bool AdapterDeploymentExecutionResultRegistry::RegisterEnvelope(
+        const AdapterDeploymentWorkOrder& workOrder,
         const AdapterDeploymentExecutionResultEnvelope& envelope,
         AZStd::string* error)
     {
-        if (!IsAdapterDeploymentExecutionStableId(envelope.m_resultId)
-            || envelope.m_workOrderId.empty()
-            || !IsAdapterDeploymentExecutionFingerprint(
-                envelope.m_workOrderFingerprint)
-            || !IsAdapterDeploymentExecutionFingerprint(
-                envelope.m_resultFingerprint))
+        AZStd::string validationError;
+        if (!HasIntrinsicShape(envelope, validationError))
         {
-            if (error)
-            {
-                *error =
-                    "Deployment execution-result registration requires stable result "
-                    "identity and exact work-order/result fingerprints.";
-            }
+            SetError(error, AZStd::move(validationError));
             return false;
         }
-        for (const AdapterDeploymentExecutionResultEnvelope& existing :
-            m_envelopes)
+
+        AdapterDeploymentExecutionEvidenceService service;
+        const AdapterDeploymentExecutionEvidenceReturn result =
+            service.BuildEvidenceReturn(workOrder, envelope);
+        if (!result.m_accepted)
+        {
+            AZStd::string message =
+                "Deployment execution-result contract rejected with status "
+                + ToString(result.m_status) + ".";
+            if (!result.m_issues.empty())
+            {
+                message += " " + result.m_issues.front().m_code + ": "
+                    + result.m_issues.front().m_message;
+            }
+            SetError(error, AZStd::move(message));
+            return false;
+        }
+
+        for (const AdapterDeploymentExecutionResultEnvelope& existing : m_envelopes)
         {
             if (existing.m_resultId == envelope.m_resultId)
             {
-                if (error)
-                {
-                    *error =
-                        "A deployment execution-result envelope with this result "
-                        "identity already exists.";
-                }
+                SetError(
+                    error,
+                    "A deployment execution-result envelope with this result identity already exists.");
+                return false;
+            }
+            if (existing.m_profileId == envelope.m_profileId
+                && existing.m_resultFingerprint == envelope.m_resultFingerprint)
+            {
+                SetError(
+                    error,
+                    "A deployment execution-result fingerprint is already registered for this profile.");
                 return false;
             }
         }
         m_envelopes.push_back(envelope);
+        AZStd::sort(
+            m_envelopes.begin(),
+            m_envelopes.end(),
+            [](const AdapterDeploymentExecutionResultEnvelope& left,
+                const AdapterDeploymentExecutionResultEnvelope& right)
+            {
+                return left.m_resultId < right.m_resultId;
+            });
         if (error)
         {
             error->clear();

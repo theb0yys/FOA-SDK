@@ -47,7 +47,7 @@ namespace
             validation.m_state = "validated";
             validation.m_method = "deterministic-work-order-test";
             validation.m_validator = "test.validator";
-            validation.m_checkedAt = "2026-01-01T00:00:00.000Z";
+            validation.m_checkedAt = "2026-01-01T00:00:00Z";
             validation.m_profileId = "profile.work-order";
             validation.m_gameVersion = "game.work-order";
             validation.m_branch = "branch.work-order";
@@ -70,7 +70,7 @@ namespace
             event.m_evidenceIds = record.m_evidenceIds;
             event.m_validationIds = { "validation.record." + record.m_recordId };
             event.m_reviewer = "test.reviewer";
-            event.m_decidedAt = "2026-01-01T00:00:00.000Z";
+            event.m_decidedAt = "2026-01-01T00:00:00Z";
             return event;
         }
 

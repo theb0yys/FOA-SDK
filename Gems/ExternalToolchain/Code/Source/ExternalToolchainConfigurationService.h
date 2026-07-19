@@ -13,6 +13,15 @@
 
 namespace ExternalToolchain
 {
+    enum class ExternalToolchainSettingValueType : AZ::u8
+    {
+        Missing,
+        String,
+        Boolean,
+        UnsignedInteger,
+        Other,
+    };
+
     class ExternalToolchainSettingsSource
     {
     public:
@@ -27,6 +36,26 @@ namespace ExternalToolchain
         virtual bool GetUInt64(
             const AZStd::string& path,
             AZ::u64& value) const = 0;
+        virtual ExternalToolchainSettingValueType GetValueType(
+            const AZStd::string& path) const
+        {
+            AZStd::string stringValue;
+            if (GetString(path, stringValue))
+            {
+                return ExternalToolchainSettingValueType::String;
+            }
+            bool boolValue = false;
+            if (GetBool(path, boolValue))
+            {
+                return ExternalToolchainSettingValueType::Boolean;
+            }
+            AZ::u64 unsignedValue = 0;
+            if (GetUInt64(path, unsignedValue))
+            {
+                return ExternalToolchainSettingValueType::UnsignedInteger;
+            }
+            return ExternalToolchainSettingValueType::Missing;
+        }
     };
 
     class SettingsRegistryExternalToolchainSettingsSource final
@@ -42,6 +71,8 @@ namespace ExternalToolchain
         bool GetUInt64(
             const AZStd::string& path,
             AZ::u64& value) const override;
+        ExternalToolchainSettingValueType GetValueType(
+            const AZStd::string& path) const override;
     };
 
     class ExternalToolchainConfigurationService
@@ -69,7 +100,7 @@ namespace ExternalToolchain
             ExternalToolResolvedConfigurationValue& value) const;
         AZStd::vector<ExternalToolResolvedConfigurationValue> ResolveAll(
             const ExternalToolProviderDescriptor& provider) const;
-        void ResolveProviderEnabled(
+        bool ResolveProviderEnabled(
             const ExternalToolProviderDescriptor& provider,
             bool& enabled,
             ConfigurationLayer& layer) const;

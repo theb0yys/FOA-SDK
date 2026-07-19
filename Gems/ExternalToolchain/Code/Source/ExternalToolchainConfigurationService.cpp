@@ -43,6 +43,54 @@ namespace ExternalToolchain
                 || value.empty()
                 || IsValidSemanticVersion(value);
         }
+
+        void ApplyStringLayer(
+            const ExternalToolchainSettingsSource& source,
+            const AZStd::string& path,
+            ConfigurationLayer layer,
+            const ExternalToolConfigurationDescriptor& descriptor,
+            ExternalToolResolvedConfigurationValue& value)
+        {
+            const ExternalToolchainSettingValueType type = source.GetValueType(path);
+            if (type == ExternalToolchainSettingValueType::Missing)
+            {
+                return;
+            }
+
+            value.m_layer = layer;
+            value.m_configured = true;
+            value.m_value.clear();
+            if (type != ExternalToolchainSettingValueType::String
+                || !source.GetString(path, value.m_value))
+            {
+                value.m_valueValid = false;
+                return;
+            }
+            value.m_valueValid = ValidateConfiguredValue(descriptor, value.m_value);
+        }
+
+        bool ApplyBoolLayer(
+            const ExternalToolchainSettingsSource& source,
+            const AZStd::string& path,
+            ConfigurationLayer candidateLayer,
+            bool& enabled,
+            ConfigurationLayer& layer,
+            bool& valid)
+        {
+            const ExternalToolchainSettingValueType type = source.GetValueType(path);
+            if (type == ExternalToolchainSettingValueType::Missing)
+            {
+                return false;
+            }
+            layer = candidateLayer;
+            valid = type == ExternalToolchainSettingValueType::Boolean
+                && source.GetBool(path, enabled);
+            if (!valid)
+            {
+                enabled = false;
+            }
+            return true;
+        }
     } // namespace
 
     bool SettingsRegistryExternalToolchainSettingsSource::GetString(
@@ -81,6 +129,40 @@ namespace ExternalToolchain
         return false;
     }
 
+    ExternalToolchainSettingValueType
+    SettingsRegistryExternalToolchainSettingsSource::GetValueType(
+        const AZStd::string& path) const
+    {
+        const AZ::SettingsRegistryInterface* registry =
+            AZ::Interface<AZ::SettingsRegistryInterface>::Get();
+        if (!registry)
+        {
+            return ExternalToolchainSettingValueType::Missing;
+        }
+        const AZ::SettingsRegistryInterface::SettingsType type =
+            registry->GetType(path);
+        switch (type.m_type)
+        {
+        case AZ::SettingsRegistryInterface::Type::NoType:
+            return ExternalToolchainSettingValueType::Missing;
+        case AZ::SettingsRegistryInterface::Type::String:
+            return ExternalToolchainSettingValueType::String;
+        case AZ::SettingsRegistryInterface::Type::Boolean:
+            return ExternalToolchainSettingValueType::Boolean;
+        case AZ::SettingsRegistryInterface::Type::Integer:
+            return type.m_signedness
+                    == AZ::SettingsRegistryInterface::Signedness::Unsigned
+                ? ExternalToolchainSettingValueType::UnsignedInteger
+                : ExternalToolchainSettingValueType::Other;
+        case AZ::SettingsRegistryInterface::Type::Null:
+        case AZ::SettingsRegistryInterface::Type::FloatingPoint:
+        case AZ::SettingsRegistryInterface::Type::Array:
+        case AZ::SettingsRegistryInterface::Type::Object:
+            return ExternalToolchainSettingValueType::Other;
+        }
+        return ExternalToolchainSettingValueType::Other;
+    }
+
     ExternalToolchainConfigurationService::ExternalToolchainConfigurationService(
         const ExternalToolchainSettingsSource& settingsSource)
         : m_settingsSource(settingsSource)
@@ -104,7 +186,6 @@ namespace ExternalToolchain
             return Failure(
                 "Session configuration value does not satisfy the declared type or limits.");
         }
-
         m_sessionOverrides[MakeSessionKey(provider.m_providerId, key)] = value;
         return Success("Session configuration override set.");
     }
@@ -118,7 +199,6 @@ namespace ExternalToolchain
         {
             return Failure("Configuration key is not declared by the provider.");
         }
-
         m_sessionOverrides.erase(MakeSessionKey(provider.m_providerId, key));
         return Success("Session configuration override cleared.");
     }
@@ -161,29 +241,27 @@ namespace ExternalToolchain
         value.m_sensitive = descriptor->m_sensitive;
         value.m_layer = ConfigurationLayer::ProviderDefault;
         value.m_value = descriptor->m_defaultValue;
+        value.m_configured = !value.m_value.empty();
+        value.m_valueValid = ValidateConfiguredValue(*descriptor, value.m_value);
 
-        AZStd::string configuredValue;
-        if (m_settingsSource.GetString(
-                MakeRegistryPath(
-                    ProjectConfigurationRoot,
-                    provider.m_providerId,
-                    key),
-                configuredValue))
-        {
-            value.m_layer = ConfigurationLayer::Project;
-            value.m_value = configuredValue;
-        }
-
-        if (m_settingsSource.GetString(
-                MakeRegistryPath(
-                    UserConfigurationRoot,
-                    provider.m_providerId,
-                    key),
-                configuredValue))
-        {
-            value.m_layer = ConfigurationLayer::User;
-            value.m_value = configuredValue;
-        }
+        ApplyStringLayer(
+            m_settingsSource,
+            MakeRegistryPath(
+                ProjectConfigurationRoot,
+                provider.m_providerId,
+                key),
+            ConfigurationLayer::Project,
+            *descriptor,
+            value);
+        ApplyStringLayer(
+            m_settingsSource,
+            MakeRegistryPath(
+                UserConfigurationRoot,
+                provider.m_providerId,
+                key),
+            ConfigurationLayer::User,
+            *descriptor,
+            value);
 
         const auto session = m_sessionOverrides.find(
             MakeSessionKey(provider.m_providerId, key));
@@ -191,10 +269,9 @@ namespace ExternalToolchain
         {
             value.m_layer = ConfigurationLayer::Session;
             value.m_value = session->second;
+            value.m_configured = true;
+            value.m_valueValid = ValidateConfiguredValue(*descriptor, value.m_value);
         }
-
-        value.m_configured = !value.m_value.empty();
-        value.m_valueValid = ValidateConfiguredValue(*descriptor, value.m_value);
         return true;
     }
 
@@ -213,7 +290,6 @@ namespace ExternalToolchain
                 values.push_back(AZStd::move(value));
             }
         }
-
         AZStd::sort(
             values.begin(),
             values.end(),
@@ -225,43 +301,44 @@ namespace ExternalToolchain
         return values;
     }
 
-    void ExternalToolchainConfigurationService::ResolveProviderEnabled(
+    bool ExternalToolchainConfigurationService::ResolveProviderEnabled(
         const ExternalToolProviderDescriptor& provider,
         bool& enabled,
         ConfigurationLayer& layer) const
     {
         enabled = provider.m_enabledByDefault;
         layer = ConfigurationLayer::ProviderDefault;
+        bool valid = true;
 
-        bool configuredEnabled = false;
-        if (m_settingsSource.GetBool(
-                MakeRegistryPath(
-                    ProjectConfigurationRoot,
-                    provider.m_providerId,
-                    "Enabled"),
-                configuredEnabled))
-        {
-            enabled = configuredEnabled;
-            layer = ConfigurationLayer::Project;
-        }
-
-        if (m_settingsSource.GetBool(
-                MakeRegistryPath(
-                    UserConfigurationRoot,
-                    provider.m_providerId,
-                    "Enabled"),
-                configuredEnabled))
-        {
-            enabled = configuredEnabled;
-            layer = ConfigurationLayer::User;
-        }
+        ApplyBoolLayer(
+            m_settingsSource,
+            MakeRegistryPath(
+                ProjectConfigurationRoot,
+                provider.m_providerId,
+                "Enabled"),
+            ConfigurationLayer::Project,
+            enabled,
+            layer,
+            valid);
+        ApplyBoolLayer(
+            m_settingsSource,
+            MakeRegistryPath(
+                UserConfigurationRoot,
+                provider.m_providerId,
+                "Enabled"),
+            ConfigurationLayer::User,
+            enabled,
+            layer,
+            valid);
 
         const auto session = m_sessionEnabled.find(provider.m_providerId);
         if (session != m_sessionEnabled.end())
         {
             enabled = session->second;
             layer = ConfigurationLayer::Session;
+            valid = true;
         }
+        return valid;
     }
 
     const ExternalToolchainSettingsSource&

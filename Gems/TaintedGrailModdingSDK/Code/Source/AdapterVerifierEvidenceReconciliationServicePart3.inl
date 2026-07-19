@@ -292,6 +292,14 @@ namespace TaintedGrailModdingSDK
                 output,
                 "VerifierResultFingerprint",
                 envelope.m_releaseReview.m_verifierResultFingerprint);
+            AppendReconciliationJsonStringArray(
+                output,
+                "CandidateSourceIds",
+                envelope.m_releaseReview.m_candidateSourceIds);
+            AppendReconciliationJsonStringArray(
+                output,
+                "CandidateEvidenceIds",
+                envelope.m_releaseReview.m_candidateEvidenceIds);
             AppendReconciliationJsonString(
                 output,
                 "Decision",

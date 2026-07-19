@@ -20,6 +20,8 @@ set(FILES
     Source/AdapterDeploymentExecutionEvidenceServicePart1.inl
     Source/AdapterDeploymentExecutionEvidenceServicePart2.inl
     Source/AdapterDeploymentExecutionEvidenceServicePart3.inl
+    Source/AdapterDeploymentExecutionResultCanonical.cpp
+    Source/AdapterDeploymentExecutionResultCanonical.h
     Source/AdapterDeploymentExecutionResultContracts.cpp
     Source/AdapterDeploymentExecutionResultContracts.h
     Source/AdapterDeploymentWorkOrderService.cpp
@@ -48,12 +50,17 @@ set(FILES
     Source/AdapterPostDeploymentVerifierEvidenceServicePart3.inl
     Source/AdapterPostDeploymentVerifierEvidenceServicePart4.inl
     Source/AdapterPostDeploymentVerifierEvidenceServicePart5.inl
+    Source/AdapterPostDeploymentVerifierEvidenceServicePart6.inl
+    Source/AdapterPostDeploymentVerifierResultCanonical.cpp
+    Source/AdapterPostDeploymentVerifierResultCanonical.h
     Source/AdapterReleaseArtifactContracts.cpp
     Source/AdapterReleaseArtifactContracts.h
     Source/AdapterReleaseArtifactProvenanceService.cpp
     Source/AdapterReleaseArtifactProvenanceService.h
     Source/AdapterReleaseArtifactProvenanceServicePart1.inl
     Source/AdapterReleaseArtifactProvenanceServicePart2.inl
+    Source/AdapterRuntimeResultCanonical.cpp
+    Source/AdapterRuntimeResultCanonical.h
     Source/AdapterRuntimeResultContracts.cpp
     Source/AdapterRuntimeResultContracts.h
     Source/AdapterRuntimeResultEvidenceService.cpp
@@ -85,8 +92,12 @@ set(FILES
     Source/AdapterWorkOrderPlanningServicePart8.inl
     Source/AdapterWorkOrderPlanningServicePart9.inl
     Source/AdapterWorkOrderPlanningService.h
+    Source/CanonicalFingerprint.cpp
+    Source/CanonicalFingerprint.h
+    Source/DeterministicContractJson.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
+    Source/CatalogDatabaseIntegrity.cpp
     Source/CatalogGovernanceBlockerService.cpp
     Source/CatalogGovernanceBlockerService.h
     Source/CatalogGovernanceTypes.cpp
@@ -105,6 +116,10 @@ set(FILES
     Source/FoundationModels.h
     Source/FoundationValidationService.cpp
     Source/FoundationValidationService.h
+    Source/PackagePathValidation.cpp
+    Source/PackagePathValidation.h
+    Source/ResearchContractValidation.cpp
+    Source/ResearchContractValidation.h
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
 )

@@ -9,10 +9,53 @@
 
 #include "FoundationNotificationBus.h"
 
+#include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
 
 namespace TaintedGrailModdingSDK
 {
+    namespace
+    {
+        bool HasErrorIssue(const AZStd::vector<ImportIssue>& issues)
+        {
+            return AZStd::any_of(
+                issues.begin(),
+                issues.end(),
+                [](const ImportIssue& issue)
+                {
+                    return issue.m_severity == "error";
+                });
+        }
+
+        bool SourceMatchesProfile(
+            const SourceRecord& source,
+            const GameProfile& profile)
+        {
+            return source.m_profileId == profile.m_profileId
+                && source.m_gameVersion == profile.m_gameVersion
+                && source.m_branch == profile.m_branch
+                && source.m_runtimeTarget == profile.m_runtimeTarget;
+        }
+
+        bool EvidenceDocumentMatchesProfile(
+            const EvidenceDocument& document,
+            const GameProfile& profile)
+        {
+            return document.m_profileId == profile.m_profileId
+                && document.m_gameVersion == profile.m_gameVersion
+                && document.m_branch == profile.m_branch;
+        }
+
+        bool EvidenceMatchesProfile(
+            const EvidenceRecord& evidence,
+            const GameProfile& profile)
+        {
+            return evidence.m_profileId == profile.m_profileId
+                && evidence.m_gameVersion == profile.m_gameVersion
+                && evidence.m_branch == profile.m_branch;
+        }
+    } // namespace
+
     FoundationService& FoundationService::Get()
     {
         static FoundationService instance;
@@ -32,11 +75,13 @@ namespace TaintedGrailModdingSDK
         RefreshSnapshot();
     }
 
-    void FoundationService::Shutdown()
+    void FoundationService::ClearWorkspaceScopedState(bool clearWorkspaceLocation)
     {
-        m_workspace = {};
-        m_workspaceFilePath.clear();
-        m_workspaceRootPath.clear();
+        if (clearWorkspaceLocation)
+        {
+            m_workspaceFilePath.clear();
+            m_workspaceRootPath.clear();
+        }
         m_packs.clear();
         m_activePackId.clear();
         m_activePackFilePath.clear();
@@ -44,6 +89,12 @@ namespace TaintedGrailModdingSDK
         m_importIssues.clear();
         m_catalog.Clear();
         m_catalogFilePath.clear();
+    }
+
+    void FoundationService::Shutdown()
+    {
+        m_workspace = {};
+        ClearWorkspaceScopedState(true);
         m_snapshot = {};
         m_initialized = false;
     }
@@ -55,14 +106,17 @@ namespace TaintedGrailModdingSDK
 
     void FoundationService::SetWorkspace(const WorkspaceModel& workspace)
     {
+        ClearWorkspaceScopedState(true);
         m_workspace = workspace;
-        m_workspaceRootPath.clear();
         RefreshSnapshot();
     }
 
-    bool FoundationService::SaveWorkspace(const AZStd::string& filePath, AZStd::string* error)
+    bool FoundationService::SaveWorkspace(
+        const AZStd::string& filePath,
+        AZStd::string* error)
     {
-        const AZ::Outcome<void, AZStd::string> result = m_workspacePersistence.Save(m_workspace, filePath);
+        const AZ::Outcome<void, AZStd::string> result =
+            m_workspacePersistence.Save(m_workspace, filePath);
         if (!result.IsSuccess())
         {
             if (error)
@@ -73,10 +127,15 @@ namespace TaintedGrailModdingSDK
         }
 
         m_workspaceFilePath = m_workspacePersistence.GetLastResolvedPath();
-        auto root = m_pathPolicy.ResolveWorkspaceRoot(m_workspace, m_workspaceFilePath, true);
+        auto root = m_pathPolicy.ResolveWorkspaceRoot(
+            m_workspace,
+            m_workspaceFilePath,
+            true);
         if (root.IsSuccess())
         {
-            auto pathValidation = m_pathPolicy.ValidateWorkspacePaths(m_workspace, root.GetValue());
+            auto pathValidation = m_pathPolicy.ValidateWorkspacePaths(
+                m_workspace,
+                root.GetValue());
             if (pathValidation.IsSuccess())
             {
                 m_workspaceRootPath = root.TakeValue();
@@ -100,7 +159,9 @@ namespace TaintedGrailModdingSDK
         return SaveWorkspace(m_workspaceFilePath, error);
     }
 
-    bool FoundationService::LoadWorkspace(const AZStd::string& filePath, AZStd::string* error)
+    bool FoundationService::LoadWorkspace(
+        const AZStd::string& filePath,
+        AZStd::string* error)
     {
         auto candidateResult = m_workspaceLoadService.BuildCandidate(filePath);
         if (!candidateResult.IsSuccess())
@@ -113,6 +174,7 @@ namespace TaintedGrailModdingSDK
         }
 
         FoundationWorkspaceLoadCandidate candidate = candidateResult.TakeValue();
+        ClearWorkspaceScopedState(true);
         m_workspace = AZStd::move(candidate.m_workspace);
         m_workspaceFilePath = AZStd::move(candidate.m_workspaceFilePath);
         m_workspaceRootPath = AZStd::move(candidate.m_workspaceRootPath);
@@ -124,7 +186,9 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    bool FoundationService::UpsertPack(const PackManifest& pack, AZStd::string* error)
+    bool FoundationService::UpsertPack(
+        const PackManifest& pack,
+        AZStd::string* error)
     {
         if (!pack.HasStableIdentity())
         {
@@ -155,7 +219,9 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    bool FoundationService::SetActivePack(const PackManifest& pack, AZStd::string* error)
+    bool FoundationService::SetActivePack(
+        const PackManifest& pack,
+        AZStd::string* error)
     {
         const AZStd::string previousActiveId = m_activePackId;
         if (!UpsertPack(pack, error))
@@ -172,7 +238,9 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    bool FoundationService::SaveActivePack(const AZStd::string& filePath, AZStd::string* error)
+    bool FoundationService::SaveActivePack(
+        const AZStd::string& filePath,
+        AZStd::string* error)
     {
         const PackManifest* pack = GetActivePack();
         if (!pack)
@@ -184,7 +252,8 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        const AZ::Outcome<void, AZStd::string> result = m_packPersistence.Save(*pack, filePath);
+        const AZ::Outcome<void, AZStd::string> result =
+            m_packPersistence.Save(*pack, filePath);
         if (!result.IsSuccess())
         {
             if (error)
@@ -212,9 +281,12 @@ namespace TaintedGrailModdingSDK
         return SaveActivePack(m_activePackFilePath, error);
     }
 
-    bool FoundationService::LoadPack(const AZStd::string& filePath, AZStd::string* error)
+    bool FoundationService::LoadPack(
+        const AZStd::string& filePath,
+        AZStd::string* error)
     {
-        AZ::Outcome<PackManifest, AZStd::string> result = m_packPersistence.Load(filePath);
+        AZ::Outcome<PackManifest, AZStd::string> result =
+            m_packPersistence.Load(filePath);
         if (!result.IsSuccess())
         {
             if (error)
@@ -269,7 +341,8 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        AZ::Outcome<SourceImportResult, AZStd::string> importResult = m_sourceImportService.Import(request, *profile);
+        AZ::Outcome<SourceImportResult, AZStd::string> importResult =
+            m_sourceImportService.Import(request, *profile);
         if (!importResult.IsSuccess())
         {
             if (error)
@@ -280,9 +353,30 @@ namespace TaintedGrailModdingSDK
         }
 
         SourceImportResult imported = importResult.TakeValue();
+        if (imported.HasErrors()
+            || imported.m_sourceDocument.m_source.m_importStatus == "error")
+        {
+            m_importIssues.insert(
+                m_importIssues.end(),
+                imported.m_sourceDocument.m_issues.begin(),
+                imported.m_sourceDocument.m_issues.end());
+            m_importIssues.insert(
+                m_importIssues.end(),
+                imported.m_evidenceDocument.m_issues.begin(),
+                imported.m_evidenceDocument.m_issues.end());
+            RefreshSnapshot();
+            if (error)
+            {
+                *error = "Source import produced error issues and was not registered or persisted as research evidence.";
+            }
+            return false;
+        }
+
         SourceEvidenceRegistry candidateRegistry = m_sourceRegistry;
         AZStd::string registryError;
-        if (!candidateRegistry.RegisterSource(imported.m_sourceDocument.m_source, &registryError))
+        if (!candidateRegistry.RegisterSource(
+                imported.m_sourceDocument.m_source,
+                &registryError))
         {
             if (error)
             {
@@ -290,7 +384,8 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
-        for (const EvidenceRecord& evidence : imported.m_evidenceDocument.m_evidence)
+        for (const EvidenceRecord& evidence :
+             imported.m_evidenceDocument.m_evidence)
         {
             if (!candidateRegistry.RegisterEvidence(evidence, &registryError))
             {
@@ -302,10 +397,11 @@ namespace TaintedGrailModdingSDK
             }
         }
 
-        AZ::Outcome<SourceEvidenceDocumentPaths, AZStd::string> saveResult = m_sourceEvidencePersistence.SaveDocuments(
-            imported.m_sourceDocument,
-            imported.m_evidenceDocument,
-            workspaceRoot);
+        AZ::Outcome<SourceEvidenceDocumentPaths, AZStd::string> saveResult =
+            m_sourceEvidencePersistence.SaveDocuments(
+                imported.m_sourceDocument,
+                imported.m_evidenceDocument,
+                workspaceRoot);
         if (!saveResult.IsSuccess())
         {
             if (error)
@@ -345,14 +441,25 @@ namespace TaintedGrailModdingSDK
             return true;
         }
 
+        const GameProfile* profile = m_workspace.FindActiveGameProfile();
+        if (!profile || !profile->IsConfigured())
+        {
+            if (error)
+            {
+                *error = "An exact configured active game profile is required before reloading source evidence.";
+            }
+            return false;
+        }
+
         AZStd::vector<SourceDocument> sourceDocuments;
         AZStd::vector<EvidenceDocument> evidenceDocuments;
         AZStd::vector<ImportIssue> loadIssues;
-        const AZ::Outcome<void, AZStd::string> loadResult = m_sourceEvidencePersistence.LoadWorkspaceDocuments(
-            workspaceRoot,
-            sourceDocuments,
-            evidenceDocuments,
-            loadIssues);
+        const AZ::Outcome<void, AZStd::string> loadResult =
+            m_sourceEvidencePersistence.LoadWorkspaceDocuments(
+                workspaceRoot,
+                sourceDocuments,
+                evidenceDocuments,
+                loadIssues);
         if (!loadResult.IsSuccess())
         {
             if (error)
@@ -364,6 +471,7 @@ namespace TaintedGrailModdingSDK
 
         SourceEvidenceRegistry rebuiltRegistry;
         AZStd::vector<ImportIssue> rebuiltIssues = AZStd::move(loadIssues);
+        bool rejected = HasErrorIssue(rebuiltIssues);
         for (const SourceDocument& document : sourceDocuments)
         {
             rebuiltIssues.insert(
@@ -371,14 +479,30 @@ namespace TaintedGrailModdingSDK
                 document.m_issues.begin(),
                 document.m_issues.end());
 
-            AZStd::string registryError;
-            if (!rebuiltRegistry.RegisterSource(document.m_source, &registryError))
+            const SourceRecord& source = document.m_source;
+            if (!document.UsesSupportedSchema()
+                || HasErrorIssue(document.m_issues)
+                || source.m_importStatus == "error"
+                || !SourceMatchesProfile(source, *profile))
             {
+                rejected = true;
+                rebuiltIssues.push_back(MakeRegistryIssue(
+                    "error",
+                    "registry.source-workspace-binding-rejected",
+                    "Source documents must use the supported schema, have no import errors, and bind exactly to the active profile, game version, branch, and runtime target.",
+                    source.m_locator));
+                continue;
+            }
+
+            AZStd::string registryError;
+            if (!rebuiltRegistry.RegisterSource(source, &registryError))
+            {
+                rejected = true;
                 rebuiltIssues.push_back(MakeRegistryIssue(
                     "error",
                     "registry.source-load-rejected",
                     registryError,
-                    document.m_source.m_locator));
+                    source.m_locator));
             }
         }
 
@@ -388,18 +512,49 @@ namespace TaintedGrailModdingSDK
                 rebuiltIssues.end(),
                 document.m_issues.begin(),
                 document.m_issues.end());
+            const SourceRecord* source = rebuiltRegistry.FindSource(document.m_sourceId);
+            if (!document.UsesSupportedSchema()
+                || HasErrorIssue(document.m_issues)
+                || !EvidenceDocumentMatchesProfile(document, *profile)
+                || !source
+                || document.m_sourceFingerprint != source->m_fingerprint)
+            {
+                rejected = true;
+                rebuiltIssues.push_back(MakeRegistryIssue(
+                    "error",
+                    "registry.evidence-document-binding-rejected",
+                    "Evidence documents must use the supported schema and bind to one accepted active-profile source with the exact source fingerprint.",
+                    document.m_sourceId));
+                continue;
+            }
+
             for (const EvidenceRecord& evidence : document.m_evidence)
             {
                 AZStd::string registryError;
-                if (!rebuiltRegistry.RegisterEvidence(evidence, &registryError))
+                if (!EvidenceMatchesProfile(evidence, *profile)
+                    || evidence.m_sourceId != source->m_sourceId
+                    || evidence.m_sourceFingerprint != source->m_fingerprint
+                    || !rebuiltRegistry.RegisterEvidence(evidence, &registryError))
                 {
+                    rejected = true;
                     rebuiltIssues.push_back(MakeRegistryIssue(
                         "error",
                         "registry.evidence-load-rejected",
-                        registryError,
+                        registryError.empty()
+                            ? "Evidence must bind exactly to the accepted active-profile source and profile context."
+                            : registryError,
                         evidence.m_locator));
                 }
             }
+        }
+
+        if (rejected)
+        {
+            if (error)
+            {
+                *error = "Source/evidence reload was rejected atomically because one or more documents failed schema, import-status, source, or active-profile binding checks.";
+            }
+            return false;
         }
 
         m_sourceRegistry = AZStd::move(rebuiltRegistry);
@@ -408,12 +563,15 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    AZStd::vector<SourceImporterContract> FoundationService::GetSourceImporterContracts() const
+    AZStd::vector<SourceImporterContract>
+    FoundationService::GetSourceImporterContracts() const
     {
         return m_sourceImportService.GetContracts();
     }
 
-    bool FoundationService::RegisterSource(const SourceRecord& source, AZStd::string* error)
+    bool FoundationService::RegisterSource(
+        const SourceRecord& source,
+        AZStd::string* error)
     {
         const bool result = m_sourceRegistry.RegisterSource(source, error);
         if (result)
@@ -423,7 +581,9 @@ namespace TaintedGrailModdingSDK
         return result;
     }
 
-    bool FoundationService::RegisterEvidence(const EvidenceRecord& evidence, AZStd::string* error)
+    bool FoundationService::RegisterEvidence(
+        const EvidenceRecord& evidence,
+        AZStd::string* error)
     {
         const bool result = m_sourceRegistry.RegisterEvidence(evidence, error);
         if (result)
@@ -433,7 +593,9 @@ namespace TaintedGrailModdingSDK
         return result;
     }
 
-    bool FoundationService::UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error)
+    bool FoundationService::UpsertCatalogRecord(
+        const CatalogRecord& record,
+        AZStd::string* error)
     {
         const bool result = m_catalog.Upsert(record, error);
         if (result)
@@ -498,10 +660,13 @@ namespace TaintedGrailModdingSDK
         m_snapshot = {};
         m_snapshot.m_workspaceName = m_workspace.m_displayName;
         m_snapshot.m_workspaceFilePath = m_workspaceFilePath;
-        m_snapshot.m_gameProfileCount = static_cast<AZ::u64>(m_workspace.m_gameProfiles.size());
+        m_snapshot.m_gameProfileCount =
+            static_cast<AZ::u64>(m_workspace.m_gameProfiles.size());
         m_snapshot.m_packCount = static_cast<AZ::u64>(m_packs.size());
-        m_snapshot.m_sourceCount = static_cast<AZ::u64>(m_sourceRegistry.GetSources().size());
-        m_snapshot.m_evidenceCount = static_cast<AZ::u64>(m_sourceRegistry.GetEvidence().size());
+        m_snapshot.m_sourceCount =
+            static_cast<AZ::u64>(m_sourceRegistry.GetSources().size());
+        m_snapshot.m_evidenceCount =
+            static_cast<AZ::u64>(m_sourceRegistry.GetEvidence().size());
         m_snapshot.m_importIssues = m_importIssues;
         for (const ImportIssue& issue : m_importIssues)
         {
@@ -515,31 +680,46 @@ namespace TaintedGrailModdingSDK
             }
         }
 
-        m_snapshot.m_catalogRecordCount = static_cast<AZ::u64>(m_catalog.GetRecords().size());
-        m_snapshot.m_catalogRelationshipCount = static_cast<AZ::u64>(m_catalog.GetRelationships().size());
-        m_snapshot.m_catalogValidationCount = static_cast<AZ::u64>(m_catalog.GetValidationHistory().size());
-        m_snapshot.m_catalogGovernanceCount = static_cast<AZ::u64>(m_catalog.GetGovernanceHistory().size());
-        m_snapshot.m_economyItemCount = static_cast<AZ::u64>(m_catalog.GetEconomyItems().size());
-        m_snapshot.m_economyRecipeCount = static_cast<AZ::u64>(m_catalog.GetEconomyRecipes().size());
-        m_snapshot.m_recipeIngredientCount = static_cast<AZ::u64>(m_catalog.GetRecipeIngredients().size());
-        m_snapshot.m_recipeOutputCount = static_cast<AZ::u64>(m_catalog.GetRecipeOutputs().size());
+        m_snapshot.m_catalogRecordCount =
+            static_cast<AZ::u64>(m_catalog.GetRecords().size());
+        m_snapshot.m_catalogRelationshipCount =
+            static_cast<AZ::u64>(m_catalog.GetRelationships().size());
+        m_snapshot.m_catalogValidationCount =
+            static_cast<AZ::u64>(m_catalog.GetValidationHistory().size());
+        m_snapshot.m_catalogGovernanceCount =
+            static_cast<AZ::u64>(m_catalog.GetGovernanceHistory().size());
+        m_snapshot.m_economyItemCount =
+            static_cast<AZ::u64>(m_catalog.GetEconomyItems().size());
+        m_snapshot.m_economyRecipeCount =
+            static_cast<AZ::u64>(m_catalog.GetEconomyRecipes().size());
+        m_snapshot.m_recipeIngredientCount =
+            static_cast<AZ::u64>(m_catalog.GetRecipeIngredients().size());
+        m_snapshot.m_recipeOutputCount =
+            static_cast<AZ::u64>(m_catalog.GetRecipeOutputs().size());
         for (const CatalogRecord& record : m_catalog.GetRecords())
         {
-            if (record.m_stalenessState == "potentially_stale" || record.m_stalenessState == "stale")
+            if (record.m_stalenessState == "potentially_stale"
+                || record.m_stalenessState == "stale")
             {
                 ++m_snapshot.m_staleCatalogSubjectCount;
             }
-            m_snapshot.m_allowedUsageCount += static_cast<AZ::u64>(record.m_allowedUsages.size());
-            m_snapshot.m_forbiddenUsageCount += static_cast<AZ::u64>(record.m_forbiddenUsages.size());
+            m_snapshot.m_allowedUsageCount +=
+                static_cast<AZ::u64>(record.m_allowedUsages.size());
+            m_snapshot.m_forbiddenUsageCount +=
+                static_cast<AZ::u64>(record.m_forbiddenUsages.size());
         }
-        for (const CatalogRelationship& relationship : m_catalog.GetRelationships())
+        for (const CatalogRelationship& relationship :
+             m_catalog.GetRelationships())
         {
-            if (relationship.m_stalenessState == "potentially_stale" || relationship.m_stalenessState == "stale")
+            if (relationship.m_stalenessState == "potentially_stale"
+                || relationship.m_stalenessState == "stale")
             {
                 ++m_snapshot.m_staleCatalogSubjectCount;
             }
-            m_snapshot.m_allowedUsageCount += static_cast<AZ::u64>(relationship.m_allowedUsages.size());
-            m_snapshot.m_forbiddenUsageCount += static_cast<AZ::u64>(relationship.m_forbiddenUsages.size());
+            m_snapshot.m_allowedUsageCount +=
+                static_cast<AZ::u64>(relationship.m_allowedUsages.size());
+            m_snapshot.m_forbiddenUsageCount +=
+                static_cast<AZ::u64>(relationship.m_forbiddenUsages.size());
         }
 
         m_snapshot.m_domainCoverage = m_catalog.BuildCoverage();
@@ -549,22 +729,25 @@ namespace TaintedGrailModdingSDK
             m_sourceRegistry,
             m_importIssues,
             m_catalog);
-        AZStd::vector<BlockerRecord> governanceBlockers = m_governanceBlockerService.Evaluate(
-            m_workspace,
-            m_sourceRegistry,
-            m_catalog);
+        AZStd::vector<BlockerRecord> governanceBlockers =
+            m_governanceBlockerService.Evaluate(
+                m_workspace,
+                m_sourceRegistry,
+                m_catalog);
         m_snapshot.m_blockers.insert(
             m_snapshot.m_blockers.end(),
             governanceBlockers.begin(),
             governanceBlockers.end());
-        AZStd::vector<BlockerRecord> economyBlockers = m_economyBlockerService.Evaluate(
-            m_sourceRegistry,
-            m_catalog);
+        AZStd::vector<BlockerRecord> economyBlockers =
+            m_economyBlockerService.Evaluate(
+                m_sourceRegistry,
+                m_catalog);
         m_snapshot.m_blockers.insert(
             m_snapshot.m_blockers.end(),
             economyBlockers.begin(),
             economyBlockers.end());
-        m_snapshot.m_openBlockerCount = static_cast<AZ::u64>(m_snapshot.m_blockers.size());
+        m_snapshot.m_openBlockerCount =
+            static_cast<AZ::u64>(m_snapshot.m_blockers.size());
 
         if (const GameProfile* profile = m_workspace.FindActiveGameProfile())
         {
@@ -600,7 +783,8 @@ namespace TaintedGrailModdingSDK
             m_snapshot.m_activePackFilePath = "Not saved";
         }
 
-        FoundationNotificationBus::Broadcast(&FoundationNotifications::OnFoundationChanged);
+        FoundationNotificationBus::Broadcast(
+            &FoundationNotifications::OnFoundationChanged);
     }
 
     PackManifest* FoundationService::FindPackById(const AZStd::string& packId)
@@ -615,7 +799,8 @@ namespace TaintedGrailModdingSDK
         return nullptr;
     }
 
-    const PackManifest* FoundationService::FindPackById(const AZStd::string& packId) const
+    const PackManifest* FoundationService::FindPackById(
+        const AZStd::string& packId) const
     {
         for (const PackManifest& pack : m_packs)
         {

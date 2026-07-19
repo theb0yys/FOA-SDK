@@ -9,11 +9,22 @@
 
 #include "FoundationModels.h"
 
+#include <cstddef>
+
 namespace TaintedGrailModdingSDK
 {
     class SourceEvidenceRegistry
     {
     public:
+        static constexpr size_t MaximumSourceCount = 4096;
+        static constexpr size_t MaximumEvidenceCount = 65536;
+
+        SourceEvidenceRegistry();
+        SourceEvidenceRegistry(const SourceEvidenceRegistry& other);
+        SourceEvidenceRegistry& operator=(const SourceEvidenceRegistry& other);
+        SourceEvidenceRegistry(SourceEvidenceRegistry&&) noexcept = default;
+        SourceEvidenceRegistry& operator=(SourceEvidenceRegistry&&) noexcept = default;
+
         bool RegisterSource(const SourceRecord& source, AZStd::string* error = nullptr);
         bool RegisterEvidence(const EvidenceRecord& evidence, AZStd::string* error = nullptr);
         void Clear();
@@ -30,6 +41,8 @@ namespace TaintedGrailModdingSDK
         const AZStd::vector<EvidenceRecord>& GetEvidence() const;
 
     private:
+        void ReserveStableStorage();
+
         AZStd::vector<SourceRecord> m_sources;
         AZStd::vector<EvidenceRecord> m_evidence;
     };

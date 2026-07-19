@@ -159,6 +159,7 @@
                 || validation->m_profileId != profile.m_profileId
                 || validation->m_gameVersion != profile.m_gameVersion
                 || validation->m_branch != profile.m_branch
+                || !IsStrictUtcTimestamp(validation->m_checkedAt)
                 || !EvidenceSetIsValid(
                     validation->m_evidenceIds,
                     record.m_subjectRef,
@@ -173,8 +174,8 @@
 
         bool CollectRelationshipValidationProof(
             const CatalogRelationship& relationship,
-            const CatalogRecord& sourceRecord,
-            const CatalogRecord& targetRecord,
+            const CatalogRecord&,
+            const CatalogRecord&,
             const GameProfile& profile,
             const SourceEvidenceRegistry& sourceRegistry,
             const CatalogDatabase& catalog,
@@ -182,8 +183,7 @@
             AZStd::vector<AZStd::string>& validationIds)
         {
             const AZStd::vector<AZStd::string> allowedSubjectRefs = {
-                sourceRecord.m_subjectRef,
-                targetRecord.m_subjectRef,
+                "relationship:" + relationship.m_relationshipId,
             };
             if (!EvidenceSetIsValidForSubjects(
                     relationship.m_evidenceIds,
@@ -203,8 +203,8 @@
                     || validation.m_state != "validated"
                     || validation.m_profileId != profile.m_profileId
                     || validation.m_gameVersion != profile.m_gameVersion
-                    || validation.m_branch != profile.m_branch)
+                    || validation.m_branch != profile.m_branch
+                    || !IsStrictUtcTimestamp(validation.m_checkedAt))
                 {
                     continue;
                 }
-

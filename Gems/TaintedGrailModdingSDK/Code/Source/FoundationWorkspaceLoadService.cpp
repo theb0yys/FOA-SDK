@@ -23,7 +23,8 @@ namespace TaintedGrailModdingSDK
                 || source.m_runtimeTarget != profile.m_runtimeTarget)
             {
                 return AZ::Failure(
-                    AZStd::string("Source document is bound to a different active game profile: ")
+                    AZStd::string(
+                        "Source document is bound to a different active game profile: ")
                     + source.m_sourceId);
             }
             return AZ::Success();
@@ -53,13 +54,15 @@ namespace TaintedGrailModdingSDK
             for (const EvidenceRecord& evidence : document.m_evidence)
             {
                 if (evidence.m_sourceId != document.m_sourceId
-                    || evidence.m_sourceFingerprint != document.m_sourceFingerprint
+                    || evidence.m_sourceFingerprint
+                        != document.m_sourceFingerprint
                     || evidence.m_profileId != document.m_profileId
                     || evidence.m_gameVersion != document.m_gameVersion
                     || evidence.m_branch != document.m_branch)
                 {
                     return AZ::Failure(
-                        AZStd::string("Evidence record does not match its parent document binding: ")
+                        AZStd::string(
+                            "Evidence record does not match its parent document binding: ")
                         + evidence.m_evidenceId);
                 }
             }
@@ -89,7 +92,8 @@ namespace TaintedGrailModdingSDK
     }
 
     AZ::Outcome<FoundationWorkspaceLoadCandidate, AZStd::string>
-    FoundationWorkspaceLoadService::BuildCandidate(const AZStd::string& filePath) const
+    FoundationWorkspaceLoadService::BuildCandidate(
+        const AZStd::string& filePath) const
     {
         if (!m_dependencies.m_loadWorkspace
             || !m_dependencies.m_resolveWorkspaceRoot
@@ -117,7 +121,8 @@ namespace TaintedGrailModdingSDK
             return AZ::Failure(AZStd::string(rootResult.GetError()));
         }
 
-        const GameProfile* activeProfile = loaded.m_workspace.FindActiveGameProfile();
+        const GameProfile* activeProfile =
+            loaded.m_workspace.FindActiveGameProfile();
         if (!activeProfile || !activeProfile->IsConfigured())
         {
             return AZ::Failure(AZStd::string(
@@ -146,7 +151,8 @@ namespace TaintedGrailModdingSDK
         SourceEvidenceRegistry registry;
         for (const SourceDocument& document : sourceDocuments)
         {
-            auto binding = ValidateSourceBinding(document.m_source, activeProfileCopy);
+            auto binding =
+                ValidateSourceBinding(document.m_source, activeProfileCopy);
             if (!binding.IsSuccess())
             {
                 return AZ::Failure(AZStd::string(binding.GetError()));
@@ -155,7 +161,8 @@ namespace TaintedGrailModdingSDK
             if (!registry.RegisterSource(document.m_source, &registryError))
             {
                 return AZ::Failure(
-                    AZStd::string("Source registry candidate rejected a document: ")
+                    AZStd::string(
+                        "Source registry candidate rejected a document: ")
                     + registryError);
             }
             loadIssues.insert(
@@ -169,10 +176,13 @@ namespace TaintedGrailModdingSDK
             const SourceRecord* source = registry.FindSource(document.m_sourceId);
             if (!source)
             {
-                return AZ::Failure(AZStd::string(
-                    "Evidence document references an unknown source: ") + document.m_sourceId);
+                return AZ::Failure(
+                    AZStd::string(
+                        "Evidence document references an unknown source: ")
+                    + document.m_sourceId);
             }
-            auto binding = ValidateEvidenceBinding(document, *source, activeProfileCopy);
+            auto binding =
+                ValidateEvidenceBinding(document, *source, activeProfileCopy);
             if (!binding.IsSuccess())
             {
                 return AZ::Failure(AZStd::string(binding.GetError()));
@@ -183,7 +193,8 @@ namespace TaintedGrailModdingSDK
                 if (!registry.RegisterEvidence(evidence, &registryError))
                 {
                     return AZ::Failure(
-                        AZStd::string("Evidence registry candidate rejected a document: ")
+                        AZStd::string(
+                            "Evidence registry candidate rejected a document: ")
                         + registryError);
                 }
             }
@@ -200,28 +211,27 @@ namespace TaintedGrailModdingSDK
         }
 
         CatalogDatabase catalog;
-        const AZStd::string catalogPath = m_dependencies.m_getCatalogPath(rootResult.GetValue());
+        const AZStd::string catalogPath =
+            m_dependencies.m_getCatalogPath(rootResult.GetValue());
         if (m_dependencies.m_catalogExists(rootResult.GetValue()))
         {
-            auto catalogLoad = m_dependencies.m_loadCatalog(rootResult.GetValue());
+            auto catalogLoad =
+                m_dependencies.m_loadCatalog(rootResult.GetValue());
             if (!catalogLoad.IsSuccess())
             {
                 return AZ::Failure(AZStd::string(catalogLoad.GetError()));
             }
-            CatalogDocument document = catalogLoad.TakeValue();
-            if (document.m_workspaceId != loaded.m_workspace.m_workspaceId
-                || document.m_profileId != activeProfileCopy.m_profileId
-                || document.m_gameVersion != activeProfileCopy.m_gameVersion
-                || document.m_branch != activeProfileCopy.m_branch)
-            {
-                return AZ::Failure(AZStd::string(
-                    "The canonical catalog document is bound to a different workspace or game profile."));
-            }
             AZStd::string catalogError;
-            if (!catalog.ReplaceFromDocument(document, &catalogError))
+            if (!catalog.ReplaceFromBoundDocument(
+                    catalogLoad.GetValue(),
+                    loaded.m_workspace,
+                    activeProfileCopy,
+                    registry,
+                    &catalogError))
             {
                 return AZ::Failure(
-                    AZStd::string("Catalog candidate validation failed: ") + catalogError);
+                    AZStd::string("Catalog candidate validation failed: ")
+                    + catalogError);
             }
         }
 

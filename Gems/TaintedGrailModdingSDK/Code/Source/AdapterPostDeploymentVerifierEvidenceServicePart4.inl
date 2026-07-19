@@ -26,8 +26,9 @@ namespace TaintedGrailModdingSDK
             case AdapterPostDeploymentVerifierFailureKind::Read:
             case AdapterPostDeploymentVerifierFailureKind::Hash:
             case AdapterPostDeploymentVerifierFailureKind::Internal:
-            case AdapterPostDeploymentVerifierFailureKind::Unknown:
                 return true;
+            case AdapterPostDeploymentVerifierFailureKind::Unknown:
+                return false;
             }
             return false;
         }
@@ -58,7 +59,7 @@ namespace TaintedGrailModdingSDK
             AZStd::vector<AZStd::string> referencedDiagnosticIds;
 
             for (const AdapterPostDeploymentVerifierFailure& failure :
-                envelope.m_failures)
+                 envelope.m_failures)
             {
                 failureIds.push_back(failure.m_failureId);
                 const AdapterPostDeploymentVerifierCheckResult* check =
@@ -84,13 +85,14 @@ namespace TaintedGrailModdingSDK
                         result,
                         flags.m_failureDiagnosticBindingMismatch,
                         "post_deployment_verifier.failure_invalid",
-                        "A verifier failure requires stable identity, one known check, "
-                        "non-empty code and message, and at least one diagnostic reference.",
+                        "A verifier failure requires stable identity, one recognised non-"
+                        "unknown failure kind, one known check, non-empty code and message, "
+                        "and at least one diagnostic reference.",
                         failure.m_checkId,
                         failure.m_failureId);
                 }
                 for (const AZStd::string& diagnosticId :
-                    failure.m_diagnosticReferenceIds)
+                     failure.m_diagnosticReferenceIds)
                 {
                     referencedDiagnosticIds.push_back(diagnosticId);
                     const AdapterPostDeploymentVerifierDiagnosticReference* diagnostic =
@@ -114,7 +116,7 @@ namespace TaintedGrailModdingSDK
             }
 
             for (const AdapterPostDeploymentVerifierDiagnosticReference& diagnostic :
-                envelope.m_diagnosticReferences)
+                 envelope.m_diagnosticReferences)
             {
                 diagnosticIds.push_back(diagnostic.m_diagnosticId);
                 AZStd::vector<AZStd::string> checkIds = diagnostic.m_checkIds;
@@ -152,7 +154,7 @@ namespace TaintedGrailModdingSDK
             }
 
             for (const AdapterPostDeploymentVerifierCheckResult& check :
-                envelope.m_checkResults)
+                 envelope.m_checkResults)
             {
                 AZStd::vector<AZStd::string> checkFailureIds = check.m_failureIds;
                 AZStd::vector<AZStd::string> checkDiagnosticIds =
@@ -194,7 +196,7 @@ namespace TaintedGrailModdingSDK
                     }
                 }
                 for (const AZStd::string& diagnosticId :
-                    check.m_diagnosticReferenceIds)
+                     check.m_diagnosticReferenceIds)
                 {
                     referencedDiagnosticIds.push_back(diagnosticId);
                     const AdapterPostDeploymentVerifierDiagnosticReference* diagnostic =

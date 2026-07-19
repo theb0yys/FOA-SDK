@@ -1,3 +1,7 @@
+#include "AdapterDeploymentExecutionResultCanonical.h"
+#include "CanonicalFingerprint.h"
+#include "ResearchContractValidation.h"
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -22,6 +26,24 @@ namespace TaintedGrailModdingSDK
         {
             return "deployment-work-order:" + envelope.m_workOrderId
                 + ":rollback:" + rollbackResultId;
+        }
+
+        AZStd::string ResultSubject(
+            const AdapterDeploymentExecutionResultEnvelope& envelope)
+        {
+            return "deployment-result:" + envelope.m_resultId;
+        }
+
+        AZStd::string WorkOrderSubject(
+            const AdapterDeploymentExecutionResultEnvelope& envelope)
+        {
+            return "deployment-work-order:" + envelope.m_workOrderId;
+        }
+
+        AZStd::string ResultLocator(
+            const AdapterDeploymentExecutionResultEnvelope& envelope)
+        {
+            return "deployment-results/" + envelope.m_resultId + ".json";
         }
 
         bool IsMutationStep(AdapterDeploymentWorkOrderStepKind kind)
@@ -223,6 +245,45 @@ namespace TaintedGrailModdingSDK
             report.m_blockers.push_back(AZStd::move(blocker));
         }
 
+        bool HasExactWorkOrderBindingEvidence(
+            const EvidenceRecord& evidence,
+            const SourceRecord& source,
+            const AdapterDeploymentExecutionResultEnvelope& envelope)
+        {
+            const AZStd::string expectedClaim =
+                "Deployment result binds exactly to review-ready work order "
+                + envelope.m_workOrderId + " with declared fingerprint "
+                + envelope.m_workOrderFingerprint + ".";
+            return evidence.m_evidenceKind == "deployment_work_order_binding"
+                && evidence.m_subjectRef == WorkOrderSubject(envelope)
+                && evidence.m_claim == expectedClaim
+                && evidence.m_locator == ResultLocator(envelope)
+                && evidence.m_recordPath == "WorkOrderBinding"
+                && evidence.m_extractedAt == envelope.m_capturedAtUtc
+                && evidence.m_sourceId == source.m_sourceId
+                && evidence.m_sourceFingerprint == source.m_fingerprint;
+        }
+
+        bool HasExactExecutorReviewEvidence(
+            const EvidenceRecord& evidence,
+            const SourceRecord& source,
+            const AdapterDeploymentExecutionResultEnvelope& envelope)
+        {
+            const AZStd::string expectedClaim =
+                "Executor " + envelope.m_executorReview.m_executorId
+                + " version " + envelope.m_executorReview.m_executorVersion
+                + " was supplied with accepted review "
+                + envelope.m_executorReview.m_reviewId + ".";
+            return evidence.m_evidenceKind == "deployment_executor_review"
+                && evidence.m_subjectRef == ResultSubject(envelope)
+                && evidence.m_claim == expectedClaim
+                && evidence.m_locator == ResultLocator(envelope)
+                && evidence.m_recordPath == "ExecutorReview"
+                && evidence.m_extractedAt == envelope.m_capturedAtUtc
+                && evidence.m_sourceId == source.m_sourceId
+                && evidence.m_sourceFingerprint == source.m_fingerprint;
+        }
+
         bool ValidateEvidenceReturnBinding(
             const AdapterDeploymentWorkOrder& workOrder,
             const AdapterDeploymentExecutionResultEnvelope& envelope,
@@ -235,6 +296,10 @@ namespace TaintedGrailModdingSDK
                 || workOrder.m_workOrderId != envelope.m_workOrderId
                 || workOrder.m_canonicalJson
                     != envelope.m_workOrderCanonicalJson
+                || !CanonicalSha256Matches(
+                    workOrder.m_canonicalJson,
+                    envelope.m_workOrderFingerprint)
+                || !DeploymentExecutionResultFingerprintMatches(envelope)
                 || workOrder.m_previewId != envelope.m_previewId
                 || workOrder.m_previewFingerprint
                     != envelope.m_previewFingerprint
@@ -256,10 +321,10 @@ namespace TaintedGrailModdingSDK
                     AdapterPostDeploymentBlockerKind::EvidenceBindingMismatch,
                     "current-work-order",
                     "post_deployment.work_order_binding_mismatch",
-                    "deployment-result:" + envelope.m_resultId,
+                    ResultSubject(envelope),
                     "The report requires the exact current review-ready work order, "
-                    "canonical JSON, preview, pack, target inventory, and all execution "
-                    "and mutation permissions false.");
+                    "canonical JSON and derived fingerprints, preview, pack, target "
+                    "inventory, and all execution and mutation permissions false.");
             }
             if (!evidenceReturn.m_accepted
                 || evidenceReturn.m_status
@@ -271,7 +336,7 @@ namespace TaintedGrailModdingSDK
                     AdapterPostDeploymentBlockerKind::ExecutionEvidenceRejected,
                     "contract",
                     "post_deployment.execution_evidence_rejected",
-                    "deployment-result:" + envelope.m_resultId,
+                    ResultSubject(envelope),
                     "Post-deployment reporting requires one accepted execution-result "
                     "evidence return. Rejected metadata is not interpreted as deployment "
                     "or compatibility evidence.");
@@ -305,7 +370,7 @@ namespace TaintedGrailModdingSDK
                     AdapterPostDeploymentBlockerKind::EvidenceBindingMismatch,
                     "result-binding",
                     "post_deployment.evidence_binding_mismatch",
-                    "deployment-result:" + envelope.m_resultId,
+                    ResultSubject(envelope),
                     "The candidate evidence return does not preserve the exact result, "
                     "work-order, fingerprint, or typed result counts.");
             }
@@ -318,26 +383,28 @@ namespace TaintedGrailModdingSDK
                 const SourceRecord& source = document.m_source;
                 sourceIds.push_back(source.m_sourceId);
                 report.m_candidateSourceIds.push_back(source.m_sourceId);
-                if (!IsAdapterDeploymentExecutionStableId(source.m_sourceId)
-                    || !IsAdapterDeploymentExecutionFingerprint(
-                        source.m_fingerprint)
+                if (!IsStableContractId(source.m_sourceId)
+                    || !IsSha256Fingerprint(source.m_fingerprint)
                     || source.m_profileId != envelope.m_profileId
                     || source.m_gameVersion != envelope.m_gameVersion
                     || source.m_branch != envelope.m_branch
-                    || source.m_runtimeTarget != envelope.m_runtimeTarget)
+                    || source.m_runtimeTarget != envelope.m_runtimeTarget
+                    || source.m_importStatus != "contract_validated"
+                    || source.m_locator.empty()
+                    || !IsStrictUtcTimestamp(source.m_capturedAt)
+                    || source.m_capturedAt != envelope.m_capturedAtUtc)
                 {
                     valid = false;
                     AddBlocker(
                         report,
                         envelope,
                         AdapterPostDeploymentBlockerKind::EvidenceBindingMismatch,
-                        source.m_sourceId.empty()
-                            ? "source"
-                            : source.m_sourceId,
+                        source.m_sourceId.empty() ? "source" : source.m_sourceId,
                         "post_deployment.source_binding_mismatch",
-                        "deployment-result:" + envelope.m_resultId,
+                        ResultSubject(envelope),
                         "A candidate source document does not preserve stable identity, "
-                        "fingerprint, or exact profile, game, branch, and runtime context.");
+                        "SHA-256 fingerprint, exact context, contract-validated import "
+                        "status, safe locator, or capture time.");
                 }
             }
             AZStd::sort(sourceIds.begin(), sourceIds.end());
@@ -351,7 +418,7 @@ namespace TaintedGrailModdingSDK
                     AdapterPostDeploymentBlockerKind::EvidenceBindingMismatch,
                     "duplicate-source",
                     "post_deployment.duplicate_candidate_source",
-                    "deployment-result:" + envelope.m_resultId,
+                    ResultSubject(envelope),
                     "Candidate source document identities must be unique.");
             }
 
@@ -379,7 +446,7 @@ namespace TaintedGrailModdingSDK
                             ? "evidence-document"
                             : document.m_sourceId,
                         "post_deployment.evidence_document_binding_mismatch",
-                        "deployment-result:" + envelope.m_resultId,
+                        ResultSubject(envelope),
                         "A candidate evidence document does not bind to a known candidate "
                         "source and the exact deployment result context.");
                 }
@@ -389,25 +456,36 @@ namespace TaintedGrailModdingSDK
                 for (const EvidenceRecord& evidence : document.m_evidence)
                 {
                     evidenceIds.push_back(evidence.m_evidenceId);
-                    report.m_candidateEvidenceIds.push_back(
-                        evidence.m_evidenceId);
-                    hasWorkOrderBinding = hasWorkOrderBinding
-                        || evidence.m_evidenceKind
-                            == "deployment_work_order_binding";
-                    hasExecutorReview = hasExecutorReview
-                        || evidence.m_evidenceKind
-                            == "deployment_executor_review";
-                    if (!IsAdapterDeploymentExecutionStableId(
-                            evidence.m_evidenceId)
+                    report.m_candidateEvidenceIds.push_back(evidence.m_evidenceId);
+                    if (source)
+                    {
+                        hasWorkOrderBinding = hasWorkOrderBinding
+                            || HasExactWorkOrderBindingEvidence(
+                                evidence,
+                                source->m_source,
+                                envelope);
+                        hasExecutorReview = hasExecutorReview
+                            || HasExactExecutorReviewEvidence(
+                                evidence,
+                                source->m_source,
+                                envelope);
+                    }
+                    if (!IsStableContractId(evidence.m_evidenceId)
                         || evidence.m_sourceId != document.m_sourceId
                         || evidence.m_sourceFingerprint
                             != document.m_sourceFingerprint
+                        || !IsSha256Fingerprint(evidence.m_sourceFingerprint)
                         || evidence.m_profileId != envelope.m_profileId
                         || evidence.m_gameVersion != envelope.m_gameVersion
                         || evidence.m_branch != envelope.m_branch
                         || evidence.m_confidence != "unrated"
                         || evidence.m_subjectRef.empty()
-                        || evidence.m_evidenceKind.empty())
+                        || evidence.m_claim.empty()
+                        || evidence.m_evidenceKind.empty()
+                        || evidence.m_locator.empty()
+                        || evidence.m_recordPath.empty()
+                        || !IsStrictUtcTimestamp(evidence.m_extractedAt)
+                        || evidence.m_extractedAt != envelope.m_capturedAtUtc)
                     {
                         valid = false;
                         AddBlocker(
@@ -418,10 +496,10 @@ namespace TaintedGrailModdingSDK
                                 ? "evidence-record"
                                 : evidence.m_evidenceId,
                             "post_deployment.evidence_record_binding_mismatch",
-                            "deployment-result:" + envelope.m_resultId,
+                            ResultSubject(envelope),
                             "A candidate evidence record does not preserve stable identity, "
-                            "source binding, exact context, unrated confidence, subject, "
-                            "or evidence kind.");
+                            "source SHA-256 binding, exact context, claim, kind, locator, "
+                            "record path, or real UTC extraction time.");
                     }
                 }
             }
@@ -436,7 +514,7 @@ namespace TaintedGrailModdingSDK
                     AdapterPostDeploymentBlockerKind::EvidenceBindingMismatch,
                     "duplicate-evidence",
                     "post_deployment.duplicate_candidate_evidence",
-                    "deployment-result:" + envelope.m_resultId,
+                    ResultSubject(envelope),
                     "Candidate evidence record identities must be unique.");
             }
 
@@ -456,10 +534,10 @@ namespace TaintedGrailModdingSDK
                     AdapterPostDeploymentBlockerKind::CandidateEvidenceMissing,
                     "candidate-set",
                     "post_deployment.candidate_evidence_missing",
-                    "deployment-result:" + envelope.m_resultId,
+                    ResultSubject(envelope),
                     "The accepted result must return a complete counted candidate source "
-                    "and evidence set containing work-order binding and executor-review "
-                    "evidence.");
+                    "and evidence set containing exact-subject, exact-claim work-order "
+                    "binding and executor-review evidence.");
             }
 
             SortUnique(report.m_candidateSourceIds);

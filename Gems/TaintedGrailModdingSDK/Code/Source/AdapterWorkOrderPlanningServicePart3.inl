@@ -24,6 +24,33 @@
             return validProofFound;
         }
 
+        const CatalogGovernanceEvent* FindEffectivePermissionEvent(
+            const CatalogRecord& record,
+            const AZStd::string& usage,
+            const CatalogDatabase& catalog)
+        {
+            const CatalogGovernanceEvent* effective = nullptr;
+            for (const CatalogGovernanceEvent& event : catalog.GetGovernanceHistory())
+            {
+                if (event.m_subjectKind != "record"
+                    || event.m_subjectId != record.m_recordId
+                    || event.m_axis != "permission"
+                    || event.m_usage != usage
+                    || !IsStrictUtcTimestamp(event.m_decidedAt))
+                {
+                    continue;
+                }
+                if (!effective
+                    || event.m_decidedAt > effective->m_decidedAt
+                    || (event.m_decidedAt == effective->m_decidedAt
+                        && event.m_eventId > effective->m_eventId))
+                {
+                    effective = &event;
+                }
+            }
+            return effective;
+        }
+
         bool CollectPermissionProof(
             const CatalogRecord& record,
             const AZStd::string& usage,
@@ -32,56 +59,70 @@
             const CatalogDatabase& catalog,
             ReadySubject& readySubject)
         {
-            bool validProofFound = false;
-            for (const CatalogGovernanceEvent& event : catalog.GetGovernanceHistory())
+            const CatalogGovernanceEvent* event =
+                FindEffectivePermissionEvent(record, usage, catalog);
+            if (!event
+                || event->m_newValue != "allow"
+                || event->m_validationIds.empty()
+                || !EvidenceSetIsValid(
+                    event->m_evidenceIds,
+                    record.m_subjectRef,
+                    profile,
+                    sourceRegistry))
             {
-                if (event.m_subjectKind != "record"
-                    || event.m_subjectId != record.m_recordId
-                    || event.m_axis != "permission"
-                    || event.m_usage != usage
-                    || event.m_newValue != "allow"
-                    || event.m_validationIds.empty()
-                    || !EvidenceSetIsValid(
-                        event.m_evidenceIds,
-                        record.m_subjectRef,
-                        profile,
-                        sourceRegistry))
-                {
-                    continue;
-                }
+                return false;
+            }
 
-                bool allValidationProofValid = true;
-                AZStd::vector<AZStd::string> validationEvidenceIds;
-                for (const AZStd::string& validationId : event.m_validationIds)
-                {
-                    if (!ValidationProofIsValid(
+            AZStd::vector<AZStd::string> validationEvidenceIds;
+            for (const AZStd::string& validationId : event->m_validationIds)
+            {
+                if (!ValidationProofIsValid(
                         validationId,
                         record,
                         profile,
                         sourceRegistry,
                         catalog,
                         validationEvidenceIds))
-                    {
-                        allValidationProofValid = false;
-                        break;
-                    }
-                }
-                if (!allValidationProofValid)
                 {
-                    continue;
+                    return false;
                 }
-
-                validProofFound = true;
-                AddUnique(readySubject.m_permissionEventIds, event.m_eventId);
-                AddAllUnique(readySubject.m_permissionEvidenceIds, event.m_evidenceIds);
-                AddAllUnique(readySubject.m_validationEvidenceIds, validationEvidenceIds);
-                AddAllUnique(readySubject.m_validationIds, event.m_validationIds);
             }
+
+            AddUnique(readySubject.m_permissionEventIds, event->m_eventId);
+            AddAllUnique(readySubject.m_permissionEvidenceIds, event->m_evidenceIds);
+            AddAllUnique(readySubject.m_validationEvidenceIds, validationEvidenceIds);
+            AddAllUnique(readySubject.m_validationIds, event->m_validationIds);
             SortUnique(readySubject.m_permissionEventIds);
             SortUnique(readySubject.m_permissionEvidenceIds);
             SortUnique(readySubject.m_validationEvidenceIds);
             SortUnique(readySubject.m_validationIds);
-            return validProofFound;
+            return true;
+        }
+
+        bool HasOpenBlockerForSubject(
+            const AZStd::string& subjectRef,
+            const AZStd::string& usage,
+            const AZStd::vector<BlockerRecord>& blockers)
+        {
+            if (usage.empty())
+            {
+                return false;
+            }
+            for (const BlockerRecord& blocker : blockers)
+            {
+                if (blocker.m_status != "open"
+                    || blocker.m_severity != "error"
+                    || blocker.m_subjectRef != subjectRef
+                    || blocker.m_affectedUsages.empty())
+                {
+                    continue;
+                }
+                if (Contains(blocker.m_affectedUsages, usage))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         bool HasOpenBlocker(
@@ -89,19 +130,21 @@
             const AZStd::string& usage,
             const AZStd::vector<BlockerRecord>& blockers)
         {
-            for (const BlockerRecord& blocker : blockers)
-            {
-                if (blocker.m_status != "open" || blocker.m_subjectRef != record.m_subjectRef)
-                {
-                    continue;
-                }
-                if (blocker.m_affectedUsages.empty()
-                    || Contains(blocker.m_affectedUsages, usage))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return HasOpenBlockerForSubject(
+                record.m_subjectRef,
+                usage,
+                blockers);
+        }
+
+        bool HasOpenRelationshipBlocker(
+            const CatalogRelationship& relationship,
+            const AZStd::string& usage,
+            const AZStd::vector<BlockerRecord>& blockers)
+        {
+            return HasOpenBlockerForSubject(
+                relationship.m_relationshipId,
+                usage,
+                blockers);
         }
 
         AZStd::vector<ReadySubject> CollectReadySubjects(
@@ -200,4 +243,3 @@
             AddArgument(step.m_arguments, "owner_pack_id", record.m_ownerPackId);
             AddArgument(step.m_arguments, "identity_kind", record.m_identityKind);
             AddArgument(step.m_arguments, "native_ref_exact", record.m_nativeRefExact);
-

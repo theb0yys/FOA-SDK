@@ -6,6 +6,7 @@
  */
 
 #include "AdapterWorkOrderPlanningService.h"
+#include "ResearchContractValidation.h"
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
@@ -13,7 +14,6 @@
 #include <iomanip>
 #include <locale>
 #include <sstream>
-
 
 #include "AdapterWorkOrderPlanningServicePart1.inl"
 #include "AdapterWorkOrderPlanningServicePart2.inl"

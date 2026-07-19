@@ -7,6 +7,8 @@
 
 #include "AdapterCompatibilityService.h"
 
+#include "ResearchContractValidation.h"
+
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
 
@@ -49,7 +51,8 @@ namespace TaintedGrailModdingSDK
             const AZStd::vector<AZStd::string>& values,
             const AZStd::string& value)
         {
-            return AZStd::find(values.begin(), values.end(), value) != values.end();
+            return AZStd::find(values.begin(), values.end(), value)
+                != values.end();
         }
 
         void AddUnique(
@@ -75,14 +78,17 @@ namespace TaintedGrailModdingSDK
         void SortUnique(AZStd::vector<AZStd::string>& values)
         {
             AZStd::sort(values.begin(), values.end());
-            values.erase(AZStd::unique(values.begin(), values.end()), values.end());
+            values.erase(
+                AZStd::unique(values.begin(), values.end()),
+                values.end());
         }
 
         const AdapterCapabilityDeclaration* FindCapabilityDeclaration(
             const AdapterDeclaration& declaration,
             AdapterCapability capability)
         {
-            for (const AdapterCapabilityDeclaration& candidate : declaration.m_capabilities)
+            for (const AdapterCapabilityDeclaration& candidate :
+                 declaration.m_capabilities)
             {
                 if (candidate.m_capability == capability)
                 {
@@ -123,19 +129,35 @@ namespace TaintedGrailModdingSDK
             const GameProfile& profile,
             const SourceEvidenceRegistry& sourceRegistry)
         {
-            if (evidenceIds.empty())
+            if (evidenceIds.empty() || expectedSubjectRef.empty())
+            {
+                return false;
+            }
+            AZStd::vector<AZStd::string> uniqueIds = evidenceIds;
+            SortUnique(uniqueIds);
+            if (uniqueIds.size() != evidenceIds.size())
             {
                 return false;
             }
             for (const AZStd::string& evidenceId : evidenceIds)
             {
-                const EvidenceRecord* evidence = sourceRegistry.FindEvidence(evidenceId);
-                if (!evidence || evidence->m_subjectRef != expectedSubjectRef)
+                const EvidenceRecord* evidence =
+                    sourceRegistry.FindEvidence(evidenceId);
+                if (!evidence
+                    || evidence->m_subjectRef != expectedSubjectRef
+                    || evidence->m_claim.empty()
+                    || evidence->m_evidenceKind.empty()
+                    || evidence->m_locator.empty()
+                    || evidence->m_recordPath.empty()
+                    || !IsStrictUtcTimestamp(evidence->m_extractedAt)
+                    || !IsSha256Fingerprint(evidence->m_sourceFingerprint))
                 {
                     return false;
                 }
-                const SourceRecord* source = sourceRegistry.FindSource(evidence->m_sourceId);
+                const SourceRecord* source =
+                    sourceRegistry.FindSource(evidence->m_sourceId);
                 if (!source
+                    || !IsUsableImportStatus(source->m_importStatus)
                     || evidence->m_sourceFingerprint != source->m_fingerprint
                     || evidence->m_profileId != source->m_profileId
                     || evidence->m_gameVersion != source->m_gameVersion
@@ -185,54 +207,37 @@ namespace TaintedGrailModdingSDK
                 && capability != AdapterCapability::Rollback;
         }
 
-        bool HasRelationshipForCapability(
-            const CatalogRecord& record,
-            AdapterCapability capability,
-            const CatalogDatabase& catalog)
+        bool RelationshipKindMatchesCapability(
+            const CatalogRelationship& relationship,
+            AdapterCapability capability)
         {
-            if (capability != AdapterCapability::VendorMutation
-                && capability != AdapterCapability::LootMutation
-                && capability != AdapterCapability::RewardMutation)
+            if (capability == AdapterCapability::VendorMutation)
             {
-                return true;
+                return relationship.m_relationshipKind == "sold_by";
             }
-
-            for (const CatalogRelationship& relationship
-                : catalog.FindRelationshipsForRecord(record.m_recordId))
+            if (capability == AdapterCapability::LootMutation)
             {
-                if (relationship.m_fromRecordId != record.m_recordId)
-                {
-                    continue;
-                }
-                if (!IsCurrentValidated(relationship))
-                {
-                    continue;
-                }
-                if (capability == AdapterCapability::VendorMutation
-                    && relationship.m_relationshipKind == "sold_by")
-                {
-                    return true;
-                }
-                if (capability == AdapterCapability::LootMutation
-                    && (relationship.m_relationshipKind == "dropped_by"
-                        || relationship.m_relationshipKind == "found_at"))
-                {
-                    return true;
-                }
-                if (capability == AdapterCapability::RewardMutation
-                    && (relationship.m_relationshipKind == "rewarded_by"
-                        || relationship.m_relationshipKind == "granted_by"))
-                {
-                    return true;
-                }
+                return relationship.m_relationshipKind == "dropped_by"
+                    || relationship.m_relationshipKind == "found_at";
+            }
+            if (capability == AdapterCapability::RewardMutation)
+            {
+                return relationship.m_relationshipKind == "rewarded_by"
+                    || relationship.m_relationshipKind == "granted_by";
             }
             return false;
         }
 
+        bool CapabilityUsesRelationships(AdapterCapability capability)
+        {
+            return capability == AdapterCapability::VendorMutation
+                || capability == AdapterCapability::LootMutation
+                || capability == AdapterCapability::RewardMutation;
+        }
+
         bool IsEligiblePermissionSubject(
             const CatalogRecord& record,
-            AdapterCapability capability,
-            const CatalogDatabase& catalog)
+            AdapterCapability capability)
         {
             if (record.m_domain != "economy")
             {
@@ -243,7 +248,8 @@ namespace TaintedGrailModdingSDK
             case AdapterCapability::ItemGrant:
                 return record.m_recordKind == "item" && !record.IsSynthetic();
             case AdapterCapability::RecipeLearn:
-                return record.m_recordKind == "recipe" && !record.IsSynthetic();
+                return record.m_recordKind == "recipe"
+                    && !record.IsSynthetic();
             case AdapterCapability::RecipeAppend:
                 return record.m_recordKind == "recipe";
             case AdapterCapability::CustomItemRegistration:
@@ -252,11 +258,10 @@ namespace TaintedGrailModdingSDK
                 return record.m_recordKind == "recipe" && record.IsSynthetic();
             case AdapterCapability::VendorMutation:
             case AdapterCapability::LootMutation:
-                return record.m_recordKind == "item"
-                    && HasRelationshipForCapability(record, capability, catalog);
+                return record.m_recordKind == "item";
             case AdapterCapability::RewardMutation:
-                return (record.m_recordKind == "item" || record.m_recordKind == "recipe")
-                    && HasRelationshipForCapability(record, capability, catalog);
+                return record.m_recordKind == "item"
+                    || record.m_recordKind == "recipe";
             case AdapterCapability::Persistence:
             case AdapterCapability::Cleanup:
             case AdapterCapability::Rollback:
@@ -265,25 +270,56 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
+        bool HasOpenErrorBlockerForSubject(
+            const AZStd::string& subjectRef,
+            const AZStd::string& usage,
+            const AZStd::vector<BlockerRecord>& blockers,
+            AZStd::vector<AZStd::string>& reasons)
+        {
+            if (subjectRef.empty() || usage.empty())
+            {
+                return false;
+            }
+            bool blocked = false;
+            for (const BlockerRecord& blocker : blockers)
+            {
+                if (blocker.m_status != "open"
+                    || blocker.m_severity != "error"
+                    || blocker.m_subjectRef != subjectRef
+                    || blocker.m_affectedUsages.empty()
+                    || !Contains(blocker.m_affectedUsages, usage))
+                {
+                    continue;
+                }
+                blocked = true;
+                AddUnique(reasons, blocker.m_reason);
+            }
+            return blocked;
+        }
+
         bool ValidationProofIsValid(
             const AZStd::string& validationId,
-            const CatalogRecord& record,
+            const AZStd::string& subjectKind,
+            const AZStd::string& subjectId,
+            const AZStd::string& expectedSubjectRef,
             const GameProfile& profile,
             const SourceEvidenceRegistry& sourceRegistry,
             const CatalogDatabase& catalog,
             AZStd::vector<AZStd::string>& evidenceIds)
         {
-            const CatalogValidationEvent* validation = catalog.FindValidationById(validationId);
+            const CatalogValidationEvent* validation =
+                catalog.FindValidationById(validationId);
             if (!validation
-                || validation->GetSubjectKind() != "record"
-                || validation->GetSubjectId() != record.m_recordId
+                || validation->GetSubjectKind() != subjectKind
+                || validation->GetSubjectId() != subjectId
                 || validation->m_state != "validated"
                 || validation->m_profileId != profile.m_profileId
                 || validation->m_gameVersion != profile.m_gameVersion
                 || validation->m_branch != profile.m_branch
+                || !IsStrictUtcTimestamp(validation->m_checkedAt)
                 || !EvidenceSetIsValid(
                     validation->m_evidenceIds,
-                    record.m_subjectRef,
+                    expectedSubjectRef,
                     profile,
                     sourceRegistry))
             {
@@ -302,72 +338,187 @@ namespace TaintedGrailModdingSDK
             AZStd::vector<AZStd::string>& evidenceIds,
             AZStd::vector<AZStd::string>& validationIds)
         {
-            for (const CatalogGovernanceEvent& event : catalog.GetGovernanceHistory())
+            const CatalogGovernanceEvent* event =
+                catalog.FindEffectiveGovernanceEvent(
+                    "record",
+                    record.m_recordId,
+                    "permission",
+                    usage);
+            if (!event
+                || event->m_newValue != "allow"
+                || !IsStrictUtcTimestamp(event->m_decidedAt)
+                || event->m_validationIds.empty()
+                || !EvidenceSetIsValid(
+                    event->m_evidenceIds,
+                    record.m_subjectRef,
+                    profile,
+                    sourceRegistry))
             {
-                if (event.m_subjectKind != "record"
-                    || event.m_subjectId != record.m_recordId
-                    || event.m_axis != "permission"
-                    || event.m_usage != usage
-                    || event.m_newValue != "allow"
-                    || !EvidenceSetIsValid(
-                        event.m_evidenceIds,
-                        record.m_subjectRef,
-                        profile,
-                        sourceRegistry)
-                    || event.m_validationIds.empty())
-                {
-                    continue;
-                }
+                return false;
+            }
 
-                bool allValidationProofValid = true;
-                AZStd::vector<AZStd::string> validationEvidence;
-                for (const AZStd::string& validationId : event.m_validationIds)
-                {
-                    if (!ValidationProofIsValid(
+            AZStd::vector<AZStd::string> validationEvidence;
+            for (const AZStd::string& validationId : event->m_validationIds)
+            {
+                if (!ValidationProofIsValid(
                         validationId,
-                        record,
+                        "record",
+                        record.m_recordId,
+                        record.m_subjectRef,
                         profile,
                         sourceRegistry,
                         catalog,
                         validationEvidence))
-                    {
-                        allValidationProofValid = false;
-                        break;
-                    }
-                }
-                if (allValidationProofValid)
                 {
-                    AddAllUnique(evidenceIds, event.m_evidenceIds);
-                    AddAllUnique(evidenceIds, validationEvidence);
-                    AddAllUnique(validationIds, event.m_validationIds);
-                    return true;
+                    return false;
                 }
             }
-            return false;
+            const CatalogValidationEvent* latest =
+                catalog.FindLatestValidationForSubject(
+                    "record",
+                    record.m_recordId);
+            if (!latest
+                || latest->m_state != "validated"
+                || !Contains(event->m_validationIds, latest->m_validationId))
+            {
+                return false;
+            }
+
+            AddAllUnique(evidenceIds, event->m_evidenceIds);
+            AddAllUnique(evidenceIds, validationEvidence);
+            AddAllUnique(validationIds, event->m_validationIds);
+            SortUnique(evidenceIds);
+            SortUnique(validationIds);
+            return true;
         }
 
-        bool HasOpenBlocker(
-            const CatalogRecord& record,
+        bool RelationshipProofIsValid(
+            const CatalogRelationship& relationship,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
+            const CatalogDatabase& catalog,
+            AZStd::vector<AZStd::string>& evidenceIds,
+            AZStd::vector<AZStd::string>& validationIds)
+        {
+            const AZStd::string subjectRef =
+                "relationship:" + relationship.m_relationshipId;
+            if (!IsCurrentValidated(relationship)
+                || relationship.m_toRecordId.empty()
+                || !relationship.m_targetSubjectRef.empty()
+                || !EvidenceSetIsValid(
+                    relationship.m_evidenceIds,
+                    subjectRef,
+                    profile,
+                    sourceRegistry))
+            {
+                return false;
+            }
+            const CatalogValidationEvent* latest =
+                catalog.FindLatestValidationForSubject(
+                    "relationship",
+                    relationship.m_relationshipId);
+            if (!latest
+                || !ValidationProofIsValid(
+                    latest->m_validationId,
+                    "relationship",
+                    relationship.m_relationshipId,
+                    subjectRef,
+                    profile,
+                    sourceRegistry,
+                    catalog,
+                    evidenceIds))
+            {
+                return false;
+            }
+            AddAllUnique(evidenceIds, relationship.m_evidenceIds);
+            AddUnique(validationIds, latest->m_validationId);
+            return true;
+        }
+
+        bool HasSafeRelationshipForCapability(
+            const CatalogRecord& sourceRecord,
+            AdapterCapability capability,
             const AZStd::string& usage,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
+            const CatalogDatabase& catalog,
             const AZStd::vector<BlockerRecord>& blockers,
+            AZStd::vector<AZStd::string>& evidenceIds,
+            AZStd::vector<AZStd::string>& validationIds,
             AZStd::vector<AZStd::string>& reasons)
         {
-            bool blocked = false;
-            for (const BlockerRecord& blocker : blockers)
+            bool found = false;
+            for (const CatalogRelationship& relationship :
+                 catalog.FindRelationshipsForRecord(sourceRecord.m_recordId))
             {
-                if (blocker.m_status != "open" || blocker.m_subjectRef != record.m_subjectRef)
+                if (relationship.m_fromRecordId != sourceRecord.m_recordId
+                    || !RelationshipKindMatchesCapability(
+                        relationship,
+                        capability))
                 {
                     continue;
                 }
-                if (!blocker.m_affectedUsages.empty()
-                    && !Contains(blocker.m_affectedUsages, usage))
+
+                AZStd::vector<AZStd::string> relationEvidence;
+                AZStd::vector<AZStd::string> relationValidation;
+                if (!RelationshipProofIsValid(
+                        relationship,
+                        profile,
+                        sourceRegistry,
+                        catalog,
+                        relationEvidence,
+                        relationValidation))
                 {
                     continue;
                 }
-                blocked = true;
-                AddUnique(reasons, blocker.m_reason);
+                AZStd::vector<AZStd::string> relationshipReasons;
+                if (HasOpenErrorBlockerForSubject(
+                        relationship.m_relationshipId,
+                        usage,
+                        blockers,
+                        relationshipReasons)
+                    || HasOpenErrorBlockerForSubject(
+                        "relationship:" + relationship.m_relationshipId,
+                        usage,
+                        blockers,
+                        relationshipReasons))
+                {
+                    AddAllUnique(reasons, relationshipReasons);
+                    continue;
+                }
+
+                const CatalogRecord* target =
+                    catalog.FindByRecordId(relationship.m_toRecordId);
+                if (!target
+                    || !IsCurrentValidated(*target)
+                    || !EvidenceSetIsValid(
+                        target->m_evidenceIds,
+                        target->m_subjectRef,
+                        profile,
+                        sourceRegistry))
+                {
+                    continue;
+                }
+                AZStd::vector<AZStd::string> targetReasons;
+                if (HasOpenErrorBlockerForSubject(
+                        target->m_subjectRef,
+                        usage,
+                        blockers,
+                        targetReasons))
+                {
+                    AddAllUnique(reasons, targetReasons);
+                    continue;
+                }
+
+                found = true;
+                AddAllUnique(evidenceIds, relationEvidence);
+                AddAllUnique(evidenceIds, target->m_evidenceIds);
+                AddAllUnique(validationIds, relationValidation);
             }
-            return blocked;
+            SortUnique(evidenceIds);
+            SortUnique(validationIds);
+            SortUnique(reasons);
+            return found;
         }
 
         PermissionEvaluation EvaluatePermission(
@@ -388,47 +539,88 @@ namespace TaintedGrailModdingSDK
             const AZStd::string usage = PermissionUsage(capability);
             bool eligibleSubjectFound = false;
             bool allowedSubjectFound = false;
-            bool openBlockerFound = false;
+            bool currentSubjectFound = false;
+            bool proofFound = false;
+            bool blockerFound = false;
             for (const CatalogRecord& record : catalog.GetRecords())
             {
                 if (record.m_ownerPackId != pack.m_packId
-                    || !IsEligiblePermissionSubject(record, capability, catalog))
+                    || !IsEligiblePermissionSubject(record, capability))
                 {
                     continue;
                 }
-
                 eligibleSubjectFound = true;
-                AddUnique(result.m_subjectIds, record.m_recordId);
                 if (!Contains(record.m_allowedUsages, usage))
                 {
                     continue;
                 }
                 allowedSubjectFound = true;
-                if (!IsCurrentValidated(record))
+                if (!IsCurrentValidated(record)
+                    || !EvidenceSetIsValid(
+                        record.m_evidenceIds,
+                        record.m_subjectRef,
+                        profile,
+                        sourceRegistry))
                 {
                     continue;
                 }
+                currentSubjectFound = true;
 
                 AZStd::vector<AZStd::string> proofEvidenceIds;
-                AZStd::vector<AZStd::string> validationIds;
-                if (PermissionProofIsValid(
-                    record,
-                    usage,
-                    profile,
-                    sourceRegistry,
-                    catalog,
-                    proofEvidenceIds,
-                    validationIds))
+                AZStd::vector<AZStd::string> proofValidationIds;
+                if (!PermissionProofIsValid(
+                        record,
+                        usage,
+                        profile,
+                        sourceRegistry,
+                        catalog,
+                        proofEvidenceIds,
+                        proofValidationIds))
                 {
-                    if (HasOpenBlocker(record, usage, blockers, result.m_reasons))
+                    continue;
+                }
+                proofFound = true;
+
+                AZStd::vector<AZStd::string> subjectReasons;
+                if (HasOpenErrorBlockerForSubject(
+                        record.m_subjectRef,
+                        usage,
+                        blockers,
+                        subjectReasons))
+                {
+                    blockerFound = true;
+                    AddAllUnique(result.m_reasons, subjectReasons);
+                    continue;
+                }
+
+                if (CapabilityUsesRelationships(capability))
+                {
+                    AZStd::vector<AZStd::string> relationshipEvidence;
+                    AZStd::vector<AZStd::string> relationshipValidation;
+                    AZStd::vector<AZStd::string> relationshipReasons;
+                    if (!HasSafeRelationshipForCapability(
+                            record,
+                            capability,
+                            usage,
+                            profile,
+                            sourceRegistry,
+                            catalog,
+                            blockers,
+                            relationshipEvidence,
+                            relationshipValidation,
+                            relationshipReasons))
                     {
-                        openBlockerFound = true;
+                        AddAllUnique(result.m_reasons, relationshipReasons);
                         continue;
                     }
-                    result.m_readiness = PermissionReadiness::Ready;
-                    AddAllUnique(result.m_evidenceIds, proofEvidenceIds);
-                    AddAllUnique(result.m_validationIds, validationIds);
+                    AddAllUnique(proofEvidenceIds, relationshipEvidence);
+                    AddAllUnique(proofValidationIds, relationshipValidation);
                 }
+
+                result.m_readiness = PermissionReadiness::Ready;
+                AddUnique(result.m_subjectIds, record.m_recordId);
+                AddAllUnique(result.m_evidenceIds, proofEvidenceIds);
+                AddAllUnique(result.m_validationIds, proofValidationIds);
             }
 
             if (result.m_readiness == PermissionReadiness::Ready)
@@ -436,6 +628,7 @@ namespace TaintedGrailModdingSDK
                 SortUnique(result.m_subjectIds);
                 SortUnique(result.m_evidenceIds);
                 SortUnique(result.m_validationIds);
+                SortUnique(result.m_reasons);
                 return result;
             }
             if (!eligibleSubjectFound || !allowedSubjectFound)
@@ -448,20 +641,33 @@ namespace TaintedGrailModdingSDK
             else
             {
                 result.m_readiness = PermissionReadiness::ProofMissing;
-                if (openBlockerFound)
+                if (!currentSubjectFound)
                 {
                     result.m_reasons.push_back(
-                        "An open blocker prevents this permitted capability from being treated as ready: "
+                        "Allowed subjects exist, but none has current exact-subject evidence and validation state: "
+                        + usage);
+                }
+                else if (!proofFound)
+                {
+                    result.m_reasons.push_back(
+                        "Allowed subjects exist, but no current effective permission and validation proof chain is available: "
+                        + usage);
+                }
+                else if (blockerFound)
+                {
+                    result.m_reasons.push_back(
+                        "An open error blocker applies to every otherwise proven subject for usage: "
                         + usage);
                 }
                 else
                 {
                     result.m_reasons.push_back(
-                        "The required allowed usage exists, but no valid same-subject permission and "
-                        "validation proof chain is available: " + usage);
+                        "No exact relationship and target proof chain remains ready for usage: "
+                        + usage);
                 }
             }
-            SortUnique(result.m_subjectIds);
+            result.m_subjectIds.clear();
+            SortUnique(result.m_reasons);
             return result;
         }
 
@@ -471,10 +677,10 @@ namespace TaintedGrailModdingSDK
             const GameProfile& profile,
             const SourceEvidenceRegistry& sourceRegistry)
         {
-            const AZStd::string identitySubject = "adapter:" + declaration.m_adapterId;
+            const AZStd::string identitySubject =
+                "adapter:" + declaration.m_adapterId;
             const AZStd::string capabilitySubject = identitySubject
-                + ":capability:"
-                + ToString(capability.m_capability);
+                + ":capability:" + ToString(capability.m_capability);
             return EvidenceSetIsValid(
                     declaration.m_identityEvidenceIds,
                     identitySubject,
@@ -552,7 +758,9 @@ namespace TaintedGrailModdingSDK
                 FindCapabilityDeclaration(declaration, capability);
             if (!profile
                 || !capabilityDeclaration
-                || !SupportsRuntimeTarget(declaration, profile->m_runtimeTarget))
+                || !SupportsRuntimeTarget(
+                    declaration,
+                    profile->m_runtimeTarget))
             {
                 row.m_status = "unsupported";
                 row.m_reasons.push_back(
@@ -591,11 +799,13 @@ namespace TaintedGrailModdingSDK
             if (permission.m_readiness == PermissionReadiness::Missing)
             {
                 row.m_status = "permission_missing";
+                row.m_subjectIds.clear();
                 return row;
             }
             if (permission.m_readiness == PermissionReadiness::ProofMissing)
             {
                 row.m_status = "proof_missing";
+                row.m_subjectIds.clear();
                 return row;
             }
             if (!AdapterProofIsValid(
@@ -605,15 +815,20 @@ namespace TaintedGrailModdingSDK
                     sourceRegistry))
             {
                 row.m_status = "proof_missing";
+                row.m_subjectIds.clear();
                 row.m_reasons.push_back(
-                    "The adapter identity or capability declaration lacks exact profile-bound evidence.");
+                    "The adapter identity or capability declaration lacks exact profile-bound usable-source evidence.");
                 return row;
             }
 
             row.m_status = "supported";
             row.m_reasons.push_back(
-                "The adapter declaration, semantic version, runtime target, permission, and proof "
-                "gates are satisfied.");
+                "Only the listed exact subjects passed adapter declaration, semantic version, runtime target, effective permission, exact evidence, relationship, validation, and blocker gates.");
+            SortUnique(row.m_subjectIds);
+            SortUnique(row.m_declarationEvidenceIds);
+            SortUnique(row.m_permissionEvidenceIds);
+            SortUnique(row.m_validationProofIds);
+            SortUnique(row.m_reasons);
             return row;
         }
     } // namespace

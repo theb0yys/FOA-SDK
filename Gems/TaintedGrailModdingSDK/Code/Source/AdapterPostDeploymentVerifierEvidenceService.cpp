@@ -8,6 +8,10 @@
 #include "AdapterPostDeploymentVerifierEvidenceService.h"
 
 #include "AdapterContractRegistry.h"
+#include "AdapterDeploymentExecutionResultCanonical.h"
+#include "AdapterPostDeploymentVerifierResultCanonical.h"
+#include "CanonicalFingerprint.h"
+#include "ResearchContractValidation.h"
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
@@ -18,4 +22,5 @@
 #include "AdapterPostDeploymentVerifierEvidenceServicePart2.inl"
 #include "AdapterPostDeploymentVerifierEvidenceServicePart3.inl"
 #include "AdapterPostDeploymentVerifierEvidenceServicePart4.inl"
+#include "AdapterPostDeploymentVerifierEvidenceServicePart6.inl"
 #include "AdapterPostDeploymentVerifierEvidenceServicePart5.inl"

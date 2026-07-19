@@ -90,6 +90,17 @@ namespace TaintedGrailModdingSDK
             return sortedLeft == sortedRight;
         }
 
+        AZ::u64 CountReconciliationEvidenceRecords(
+            const AZStd::vector<EvidenceDocument>& documents)
+        {
+            AZ::u64 count = 0;
+            for (const EvidenceDocument& document : documents)
+            {
+                count += static_cast<AZ::u64>(document.m_evidence.size());
+            }
+            return count;
+        }
+
         const AdapterPostDeploymentBlocker* FindReportBlockerForStep(
             const AdapterPostDeploymentVerificationReport& report,
             const AZStd::string& stepId)
@@ -213,6 +224,8 @@ namespace TaintedGrailModdingSDK
                     == AdapterPostDeploymentVerifierEnvelopeStatus::Accepted
                 || verifierEvidence.m_status
                     == AdapterPostDeploymentVerifierEnvelopeStatus::ObservationMismatch;
+            const AZ::u64 evidenceCount = CountReconciliationEvidenceRecords(
+                verifierEvidence.m_evidenceDocuments);
             if (!verifierEvidence.m_contractValid
                 || !eligibleStatus
                 || verifierEvidence.m_verifierResultId
@@ -221,15 +234,30 @@ namespace TaintedGrailModdingSDK
                 || verifierEvidence.m_resultId != report.m_resultId
                 || verifierEvidence.m_workOrderId != report.m_workOrderId
                 || verifierEvidence.m_resultFingerprint
-                    != verifierEnvelope.m_resultFingerprint)
+                    != verifierEnvelope.m_resultFingerprint
+                || verifierEvidence.m_checkCount
+                    != static_cast<AZ::u64>(
+                        verifierEnvelope.m_checkResults.size())
+                || verifierEvidence.m_failureCount
+                    != static_cast<AZ::u64>(verifierEnvelope.m_failures.size())
+                || verifierEvidence.m_diagnosticReferenceCount
+                    != static_cast<AZ::u64>(
+                        verifierEnvelope.m_diagnosticReferences.size())
+                || verifierEvidence.m_sourceDocumentCount
+                    != static_cast<AZ::u64>(
+                        verifierEvidence.m_sourceDocuments.size())
+                || verifierEvidence.m_evidenceRecordCount != evidenceCount
+                || verifierEvidence.m_sourceDocuments.empty()
+                || verifierEvidence.m_evidenceDocuments.empty())
             {
                 AddReconciliationIssue(
                     result,
                     flags.m_verifierEvidenceInvalid,
                     "verifier_reconciliation.verifier_evidence_invalid",
-                    "Reconciliation requires one structurally valid independent-verifier "
-                    "evidence return. Both accepted and observation_mismatch results are "
-                    "eligible; malformed or rejected verifier evidence is not.");
+                    "Reconciliation requires one exact structurally valid independent-"
+                    "verifier evidence return. Both accepted and observation_mismatch "
+                    "results remain eligible; malformed, rejected, empty, or count-drifted "
+                    "verifier evidence is not.");
             }
         }
 
@@ -244,27 +272,10 @@ namespace TaintedGrailModdingSDK
             ReconciliationFlags& flags)
         {
             const AdapterVerifierReleaseReview& review = request.m_releaseReview;
-            if (!IsAdapterPostDeploymentVerifierStableId(
+            bool mismatch = !IsAdapterPostDeploymentVerifierStableId(
                     request.m_reconciliationId)
                 || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                     request.m_evaluatedAtUtc)
-                || review.m_reportId != report.m_reportId
-                || review.m_reportCanonicalJson
-                    != verifierEnvelope.m_reportCanonicalJson
-                || review.m_verifierResultId
-                    != verifierEnvelope.m_verifierResultId
-                || review.m_workOrderFingerprint
-                    != executionEnvelope.m_workOrderFingerprint
-                || review.m_executionResultFingerprint
-                    != executionEnvelope.m_resultFingerprint
-                || review.m_verifierResultFingerprint
-                    != verifierEnvelope.m_resultFingerprint
-                || !SameStableIdSet(
-                    review.m_candidateSourceIds,
-                    envelope.m_inputCandidateSourceIds)
-                || !SameStableIdSet(
-                    review.m_candidateEvidenceIds,
-                    envelope.m_inputCandidateEvidenceIds)
                 || verifierEnvelope.m_reportId != report.m_reportId
                 || verifierEnvelope.m_reportStatus != report.m_status
                 || verifierEnvelope.m_resultId != executionEnvelope.m_resultId
@@ -277,16 +288,44 @@ namespace TaintedGrailModdingSDK
                 || verifierEnvelope.m_gameVersion != executionEnvelope.m_gameVersion
                 || verifierEnvelope.m_branch != executionEnvelope.m_branch
                 || verifierEnvelope.m_runtimeTarget
-                    != executionEnvelope.m_runtimeTarget)
+                    != executionEnvelope.m_runtimeTarget;
+
+            const bool completeReviewIdentity = !review.m_reviewId.empty()
+                && !review.m_reviewer.empty()
+                && review.m_decision
+                    != AdapterVerifierReleaseReviewDecision::Unknown;
+            if (completeReviewIdentity)
+            {
+                mismatch = mismatch
+                    || review.m_reportId != report.m_reportId
+                    || review.m_reportCanonicalJson
+                        != verifierEnvelope.m_reportCanonicalJson
+                    || review.m_verifierResultId
+                        != verifierEnvelope.m_verifierResultId
+                    || review.m_workOrderFingerprint
+                        != executionEnvelope.m_workOrderFingerprint
+                    || review.m_executionResultFingerprint
+                        != executionEnvelope.m_resultFingerprint
+                    || review.m_verifierResultFingerprint
+                        != verifierEnvelope.m_resultFingerprint
+                    || !SameStableIdSet(
+                        review.m_candidateSourceIds,
+                        envelope.m_inputCandidateSourceIds)
+                    || !SameStableIdSet(
+                        review.m_candidateEvidenceIds,
+                        envelope.m_inputCandidateEvidenceIds);
+            }
+
+            if (mismatch)
             {
                 AddReconciliationIssue(
                     result,
                     flags.m_bindingMismatch,
                     "verifier_reconciliation.binding_mismatch",
-                    "The reconciliation request and release review must bind to the exact "
-                    "current report JSON, verifier result, execution result, work order, "
-                    "fingerprints, candidate identities, and profile/game/branch/runtime "
-                    "context.");
+                    "The reconciliation request, upstream verifier result, and any present "
+                    "release review must bind to the exact current report JSON, execution "
+                    "result, work order, fingerprints, candidate identities, and "
+                    "profile/game/branch/runtime context.");
             }
         }
     } // namespace

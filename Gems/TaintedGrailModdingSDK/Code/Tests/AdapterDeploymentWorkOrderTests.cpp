@@ -6,6 +6,7 @@
  */
 
 #include "AdapterDeploymentWorkOrderService.h"
+#include "CanonicalFingerprint.h"
 
 #include <AzTest/AzTest.h>
 
@@ -49,7 +50,7 @@ namespace TaintedGrailModdingSDK
             request.m_preview.m_status =
                 AdapterStagingDeploymentPreviewStatus::Ready;
             request.m_preview.m_canonicalJson =
-                "{\"DeploymentMutationAllowed\":false}";
+                "{\"DeploymentMutationAllowed\":false,\"LaunchAllowed\":false}";
             request.m_preview.m_stagingMutationAllowed = false;
             request.m_preview.m_deploymentMutationAllowed = false;
             request.m_preview.m_rollbackExecutionAllowed = false;
@@ -114,7 +115,8 @@ namespace TaintedGrailModdingSDK
                 request.m_preview.m_rollbackSteps.push_back(step);
             }
 
-            request.m_previewFingerprint = Fingerprint('a');
+            request.m_previewFingerprint =
+                CalculateCanonicalSha256(request.m_preview.m_canonicalJson);
             request.m_confirmation.m_confirmationId = "owner.confirmation";
             request.m_confirmation.m_previewId = request.m_preview.m_previewId;
             request.m_confirmation.m_previewFingerprint =
@@ -240,6 +242,22 @@ namespace TaintedGrailModdingSDK
             AZStd::string::npos);
     }
 
+    TEST(AdapterDeploymentWorkOrderTests, CallerSelectedPreviewFingerprintIsRejected)
+    {
+        AdapterDeploymentWorkOrderRequest request = MakeReadyRequest();
+        request.m_previewFingerprint = Fingerprint('a');
+        request.m_confirmation.m_previewFingerprint = request.m_previewFingerprint;
+        request.m_maintenanceWindow.m_previewFingerprint = request.m_previewFingerprint;
+        for (AdapterDeploymentPreflightEvidence& preflight : request.m_preflightEvidence)
+        {
+            preflight.m_previewFingerprint = request.m_previewFingerprint;
+        }
+        AdapterDeploymentWorkOrderService service;
+        EXPECT_EQ(
+            service.BuildWorkOrder(request).m_status,
+            AdapterDeploymentWorkOrderStatus::PreviewNotReady);
+    }
+
     TEST(AdapterDeploymentWorkOrderTests, PreviewNotReadyPrecedesConfirmationAndPreflightFailures)
     {
         AdapterDeploymentWorkOrderRequest request = MakeReadyRequest();
@@ -283,6 +301,12 @@ namespace TaintedGrailModdingSDK
         expired.m_evaluatedAtUtc = "2026-07-19T14:30:00Z";
         EXPECT_EQ(
             service.BuildWorkOrder(expired).m_status,
+            AdapterDeploymentWorkOrderStatus::ConfirmationExpired);
+
+        AdapterDeploymentWorkOrderRequest impossibleDate = MakeReadyRequest();
+        impossibleDate.m_confirmation.m_issuedAtUtc = "2026-02-31T12:00:00Z";
+        EXPECT_EQ(
+            service.BuildWorkOrder(impossibleDate).m_status,
             AdapterDeploymentWorkOrderStatus::ConfirmationExpired);
 
         AdapterDeploymentWorkOrderRequest invalidWindow = MakeReadyRequest();
@@ -349,6 +373,34 @@ namespace TaintedGrailModdingSDK
         {
             EXPECT_FALSE(step.m_executionAllowed);
         }
+    }
+
+    TEST(AdapterDeploymentWorkOrderTests, SerializerExposesMutatedSafetyFlags)
+    {
+        AdapterDeploymentWorkOrderService service;
+        AdapterDeploymentWorkOrder workOrder = service.BuildWorkOrder(MakeReadyRequest());
+        ASSERT_FALSE(workOrder.m_steps.empty());
+        ASSERT_FALSE(workOrder.m_checklist.empty());
+        workOrder.m_executionAllowed = true;
+        workOrder.m_steps.front().m_executionAllowed = true;
+        workOrder.m_checklist.front().m_acknowledgementRecorded = true;
+        const AZStd::string json = service.SerializeCanonicalWorkOrder(workOrder);
+        EXPECT_NE(json.find("\"ExecutionAllowed\":true"), AZStd::string::npos);
+        EXPECT_NE(json.find("\"AcknowledgementRecorded\":true"), AZStd::string::npos);
+    }
+
+    TEST(AdapterDeploymentWorkOrderTests, JsonEscapingDistinguishesControlBytes)
+    {
+        AdapterDeploymentWorkOrderService service;
+        AdapterDeploymentWorkOrder first;
+        AdapterDeploymentWorkOrder second;
+        first.m_workOrderId = AZStd::string("owner.") + char(0x01);
+        second.m_workOrderId = AZStd::string("owner.") + char(0x02);
+        const AZStd::string firstJson = service.SerializeCanonicalWorkOrder(first);
+        const AZStd::string secondJson = service.SerializeCanonicalWorkOrder(second);
+        EXPECT_NE(firstJson, secondJson);
+        EXPECT_NE(firstJson.find("\\u0001"), AZStd::string::npos);
+        EXPECT_NE(secondJson.find("\\u0002"), AZStd::string::npos);
     }
 
     TEST(AdapterDeploymentWorkOrderTests, CanonicalWorkOrderIsDeterministic)

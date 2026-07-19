@@ -7,6 +7,13 @@
 
 #include "AdapterPostDeploymentVerifierContracts.h"
 
+#include "AdapterPostDeploymentVerifierEvidenceService.h"
+#include "AdapterPostDeploymentVerifierResultCanonical.h"
+#include "ResearchContractValidation.h"
+
+#include <AzCore/std/algorithm.h>
+#include <AzCore/std/utility/move.h>
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -124,6 +131,14 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+
+        void SetError(AZStd::string* error, AZStd::string value)
+        {
+            if (error)
+            {
+                *error = AZStd::move(value);
+            }
+        }
     } // namespace
 
     AZStd::string ToString(AdapterPostDeploymentVerifierReviewDecision decision)
@@ -181,6 +196,10 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& value,
         AdapterPostDeploymentVerifierFailureKind& kind)
     {
+        if (value == "unknown")
+        {
+            return false;
+        }
         return TryParseEnum(value, kind, FailureKinds);
     }
 
@@ -200,12 +219,12 @@ namespace TaintedGrailModdingSDK
 
     bool IsAdapterPostDeploymentVerifierStableId(const AZStd::string& value)
     {
-        return IsAdapterDeploymentExecutionStableId(value);
+        return IsStableContractId(value);
     }
 
     bool IsAdapterPostDeploymentVerifierFingerprint(const AZStd::string& value)
     {
-        return IsAdapterDeploymentExecutionFingerprint(value);
+        return IsSha256Fingerprint(value);
     }
 
     bool IsAdapterPostDeploymentVerifierDiagnosticReference(
@@ -216,7 +235,7 @@ namespace TaintedGrailModdingSDK
 
     bool IsAdapterPostDeploymentVerifierUtcTimestamp(const AZStd::string& value)
     {
-        return IsAdapterDeploymentExecutionUtcTimestamp(value);
+        return IsStrictUtcTimestamp(value);
     }
 
     AdapterPostDeploymentVerifierResultRegistry&
@@ -227,27 +246,50 @@ namespace TaintedGrailModdingSDK
     }
 
     bool AdapterPostDeploymentVerifierResultRegistry::RegisterEnvelope(
+        const AdapterPostDeploymentVerifierResultEnvelope&,
+        AZStd::string* error)
+    {
+        SetError(
+            error,
+            "Unbound post-deployment verifier-result registration is prohibited; supply the exact work order, execution result, report, and source/evidence registry.");
+        return false;
+    }
+
+    bool AdapterPostDeploymentVerifierResultRegistry::RegisterEnvelope(
+        const AdapterDeploymentWorkOrder& workOrder,
+        const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,
+        const AdapterPostDeploymentVerificationReport& report,
+        const SourceEvidenceRegistry& sourceRegistry,
         const AdapterPostDeploymentVerifierResultEnvelope& envelope,
         AZStd::string* error)
     {
-        if (!IsAdapterPostDeploymentVerifierStableId(envelope.m_verifierResultId)
-            || !IsAdapterPostDeploymentVerifierStableId(envelope.m_reportId)
-            || !IsAdapterPostDeploymentVerifierStableId(envelope.m_resultId)
-            || envelope.m_workOrderId.empty()
-            || !IsAdapterPostDeploymentVerifierFingerprint(
-                envelope.m_workOrderFingerprint)
-            || !IsAdapterPostDeploymentVerifierFingerprint(
-                envelope.m_executionResultFingerprint)
-            || !IsAdapterPostDeploymentVerifierFingerprint(
-                envelope.m_resultFingerprint))
+        if (!PostDeploymentVerifierResultFingerprintMatches(envelope))
         {
-            if (error)
+            SetError(
+                error,
+                "Verifier-result fingerprint must be the SHA-256 of the deterministic canonical verifier-result payload.");
+            return false;
+        }
+
+        AdapterPostDeploymentVerifierEvidenceService service;
+        const AdapterPostDeploymentVerifierEvidenceReturn result =
+            service.BuildEvidenceReturn(
+                workOrder,
+                executionEnvelope,
+                report,
+                sourceRegistry,
+                envelope);
+        if (!result.m_contractValid)
+        {
+            AZStd::string message =
+                "Post-deployment verifier result rejected with status "
+                + ToString(result.m_status) + ".";
+            if (!result.m_issues.empty())
             {
-                *error =
-                    "Post-deployment verifier registration requires stable result, report, "
-                    "and execution-result identities plus exact work-order, execution-result, "
-                    "and verifier-result fingerprints.";
+                message += " " + result.m_issues.front().m_code + ": "
+                    + result.m_issues.front().m_message;
             }
+            SetError(error, AZStd::move(message));
             return false;
         }
 
@@ -256,17 +298,30 @@ namespace TaintedGrailModdingSDK
         {
             if (existing.m_verifierResultId == envelope.m_verifierResultId)
             {
-                if (error)
-                {
-                    *error =
-                        "A post-deployment verifier envelope with this result identity "
-                        "already exists.";
-                }
+                SetError(
+                    error,
+                    "A post-deployment verifier envelope with this result identity already exists.");
+                return false;
+            }
+            if (existing.m_profileId == envelope.m_profileId
+                && existing.m_resultFingerprint == envelope.m_resultFingerprint)
+            {
+                SetError(
+                    error,
+                    "A post-deployment verifier-result fingerprint is already registered for this profile.");
                 return false;
             }
         }
 
         m_envelopes.push_back(envelope);
+        AZStd::sort(
+            m_envelopes.begin(),
+            m_envelopes.end(),
+            [](const AdapterPostDeploymentVerifierResultEnvelope& left,
+                const AdapterPostDeploymentVerifierResultEnvelope& right)
+            {
+                return left.m_verifierResultId < right.m_verifierResultId;
+            });
         if (error)
         {
             error->clear();

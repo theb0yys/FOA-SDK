@@ -38,19 +38,32 @@ namespace
             return AZStd::find(values.begin(), values.end(), value) != values.end();
         }
 
+        AZStd::string WorkOrderSourceFingerprint()
+        {
+            return AZStd::string("sha256:") + AZStd::string(64, 'a');
+        }
+
         GameProfile MakeProfile()
         {
             GameProfile profile;
             profile.m_profileId = "profile.work-order";
+            profile.m_displayName = "Work-order profile";
+            profile.m_installPath = "Game";
             profile.m_gameVersion = "game.work-order";
             profile.m_branch = "branch.work-order";
             profile.m_runtimeTarget = "Mono";
+            profile.m_unityVersion = "2022.3.22f1";
+            profile.m_bepInExVersion = "5.4.23.3";
+            profile.m_managedAssembliesPath = "Game/Managed";
+            profile.m_pluginPath = "Game/BepInEx/plugins";
             return profile;
         }
 
         WorkspaceModel MakeWorkspace()
         {
             WorkspaceModel workspace;
+            workspace.m_workspaceId = "workspace.work-order";
+            workspace.m_displayName = "Work-order workspace";
             workspace.m_activeGameProfileId = "profile.work-order";
             workspace.m_gameProfiles = { MakeProfile() };
             return workspace;
@@ -60,11 +73,14 @@ namespace
         {
             PackManifest pack;
             pack.m_packId = "owner.work-order-pack";
+            pack.m_displayName = "Work-order pack";
+            pack.m_ownerId = "owner";
             pack.m_version = "2.0.0";
             pack.m_requiredAdapterVersion = "1.2.0";
             pack.m_saveImpact = "compatible";
             pack.m_buildConfiguration = "Profile";
             pack.m_releaseChannel = "preview";
+            pack.m_runtimeActionsEnabled = false;
             return pack;
         }
 
@@ -72,13 +88,24 @@ namespace
         {
             SourceRecord source;
             source.m_sourceId = "source.work-order";
-            source.m_fingerprint = "fingerprint.work-order";
+            source.m_title = "Work-order research source";
+            source.m_sourceKind = "test-fixture";
+            source.m_locator = "Sources/source.work-order/input.json";
+            source.m_fingerprint = WorkOrderSourceFingerprint();
             source.m_profileId = "profile.work-order";
             source.m_gameVersion = "game.work-order";
             source.m_branch = "branch.work-order";
             source.m_runtimeTarget = "Mono";
+            source.m_toolName = "work-order-tests";
+            source.m_toolVersion = "1.0.0";
             source.m_importerId = "work-order.tests";
             source.m_importerVersion = "1.0.0";
+            source.m_capturedAt = "2026-01-01T00:00:00Z";
+            source.m_importedAt = "2026-01-01T00:00:01Z";
+            source.m_limitations = "Synthetic deterministic fixture.";
+            source.m_mediaType = "application/json";
+            source.m_byteSize = 1024;
+            source.m_importStatus = "imported";
             return source;
         }
 
@@ -89,12 +116,17 @@ namespace
             EvidenceRecord evidence;
             evidence.m_evidenceId = AZStd::move(evidenceId);
             evidence.m_sourceId = "source.work-order";
-            evidence.m_sourceFingerprint = "fingerprint.work-order";
+            evidence.m_sourceFingerprint = WorkOrderSourceFingerprint();
             evidence.m_profileId = "profile.work-order";
             evidence.m_gameVersion = "game.work-order";
             evidence.m_branch = "branch.work-order";
             evidence.m_subjectRef = AZStd::move(subjectRef);
             evidence.m_claim = "Project-owned deterministic work-order plan evidence.";
+            evidence.m_evidenceKind = "structured_record";
+            evidence.m_confidence = "documented";
+            evidence.m_locator = "Sources/source.work-order/input.json";
+            evidence.m_recordPath = "/evidence";
+            evidence.m_extractedAt = "2026-01-01T00:00:01Z";
             return evidence;
         }
 

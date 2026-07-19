@@ -35,6 +35,38 @@
             second.m_plans.front().m_canonicalJson);
     }
 
+    TEST(TaintedGrailAdapterWorkOrderPlanningTests, SerializerExposesMutatedExecutionFlags)
+    {
+        AdapterWorkOrderPlan plan;
+        plan.m_planId = "workorder.plan:owner.pack:owner.adapter";
+        plan.m_packId = "owner.pack";
+        plan.m_packVersion = "1.0.0";
+        plan.m_adapterId = "owner.adapter";
+        plan.m_adapterVersion = "1.0.0";
+        plan.m_requiredAdapterVersion = "1.0.0";
+        plan.m_profileId = "profile.mono";
+        plan.m_gameVersion = "1.0.0";
+        plan.m_branch = "mono";
+        plan.m_runtimeTarget = "Mono";
+        plan.m_executionAllowed = true;
+
+        AdapterWorkOrderStep step;
+        step.m_stepId = plan.m_planId + ":step:item_grant:record:item.test";
+        step.m_sequence = 1;
+        step.m_capability = "item_grant";
+        step.m_subjectKind = "record";
+        step.m_subjectId = "item.test";
+        step.m_executionAllowed = true;
+        plan.m_steps.push_back(step);
+
+        AdapterWorkOrderPlanningService service;
+        const AZStd::string json = service.SerializeCanonicalPlan(plan);
+        EXPECT_NE(json.find("\"ExecutionAllowed\":true"), AZStd::string::npos);
+        EXPECT_NE(
+            json.find("\"StepId\":" + AZStd::string("\"") + step.m_stepId),
+            AZStd::string::npos);
+    }
+
     TEST(TaintedGrailAdapterWorkOrderPlanningTests, PlanningDoesNotMutateInputs)
     {
         ReadyFixture fixture = MakeReadyFixture();

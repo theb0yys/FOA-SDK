@@ -38,6 +38,8 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_stationSubjectRef;
         AZStd::string m_stationIdentity;
         AZStd::vector<AZStd::string> m_associationSources;
+        AZStd::vector<AZStd::string> m_stationEvidenceSubjectRefs;
+        AZStd::vector<AZStd::string> m_learnabilityEvidenceSubjectRefs;
         AZStd::string m_unlockMode;
         AZStd::vector<AZStd::string> m_unlockSubjectRefs;
         AZStd::vector<AZStd::string> m_learnedFromRelationshipIds;
@@ -55,9 +57,17 @@ namespace TaintedGrailModdingSDK
     public:
         AZ::Outcome<CatalogRelationship, AZStd::string> BuildAcquisitionRelationship(
             const EconomyAcquisitionRequest& request,
+            const SourceEvidenceRegistry& sourceRegistry,
             const CatalogDatabase& catalog) const;
 
-        AZStd::vector<EconomyActionLaneStatus> BuildActionLaneMatrix(const CatalogRecord& record) const;
+        // Compatibility entry point retained fail-closed: association evidence cannot
+        // be validated without the active source/evidence registry.
+        AZ::Outcome<CatalogRelationship, AZStd::string> BuildAcquisitionRelationship(
+            const EconomyAcquisitionRequest& request,
+            const CatalogDatabase& catalog) const;
+
+        AZStd::vector<EconomyActionLaneStatus> BuildActionLaneMatrix(
+            const CatalogRecord& record) const;
 
         AZStd::vector<EconomyRecipeStationEvidenceRow> BuildRecipeStationEvidence(
             const AZStd::string& recipeRecordId,

@@ -7,6 +7,7 @@
 
 set(FILES
     Tests/AdapterContractTests.cpp
+    Tests/CanonicalFingerprintTests.cpp
     Tests/CatalogDatabaseTests.cpp
     Tests/CatalogGovernanceHardeningTests.cpp
     Tests/CatalogGovernanceServiceTests.cpp
@@ -15,4 +16,5 @@ set(FILES
     Tests/EconomyAuthoringTests.cpp
     Tests/EconomyCoverageServiceTests.cpp
     Tests/EconomyDuplicateDetectionServiceTests.cpp
+    Tests/FoundationWorkspaceIsolationTests.cpp
 )

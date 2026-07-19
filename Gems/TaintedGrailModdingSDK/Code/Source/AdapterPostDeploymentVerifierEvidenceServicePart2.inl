@@ -80,6 +80,64 @@ namespace TaintedGrailModdingSDK
                 != review.m_capabilities.end();
         }
 
+        bool VerifierReviewEvidenceIsBound(
+            const AdapterPostDeploymentVerifierReview& review,
+            const AdapterPostDeploymentVerifierResultEnvelope& envelope,
+            const SourceEvidenceRegistry& sourceRegistry)
+        {
+            if (review.m_evidenceIds.empty())
+            {
+                return false;
+            }
+            AZStd::vector<AZStd::string> evidenceIds = review.m_evidenceIds;
+            AZStd::sort(evidenceIds.begin(), evidenceIds.end());
+            if (AZStd::adjacent_find(evidenceIds.begin(), evidenceIds.end())
+                != evidenceIds.end())
+            {
+                return false;
+            }
+
+            const AZStd::string expectedSubject =
+                "post-deployment-verifier:" + review.m_verifierId;
+            for (const AZStd::string& evidenceId : evidenceIds)
+            {
+                if (!IsStableContractId(evidenceId))
+                {
+                    return false;
+                }
+                const EvidenceRecord* evidence =
+                    sourceRegistry.FindEvidence(evidenceId);
+                if (!evidence
+                    || evidence->m_subjectRef != expectedSubject
+                    || evidence->m_claim.empty()
+                    || evidence->m_evidenceKind.empty()
+                    || evidence->m_locator.empty()
+                    || evidence->m_recordPath.empty()
+                    || !IsStrictUtcTimestamp(evidence->m_extractedAt)
+                    || evidence->m_extractedAt > review.m_reviewedAtUtc
+                    || !IsSha256Fingerprint(evidence->m_sourceFingerprint))
+                {
+                    return false;
+                }
+                const SourceRecord* source =
+                    sourceRegistry.FindSource(evidence->m_sourceId);
+                if (!source
+                    || !IsUsableImportStatus(source->m_importStatus)
+                    || source->m_fingerprint != evidence->m_sourceFingerprint
+                    || source->m_profileId != envelope.m_profileId
+                    || source->m_gameVersion != envelope.m_gameVersion
+                    || source->m_branch != envelope.m_branch
+                    || source->m_runtimeTarget != envelope.m_runtimeTarget
+                    || evidence->m_profileId != envelope.m_profileId
+                    || evidence->m_gameVersion != envelope.m_gameVersion
+                    || evidence->m_branch != envelope.m_branch)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         void ValidateVerifierReportReadiness(
             const AdapterDeploymentWorkOrder& workOrder,
             const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,
@@ -92,6 +150,10 @@ namespace TaintedGrailModdingSDK
                 || workOrder.m_workOrderId != executionEnvelope.m_workOrderId
                 || workOrder.m_canonicalJson
                     != executionEnvelope.m_workOrderCanonicalJson
+                || !CanonicalSha256Matches(
+                    workOrder.m_canonicalJson,
+                    executionEnvelope.m_workOrderFingerprint)
+                || !DeploymentExecutionResultFingerprintMatches(executionEnvelope)
                 || workOrder.m_previewId != executionEnvelope.m_previewId
                 || workOrder.m_previewFingerprint
                     != executionEnvelope.m_previewFingerprint
@@ -116,7 +178,7 @@ namespace TaintedGrailModdingSDK
                 || report.m_releasePublished
                 || report.m_launchPerformed
                 || report.m_adapterCalled
-                || report.m_reportId.empty()
+                || !IsStableContractId(report.m_reportId)
                 || report.m_resultId != executionEnvelope.m_resultId
                 || report.m_workOrderId != executionEnvelope.m_workOrderId
                 || report.m_workOrderFingerprint
@@ -133,36 +195,37 @@ namespace TaintedGrailModdingSDK
                     flags.m_reportNotReady,
                     "post_deployment_verifier.report_not_ready",
                     "Independent verification requires one exact current structurally "
-                    "eligible post-deployment report with accepted execution evidence, "
-                    "human review retained, and every execution, mutation, verifier, "
-                    "promotion, launch, adapter, and publication flag false. Existing "
-                    "compatibility or release blockers remain input facts and are not "
-                    "cleared by this contract.");
+                    "eligible post-deployment report with derived work-order and execution "
+                    "fingerprints, accepted execution evidence, human review retained, and "
+                    "every execution, mutation, verifier, promotion, launch, adapter, and "
+                    "publication flag false. Existing compatibility or release blockers "
+                    "remain input facts and are not cleared by this contract.");
             }
         }
 
         void ValidateVerifierReview(
             const AdapterDeploymentWorkOrder& workOrder,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterPostDeploymentVerifierResultEnvelope& envelope,
             AdapterPostDeploymentVerifierEvidenceReturn& result,
             VerifierValidationFlags& flags)
         {
             const AdapterPostDeploymentVerifierReview& review =
                 envelope.m_verifierReview;
-            AdapterSemanticVersion version;
-            bool invalid = !IsAdapterPostDeploymentVerifierStableId(review.m_reviewId)
-                || !IsAdapterPostDeploymentVerifierStableId(review.m_verifierId)
-                || !TryParseAdapterSemanticVersion(review.m_verifierVersion, version)
-                || !IsAdapterPostDeploymentVerifierFingerprint(
-                    review.m_verifierFingerprint)
+            bool invalid = !IsStableContractId(review.m_reviewId)
+                || !IsStableContractId(review.m_verifierId)
+                || !IsStrictSemanticVersion(review.m_verifierVersion)
+                || !IsSha256Fingerprint(review.m_verifierFingerprint)
                 || review.m_decision
                     != AdapterPostDeploymentVerifierReviewDecision::Accepted
                 || review.m_reviewer.empty()
-                || review.m_evidenceIds.empty()
-                || !IsAdapterPostDeploymentVerifierUtcTimestamp(
-                    review.m_reviewedAtUtc)
+                || !IsStrictUtcTimestamp(review.m_reviewedAtUtc)
                 || (!envelope.m_capturedAtUtc.empty()
-                    && review.m_reviewedAtUtc > envelope.m_capturedAtUtc);
+                    && review.m_reviewedAtUtc > envelope.m_capturedAtUtc)
+                || !VerifierReviewEvidenceIsBound(
+                    review,
+                    envelope,
+                    sourceRegistry);
 
             AZStd::vector<AZStd::string> capabilityNames;
             for (AdapterPostDeploymentVerifierCapability capability :
@@ -174,23 +237,11 @@ namespace TaintedGrailModdingSDK
             }
             AZStd::sort(capabilityNames.begin(), capabilityNames.end());
             invalid = invalid
+                || capabilityNames.empty()
                 || AZStd::adjacent_find(
                        capabilityNames.begin(),
                        capabilityNames.end())
                     != capabilityNames.end();
-
-            AZStd::vector<AZStd::string> reviewEvidenceIds = review.m_evidenceIds;
-            for (const AZStd::string& evidenceId : reviewEvidenceIds)
-            {
-                invalid = invalid
-                    || !IsAdapterPostDeploymentVerifierStableId(evidenceId);
-            }
-            AZStd::sort(reviewEvidenceIds.begin(), reviewEvidenceIds.end());
-            invalid = invalid
-                || AZStd::adjacent_find(
-                       reviewEvidenceIds.begin(),
-                       reviewEvidenceIds.end())
-                    != reviewEvidenceIds.end();
 
             bool needsPresence = false;
             bool needsFingerprint = false;
@@ -229,10 +280,11 @@ namespace TaintedGrailModdingSDK
                     result,
                     flags.m_verifierUnreviewed,
                     "post_deployment_verifier.verifier_unreviewed",
-                    "The supplied verifier requires accepted named evidence-backed review, "
-                    "stable identity, strict semantic version, lowercase SHA-256 "
-                    "fingerprint, UTC review time, unique typed capabilities, and exact "
-                    "presence, fingerprint, and absence coverage required by the work order.");
+                    "The supplied verifier requires accepted named review, stable identity, "
+                    "strict semantic version, lowercase SHA-256 fingerprint, real UTC "
+                    "review time, unique typed capabilities, exact required capability "
+                    "coverage, and registered usable-source evidence that proves the exact "
+                    "verifier identity for the active profile.");
             }
         }
 
@@ -262,8 +314,8 @@ namespace TaintedGrailModdingSDK
                     flags.m_reportBindingMismatch,
                     "post_deployment_verifier.report_binding_mismatch",
                     "The verifier envelope must bind to the exact current report identity, "
-                    "status, canonical JSON, work order, execution result, fingerprints, "
-                    "profile, game version, branch, and runtime target.");
+                    "status, canonical JSON, work order, execution result, derived "
+                    "fingerprints, profile, game version, branch, and runtime target.");
             }
         }
 
@@ -273,34 +325,29 @@ namespace TaintedGrailModdingSDK
             VerifierValidationFlags& flags)
         {
             if (envelope.m_contractVersion != 1
-                || !IsAdapterPostDeploymentVerifierStableId(
-                    envelope.m_verifierResultId)
-                || !IsAdapterPostDeploymentVerifierStableId(envelope.m_reportId)
-                || !IsAdapterPostDeploymentVerifierStableId(envelope.m_resultId)
-                || !IsAdapterPostDeploymentVerifierStableId(envelope.m_workOrderId)
-                || !IsAdapterPostDeploymentVerifierFingerprint(
-                    envelope.m_workOrderFingerprint)
-                || !IsAdapterPostDeploymentVerifierFingerprint(
-                    envelope.m_executionResultFingerprint)
-                || !IsAdapterPostDeploymentVerifierFingerprint(
-                    envelope.m_resultFingerprint)
-                || !IsAdapterPostDeploymentVerifierUtcTimestamp(
-                    envelope.m_capturedAtUtc)
+                || !IsStableContractId(envelope.m_verifierResultId)
+                || !IsStableContractId(envelope.m_reportId)
+                || !IsStableContractId(envelope.m_resultId)
+                || !IsStableContractId(envelope.m_workOrderId)
+                || !IsSha256Fingerprint(envelope.m_workOrderFingerprint)
+                || !IsSha256Fingerprint(envelope.m_executionResultFingerprint)
+                || !IsSha256Fingerprint(envelope.m_resultFingerprint)
+                || !PostDeploymentVerifierResultFingerprintMatches(envelope)
+                || !IsStrictUtcTimestamp(envelope.m_capturedAtUtc)
                 || envelope.m_reportCanonicalJson.empty()
-                || envelope.m_profileId.empty()
+                || !IsStableContractId(envelope.m_profileId)
                 || envelope.m_gameVersion.empty()
                 || envelope.m_branch.empty()
-                || (envelope.m_runtimeTarget != "Mono"
-                    && envelope.m_runtimeTarget != "IL2CPP"))
+                || !IsSupportedRuntimeTarget(envelope.m_runtimeTarget))
             {
                 AddVerifierIssue(
                     result,
                     flags.m_envelopeInvalid,
                     "post_deployment_verifier.envelope_invalid",
                     "The verifier envelope requires contract version 1, stable identity, "
-                    "exact lowercase SHA-256 fingerprints, non-empty canonical report JSON, "
-                    "UTC capture time, and explicit profile, game, branch, and Mono/IL2CPP "
-                    "runtime context.");
+                    "exact derived lowercase SHA-256 fingerprints, non-empty canonical "
+                    "report JSON, real UTC capture time, and explicit profile, game, "
+                    "branch, and Mono/IL2CPP runtime context.");
             }
         }
     } // namespace

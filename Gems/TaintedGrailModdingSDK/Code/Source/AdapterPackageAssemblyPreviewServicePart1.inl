@@ -116,64 +116,34 @@ namespace TaintedGrailModdingSDK
 
         bool IsSafeRelativePath(const AZStd::string& value)
         {
-            if (value.empty() || value.front() == '/' || value.front() == '\\')
-            {
-                return false;
-            }
-            if (value.size() > 1 && value[1] == ':')
-            {
-                return false;
-            }
-
-            size_t start = 0;
-            while (start <= value.size())
-            {
-                const size_t end = value.find('/', start);
-                const size_t length = end == AZStd::string::npos
-                    ? value.size() - start
-                    : end - start;
-                if (length == 0)
-                {
-                    return false;
-                }
-                const AZStd::string component = value.substr(start, length);
-                if (component == "." || component == "..")
-                {
-                    return false;
-                }
-                for (char character : component)
-                {
-                    const unsigned char byte = static_cast<unsigned char>(character);
-                    if (byte <= 0x20 || byte == 0x7f
-                        || character == '\\' || character == ':')
-                    {
-                        return false;
-                    }
-                }
-                if (end == AZStd::string::npos)
-                {
-                    break;
-                }
-                start = end + 1;
-            }
-            return true;
+            return IsSafePackageRelativePath(value);
         }
 
         bool PathIsInsideRoot(
             const AZStd::string& root,
             const AZStd::string& path)
         {
-            if (!IsSafeRelativePath(root) || !IsSafeRelativePath(path))
-            {
-                return false;
-            }
-            AZStd::string normalizedRoot = root;
-            if (normalizedRoot.back() != '/')
-            {
-                normalizedRoot.push_back('/');
-            }
-            return path.size() > normalizedRoot.size()
-                && path.substr(0, normalizedRoot.size()) == normalizedRoot;
+            return IsPackagePathInsideRoot(root, path);
+        }
+
+        bool PackagePathsEqual(
+            const AZStd::string& left,
+            const AZStd::string& right)
+        {
+            PackagePathIdentity leftIdentity;
+            PackagePathIdentity rightIdentity;
+            return TryBuildPackagePathIdentity(left, leftIdentity)
+                && TryBuildPackagePathIdentity(right, rightIdentity)
+                && leftIdentity.m_windowsIdentity
+                    == rightIdentity.m_windowsIdentity;
+        }
+
+        AZStd::string PackagePathSortIdentity(const AZStd::string& path)
+        {
+            PackagePathIdentity identity;
+            return TryBuildPackagePathIdentity(path, identity)
+                ? identity.m_windowsIdentity
+                : path;
         }
 
         template<class ValueType>
@@ -193,7 +163,7 @@ namespace TaintedGrailModdingSDK
             for (const AdapterPackageAssemblyBlocker& blocker : blockers)
             {
                 if (blocker.m_code == code
-                    && blocker.m_packagePath == packagePath
+                    && PackagePathsEqual(blocker.m_packagePath, packagePath)
                     && blocker.m_reason == reason)
                 {
                     return;
@@ -224,7 +194,7 @@ namespace TaintedGrailModdingSDK
         {
             for (const AdapterBuildExpectedOutput& output : manifest.m_expectedOutputs)
             {
-                if (output.m_relativePath == packagePath)
+                if (PackagePathsEqual(output.m_relativePath, packagePath))
                 {
                     return &output;
                 }
@@ -239,7 +209,8 @@ namespace TaintedGrailModdingSDK
             AZStd::vector<const AdapterStagingInventoryEntry*> matches;
             for (const AdapterStagingInventoryEntry& entry : inventory.m_entries)
             {
-                if (entry.m_includeInPackage && entry.m_packagePath == packagePath)
+                if (entry.m_includeInPackage
+                    && PackagePathsEqual(entry.m_packagePath, packagePath))
                 {
                     matches.push_back(&entry);
                 }
@@ -255,11 +226,16 @@ namespace TaintedGrailModdingSDK
                 [](const AdapterPackageLayoutEntry& left,
                     const AdapterPackageLayoutEntry& right)
                 {
-                    if (left.m_packagePath != right.m_packagePath)
+                    const AZStd::string leftPath =
+                        PackagePathSortIdentity(left.m_packagePath);
+                    const AZStd::string rightPath =
+                        PackagePathSortIdentity(right.m_packagePath);
+                    if (leftPath != rightPath)
                     {
-                        return left.m_packagePath < right.m_packagePath;
+                        return leftPath < rightPath;
                     }
-                    return left.m_stagingPath < right.m_stagingPath;
+                    return PackagePathSortIdentity(left.m_stagingPath)
+                        < PackagePathSortIdentity(right.m_stagingPath);
                 });
             AZStd::sort(
                 preview.m_omissions.begin(),
@@ -267,9 +243,13 @@ namespace TaintedGrailModdingSDK
                 [](const AdapterPackageAssemblyOmission& left,
                     const AdapterPackageAssemblyOmission& right)
                 {
-                    if (left.m_expectedPath != right.m_expectedPath)
+                    const AZStd::string leftPath =
+                        PackagePathSortIdentity(left.m_expectedPath);
+                    const AZStd::string rightPath =
+                        PackagePathSortIdentity(right.m_expectedPath);
+                    if (leftPath != rightPath)
                     {
-                        return left.m_expectedPath < right.m_expectedPath;
+                        return leftPath < rightPath;
                     }
                     return left.m_reason < right.m_reason;
                 });
@@ -279,7 +259,8 @@ namespace TaintedGrailModdingSDK
                 [](const AdapterPackageAssemblyCollision& left,
                     const AdapterPackageAssemblyCollision& right)
                 {
-                    return left.m_packagePath < right.m_packagePath;
+                    return PackagePathSortIdentity(left.m_packagePath)
+                        < PackagePathSortIdentity(right.m_packagePath);
                 });
             for (AdapterPackageAssemblyCollision& collision : preview.m_collisions)
             {
@@ -297,9 +278,13 @@ namespace TaintedGrailModdingSDK
                     {
                         return left.m_code < right.m_code;
                     }
-                    if (left.m_packagePath != right.m_packagePath)
+                    const AZStd::string leftPath =
+                        PackagePathSortIdentity(left.m_packagePath);
+                    const AZStd::string rightPath =
+                        PackagePathSortIdentity(right.m_packagePath);
+                    if (leftPath != rightPath)
                     {
-                        return left.m_packagePath < right.m_packagePath;
+                        return leftPath < rightPath;
                     }
                     return left.m_reason < right.m_reason;
                 });

@@ -19,6 +19,17 @@
                         }
                         for (const CatalogRelationship* relationship : readySubject.m_relationships)
                         {
+                            const AZStd::string usage = PermissionUsage(capability);
+                            if (HasOpenRelationshipBlocker(
+                                    *relationship,
+                                    usage,
+                                    blockers))
+                            {
+                                planningErrors.push_back(
+                                    relationship->m_relationshipId
+                                    + ": an open error blocker applies to the exact relationship usage.");
+                                continue;
+                            }
                             if (relationship->m_toRecordId.empty())
                             {
                                 planningErrors.push_back(
@@ -59,12 +70,12 @@
                             }
                             if (HasOpenBlocker(
                                     *targetRecord,
-                                    PermissionUsage(capability),
+                                    usage,
                                     blockers))
                             {
                                 planningErrors.push_back(
                                     relationship->m_relationshipId
-                                    + ": an open blocker applies to the resolved target record.");
+                                    + ": an open error blocker applies to the resolved target record usage.");
                                 continue;
                             }
                             AZStd::vector<AZStd::string> relationshipValidationEvidenceIds;
@@ -81,7 +92,7 @@
                             {
                                 planningErrors.push_back(
                                     relationship->m_relationshipId
-                                    + ": no exact relationship validation proof is available.");
+                                    + ": no exact relationship-bound validation proof is available.");
                                 continue;
                             }
                             plan.m_steps.push_back(BuildRelationshipStep(
@@ -179,5 +190,6 @@
         AppendJsonString(output, canonicalPlan.m_branch);
         output += ",\"RuntimeTarget\":";
         AppendJsonString(output, canonicalPlan.m_runtimeTarget);
-        output += ",\"ExecutionAllowed\":false,\"Steps\":[";
-
+        output += ",\"ExecutionAllowed\":";
+        output += canonicalPlan.m_executionAllowed ? "true" : "false";
+        output += ",\"Steps\":[";

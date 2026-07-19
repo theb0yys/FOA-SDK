@@ -1,3 +1,7 @@
+#include "AdapterDeploymentExecutionResultCanonical.h"
+#include "CanonicalFingerprint.h"
+#include "ResearchContractValidation.h"
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -48,6 +52,25 @@ namespace TaintedGrailModdingSDK
         {
             AZStd::sort(values.begin(), values.end());
             values.erase(AZStd::unique(values.begin(), values.end()), values.end());
+        }
+
+        bool HasStableUniqueIds(const AZStd::vector<AZStd::string>& values)
+        {
+            if (values.empty())
+            {
+                return false;
+            }
+            AZStd::vector<AZStd::string> sorted = values;
+            for (const AZStd::string& value : sorted)
+            {
+                if (!IsStableContractId(value))
+                {
+                    return false;
+                }
+            }
+            AZStd::sort(sorted.begin(), sorted.end());
+            return AZStd::adjacent_find(sorted.begin(), sorted.end())
+                == sorted.end();
         }
 
         const AdapterDeploymentWorkOrderStep* FindWorkOrderStep(
@@ -225,20 +248,15 @@ namespace TaintedGrailModdingSDK
         {
             const AdapterDeploymentExecutorReview& review =
                 envelope.m_executorReview;
-            AdapterSemanticVersion version;
-            if (!IsAdapterDeploymentExecutionStableId(review.m_reviewId)
-                || !IsAdapterDeploymentExecutionStableId(review.m_executorId)
-                || !TryParseAdapterSemanticVersion(
-                    review.m_executorVersion,
-                    version)
-                || !IsAdapterDeploymentExecutionFingerprint(
-                    review.m_executorFingerprint)
+            if (!IsStableContractId(review.m_reviewId)
+                || !IsStableContractId(review.m_executorId)
+                || !IsStrictSemanticVersion(review.m_executorVersion)
+                || !IsSha256Fingerprint(review.m_executorFingerprint)
                 || review.m_decision
                     != AdapterDeploymentExecutorReviewDecision::Accepted
                 || review.m_reviewer.empty()
-                || review.m_evidenceIds.empty()
-                || !IsAdapterDeploymentExecutionUtcTimestamp(
-                    review.m_reviewedAtUtc)
+                || !HasStableUniqueIds(review.m_evidenceIds)
+                || !IsStrictUtcTimestamp(review.m_reviewedAtUtc)
                 || (!envelope.m_capturedAtUtc.empty()
                     && review.m_reviewedAtUtc > envelope.m_capturedAtUtc))
             {
@@ -248,7 +266,7 @@ namespace TaintedGrailModdingSDK
                     "deployment_result.executor_unreviewed",
                     "The supplied executor metadata requires an accepted, named, "
                     "evidence-backed review with stable identity, strict semantic "
-                    "version, fingerprint, and UTC review time.");
+                    "version, fingerprint, unique evidence, and a real UTC review time.");
             }
         }
 
@@ -258,47 +276,50 @@ namespace TaintedGrailModdingSDK
             AdapterDeploymentExecutionEvidenceReturn& result,
             ValidationFlags& flags)
         {
+            const bool workOrderFingerprintMatches =
+                !workOrder.m_canonicalJson.empty()
+                && CanonicalSha256Matches(
+                    workOrder.m_canonicalJson,
+                    envelope.m_workOrderFingerprint)
+                && CanonicalSha256Matches(
+                    envelope.m_workOrderCanonicalJson,
+                    envelope.m_workOrderFingerprint);
             if (envelope.m_workOrderId != workOrder.m_workOrderId
-                || envelope.m_workOrderCanonicalJson
-                    != workOrder.m_canonicalJson
+                || envelope.m_workOrderCanonicalJson != workOrder.m_canonicalJson
+                || !workOrderFingerprintMatches
                 || envelope.m_previewId != workOrder.m_previewId
-                || envelope.m_previewFingerprint
-                    != workOrder.m_previewFingerprint
+                || envelope.m_previewFingerprint != workOrder.m_previewFingerprint
                 || envelope.m_packId != workOrder.m_packId
-                || envelope.m_targetInventoryId
-                    != workOrder.m_targetInventoryId)
+                || envelope.m_targetInventoryId != workOrder.m_targetInventoryId)
             {
                 AddIssue(
                     result,
                     flags.m_workOrderBindingMismatch,
                     "deployment_result.work_order_binding_mismatch",
                     "The result envelope must bind to the exact work-order identity, "
-                    "canonical JSON, preview, fingerprint, pack, and target inventory.");
+                    "canonical JSON and derived SHA-256 fingerprint, preview, pack, and "
+                    "target inventory.");
             }
 
             if (envelope.m_contractVersion != 1
-                || !IsAdapterDeploymentExecutionStableId(envelope.m_resultId)
-                || !IsAdapterDeploymentExecutionFingerprint(
-                    envelope.m_workOrderFingerprint)
-                || !IsAdapterDeploymentExecutionFingerprint(
-                    envelope.m_resultFingerprint)
-                || !IsAdapterDeploymentExecutionFingerprint(
-                    envelope.m_previewFingerprint)
-                || !IsAdapterDeploymentExecutionUtcTimestamp(
-                    envelope.m_capturedAtUtc)
-                || envelope.m_profileId.empty()
+                || !IsStableContractId(envelope.m_resultId)
+                || !IsSha256Fingerprint(envelope.m_workOrderFingerprint)
+                || !IsSha256Fingerprint(envelope.m_resultFingerprint)
+                || !DeploymentExecutionResultFingerprintMatches(envelope)
+                || !IsSha256Fingerprint(envelope.m_previewFingerprint)
+                || !IsStrictUtcTimestamp(envelope.m_capturedAtUtc)
+                || !IsStableContractId(envelope.m_profileId)
                 || envelope.m_gameVersion.empty()
                 || envelope.m_branch.empty()
-                || (envelope.m_runtimeTarget != "Mono"
-                    && envelope.m_runtimeTarget != "IL2CPP"))
+                || !IsSupportedRuntimeTarget(envelope.m_runtimeTarget))
             {
                 AddIssue(
                     result,
                     flags.m_envelopeInvalid,
                     "deployment_result.envelope_invalid",
-                    "The result envelope requires contract version 1, stable result "
-                    "identity, exact lowercase SHA-256 fingerprints, UTC capture time, "
-                    "and explicit profile/game/branch/runtime context.");
+                    "The result envelope requires contract version 1, stable identity, "
+                    "canonical work-order and result SHA-256 fingerprints, a real UTC "
+                    "capture time, and exact profile/game/branch/runtime context.");
             }
         }
 
@@ -369,8 +390,7 @@ namespace TaintedGrailModdingSDK
                 if (runtimeStep.m_outcome
                     == AdapterDeploymentExecutionOutcome::Succeeded)
                 {
-                    if ((step->m_kind
-                            == AdapterDeploymentWorkOrderStepKind::Add
+                    if ((step->m_kind == AdapterDeploymentWorkOrderStepKind::Add
                             || step->m_kind
                                 == AdapterDeploymentWorkOrderStepKind::Replace)
                         && (!runtimeStep.m_targetPresent

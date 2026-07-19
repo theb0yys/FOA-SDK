@@ -7,12 +7,26 @@
 
 #include "ExternalToolchainDiscoveryService.h"
 
-#include <AzCore/IO/SystemFile.h>
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/chrono/chrono.h>
 #include <AzCore/std/containers/unordered_set.h>
 #include <AzCore/std/string/string_view.h>
 #include <AzCore/std/utility/move.h>
+
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <filesystem>
+#include <memory>
+#include <mutex>
+#include <thread>
+
+#if defined(_WIN32)
+#   include <Windows.h>
+#else
+#   include <sys/stat.h>
+#   include <unistd.h>
+#endif
 
 namespace ExternalToolchain
 {
@@ -26,6 +40,8 @@ namespace ExternalToolchain
             "/O3DE/ExternalToolchain/Host/Discovery/MaximumProbesPerProvider";
         constexpr const char* ProviderBudgetMillisecondsPath =
             "/O3DE/ExternalToolchain/Host/Discovery/ProviderBudgetMilliseconds";
+        constexpr AZ::u32 HardProbeTimeoutMilliseconds = 250;
+        constexpr size_t MaximumAbandonedProbeThreads = 8;
 
         ProviderOperationResult Success(AZStd::string message)
         {
@@ -51,15 +67,6 @@ namespace ExternalToolchain
                 && AZStd::string_view(value.data(), prefixView.size()) == prefixView;
         }
 
-        bool EndsWith(const AZStd::string& value, const char* suffix)
-        {
-            const AZStd::string_view suffixView(suffix);
-            return value.size() >= suffixView.size()
-                && AZStd::string_view(
-                       value.data() + value.size() - suffixView.size(),
-                       suffixView.size()) == suffixView;
-        }
-
         bool IsAsciiAlpha(char value)
         {
             return (value >= 'A' && value <= 'Z')
@@ -73,23 +80,29 @@ namespace ExternalToolchain
                 || value.find("://") != AZStd::string::npos;
         }
 
-        bool IsAbsoluteLocalPath(const AZStd::string& value)
+        bool IsAbsoluteHostPath(
+            const AZStd::string& value,
+            const AZStd::string& platformId)
         {
-            if (StartsWith(value, "/"))
+            if (platformId == "windows")
             {
-                return true;
+                return value.size() >= 3
+                    && IsAsciiAlpha(value[0])
+                    && value[1] == ':'
+                    && (value[2] == '/' || value[2] == '\\');
             }
-            return value.size() >= 3
-                && IsAsciiAlpha(value[0])
-                && value[1] == ':'
-                && (value[2] == '/' || value[2] == '\\');
+            if (platformId == "linux" || platformId == "mac")
+            {
+                return StartsWith(value, "/")
+                    && !(value.size() >= 2 && value[1] == '/');
+            }
+            return false;
         }
 
         bool HasTraversalSegment(const AZStd::string& value)
         {
             AZStd::string normalized = value;
             AZStd::replace(normalized.begin(), normalized.end(), '\\', '/');
-
             size_t start = 0;
             while (start <= normalized.size())
             {
@@ -110,47 +123,19 @@ namespace ExternalToolchain
             return false;
         }
 
-        AZStd::string NormalizeLocalPath(AZStd::string value)
+        AZStd::string PathString(const std::filesystem::path& value)
         {
-            AZStd::replace(value.begin(), value.end(), '\\', '/');
+            const std::string text = value.generic_string();
+            return AZStd::string(text.data(), text.size());
+        }
 
-            AZStd::string normalized;
-            normalized.reserve(value.size());
-            bool previousSlash = false;
-            for (char character : value)
-            {
-                const bool slash = character == '/';
-                if (slash && previousSlash)
-                {
-                    continue;
-                }
-                normalized.push_back(character);
-                previousSlash = slash;
-            }
-
-            for (;;)
-            {
-                const size_t position = normalized.find("/./");
-                if (position == AZStd::string::npos)
-                {
-                    break;
-                }
-                normalized.erase(position, 2);
-            }
-            if (EndsWith(normalized, "/."))
-            {
-                normalized.erase(normalized.size() - 2);
-            }
-
-            const bool driveRoot = normalized.size() == 3
-                && IsAsciiAlpha(normalized[0])
-                && normalized[1] == ':'
-                && normalized[2] == '/';
-            if (normalized.size() > 1 && EndsWith(normalized, "/") && !driveRoot)
-            {
-                normalized.pop_back();
-            }
-            return normalized;
+        AZStd::string NormalizeLocalPath(const AZStd::string& value)
+        {
+            std::error_code error;
+            const std::filesystem::path path =
+                std::filesystem::u8path(value.c_str()).lexically_normal();
+            (void)error;
+            return PathString(path);
         }
 
         AZStd::string MakePathIdentity(
@@ -189,22 +174,23 @@ namespace ExternalToolchain
             switch (status)
             {
             case DiscoveryStatus::Misconfigured:
-                return 7;
+                return 8;
             case DiscoveryStatus::ProbeFailed:
-                return 6;
+                return 7;
             case DiscoveryStatus::UnsupportedVersion:
-                return 5;
+                return 6;
             case DiscoveryStatus::NotInstalled:
-                return 4;
+                return 5;
             case DiscoveryStatus::NotRun:
-                return 3;
+                return 4;
             case DiscoveryStatus::Disabled:
-                return 2;
+                return 3;
             case DiscoveryStatus::UnsupportedPlatform:
+                return 2;
+            case DiscoveryStatus::Ambiguous:
                 return 1;
             case DiscoveryStatus::Installed:
-            case DiscoveryStatus::Ambiguous:
-                return 8;
+                return 0;
             }
             return 0;
         }
@@ -253,6 +239,12 @@ namespace ExternalToolchain
             const ExternalToolDiscoveryProbeDescriptor& probe,
             AZStd::string& message)
         {
+            if (!probe.m_versionConfigurationKey.empty() && version.empty())
+            {
+                message =
+                    "A probe that declares a version key requires one configured semantic version.";
+                return false;
+            }
             if (version.empty())
             {
                 if (!probe.m_minimumSupportedVersion.empty()
@@ -264,7 +256,6 @@ namespace ExternalToolchain
                 }
                 return true;
             }
-
             if (!IsValidSemanticVersion(version))
             {
                 message = "Configured tool version is not valid semantic versioning.";
@@ -288,7 +279,6 @@ namespace ExternalToolchain
                     return false;
                 }
             }
-
             if (!probe.m_maximumSupportedVersion.empty())
             {
                 if (!TryCompareSemanticVersions(
@@ -307,24 +297,188 @@ namespace ExternalToolchain
             }
             return true;
         }
+
+        bool PathIdentitiesMatch(
+            const std::filesystem::path& left,
+            const std::filesystem::path& right)
+        {
+            AZStd::string leftText = PathString(left.lexically_normal());
+            AZStd::string rightText = PathString(right.lexically_normal());
+#if defined(_WIN32)
+            leftText = MakePathIdentity(AZStd::move(leftText), "windows");
+            rightText = MakePathIdentity(AZStd::move(rightText), "windows");
+#endif
+            return leftText == rightText;
+        }
+
+        ExternalToolPathObservation InspectLocalPathSynchronously(
+            const AZStd::string& path)
+        {
+            ExternalToolPathObservation observation;
+            std::error_code error;
+            const std::filesystem::path input =
+                std::filesystem::u8path(path.c_str()).lexically_normal();
+            const std::filesystem::file_status status =
+                std::filesystem::symlink_status(input, error);
+            if (error)
+            {
+                observation.m_message =
+                    "Path metadata could not be read without crossing the local-discovery boundary.";
+                return observation;
+            }
+            if (!std::filesystem::exists(status))
+            {
+                observation.m_boundarySafe = true;
+                observation.m_message = "Path does not exist.";
+                return observation;
+            }
+            if (std::filesystem::is_symlink(status))
+            {
+                observation.m_message =
+                    "Symbolic links and filesystem indirection are prohibited.";
+                return observation;
+            }
+
+#if defined(_WIN32)
+            const std::wstring root = input.root_name().wstring() + L"\\";
+            const UINT driveType = GetDriveTypeW(root.c_str());
+            if (driveType != DRIVE_FIXED && driveType != DRIVE_RAMDISK)
+            {
+                observation.m_message =
+                    "Discovery is restricted to fixed local or RAM-backed storage.";
+                return observation;
+            }
+            const DWORD attributes = GetFileAttributesW(input.c_str());
+            if (attributes == INVALID_FILE_ATTRIBUTES)
+            {
+                observation.m_message = "Windows path attributes could not be read.";
+                return observation;
+            }
+            if ((attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+            {
+                observation.m_message =
+                    "Windows reparse points, junctions, and redirected storage are prohibited.";
+                return observation;
+            }
+#else
+            struct stat rootStatus{};
+            if (::stat("/", &rootStatus) != 0)
+            {
+                observation.m_message = "The host root storage identity is unavailable.";
+                return observation;
+            }
+            std::filesystem::path current = input.root_path();
+            for (const std::filesystem::path& component : input.relative_path())
+            {
+                current /= component;
+                struct stat linkStatus{};
+                struct stat resolvedStatus{};
+                if (::lstat(current.c_str(), &linkStatus) != 0
+                    || S_ISLNK(linkStatus.st_mode))
+                {
+                    observation.m_message =
+                        "Symbolic links and unresolved path components are prohibited.";
+                    return observation;
+                }
+                if (::stat(current.c_str(), &resolvedStatus) != 0
+                    || resolvedStatus.st_dev != rootStatus.st_dev)
+                {
+                    observation.m_message =
+                        "Mount-point or redirected-storage boundaries are prohibited.";
+                    return observation;
+                }
+            }
+#endif
+
+            const std::filesystem::path resolved =
+                std::filesystem::canonical(input, error);
+            if (error || !PathIdentitiesMatch(input, resolved))
+            {
+                observation.m_message =
+                    "The final filesystem identity differs from the declared local path.";
+                return observation;
+            }
+
+            observation.m_exists = true;
+            observation.m_isDirectory = std::filesystem::is_directory(status);
+            observation.m_boundarySafe = true;
+            observation.m_resolvedPath = PathString(resolved);
+            observation.m_message = observation.m_isDirectory
+                ? "Local directory exists without filesystem indirection."
+                : "Local file exists without filesystem indirection.";
+            return observation;
+        }
+
+        struct AsyncProbeState
+        {
+            std::mutex m_mutex;
+            std::condition_variable m_condition;
+            bool m_done = false;
+            ExternalToolPathObservation m_observation;
+        };
+
+        std::atomic<size_t> s_outstandingProbeThreads{ 0 };
     } // namespace
 
     ExternalToolPathObservation SystemFileExternalToolPathProbe::Inspect(
         const AZStd::string& path) const
     {
-        ExternalToolPathObservation observation;
-        observation.m_exists = AZ::IO::SystemFile::Exists(path.c_str());
-        if (observation.m_exists)
+        return Inspect(path, HardProbeTimeoutMilliseconds);
+    }
+
+    ExternalToolPathObservation SystemFileExternalToolPathProbe::Inspect(
+        const AZStd::string& path,
+        AZ::u32 timeoutMilliseconds) const
+    {
+        ExternalToolPathObservation timeoutObservation;
+        const size_t previous = s_outstandingProbeThreads.fetch_add(1);
+        if (previous >= MaximumAbandonedProbeThreads)
         {
-            observation.m_isDirectory = AZ::IO::SystemFile::IsDirectory(path.c_str());
-            observation.m_message = observation.m_isDirectory
-                ? "Directory exists."
-                : "File exists.";
+            s_outstandingProbeThreads.fetch_sub(1);
+            timeoutObservation.m_timedOut = true;
+            timeoutObservation.m_message =
+                "The bounded discovery worker limit is exhausted by unfinished probes.";
+            return timeoutObservation;
         }
-        else
+
+        const AZ::u32 boundedTimeout = AZStd::min(
+            AZStd::max<AZ::u32>(timeoutMilliseconds, 1),
+            HardProbeTimeoutMilliseconds);
+        const auto state = std::make_shared<AsyncProbeState>();
+        std::thread worker(
+            [state, path]()
+            {
+                ExternalToolPathObservation observation =
+                    InspectLocalPathSynchronously(path);
+                {
+                    std::lock_guard<std::mutex> lock(state->m_mutex);
+                    state->m_observation = AZStd::move(observation);
+                    state->m_done = true;
+                }
+                state->m_condition.notify_one();
+                s_outstandingProbeThreads.fetch_sub(1);
+            });
+
+        std::unique_lock<std::mutex> lock(state->m_mutex);
+        const bool completed = state->m_condition.wait_for(
+            lock,
+            std::chrono::milliseconds(boundedTimeout),
+            [state]()
+            {
+                return state->m_done;
+            });
+        if (!completed)
         {
-            observation.m_message = "Path does not exist.";
+            worker.detach();
+            timeoutObservation.m_timedOut = true;
+            timeoutObservation.m_message =
+                "Path inspection exceeded the hard non-blocking discovery timeout.";
+            return timeoutObservation;
         }
+
+        ExternalToolPathObservation observation = state->m_observation;
+        lock.unlock();
+        worker.join();
         return observation;
     }
 
@@ -343,7 +497,6 @@ namespace ExternalToolchain
     {
         bool discoveryEnabled = true;
         m_settingsSource.GetBool(DiscoveryEnabledPath, discoveryEnabled);
-
         const AZ::u64 maximumProviders = ReadBoundedUInt64(
             m_settingsSource,
             MaximumProvidersPath,
@@ -394,16 +547,13 @@ namespace ExternalToolchain
                 m_results.push_back(AZStd::move(result));
                 continue;
             }
-
-            m_results.push_back(
-                DiscoverProvider(
-                    provider,
-                    configurationService,
-                    platformId,
-                    maximumProbes,
-                    providerBudgetMilliseconds));
+            m_results.push_back(DiscoverProvider(
+                provider,
+                configurationService,
+                platformId,
+                maximumProbes,
+                providerBudgetMilliseconds));
         }
-
         return Success("Provider discovery refreshed.");
     }
 
@@ -444,7 +594,8 @@ namespace ExternalToolchain
         ExternalToolDiscoveryResult result;
         result.m_providerId = provider.m_providerId;
 
-        if (!ContainsString(provider.m_platforms, platformId))
+        if (!provider.m_platforms.empty()
+            && !ContainsString(provider.m_platforms, platformId))
         {
             result.m_status = DiscoveryStatus::UnsupportedPlatform;
             result.m_diagnostics.push_back(
@@ -461,21 +612,17 @@ namespace ExternalToolchain
         if (!providerEnabled)
         {
             result.m_status = DiscoveryStatus::Disabled;
-            result.m_diagnostics.push_back(
-                AZStd::string::format(
-                    "Provider is disabled by the %s configuration layer.",
-                    ToString(enabledLayer).c_str()));
+            result.m_diagnostics.push_back(AZStd::string::format(
+                "Provider is disabled by the %s configuration layer.",
+                ToString(enabledLayer).c_str()));
             return result;
         }
-
         if (provider.m_discoveryProbes.empty())
         {
             result.m_status = DiscoveryStatus::NotRun;
-            result.m_diagnostics.push_back(
-                "Provider declares no discovery probes.");
+            result.m_diagnostics.push_back("Provider declares no discovery probes.");
             return result;
         }
-
         if (provider.m_discoveryProbes.size() > maximumProbes)
         {
             result.m_status = DiscoveryStatus::ProbeFailed;
@@ -510,16 +657,13 @@ namespace ExternalToolchain
             ExternalToolInstallationCandidate candidate;
             candidate.m_providerId = provider.m_providerId;
             candidate.m_probeId = probe.m_probeId;
-
-            const AZ::u64 providerElapsedMilliseconds =
-                ElapsedMilliseconds(providerStarted);
-            if (providerElapsedMilliseconds >= providerBudgetMilliseconds)
+            if (ElapsedMilliseconds(providerStarted) >= providerBudgetMilliseconds)
             {
                 candidate.m_status = DiscoveryStatus::ProbeFailed;
                 candidate.m_message =
                     "Provider discovery budget was exhausted before this probe.";
                 result.m_candidates.push_back(AZStd::move(candidate));
-                break;
+                continue;
             }
 
             const ExternalToolResolvedConfigurationValue* pathValue =
@@ -531,8 +675,7 @@ namespace ExternalToolchain
                 candidate.m_status = probe.m_required
                     ? DiscoveryStatus::Misconfigured
                     : DiscoveryStatus::NotInstalled;
-                candidate.m_message =
-                    "The probe path configuration is missing.";
+                candidate.m_message = "The probe path configuration is missing.";
                 result.m_candidates.push_back(AZStd::move(candidate));
                 continue;
             }
@@ -540,34 +683,20 @@ namespace ExternalToolchain
             {
                 candidate.m_status = DiscoveryStatus::Misconfigured;
                 candidate.m_message =
-                    "The probe path configuration violates declared limits.";
+                    "The probe path configuration has an invalid type or value.";
                 result.m_candidates.push_back(AZStd::move(candidate));
                 continue;
             }
 
             candidate.m_pathLayer = pathValue->m_layer;
             candidate.m_path = pathValue->m_value;
-            if (IsNetworkOrUriPath(candidate.m_path))
+            if (IsNetworkOrUriPath(candidate.m_path)
+                || !IsAbsoluteHostPath(candidate.m_path, platformId)
+                || HasTraversalSegment(candidate.m_path))
             {
                 candidate.m_status = DiscoveryStatus::Misconfigured;
                 candidate.m_message =
-                    "Network and URI paths are prohibited by bounded local discovery.";
-                result.m_candidates.push_back(AZStd::move(candidate));
-                continue;
-            }
-            if (!IsAbsoluteLocalPath(candidate.m_path))
-            {
-                candidate.m_status = DiscoveryStatus::Misconfigured;
-                candidate.m_message =
-                    "Discovery paths must be absolute local paths.";
-                result.m_candidates.push_back(AZStd::move(candidate));
-                continue;
-            }
-            if (HasTraversalSegment(candidate.m_path))
-            {
-                candidate.m_status = DiscoveryStatus::Misconfigured;
-                candidate.m_message =
-                    "Discovery paths must not contain parent traversal segments.";
+                    "Discovery paths must be host-native absolute local paths without URI, network, or traversal syntax.";
                 result.m_candidates.push_back(AZStd::move(candidate));
                 continue;
             }
@@ -577,35 +706,44 @@ namespace ExternalToolchain
                 MakePathIdentity(candidate.m_path, platformId);
             if (!seenPaths.insert(identity).second)
             {
-                result.m_diagnostics.push_back(
-                    AZStd::string::format(
-                        "Duplicate candidate path from probe '%s' was ignored.",
-                        probe.m_probeId.c_str()));
+                candidate.m_status = DiscoveryStatus::Misconfigured;
+                candidate.m_message =
+                    "A duplicate candidate path cannot satisfy a distinct discovery probe.";
+                result.m_candidates.push_back(AZStd::move(candidate));
                 continue;
             }
 
             const auto probeStarted = AZStd::chrono::steady_clock::now();
             const ExternalToolPathObservation observation =
-                m_pathProbe.Inspect(candidate.m_path);
+                m_pathProbe.Inspect(candidate.m_path, probe.m_timeoutMilliseconds);
             candidate.m_elapsedMilliseconds = ElapsedMilliseconds(probeStarted);
-            if (candidate.m_elapsedMilliseconds > probe.m_timeoutMilliseconds)
+            if (observation.m_timedOut)
             {
                 candidate.m_status = DiscoveryStatus::ProbeFailed;
-                candidate.m_message =
-                    "Path inspection exceeded the best-effort probe timeout.";
+                candidate.m_message = observation.m_message;
                 result.m_candidates.push_back(AZStd::move(candidate));
                 continue;
             }
-
+            if (!observation.m_boundarySafe)
+            {
+                candidate.m_status = DiscoveryStatus::Misconfigured;
+                candidate.m_message = observation.m_message;
+                result.m_candidates.push_back(AZStd::move(candidate));
+                continue;
+            }
             if (ElapsedMilliseconds(providerStarted) > providerBudgetMilliseconds)
             {
                 candidate.m_status = DiscoveryStatus::ProbeFailed;
                 candidate.m_message =
-                    "Provider discovery budget was exceeded during path inspection.";
+                    "Provider discovery budget was exceeded during bounded path inspection.";
                 result.m_candidates.push_back(AZStd::move(candidate));
                 continue;
             }
 
+            if (!observation.m_resolvedPath.empty())
+            {
+                candidate.m_path = observation.m_resolvedPath;
+            }
             candidate.m_pathExists = observation.m_exists;
             candidate.m_kindMatches = observation.m_exists
                 && ((probe.m_kind == DiscoveryProbeKind::Directory
@@ -634,25 +772,25 @@ namespace ExternalToolchain
                     FindResolvedValue(
                         resolvedConfiguration,
                         probe.m_versionConfigurationKey);
-                if (versionValue && versionValue->m_configured)
+                if (!versionValue
+                    || !versionValue->m_configured
+                    || !versionValue->m_valueValid
+                    || versionValue->m_value.empty())
                 {
-                    if (!versionValue->m_valueValid)
-                    {
-                        candidate.m_status = DiscoveryStatus::Misconfigured;
-                        candidate.m_message =
-                            "The configured tool version is invalid.";
-                        result.m_candidates.push_back(AZStd::move(candidate));
-                        continue;
-                    }
-                    candidate.m_version = versionValue->m_value;
+                    candidate.m_status = DiscoveryStatus::Misconfigured;
+                    candidate.m_message =
+                        "A versioned probe requires one configured valid semantic version.";
+                    result.m_candidates.push_back(AZStd::move(candidate));
+                    continue;
                 }
+                candidate.m_version = versionValue->m_value;
             }
 
             AZStd::string versionMessage;
             if (!VersionWithinBounds(candidate.m_version, probe, versionMessage))
             {
                 candidate.m_status = candidate.m_version.empty()
-                    || !IsValidSemanticVersion(candidate.m_version)
+                        || !IsValidSemanticVersion(candidate.m_version)
                     ? DiscoveryStatus::Misconfigured
                     : DiscoveryStatus::UnsupportedVersion;
                 candidate.m_message = AZStd::move(versionMessage);
@@ -662,7 +800,7 @@ namespace ExternalToolchain
 
             candidate.m_status = DiscoveryStatus::Installed;
             candidate.m_message =
-                "Configured local path exists and satisfies the declared probe.";
+                "Resolved fixed local path satisfies the exact declared probe.";
             result.m_candidates.push_back(AZStd::move(candidate));
         }
 
@@ -675,19 +813,16 @@ namespace ExternalToolchain
         }
 
         result.m_elapsedMilliseconds = ElapsedMilliseconds(providerStarted);
-
         bool requiredProbeFailed = false;
         DiscoveryStatus requiredFailureStatus = DiscoveryStatus::NotInstalled;
         int requiredFailurePriority = StatusPriority(requiredFailureStatus);
         AZStd::vector<const ExternalToolInstallationCandidate*> installed;
-        for (const ExternalToolInstallationCandidate& candidate :
-             result.m_candidates)
+        for (const ExternalToolInstallationCandidate& candidate : result.m_candidates)
         {
             if (candidate.m_status == DiscoveryStatus::Installed)
             {
                 installed.push_back(&candidate);
             }
-
             const auto probe = AZStd::find_if(
                 probes.begin(),
                 probes.end(),
@@ -700,15 +835,22 @@ namespace ExternalToolchain
                 && candidate.m_status != DiscoveryStatus::Installed)
             {
                 requiredProbeFailed = true;
-                const int candidatePriority = StatusPriority(candidate.m_status);
-                if (candidatePriority > requiredFailurePriority)
+                const int priority = StatusPriority(candidate.m_status);
+                if (priority > requiredFailurePriority)
                 {
-                    requiredFailurePriority = candidatePriority;
+                    requiredFailurePriority = priority;
                     requiredFailureStatus = candidate.m_status;
                 }
             }
         }
 
+        if (result.m_candidates.size() != applicableProbeCount)
+        {
+            requiredProbeFailed = true;
+            requiredFailureStatus = DiscoveryStatus::ProbeFailed;
+            result.m_diagnostics.push_back(
+                "Every applicable probe must emit one candidate result.");
+        }
         if (requiredProbeFailed)
         {
             result.m_status = requiredFailureStatus;
@@ -716,7 +858,6 @@ namespace ExternalToolchain
                 "One or more required discovery probes did not succeed.");
             return result;
         }
-
         if (installed.size() == 1)
         {
             result.m_status = DiscoveryStatus::Installed;
@@ -728,15 +869,13 @@ namespace ExternalToolchain
         {
             result.m_status = DiscoveryStatus::Ambiguous;
             result.m_diagnostics.push_back(
-                "Multiple distinct compatible installations were discovered; "
-                "configuration must select one exact path.");
+                "Multiple distinct compatible installations were discovered; configuration must select one exact path.");
             return result;
         }
 
         result.m_status = DiscoveryStatus::NotInstalled;
         int priority = StatusPriority(result.m_status);
-        for (const ExternalToolInstallationCandidate& candidate :
-             result.m_candidates)
+        for (const ExternalToolInstallationCandidate& candidate : result.m_candidates)
         {
             const int candidatePriority = StatusPriority(candidate.m_status);
             if (candidatePriority > priority)

@@ -16,6 +16,9 @@ namespace ExternalToolchain
         bool m_exists = false;
         bool m_isDirectory = false;
         AZStd::string m_message;
+        bool m_timedOut = false;
+        bool m_boundarySafe = false;
+        AZStd::string m_resolvedPath;
     };
 
     class ExternalToolPathProbe
@@ -25,6 +28,22 @@ namespace ExternalToolchain
 
         virtual ExternalToolPathObservation Inspect(
             const AZStd::string& path) const = 0;
+        virtual ExternalToolPathObservation Inspect(
+            const AZStd::string& path,
+            AZ::u32 timeoutMilliseconds) const
+        {
+            (void)timeoutMilliseconds;
+            ExternalToolPathObservation observation = Inspect(path);
+            if (!observation.m_timedOut)
+            {
+                observation.m_boundarySafe = true;
+                if (observation.m_resolvedPath.empty())
+                {
+                    observation.m_resolvedPath = path;
+                }
+            }
+            return observation;
+        }
     };
 
     class SystemFileExternalToolPathProbe final
@@ -33,6 +52,9 @@ namespace ExternalToolchain
     public:
         ExternalToolPathObservation Inspect(
             const AZStd::string& path) const override;
+        ExternalToolPathObservation Inspect(
+            const AZStd::string& path,
+            AZ::u32 timeoutMilliseconds) const override;
     };
 
     class ExternalToolchainDiscoveryService

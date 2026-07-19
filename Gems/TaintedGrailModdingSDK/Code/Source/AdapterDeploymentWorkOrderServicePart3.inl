@@ -4,10 +4,12 @@ namespace TaintedGrailModdingSDK
     {
         AZStd::string EscapeJson(const AZStd::string& value)
         {
+            constexpr char HexDigits[] = "0123456789abcdef";
             AZStd::string escaped;
             escaped.reserve(value.size() + 8);
             for (char character : value)
             {
+                const unsigned char byte = static_cast<unsigned char>(character);
                 switch (character)
                 {
                 case '"':
@@ -32,9 +34,11 @@ namespace TaintedGrailModdingSDK
                     escaped += "\\t";
                     break;
                 default:
-                    if (static_cast<unsigned char>(character) < 0x20)
+                    if (byte < 0x20)
                     {
-                        escaped += "?";
+                        escaped += "\\u00";
+                        escaped.push_back(HexDigits[(byte >> 4) & 0x0f]);
+                        escaped.push_back(HexDigits[byte & 0x0f]);
                     }
                     else
                     {
@@ -67,11 +71,16 @@ namespace TaintedGrailModdingSDK
             stream << ']';
         }
 
+        void WriteJsonBool(std::ostringstream& stream, bool value)
+        {
+            stream << (value ? "true" : "false");
+        }
+
         void AddBlockedChecklist(AdapterDeploymentWorkOrder& workOrder)
         {
             AZStd::vector<AZStd::string> blockerCodes;
             for (const AdapterDeploymentWorkOrderBlocker& blocker :
-                workOrder.m_blockers)
+                 workOrder.m_blockers)
             {
                 blockerCodes.push_back(blocker.m_code);
             }
@@ -144,15 +153,19 @@ namespace TaintedGrailModdingSDK
             || request.m_preview.m_deploymentMutationAllowed
             || request.m_preview.m_rollbackExecutionAllowed
             || request.m_preview.m_launchAllowed
-            || !IsSha256Fingerprint(request.m_previewFingerprint))
+            || !IsSha256Fingerprint(request.m_previewFingerprint)
+            || !CanonicalSha256Matches(
+                request.m_preview.m_canonicalJson,
+                request.m_previewFingerprint))
         {
             previewNotReady = true;
             AddBlocker(
                 workOrder,
                 "deployment_work_order.preview_not_ready",
                 workOrder.m_previewId,
-                "An exact ready staging/deployment preview with all mutation and launch "
-                "permissions false is required.");
+                "An exact ready staging/deployment preview with a SHA-256 fingerprint "
+                "derived from its canonical JSON and all mutation and launch permissions "
+                "false is required.");
         }
 
         const AdapterDeploymentConfirmation& confirmation =
@@ -185,15 +198,14 @@ namespace TaintedGrailModdingSDK
         if (confirmation.m_previewId != request.m_preview.m_previewId
             || confirmation.m_previewFingerprint
                 != request.m_previewFingerprint
-            || !IsSha256Fingerprint(
-                confirmation.m_previewFingerprint))
+            || !IsSha256Fingerprint(confirmation.m_previewFingerprint))
         {
             confirmationBindingMismatch = true;
             AddBlocker(
                 workOrder,
                 "deployment_work_order.confirmation_binding_mismatch",
                 confirmation.m_confirmationId,
-                "The confirmation must bind to the exact ready preview ID and fingerprint.");
+                "The confirmation must bind to the exact ready preview ID and derived fingerprint.");
         }
         if (!ScopeCoversPreview(confirmation.m_scope, request.m_preview))
         {
@@ -217,7 +229,7 @@ namespace TaintedGrailModdingSDK
                 workOrder,
                 "deployment_work_order.confirmation_expired",
                 confirmation.m_confirmationId,
-                "Confirmation times and evaluation time must use exact UTC seconds and "
+                "Confirmation times and evaluation time must use exact valid UTC seconds and "
                 "the evaluation must occur before expiry.");
         }
 
@@ -286,7 +298,7 @@ namespace TaintedGrailModdingSDK
             }
         }
         for (const AdapterDeploymentPreflightEvidence& preflight :
-            request.m_preflightEvidence)
+             request.m_preflightEvidence)
         {
             if (!IsStableNamespacedId(preflight.m_preflightId)
                 || preflight.m_previewId != request.m_preview.m_previewId
@@ -296,8 +308,7 @@ namespace TaintedGrailModdingSDK
                 || preflight.m_status
                     != AdapterDeploymentPreflightStatus::Passed
                 || !IsUtcTimestamp(preflight.m_checkedAtUtc)
-                || preflight.m_checkedAtUtc
-                    < confirmation.m_issuedAtUtc
+                || preflight.m_checkedAtUtc < confirmation.m_issuedAtUtc
                 || preflight.m_checkedAtUtc > request.m_evaluatedAtUtc
                 || preflight.m_checker.empty()
                 || preflight.m_evidenceIds.empty())
@@ -402,8 +413,7 @@ namespace TaintedGrailModdingSDK
             AddBlockedChecklist(workOrder);
         }
         SortWorkOrderCollections(workOrder);
-        workOrder.m_canonicalJson =
-            SerializeCanonicalWorkOrder(workOrder);
+        workOrder.m_canonicalJson = SerializeCanonicalWorkOrder(workOrder);
         return workOrder;
     }
 
@@ -471,7 +481,8 @@ namespace TaintedGrailModdingSDK
             WriteStringArray(stream, step.m_evidenceIds);
             stream << ",\"Description\":";
             WriteJsonString(stream, step.m_description);
-            stream << ",\"ExecutionAllowed\":false";
+            stream << ",\"ExecutionAllowed\":";
+            WriteJsonBool(stream, step.m_executionAllowed);
             stream << '}';
         }
         stream << ']';
@@ -496,7 +507,8 @@ namespace TaintedGrailModdingSDK
             WriteJsonString(stream, item.m_detail);
             stream << ",\"EvidenceIds\":";
             WriteStringArray(stream, item.m_evidenceIds);
-            stream << ",\"AcknowledgementRecorded\":false";
+            stream << ",\"AcknowledgementRecorded\":";
+            WriteJsonBool(stream, item.m_acknowledgementRecorded);
             stream << '}';
         }
         stream << ']';
@@ -519,13 +531,20 @@ namespace TaintedGrailModdingSDK
             stream << '}';
         }
         stream << ']';
-        stream << ",\"ExecutionAllowed\":false";
-        stream << ",\"CopyAllowed\":false";
-        stream << ",\"DeleteAllowed\":false";
-        stream << ",\"BackupAllowed\":false";
-        stream << ",\"RestoreAllowed\":false";
-        stream << ",\"DeploymentAllowed\":false";
-        stream << ",\"LaunchAllowed\":false";
+        stream << ",\"ExecutionAllowed\":";
+        WriteJsonBool(stream, workOrder.m_executionAllowed);
+        stream << ",\"CopyAllowed\":";
+        WriteJsonBool(stream, workOrder.m_copyAllowed);
+        stream << ",\"DeleteAllowed\":";
+        WriteJsonBool(stream, workOrder.m_deleteAllowed);
+        stream << ",\"BackupAllowed\":";
+        WriteJsonBool(stream, workOrder.m_backupAllowed);
+        stream << ",\"RestoreAllowed\":";
+        WriteJsonBool(stream, workOrder.m_restoreAllowed);
+        stream << ",\"DeploymentAllowed\":";
+        WriteJsonBool(stream, workOrder.m_deploymentAllowed);
+        stream << ",\"LaunchAllowed\":";
+        WriteJsonBool(stream, workOrder.m_launchAllowed);
         stream << '}';
         return stream.str().c_str();
     }

@@ -9,6 +9,7 @@
 
 #include "AdapterPostDeploymentVerifierContracts.h"
 #include "FoundationModels.h"
+#include "SourceEvidenceRegistry.h"
 
 namespace TaintedGrailModdingSDK
 {
@@ -56,6 +57,15 @@ namespace TaintedGrailModdingSDK
         AZStd::string SerializeCanonicalReport(
             const AdapterPostDeploymentVerificationReport& report) const;
 
+        AdapterPostDeploymentVerifierEvidenceReturn BuildEvidenceReturn(
+            const AdapterDeploymentWorkOrder& workOrder,
+            const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,
+            const AdapterPostDeploymentVerificationReport& report,
+            const SourceEvidenceRegistry& sourceRegistry,
+            const AdapterPostDeploymentVerifierResultEnvelope& verifierEnvelope) const;
+
+        // Compatibility entry point. It cannot establish research-evidence binding and
+        // therefore deliberately resolves fail-closed as verifier_unreviewed.
         AdapterPostDeploymentVerifierEvidenceReturn BuildEvidenceReturn(
             const AdapterDeploymentWorkOrder& workOrder,
             const AdapterDeploymentExecutionResultEnvelope& executionEnvelope,

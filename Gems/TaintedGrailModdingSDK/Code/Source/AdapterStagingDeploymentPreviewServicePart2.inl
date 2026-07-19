@@ -173,14 +173,17 @@ namespace TaintedGrailModdingSDK
             || request.m_packagePreview.m_archiveAllowed
             || request.m_packagePreview.m_deploymentAllowed
             || request.m_packagePreview.m_canonicalJson.empty()
-            || !IsSha256Fingerprint(request.m_packagePreviewFingerprint))
+            || !IsSha256Fingerprint(request.m_packagePreviewFingerprint)
+            || !CanonicalSha256Matches(
+                request.m_packagePreview.m_canonicalJson,
+                request.m_packagePreviewFingerprint))
         {
             packageNotReady = true;
             AddBlocker(
                 preview.m_blockers,
                 "deployment.package_not_ready",
                 preview.m_packageRoot,
-                "A ready canonical package preview with all mutation permissions false and an exact SHA-256 fingerprint is required.");
+                "A ready canonical package preview whose SHA-256 fingerprint is derived from its exact canonical JSON, with all mutation permissions false, is required.");
         }
         for (const AdapterPackageLayoutEntry& entry : request.m_packagePreview.m_layout)
         {
@@ -228,7 +231,7 @@ namespace TaintedGrailModdingSDK
                 preview.m_blockers,
                 "deployment.inventory_binding_mismatch",
                 inventory.m_targetRoot,
-                "The target inventory must bind to the exact package preview, fingerprint, pack, and package root.");
+                "The target inventory must bind to the exact package preview, derived fingerprint, pack, and package root.");
         }
 
         if (!IsSafeRelativePath(inventory.m_targetRoot)
@@ -313,7 +316,7 @@ namespace TaintedGrailModdingSDK
 
         AZStd::vector<AZStd::string> matchedTargetEntryIds;
         for (const AdapterPackageLayoutEntry& packageEntry :
-            request.m_packagePreview.m_layout)
+             request.m_packagePreview.m_layout)
         {
             const AZStd::string& targetPath = packageEntry.m_packagePath;
             if (!IsSafeRelativePath(targetPath)

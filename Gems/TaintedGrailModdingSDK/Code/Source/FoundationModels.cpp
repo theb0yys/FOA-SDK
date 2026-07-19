@@ -7,11 +7,83 @@
 
 #include "FoundationModels.h"
 
+#include "ResearchContractValidation.h"
+
 #include <AzCore/Serialization/SerializeContext.h>
-#include <AzCore/std/string/regex.h>
 
 namespace TaintedGrailModdingSDK
 {
+    namespace
+    {
+        bool IsBoundedIdentityToken(
+            const AZStd::string& value,
+            size_t maximumLength = 128)
+        {
+            if (value.empty() || value.size() > maximumLength)
+            {
+                return false;
+            }
+            for (char character : value)
+            {
+                const bool allowed =
+                    (character >= 'a' && character <= 'z')
+                    || (character >= 'A' && character <= 'Z')
+                    || (character >= '0' && character <= '9')
+                    || character == '.'
+                    || character == '_'
+                    || character == '-';
+                if (!allowed)
+                {
+                    return false;
+                }
+            }
+            return value.find("..") == AZStd::string::npos
+                && value.front() != '.'
+                && value.back() != '.';
+        }
+
+        bool IsBoundedVersionToken(const AZStd::string& value)
+        {
+            if (value.empty() || value.size() > 128)
+            {
+                return false;
+            }
+            for (char character : value)
+            {
+                const bool allowed =
+                    (character >= 'a' && character <= 'z')
+                    || (character >= 'A' && character <= 'Z')
+                    || (character >= '0' && character <= '9')
+                    || character == '.'
+                    || character == '_'
+                    || character == '-'
+                    || character == '+';
+                if (!allowed)
+                {
+                    return false;
+                }
+            }
+            return value.front() != '.'
+                && value.back() != '.'
+                && value.find("..") == AZStd::string::npos;
+        }
+
+        bool HasUniqueBoundedTokens(const AZStd::vector<AZStd::string>& values)
+        {
+            AZStd::vector<AZStd::string> sorted = values;
+            for (const AZStd::string& value : sorted)
+            {
+                if (!IsBoundedIdentityToken(value, 256))
+                {
+                    return false;
+                }
+            }
+            AZStd::sort(sorted.begin(), sorted.end());
+            return AZStd::adjacent_find(sorted.begin(), sorted.end())
+                == sorted.end();
+        }
+    } // namespace
+
     void GameProfile::Reflect(AZ::ReflectContext* context)
     {
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
@@ -36,12 +108,24 @@ namespace TaintedGrailModdingSDK
 
     bool GameProfile::IsConfigured() const
     {
-        return !m_profileId.empty()
+        const bool monoConfigured = m_runtimeTarget != "Mono"
+            || (!m_bepInExVersion.empty()
+                && IsBoundedVersionToken(m_bepInExVersion)
+                && !m_pluginPath.empty());
+        const bool il2CppConfigured = m_runtimeTarget != "IL2CPP"
+            || m_pluginPath.empty();
+        return IsStableContractId(m_profileId)
+            && !m_displayName.empty()
+            && m_displayName.size() <= 512
             && !m_installPath.empty()
-            && !m_gameVersion.empty()
-            && !m_branch.empty()
-            && !m_runtimeTarget.empty()
-            && !m_managedAssembliesPath.empty();
+            && IsBoundedVersionToken(m_gameVersion)
+            && IsBoundedIdentityToken(m_branch)
+            && IsSupportedRuntimeTarget(m_runtimeTarget)
+            && IsBoundedVersionToken(m_unityVersion)
+            && !m_managedAssembliesPath.empty()
+            && HasUniqueBoundedTokens(m_dlcScopes)
+            && monoConfigured
+            && il2CppConfigured;
     }
 
     void WorkspaceModel::Reflect(AZ::ReflectContext* context)
@@ -105,13 +189,11 @@ namespace TaintedGrailModdingSDK
 
     bool PackManifest::HasStableIdentity() const
     {
-        static const AZStd::regex packIdPattern("^[a-z0-9][a-z0-9._-]*\\.[a-z0-9][a-z0-9._-]*$");
-        static const AZStd::regex semanticVersionPattern(
-            "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$");
         return m_schemaVersion == 1
-            && AZStd::regex_match(m_packId, packIdPattern)
-            && !m_ownerId.empty()
-            && AZStd::regex_match(m_version, semanticVersionPattern);
+            && IsStableContractId(m_packId)
+            && m_packId.find(':') == AZStd::string::npos
+            && IsBoundedIdentityToken(m_ownerId, 256)
+            && IsStrictSemanticVersion(m_version);
     }
 
     bool PackManifest::UsesSupportedSchema() const

@@ -1,10 +1,8 @@
 name: Tainted Grail Repository Hygiene
 
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. Run this workflow manually only after Actions is restored.
 on:
-  pull_request:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:

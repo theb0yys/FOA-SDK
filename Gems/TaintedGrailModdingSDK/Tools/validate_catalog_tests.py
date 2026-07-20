@@ -86,6 +86,7 @@ def main() -> int:
         test_entries = manifest_entries(test_manifest_path)
         expected_tests = {
             "Tests/AdapterContractTests.cpp",
+            "Tests/CanonicalFingerprintTests.cpp",
             "Tests/CatalogDatabaseTests.cpp",
             "Tests/CatalogGovernanceHardeningTests.cpp",
             "Tests/CatalogGovernanceServiceTests.cpp",
@@ -94,6 +95,7 @@ def main() -> int:
             "Tests/EconomyAuthoringTests.cpp",
             "Tests/EconomyCoverageServiceTests.cpp",
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
+            "Tests/FoundationWorkspaceIsolationTests.cpp",
         }
         if test_entries != expected_tests:
             fail(
@@ -135,7 +137,6 @@ def main() -> int:
             "Source/EconomyDuplicateDetectionService.cpp",
             "Source/EconomyModels.cpp",
             "Source/FoundationModels.cpp",
-            "Source/FoundationValidationService.cpp",
             "Source/SourceEvidenceRegistry.cpp",
         }
         if not required_core.issubset(core_entries):
@@ -151,6 +152,7 @@ def main() -> int:
             "Source/CatalogPromotionService.cpp",
             "Source/EconomyAuthoringService.cpp",
             "Source/FoundationCatalogService.cpp",
+            "Source/FoundationValidationService.cpp",
             "Source/PackPersistenceService.cpp",
             "Source/SourceEvidencePersistenceService.cpp",
             "Source/SourceImportService.cpp",
@@ -326,7 +328,7 @@ def main() -> int:
                 "missing evidence",
                 "unresolved",
                 "The evidence ID is unknown",
-                "The evidence belongs to an unrelated subject",
+                "The evidence does not prove an exact station or learnability association",
                 "The station is not validated, current, reference-complete, conflict-free, and non-superseded",
                 "AZStd::sort(",
             ),
@@ -347,7 +349,7 @@ def main() -> int:
         require_fragments(
             source_root / "ItemRecipeEditorWidget.cpp",
             (
-                "Station Visibility and Learnability Evidence — Read-only Research",
+                "Station Visibility and Learnability Evidence - Read-only Research",
                 "This view combines exact station IDs",
                 "BuildRecipeStationEvidence(",
                 "Blockers and reasons",

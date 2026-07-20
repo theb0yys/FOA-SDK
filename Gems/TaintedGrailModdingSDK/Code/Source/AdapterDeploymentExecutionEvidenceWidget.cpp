@@ -249,8 +249,8 @@ namespace TaintedGrailModdingSDK
                 "metadata supplied by a separately reviewed executor. Exact work-order "
                 "and attempted-step identities, backup and restore outcomes, target "
                 "fingerprints, rollback results, failures, and safe log references are "
-                "returned as candidate source/evidence documents. Nothing is executed, "
-                "imported, promoted, validated, permitted, deployed, launched, or written."),
+                "returned as candidate source/evidence documents. Automatic evidence promotion: prohibited. "
+                "Nothing is executed, imported, promoted, validated, permitted, deployed, launched, or written."),
             this);
         description->setWordWrap(true);
         layout->addWidget(description);

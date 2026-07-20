@@ -1,3 +1,10 @@
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+
 from __future__ import annotations
 
 import sys
@@ -121,7 +128,7 @@ tr("Backup outcome")
 tr("Target verification")
 tr("Rollback / restore outcome")
 tr("Evidence candidates")
-automatic evidence promotion: prohibited
+Automatic evidence promotion: prohibited
 """
         (source / "AdapterDeploymentExecutionEvidenceWidget.cpp").write_text(
             widget,
@@ -143,22 +150,17 @@ automatic evidence promotion: prohibited
         )
 
         test_text = """
-TypedVocabulariesAndReferenceBoundariesAreStrict
-RegistryRejectsDuplicateResultIdentity
+TypedVocabulariesReferencesAndDatesAreStrict
+UnboundRegistrationIsProhibited
+BoundRegistryRejectsDuplicateResultIdentity
 CompleteEnvelopeReturnsCandidateEvidenceOnly
-WorkOrderNotReadyPrecedesExecutorAndEnvelopeFailures
-ExecutorReviewAndExactWorkOrderBindingFailClosed
-StepIdentityAndOutcomeShapeAreExact
-BackupOutcomePreservesExactPreChangeFingerprint
-TargetVerificationKeepsMatchedAndMismatchedDistinct
-RollbackRestoreOutcomesBindExactInverseState
-FailureAndLogReferencesRemainSameStepBound
-FailedExecutionCanStillBeContractAcceptedEvidence
-CandidateEvidenceOrderingIsDeterministic
-EvidenceReturnDoesNotMutateWorkOrderOrEnvelope
+CallerSelectedWorkOrderAndResultFingerprintsFailClosed
+MissingStepBackupVerificationAndRollbackFailClosed
+UnknownFailureKindAndImpossibleCaptureDateAreRejectedBeforeStorage
+CanonicalPayloadIsOrderIndependentAndContentSensitive
 EXPECT_TRUE(result.m_accepted)
-m_sourceDocumentCount m_evidenceRecordCount
-stepCount resultCount
+m_stepResultCount m_backupResultCount m_verificationCount m_rollbackResultCount
+m_sourceDocuments.empty m_evidenceDocuments.empty
 """
         (tests / "AdapterDeploymentExecutionResultTests.cpp").write_text(
             test_text,
@@ -176,7 +178,7 @@ stepCount resultCount
         (
             docs / "FOA_ADAPTER_DEPLOYMENT_EXECUTION_RESULTS.md"
         ).write_text(
-            "exact reviewed deployment work order separately reviewed executor "
+            "Exact reviewed deployment work order separately reviewed executor "
             "attempted step identities backup and restore outcomes deployed fingerprints "
             "rollback results safe log references candidate evidence "
             "No executor, deployment command, launch path, adapter call, or automatic evidence promotion",
@@ -197,7 +199,7 @@ stepCount resultCount
         (repo / "ROADMAP.md").write_text(
             "Typed deployment execution-result and verification envelope\n"
             "Status: implemented, continuing hardening and Windows UI verification.\n"
-            "backup/restore outcomes, deployed fingerprints, rollback results, logs, and candidate evidence\n"
+            "backup/restore outcomes, target verification, rollback, failures, and logs\n"
             "No executor, deployment command, launch path, adapter call, or automatic evidence promotion",
             encoding="utf-8",
         )
@@ -323,14 +325,14 @@ stepCount resultCount
             )
             path.write_text(
                 path.read_text().replace(
-                    "StepIdentityAndOutcomeShapeAreExact",
+                    "CompleteEnvelopeReturnsCandidateEvidenceOnly",
                     "step test missing",
                 ),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(
                 AdapterDeploymentExecutionResultContractError,
-                "StepIdentity",
+                "CompleteEnvelopeReturnsCandidateEvidenceOnly",
             ):
                 validate_adapter_deployment_execution_results(repo)
 

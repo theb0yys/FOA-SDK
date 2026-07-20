@@ -172,10 +172,10 @@ def main() -> int:
             (
                 "Windows Manual UI Smoke and Screenshot Evidence",
                 "real Windows x64 Profile",
-                "Tools → Tainted Grail SDK",
+                "Tools \u2192 Tainted Grail SDK",
                 "All ten TG SDK panes",
                 "Tainted Grail Adapter Work-Order Plans",
-                "100–200%",
+                "100\u2013200%",
                 "keyboard traversal",
                 "save, close, reopen",
                 "failure message",

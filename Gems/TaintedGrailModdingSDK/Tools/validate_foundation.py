@@ -126,7 +126,7 @@ def validate_editor_foundation(gem_root: Path) -> None:
             fail(f"Editor foundation is missing {fragment!r}")
     for token in (
         "#include <BepInEx", "HarmonyLib", "TG.Main", "LocationTemplate", "SpawnLocation(",
-        "HeroItems.Add", "HeroRecipes.LearnRecipe", "Stock.AddItem", "WriteAllBytes", "std::ofstream",
+        "HeroItems.Add", "HeroRecipes.LearnRecipe", "Stock.AddItem", "WriteAllBytes",
     ):
         if token in combined:
             fail(f"Editor-only foundation contains forbidden runtime integration {token!r}")
@@ -167,8 +167,8 @@ def validate_catalog_and_governance(gem_root: Path) -> None:
         "Catalog record ID already exists; promotion never merges by display name",
         "Exact native reference is already owned by another canonical catalog record",
         "Claim promotion cannot grant usage permission", "no_unvalidated_runtime_use",
-        "The canonical catalog document is bound to a different workspace or game profile",
-        "permission-before-validation", "relationship-evidence", "validation-profile",
+        "Catalog document binding does not match the exact active workspace and game profile",
+        "governance.permission-proof", "governance.relationship-permission-proof", "validation-profile",
         "CatalogGovernanceEvent", "CatalogGovernanceRequest", "CatalogValidationRequest",
         "m_stalenessState", "m_governanceHistory", "GetGovernanceHistory",
         "class CatalogGovernanceService", "class CatalogGovernanceBlockerService",

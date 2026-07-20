@@ -122,7 +122,7 @@ materialCount outputCount
         )
         (docs / "FOA_ADAPTER_BUILD_MANIFESTS.md").write_text(
             "reproducible build definition resolved materials BepInEx plugin metadata "
-            "hard and soft dependencies safe relative package paths redistribution ready "
+            "hard and soft dependencies safe relative locator redistribution ready "
             "toolchain_unresolved BuildAllowed No compilation, packaging, deployment, or execution SLSA",
             encoding="utf-8",
         )

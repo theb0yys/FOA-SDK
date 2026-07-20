@@ -70,9 +70,9 @@ row->m_status != "supported"
 group.m_rows.size() != sizeof(AllCapabilities)
 CollectReadySubjects CollectPermissionProof CollectRelationshipValidationProof
 RecordInputEvidenceIsValid RecordPayloadIsComplete
-typed recipe output lacks exact profile-bound input evidence
+typed recipe output lacks evidence for the exact output association, quantity, and probability
 canonical plans require a resolved target record ID
-no exact relationship validation proof is available
+no exact relationship-bound validation proof is available
 "workorder.plan:" ":step:" SerializeCanonicalPlan ExecutionAllowed
 AppendJsonStringArray SortSteps m_canonicalJson
 m_inputEvidenceIds m_declarationEvidenceIds m_permissionEventIds
@@ -147,7 +147,7 @@ declarationCountBefore relationshipCountBefore
             encoding="utf-8",
         )
         (docs / "FOA_ADAPTER_WORK_ORDER_PLANS.md").write_text(
-            "canonical plans only all eleven compatibility rows stable plan identity canonical JSON "
+            "canonical plans only All eleven compatibility rows stable plan identity canonical JSON "
             "input evidence permission evidence validation proof resolved relationship targets transient "
             "ExecutionAllowed No runtime execution runtime-result evidence envelope\n",
             encoding="utf-8",
@@ -161,7 +161,7 @@ declarationCountBefore relationshipCountBefore
             encoding="utf-8",
         )
         (docs / "USER_GUIDE.md").write_text(
-            "Tainted Grail Adapter Work-Order Plans generated refused canonical JSON execution is prohibited\n",
+            "Tainted Grail Adapter Work-Order Plans generated refused canonical JSON Execution is prohibited\n",
             encoding="utf-8",
         )
         (docs / "DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md").write_text(
@@ -176,7 +176,7 @@ declarationCountBefore relationshipCountBefore
         (repo / "ROADMAP.md").write_text(
             "Deterministic work-order plan generation\n"
             "Status: implemented, continuing hardening and Windows UI verification.\n"
-            "runtime-result evidence envelope\n",
+            "Runtime-result evidence envelope\n",
             encoding="utf-8",
         )
         (repo / "CHANGELOG.md").write_text(

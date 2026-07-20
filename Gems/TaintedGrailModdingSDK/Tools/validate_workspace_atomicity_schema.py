@@ -121,7 +121,7 @@ def validate_workspace_contract(repo_root: Path) -> None:
             "RejectLoadErrors",
             "SourceEvidenceRegistry registry",
             "CatalogDatabase catalog",
-            "ReplaceFromDocument",
+            "ReplaceFromBoundDocument",
             "activeProfileCopy",
         ),
     )
@@ -136,8 +136,8 @@ def validate_workspace_contract(repo_root: Path) -> None:
             "DeploymentPath",
             "DiagnosticsPath",
             "ExtractedDataPath",
-            "ManagedAssembliesPath must remain inside",
-            "PluginPath must remain inside",
+            "ManagedAssembliesPath must be a dedicated directory inside the canonical InstallPath",
+            "PluginPath must be a dedicated directory inside InstallPath for Mono profiles",
         ),
     )
     require_fragments(

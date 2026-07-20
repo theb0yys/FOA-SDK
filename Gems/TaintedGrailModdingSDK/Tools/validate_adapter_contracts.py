@@ -125,7 +125,7 @@ def validate_adapter_contracts(repo_root: Path) -> None:
             '"vendor_or_loot_injection"',
             '"quest_or_contract_reward_injection"',
             "FindValidationById",
-            "GetGovernanceHistory",
+            "FindEffectiveGovernanceEvent",
             "m_sourceFingerprint",
             "m_profileId",
             "m_gameVersion",

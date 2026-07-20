@@ -1,3 +1,10 @@
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+
 from __future__ import annotations
 
 import sys
@@ -48,7 +55,10 @@ class AdapterDeploymentWorkOrderValidatorTests(unittest.TestCase):
         (
             code / "taintedgrailmoddingsdk_deployment_work_order_tests_files.cmake"
         ).write_text(
-            "set(FILES\n    Tests/AdapterDeploymentWorkOrderTests.cpp\n)\n",
+            "set(FILES\n"
+            "    Tests/AdapterDeploymentWorkOrderTests.cpp\n"
+            "    Tests/AdapterDeploymentPipelineHandoffTests.cpp\n"
+            ")\n",
             encoding="utf-8",
         )
         (code / "CMakeLists.txt").write_text(

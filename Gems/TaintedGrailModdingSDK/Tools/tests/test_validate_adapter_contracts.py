@@ -63,7 +63,7 @@ class AdapterCompatibilityService BuildCapabilityMatrix
 "supported" "unsupported" "version_mismatch" "permission_missing" "proof_missing"
 "existing_item_grant" "existing_recipe_learn" "runtime_recipe_append"
 "vendor_or_loot_injection" "quest_or_contract_reward_injection"
-FindValidationById GetGovernanceHistory m_sourceFingerprint m_profileId m_gameVersion m_branch
+FindValidationById FindEffectiveGovernanceEvent m_sourceFingerprint m_profileId m_gameVersion m_branch
 m_runtimeTarget declarations.empty()
 """
         (source / "AdapterCompatibilityService.h").write_text(compatibility, encoding="utf-8")

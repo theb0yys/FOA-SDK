@@ -70,7 +70,7 @@ struct AdapterRuntimeFailure struct AdapterRuntimeLogReference
 struct AdapterRuntimeStepResult struct AdapterRuntimeRecoveryResult
 struct AdapterRuntimeResultEnvelope class AdapterRuntimeResultRegistry RegisterEnvelope
 m_attempted m_cleanupResult m_rollbackResult m_planCanonicalJson m_planFingerprint
-m_resultFingerprint "sha256:" IsAdapterRuntimeLogReference safe relative locators
+m_resultFingerprint IsSha256Fingerprint CanonicalSha256Matches IsAdapterRuntimeLogReference safe relative locators
 Failed and skipped outcomes require failures
 """
         (source / "AdapterRuntimeResultContracts.h").write_text(contracts, encoding="utf-8")
@@ -83,7 +83,8 @@ runtime_result.step_missing runtime_result.step_unknown runtime_result.cleanup_m
 runtime_result.rollback_mismatch RecoveryMatchesStep
 FindPlanCapabilityStep(plan, "cleanup") FindPlanCapabilityStep(plan, "rollback")
 SourceDocument EvidenceDocument "adapter_runtime_step_result" "adapter_runtime_failure"
-"adapter_runtime_cleanup_result" "adapter_runtime_rollback_result"
+const char* recoveryNames[] = { "cleanup", "rollback" }
+AZStd::string("adapter_runtime_") + recoveryNames[index] + "_result"
 "adapter_runtime_log_reference" "adapter_runtime_plan_binding"
 m_sourceDocuments m_evidenceDocuments m_accepted = true
 validation and permission remain unchanged
@@ -116,18 +117,17 @@ tr("Evidence candidates") tr("execution: prohibited")
 
         test_text = """
 TypedOutcomeFailureAndLogVocabulariesAreStrict
-RegistryRejectsMalformedAndDuplicateResultFingerprints
+RegistryRejectsCallerSelectedAndDuplicateFingerprints
+PlanFingerprintMustHashExactCanonicalJson
 ExactAttemptedPlanProducesCandidateEvidenceOnly
 FailedStepAndTypedFailureReturnAsNewEvidence
 UnknownOrMissingStepIdentityFailsClosed
 OutcomeAndFailureShapeIsValidatedBeforeEvidenceReturn
 CleanupAndRollbackSummariesMustMatchTheirStepResults
-PlanBindingAndCanonicalJsonMismatchFailsClosed
-LogReferencesAndFingerprintsBecomeSeparateEvidenceSources
-EvidenceReturnIsDeterministicAndDoesNotMutateInputs
+ImpossibleUtcDateAndUnknownFailureKindAreRejected
+CanonicalPayloadIsOrderIndependentButContentSensitive
 EXPECT_TRUE(HasEvidenceKind(result, "adapter_runtime_failure"))
 EXPECT_TRUE(HasIssue(result, "runtime_result.cleanup_mismatch"))
-planStepCountBefore envelopeStepCountBefore
 """
         (tests / "AdapterRuntimeResultEvidenceTests.cpp").write_text(test_text, encoding="utf-8")
         (workflow / "tainted-grail-sdk-foundation.yml").write_text(

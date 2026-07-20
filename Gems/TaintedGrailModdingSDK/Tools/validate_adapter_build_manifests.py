@@ -271,7 +271,7 @@ def validate_adapter_build_manifests(repo_root: Path) -> None:
             "resolved materials",
             "BepInEx plugin metadata",
             "hard and soft dependencies",
-            "safe relative package paths",
+            "safe relative locator",
             "redistribution",
             "ready",
             "toolchain_unresolved",

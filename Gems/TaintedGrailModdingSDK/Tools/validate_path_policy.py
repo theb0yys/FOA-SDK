@@ -78,8 +78,8 @@ def validate_path_policy(repo_root: Path) -> None:
             "DeploymentPath",
             "DiagnosticsPath",
             "ExtractedDataPath",
-            "ManagedAssembliesPath must remain inside",
-            "PluginPath must remain inside",
+            "ManagedAssembliesPath must be a dedicated directory inside the canonical InstallPath",
+            "PluginPath must be a dedicated directory inside InstallPath for Mono profiles",
         ),
     )
     require_fragments(
@@ -258,10 +258,10 @@ def validate_path_policy(repo_root: Path) -> None:
     require_fragments(
         repo_root / "docs/tainted-grail-sdk/PATH_POLICY.md",
         (
-            "Canonical resolution",
-            "component containment",
+            "Resolve absolute canonical paths",
+            "Compare containment by path components",
             "filesystem links",
-            "diagnostic-only",
+            "Diagnostic override",
             "source-built",
         ),
     )

@@ -123,8 +123,8 @@ namespace TaintedGrailModdingSDK
                 "Read-only Phase 8 package-layout research. Each preview compares one accepted "
                 "build-manifest review with one project-owned staging inventory, then derives "
                 "package paths, output digests, omissions, collisions, and redistribution blockers. "
-                "AssemblyAllowed, ArchiveAllowed, and DeploymentAllowed are always false. Nothing "
-                "is copied, archived, deployed, launched, or executed by this pane."),
+                "AssemblyAllowed, ArchiveAllowed, and DeploymentAllowed are always false. "
+                "Nothing is copied, archived, deployed, launched, or executed by this pane."),
             this);
         description->setWordWrap(true);
         layout->addWidget(description);

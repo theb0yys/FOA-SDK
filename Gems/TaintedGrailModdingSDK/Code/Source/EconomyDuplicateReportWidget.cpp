@@ -50,7 +50,7 @@ namespace TaintedGrailModdingSDK
             QStringList details;
             for (const EconomyDuplicateCandidate& candidate : group.m_candidates)
             {
-                QString candidateText = QObject::tr("%1 → %2 [%3]")
+                QString candidateText = QObject::tr("%1 -> %2 [%3]")
                     .arg(ToQString(candidate.m_ownerPackId))
                     .arg(ToQString(candidate.m_recordId))
                     .arg(ToQString(candidate.m_status));
@@ -86,8 +86,9 @@ namespace TaintedGrailModdingSDK
         auto* description = new QLabel(
             tr(
                 "Read-only authoring-time candidates from exact economy subject references and exact recipe "
-                "duplicate keys across distinct owner packs. Display names and fuzzy similarity are never identity "
-                "signals. The report does not merge records, reject a pack, select a winner, grant permission, or "
+                "duplicate keys across distinct owner packs. "
+                "Display names and fuzzy similarity are never identity signals. "
+                "The report does not merge records, reject a pack, select a winner, grant permission, or "
                 "prove runtime conflict."),
             this);
         description->setWordWrap(true);

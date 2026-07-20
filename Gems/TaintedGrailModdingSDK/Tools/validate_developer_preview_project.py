@@ -170,7 +170,7 @@ def validate_preview_project(repo_root: Path) -> None:
             "validate_path_policy.py",
             "repository-owned path policy",
             "Tainted Grail Modding Editor.lnk",
-            "Tools → Tainted Grail SDK",
+            "Tools \u2192 Tainted Grail SDK",
             "TaintedGrailModdingEditor/user/log/Editor.log",
         ),
         "dedicated-entry quickstart",

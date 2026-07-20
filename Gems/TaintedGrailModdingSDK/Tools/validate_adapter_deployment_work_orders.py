@@ -86,10 +86,11 @@ def validate_adapter_deployment_work_orders(repo_root: Path) -> None:
     )
     if manifest_entries(test_manifest) != (
         "Tests/AdapterDeploymentWorkOrderTests.cpp",
+        "Tests/AdapterDeploymentPipelineHandoffTests.cpp",
     ):
         raise AdapterDeploymentWorkOrderContractError(
-            "Deployment work-order test ownership must contain only "
-            "Tests/AdapterDeploymentWorkOrderTests.cpp."
+            "Deployment work-order test ownership must contain the service tests and "
+            "the real staging-preview-to-work-order handoff regression test."
         )
     require_fragments(
         cmake,
@@ -109,6 +110,7 @@ def validate_adapter_deployment_work_orders(repo_root: Path) -> None:
             *(read_text(path) for path in service_parts),
         ]
     )
+    service = service.replace('\\"', '"')
     require_fragments(
         service,
         (

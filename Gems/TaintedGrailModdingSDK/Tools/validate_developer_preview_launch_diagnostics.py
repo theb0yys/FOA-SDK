@@ -161,7 +161,7 @@ def main() -> int:
         require_fragments(
             troubleshooting_path,
             (
-                "Tools → Tainted Grail SDK",
+                "Tools \u2192 Tainted Grail SDK",
                 "Editor.log",
                 "diagnostics-manifest.json",
                 "Nothing is uploaded automatically",

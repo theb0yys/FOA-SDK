@@ -1,6 +1,6 @@
 #
 # Copyright (c) Contributors to the Open 3D Engine Project.
-# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+# For complete copyright and license terms please see the LICENSE at this distribution.
 #
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
@@ -109,6 +109,9 @@ set(FILES
     Source/CatalogDatabaseIntegrity.cpp
     Source/CatabaseIntegrityBase.inl
     Source/CatalogDatabasePopulation.cpp
+    Source/CatabasePopulationPart1.inl
+    Source/CatabasePopulationPart2.inl
+    Source/CatabasePopulationPart3.inl
     Source/CatalogGovernanceBlockerService.cpp
     Source/CatalogGovernanceBlockerService.h
     Source/CatalogGovernanceTypes.cpp

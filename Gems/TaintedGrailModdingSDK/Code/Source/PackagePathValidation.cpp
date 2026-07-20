@@ -119,7 +119,7 @@ namespace TaintedGrailModdingSDK
             || value.size() > 2048
             || value.front() == '/'
             || value.front() == '\\'
-            || (value.size() > 1 && value[1] == ':')
+            || (value.size() > 1 && value[1] == ':'))
         {
             SetError(error, "Package paths must be bounded relative paths.");
             return false;

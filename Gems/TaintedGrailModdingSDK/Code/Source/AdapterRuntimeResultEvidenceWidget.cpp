@@ -11,6 +11,7 @@
 #include "FoundationService.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
 
 #include <QAbstractItemView>
 #include <QFont>

@@ -464,18 +464,37 @@ namespace TaintedGrailModdingSDK
                 {
                     evidenceIds.push_back(evidence.m_evidenceId);
                     report.m_candidateEvidenceIds.push_back(evidence.m_evidenceId);
+                    bool specialBindingMismatch = false;
                     if (source)
                     {
+                        const bool exactWorkOrderBinding =
+                            HasExactWorkOrderBindingEvidence(
+                                evidence,
+                                source->m_source,
+                                envelope);
+                        const bool exactExecutorReview =
+                            HasExactExecutorReviewEvidence(
+                                evidence,
+                                source->m_source,
+                                envelope);
                         hasWorkOrderBinding = hasWorkOrderBinding
-                            || HasExactWorkOrderBindingEvidence(
-                                evidence,
-                                source->m_source,
-                                envelope);
+                            || exactWorkOrderBinding;
                         hasExecutorReview = hasExecutorReview
-                            || HasExactExecutorReviewEvidence(
-                                evidence,
-                                source->m_source,
-                                envelope);
+                            || exactExecutorReview;
+                        specialBindingMismatch =
+                            (evidence.m_evidenceKind
+                                    == "deployment_work_order_binding"
+                                && !exactWorkOrderBinding)
+                            || (evidence.m_evidenceKind
+                                    == "deployment_executor_review"
+                                && !exactExecutorReview);
+                    }
+                    else if (evidence.m_evidenceKind
+                            == "deployment_work_order_binding"
+                        || evidence.m_evidenceKind
+                            == "deployment_executor_review")
+                    {
+                        specialBindingMismatch = true;
                     }
                     if (!IsStableContractId(evidence.m_evidenceId)
                         || evidence.m_sourceId != document.m_sourceId
@@ -492,7 +511,8 @@ namespace TaintedGrailModdingSDK
                         || evidence.m_locator.empty()
                         || evidence.m_recordPath.empty()
                         || !IsStrictUtcTimestamp(evidence.m_extractedAt)
-                        || evidence.m_extractedAt != envelope.m_capturedAtUtc)
+                        || evidence.m_extractedAt != envelope.m_capturedAtUtc
+                        || specialBindingMismatch)
                     {
                         valid = false;
                         AddBlocker(

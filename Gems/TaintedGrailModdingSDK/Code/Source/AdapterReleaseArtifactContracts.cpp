@@ -10,6 +10,7 @@
 #include "AdapterReleaseArtifactProvenanceService.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
 #include <AzCore/std/utility/move.h>
 
 namespace TaintedGrailModdingSDK
@@ -215,36 +216,31 @@ namespace TaintedGrailModdingSDK
         return registry;
     }
 
-    bool AdapterReleaseArtifactRegistry::RegisterEnvelope(
-        const AdapterReleaseArtifactEnvelope& envelope,
+    bool AdapterReleaseArtifactRegistry::RegisterRequest(
+        const AdapterVerifierEvidenceReconciliationResult& reconciliation,
+        const AdapterPackageAssemblyPreview& packagePreview,
+        const SourceEvidenceRegistry& sourceRegistry,
+        const AdapterReleaseArtifactRequest& request,
         AZStd::string* error)
     {
         AdapterReleaseArtifactProvenanceService service;
-        if (!IsAdapterPostDeploymentVerifierStableId(envelope.m_artifactId)
-            || !IsAdapterPostDeploymentVerifierUtcTimestamp(
-                envelope.m_evaluatedAtUtc)
+        const AdapterReleaseArtifactResult result = service.BuildEnvelope(
+            reconciliation,
+            packagePreview,
+            sourceRegistry,
+            request);
+        const AdapterReleaseArtifactEnvelope& envelope = result.m_envelope;
+        if (!result.m_ready
             || envelope.m_status != AdapterReleaseArtifactEnvelopeStatus::Ready
             || !envelope.m_metadataReady
             || !envelope.m_humanReviewRequired
             || !envelope.m_blockers.empty()
-            || envelope.m_contents.empty()
-            || envelope.m_publicationTargets.empty()
-            || envelope.m_contentCount
-                != static_cast<AZ::u64>(envelope.m_contents.size())
-            || envelope.m_provenanceCount
-                != static_cast<AZ::u64>(envelope.m_provenance.size())
-            || envelope.m_legalDispositionCount
-                != static_cast<AZ::u64>(envelope.m_legalDispositions.size())
-            || envelope.m_publicationTargetCount
-                != static_cast<AZ::u64>(envelope.m_publicationTargets.size())
             || HasOperationalMutation(envelope)
-            || envelope.m_canonicalJson.empty()
-            || envelope.m_canonicalJson
-                != service.SerializeCanonicalEnvelope(envelope))
+            || envelope.m_canonicalJson.empty())
         {
             SetError(
                 error,
-                "Release-artifact session registration requires one self-canonical, Ready, metadata-complete, blocker-free, operation-free envelope with exact counts and reviewed publication targets.");
+                "Release-artifact session registration requires the production service to rebuild one Ready, evidence-bound, blocker-free, operation-free envelope from its exact upstream inputs.");
             return false;
         }
 

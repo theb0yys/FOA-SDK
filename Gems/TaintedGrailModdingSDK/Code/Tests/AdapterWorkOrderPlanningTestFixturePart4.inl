@@ -197,7 +197,12 @@ namespace
             nativeOutput.m_linkId = "output.recipe.native";
             nativeOutput.m_recipeRecordId = nativeRecipe.m_recordId;
             nativeOutput.m_itemRecordId = nativeItem.m_recordId;
-            nativeOutput.m_evidenceIds = nativeRecipe.m_evidenceIds;
+            nativeOutput.m_evidenceIds = { "evidence.output.recipe.native" };
+            RegisterEvidence(
+                fixture.m_sourceRegistry,
+                MakeEvidence(
+                    nativeOutput.m_evidenceIds.front(),
+                    "economy-recipe-output:" + nativeOutput.m_linkId));
             EXPECT_TRUE(fixture.m_catalog.UpsertRecipeOutput(nativeOutput, &error))
                 << error.c_str();
 
@@ -205,7 +210,12 @@ namespace
             syntheticOutput.m_linkId = "output.recipe.synthetic";
             syntheticOutput.m_recipeRecordId = syntheticRecipe.m_recordId;
             syntheticOutput.m_itemRecordId = syntheticItem.m_recordId;
-            syntheticOutput.m_evidenceIds = syntheticRecipe.m_evidenceIds;
+            syntheticOutput.m_evidenceIds = { "evidence.output.recipe.synthetic" };
+            RegisterEvidence(
+                fixture.m_sourceRegistry,
+                MakeEvidence(
+                    syntheticOutput.m_evidenceIds.front(),
+                    "economy-recipe-output:" + syntheticOutput.m_linkId));
             EXPECT_TRUE(fixture.m_catalog.UpsertRecipeOutput(syntheticOutput, &error))
                 << error.c_str();
 

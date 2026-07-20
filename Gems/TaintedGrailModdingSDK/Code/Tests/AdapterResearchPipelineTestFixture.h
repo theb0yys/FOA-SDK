@@ -18,6 +18,7 @@
 #include "SourceEvidenceRegistry.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
 #include <AzCore/std/utility/move.h>
 
 namespace TaintedGrailModdingSDK::Test
@@ -352,7 +353,56 @@ namespace TaintedGrailModdingSDK::Test
             evidence.m_recordPath = "VerifierReview";
             evidence.m_extractedAt = "2026-07-19T12:05:00Z";
             registry.RegisterEvidence(evidence, &error);
+
+            evidence.m_evidenceId = "owner.evidence.release-content.1";
+            evidence.m_subjectRef =
+                "release-content:owner.release-content.1";
+            evidence.m_claim =
+                "The exact synthetic release content provenance and legal disposition were reviewed.";
+            evidence.m_evidenceKind = "release_content_review";
+            evidence.m_recordPath = "ReleaseReview/Contents/1";
+            registry.RegisterEvidence(evidence, &error);
+
+            evidence.m_evidenceId = "owner.evidence.release-artifact";
+            evidence.m_subjectRef =
+                "release-artifact:owner.release-artifact";
+            evidence.m_claim =
+                "The exact synthetic release signing intent and publication target were reviewed.";
+            evidence.m_evidenceKind = "release_artifact_review";
+            evidence.m_recordPath = "ReleaseReview/Artifact";
+            registry.RegisterEvidence(evidence, &error);
             return registry;
+        }
+
+        static void AppendReleaseReviewCandidateEvidence(
+            const SourceEvidenceRegistry& registry,
+            AdapterPostDeploymentVerifierEvidenceReturn& evidenceReturn)
+        {
+            const SourceRecord* source =
+                registry.FindSource("owner.verifier-review-source");
+            if (!source)
+            {
+                return;
+            }
+            EvidenceDocument document;
+            document.m_sourceId = source->m_sourceId;
+            document.m_sourceFingerprint = source->m_fingerprint;
+            document.m_profileId = source->m_profileId;
+            document.m_gameVersion = source->m_gameVersion;
+            document.m_branch = source->m_branch;
+            for (const AZStd::string& evidenceId : {
+                     AZStd::string("owner.evidence.release-content.1"),
+                     AZStd::string("owner.evidence.release-artifact") })
+            {
+                if (const EvidenceRecord* evidence =
+                        registry.FindEvidence(evidenceId))
+                {
+                    document.m_evidence.push_back(*evidence);
+                }
+            }
+            evidenceReturn.m_evidenceRecordCount +=
+                static_cast<AZ::u64>(document.m_evidence.size());
+            evidenceReturn.m_evidenceDocuments.push_back(AZStd::move(document));
         }
 
         static AdapterPostDeploymentVerifierResultEnvelope BuildVerifierEnvelope(
@@ -538,10 +588,6 @@ namespace TaintedGrailModdingSDK::Test
             request.m_packagePreviewCanonicalJson =
                 packagePreview.m_canonicalJson;
 
-            const AZStd::string evidenceId =
-                reconciliation.m_envelope.m_inputCandidateEvidenceIds.empty()
-                ? AZStd::string("owner.evidence.release")
-                : reconciliation.m_envelope.m_inputCandidateEvidenceIds.front();
             for (size_t index = 0; index < packagePreview.m_layout.size(); ++index)
             {
                 const AdapterPackageLayoutEntry& entry =
@@ -570,9 +616,11 @@ namespace TaintedGrailModdingSDK::Test
                 provenance.m_subjectRef =
                     "release-content:" + content.m_contentId;
                 provenance.m_sourceKind = "reviewed_package_layout";
-                provenance.m_sourceId = "owner.release-source." + suffix;
-                provenance.m_sourceFingerprint = entry.m_outputDigest;
-                provenance.m_evidenceIds = { evidenceId };
+                provenance.m_sourceId = "owner.verifier-review-source";
+                provenance.m_sourceFingerprint = FixtureFingerprint('e');
+                provenance.m_evidenceIds = {
+                    "owner.evidence.release-content." + suffix,
+                };
                 provenance.m_capturedAtUtc = "2026-07-19T14:40:00Z";
                 provenance.m_limitations =
                     "Metadata declaration only; no file was opened or hashed.";
@@ -584,7 +632,9 @@ namespace TaintedGrailModdingSDK::Test
                 disposition.m_disposition =
                     AdapterReleaseLegalDisposition::Approved;
                 disposition.m_reviewer = "legal-reviewer";
-                disposition.m_evidenceIds = { evidenceId };
+                disposition.m_evidenceIds = {
+                    "owner.evidence.release-content." + suffix,
+                };
                 disposition.m_reviewedAtUtc = "2026-07-19T14:45:00Z";
                 disposition.m_rationale =
                     "The synthetic package entry is project-owned and redistributable.";
@@ -597,7 +647,9 @@ namespace TaintedGrailModdingSDK::Test
             request.m_signingIntent.m_identityKind =
                 AdapterReleaseSigningIdentityKind::None;
             request.m_signingIntent.m_reviewer = "signing-reviewer";
-            request.m_signingIntent.m_evidenceIds = { evidenceId };
+            request.m_signingIntent.m_evidenceIds = {
+                "owner.evidence.release-artifact",
+            };
             request.m_signingIntent.m_reviewedAtUtc =
                 "2026-07-19T14:50:00Z";
             request.m_signingIntent.m_rationale =
@@ -609,7 +661,7 @@ namespace TaintedGrailModdingSDK::Test
             target.m_locator = "github.com/theb0yys/o3de/releases";
             target.m_channel = "test";
             target.m_reviewer = "publication-reviewer";
-            target.m_evidenceIds = { evidenceId };
+            target.m_evidenceIds = { "owner.evidence.release-artifact" };
             target.m_reviewedAtUtc = "2026-07-19T14:55:00Z";
             target.m_rationale =
                 "Reviewed metadata declaration only; no service is contacted.";
@@ -650,6 +702,9 @@ namespace TaintedGrailModdingSDK::Test
                 m_report,
                 m_sourceRegistry,
                 m_verifierEnvelope);
+            AppendReleaseReviewCandidateEvidence(
+                m_sourceRegistry,
+                m_verifierEvidence);
 
             m_reconciliationRequest = BuildReconciliationRequest(
                 m_executionEnvelope,
@@ -673,6 +728,7 @@ namespace TaintedGrailModdingSDK::Test
             m_releaseArtifact = releaseService.BuildEnvelope(
                 m_reconciliation,
                 m_packagePreview,
+                m_sourceRegistry,
                 m_releaseRequest);
         }
     };

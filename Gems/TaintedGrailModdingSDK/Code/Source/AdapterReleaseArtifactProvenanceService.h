@@ -9,6 +9,7 @@
 
 #include "AdapterReleaseArtifactContracts.h"
 #include "FoundationModels.h"
+#include "SourceEvidenceRegistry.h"
 
 namespace TaintedGrailModdingSDK
 {
@@ -41,9 +42,7 @@ namespace TaintedGrailModdingSDK
         AdapterReleaseArtifactResult BuildEnvelope(
             const AdapterVerifierEvidenceReconciliationResult& reconciliation,
             const AdapterPackageAssemblyPreview& packagePreview,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterReleaseArtifactRequest& request) const;
-
-        AZStd::string SerializeCanonicalEnvelope(
-            const AdapterReleaseArtifactEnvelope& envelope) const;
     };
 } // namespace TaintedGrailModdingSDK

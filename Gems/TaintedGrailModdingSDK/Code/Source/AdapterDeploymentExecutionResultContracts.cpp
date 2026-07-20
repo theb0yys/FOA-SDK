@@ -13,6 +13,7 @@
 #include "ResearchContractValidation.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
 
 namespace TaintedGrailModdingSDK
 {

@@ -141,8 +141,8 @@ Purpose: immutable provenance for an imported artifact.
     "ToolVersion": "1.0.0",
     "ImporterId": "tg.structured-json",
     "ImporterVersion": "1.0.0",
-    "CapturedAt": "2026-07-17T10:00:00.000Z",
-    "ImportedAt": "2026-07-17T11:00:00.000Z",
+    "CapturedAt": "2026-07-17T10:00:00Z",
+    "ImportedAt": "2026-07-17T11:00:00Z",
     "Limitations": "Read-only capture",
     "MediaType": "application/json",
     "ByteSize": 1234,
@@ -184,7 +184,7 @@ Sources/<source-id>/evidence.tgevidence.json
       "Confidence": "unrated",
       "Locator": "/path/to/input.json",
       "RecordPath": "$.evidence[0]",
-      "ExtractedAt": "2026-07-17T11:00:00.000Z"
+      "ExtractedAt": "2026-07-17T11:00:00Z"
     }
   ],
   "Issues": []
@@ -210,6 +210,15 @@ subject_ref,claim
 ```
 
 Optional columns are `evidence_id`, `kind`, `confidence`, and `locator`. Generic artifact intake creates provenance and a manual-extraction issue but does not infer evidence.
+
+Structured JSON and CSV must decode as valid UTF-8 without replacement
+characters. CSV follows quoted-field rules including doubled quotes and embedded
+newlines, rejects unterminated or misplaced quotes, and is limited to 100,000
+evidence rows in addition to the 64 MiB source-byte limit.
+
+All durable contract timestamps use whole-second UTC precision exactly as
+`YYYY-MM-DDTHH:MM:SSZ`. Fractional seconds are rejected so chronological
+comparisons remain unambiguous.
 
 ## Import issue
 
@@ -284,8 +293,8 @@ Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
   "MissingRefs": [],
   "ConflictRefs": [],
   "Tags": ["example"],
-  "CreatedAt": "2026-07-17T12:00:00.000Z",
-  "UpdatedAt": "2026-07-17T12:00:00.000Z",
+  "CreatedAt": "2026-07-17T12:00:00Z",
+  "UpdatedAt": "2026-07-17T12:00:00Z",
   "SupersededByRecordId": ""
 }
 ```
@@ -320,8 +329,8 @@ Duplicate record IDs and duplicate non-empty exact native references are rejecte
   "MissingRefs": [],
   "ConflictRefs": [],
   "Attributes": [],
-  "CreatedAt": "2026-07-17T12:00:00.000Z",
-  "UpdatedAt": "2026-07-17T12:00:00.000Z",
+  "CreatedAt": "2026-07-17T12:00:00Z",
+  "UpdatedAt": "2026-07-17T12:00:00Z",
   "SupersededByRelationshipId": ""
 }
 ```
@@ -339,7 +348,7 @@ A relationship requires a stable ID, existing source record, kind, exactly one t
   "State": "validated",
   "Method": "runtime-observation",
   "Validator": "validator-id",
-  "CheckedAt": "2026-07-17T13:00:00.000Z",
+  "CheckedAt": "2026-07-17T13:00:00Z",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
   "Branch": "mono",
@@ -366,7 +375,7 @@ Validation history is append-only. A validation result does not grant permission
   "EvidenceIds": ["evidence.fingerprint.3"],
   "ValidationIds": ["validation.record.example.1"],
   "Reviewer": "reviewer-id",
-  "DecidedAt": "2026-07-17T13:05:00.000Z",
+  "DecidedAt": "2026-07-17T13:05:00Z",
   "Notes": "Narrow existing-item lane only."
 }
 ```

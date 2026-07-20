@@ -36,7 +36,7 @@ namespace TaintedGrailModdingSDK
             return false;
         }
         const AZStd::string derivedFingerprint =
-            ComputeCanonicalFingerprint(request.m_manifest.m_canonicalJson);
+            CalculateCanonicalSha256(request.m_manifest.m_canonicalJson);
         if (request.m_manifest.m_canonicalJson.empty()
             || request.m_review.m_manifestFingerprint != derivedFingerprint
             || request.m_inventory.m_manifestFingerprint != derivedFingerprint)
@@ -85,7 +85,7 @@ namespace TaintedGrailModdingSDK
         const AdapterBuildManifestReview& review = request.m_review;
         const AdapterStagingInventory& inventory = request.m_inventory;
         const AZStd::string derivedManifestFingerprint =
-            ComputeCanonicalFingerprint(manifest.m_canonicalJson);
+            CalculateCanonicalSha256(manifest.m_canonicalJson);
 
         preview.m_manifestId = manifest.m_manifestId;
         preview.m_manifestFingerprint = derivedManifestFingerprint;

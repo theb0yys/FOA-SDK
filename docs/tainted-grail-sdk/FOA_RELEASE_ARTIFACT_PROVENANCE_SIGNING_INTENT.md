@@ -12,7 +12,8 @@ It does not perform release operations.
 
 1. one exact accepted `AdapterVerifierEvidenceReconciliationResult`;
 2. one exact `ready` `AdapterPackageAssemblyPreview`;
-3. one `AdapterReleaseArtifactRequest` containing declared release metadata.
+3. one `AdapterReleaseArtifactRequest` containing declared release metadata;
+4. the active `SourceEvidenceRegistry` used to prove every review-evidence ID.
 
 The reconciliation must have:
 
@@ -84,6 +85,12 @@ Each content row requires one or more stable provenance records. A record preser
 
 Capture time cannot be later than release evaluation. Every referenced provenance identity must resolve to one record for the same content.
 
+Every evidence ID used by provenance, legal, signing, or publication review must
+exist in the active registry, bind to the exact profile/source/fingerprint and
+declared review subject, have a usable import state, and appear in the accepted
+reconciliation candidate-evidence set. A syntactically valid invented ID is not
+evidence and fails closed.
+
 ## Legal and redistribution disposition
 
 Every content row requires exactly one legal-disposition record. A metadata-ready envelope requires `approved` disposition with:
@@ -138,6 +145,12 @@ Target kinds are:
 
 A target declaration does not authenticate, upload, publish, create a release, or contact an external service. No upload or publication occurred.
 
+Signing decisions, signing-identity kinds, and publication-target kinds reject
+both the named `unknown` values and every out-of-range value. Reviewed locators
+are bounded to 512 characters and must be relative, traversal-free identifiers;
+absolute paths, URI schemes, user information, queries, fragments, control
+characters, and backslashes are rejected.
+
 ## Deterministic status precedence
 
 Envelope status is resolved in this exact order:
@@ -168,7 +181,7 @@ Candidate evidence is not automatically registered, persisted, promoted, validat
 
 ## Transient registry and Editor pane
 
-`AdapterReleaseArtifactRegistry` stores transient envelopes for display and is cleared when the dedicated pane system component deactivates.
+`AdapterReleaseArtifactRegistry` stores transient envelopes for display and is cleared when the dedicated pane system component deactivates. It does not accept caller-built envelopes. Registration accepts the upstream inputs, request, and evidence registry, reruns the production service, and stores only its accepted ready result.
 
 The read-only **Tainted Grail Release Artifact Provenance and Signing Intent** pane displays:
 

@@ -7,6 +7,23 @@
 
 namespace
 {
+        AZStd::string RefusalSummary(const AdapterWorkOrderPlanSet& result)
+        {
+            AZStd::string summary;
+            for (const AdapterWorkOrderRefusal& refusal : result.m_refusals)
+            {
+                for (const AZStd::string& status : refusal.m_compatibilityStatuses)
+                {
+                    summary += status + "; ";
+                }
+                for (const AZStd::string& reason : refusal.m_reasons)
+                {
+                    summary += reason + "; ";
+                }
+            }
+            return summary;
+        }
+
         const AdapterWorkOrderStep* FindStep(
             const AdapterWorkOrderPlan& plan,
             const AZStd::string& capability,

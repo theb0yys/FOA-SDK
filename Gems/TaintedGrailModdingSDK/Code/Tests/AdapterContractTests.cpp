@@ -8,6 +8,7 @@
 #include "AdapterCompatibilityService.h"
 #include "AdapterContractRegistry.h"
 #include "CatalogDatabase.h"
+#include "ResearchContractValidation.h"
 #include "SourceEvidenceRegistry.h"
 
 #include <AzTest/AzTest.h>
@@ -29,6 +30,7 @@ namespace TaintedGrailModdingSDK
         WorkspaceModel MakeWorkspace()
         {
             WorkspaceModel workspace;
+            workspace.m_workspaceId = "workspace.adapter";
             workspace.m_activeGameProfileId = "profile.adapter";
             workspace.m_gameProfiles = { MakeProfile() };
             return workspace;
@@ -46,13 +48,24 @@ namespace TaintedGrailModdingSDK
         {
             SourceRecord source;
             source.m_sourceId = "source.adapter";
-            source.m_fingerprint = "fingerprint.adapter";
+            source.m_title = "Adapter contract test source";
+            source.m_sourceKind = "structured_test_fixture";
+            source.m_locator = "research/adapter-contract.json";
+            source.m_fingerprint =
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
             source.m_profileId = "profile.adapter";
             source.m_gameVersion = "game.adapter";
             source.m_branch = "branch.adapter";
             source.m_runtimeTarget = "Mono";
+            source.m_toolName = "adapter-contract-tests";
+            source.m_toolVersion = "1.0.0";
             source.m_importerId = "adapter.contract.tests";
             source.m_importerVersion = "1.0.0";
+            source.m_capturedAt = "2026-01-01T00:00:00Z";
+            source.m_importedAt = "2026-01-01T00:00:01Z";
+            source.m_mediaType = "application/json";
+            source.m_byteSize = 512;
+            source.m_importStatus = "imported";
             return source;
         }
 
@@ -63,12 +76,18 @@ namespace TaintedGrailModdingSDK
             EvidenceRecord evidence;
             evidence.m_evidenceId = AZStd::move(evidenceId);
             evidence.m_sourceId = "source.adapter";
-            evidence.m_sourceFingerprint = "fingerprint.adapter";
+            evidence.m_sourceFingerprint =
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
             evidence.m_profileId = "profile.adapter";
             evidence.m_gameVersion = "game.adapter";
             evidence.m_branch = "branch.adapter";
             evidence.m_subjectRef = AZStd::move(subjectRef);
             evidence.m_claim = "Project-owned adapter contract test evidence.";
+            evidence.m_evidenceKind = "structured_record";
+            evidence.m_confidence = "documented";
+            evidence.m_locator = "research/adapter-contract.json";
+            evidence.m_recordPath = "/records/0";
+            evidence.m_extractedAt = "2026-01-01T00:00:00Z";
             return evidence;
         }
 
@@ -134,7 +153,7 @@ namespace TaintedGrailModdingSDK
             validation.m_state = "validated";
             validation.m_method = "adapter-contract-test";
             validation.m_validator = "test.validator";
-            validation.m_checkedAt = "2026-01-01T00:00:00.000Z";
+            validation.m_checkedAt = "2026-01-01T00:00:00Z";
             validation.m_profileId = "profile.adapter";
             validation.m_gameVersion = "game.adapter";
             validation.m_branch = "branch.adapter";
@@ -154,7 +173,7 @@ namespace TaintedGrailModdingSDK
             event.m_evidenceIds = { "evidence.item" };
             event.m_validationIds = { "validation.item" };
             event.m_reviewer = "test.reviewer";
-            event.m_decidedAt = "2026-01-01T00:00:00.000Z";
+            event.m_decidedAt = "2026-01-01T00:00:01Z";
             return event;
         }
 
@@ -179,6 +198,10 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(TryParseAdapterSemanticVersion("1.2.3-alpha.1+build.9", version));
         EXPECT_FALSE(TryParseAdapterSemanticVersion("1.02.3", version));
         EXPECT_FALSE(TryParseAdapterSemanticVersion("1.2.3-01", version));
+        EXPECT_FALSE(IsStrictSemanticVersion(
+            AZStd::string(300, '9') + ".1.0"));
+        EXPECT_TRUE(IsStrictUtcTimestamp("2026-07-20T10:00:00Z"));
+        EXPECT_FALSE(IsStrictUtcTimestamp("2026-07-20T10:00:00.001Z"));
         EXPECT_TRUE(IsAdapterVersionCompatible("1.2.0", "1.5.0"));
         EXPECT_FALSE(IsAdapterVersionCompatible("1.2.0", "2.0.0"));
         EXPECT_TRUE(IsAdapterVersionCompatible("0.3.1", "0.3.9"));
@@ -337,8 +360,13 @@ namespace TaintedGrailModdingSDK
         itemProfile.m_recordId = "item.adapter";
         itemProfile.m_evidenceIds = { "evidence.item" };
         ASSERT_TRUE(catalog.UpsertEconomyItem(itemProfile, &error));
-        ASSERT_TRUE(catalog.AddValidationEvent(MakeValidation(), &error));
-        ASSERT_TRUE(catalog.AddGovernanceEvent(MakePermission(), &error));
+        const WorkspaceModel workspace = MakeWorkspace();
+        const GameProfile* profile = workspace.FindActiveGameProfile();
+        ASSERT_NE(profile, nullptr);
+        ASSERT_TRUE(catalog.AddValidationEventBound(
+            MakeValidation(), workspace, *profile, sourceRegistry, &error));
+        ASSERT_TRUE(catalog.AddGovernanceEventBound(
+            MakePermission(), workspace, *profile, sourceRegistry, &error));
 
         const size_t declarationCountBefore = registry.GetDeclarations().size();
         const size_t sourceCountBefore = sourceRegistry.GetSources().size();
@@ -349,7 +377,7 @@ namespace TaintedGrailModdingSDK
 
         AdapterCompatibilityService service;
         const AdapterCapabilityMatrix first = service.BuildCapabilityMatrix(
-            MakeWorkspace(),
+            workspace,
             { MakePack() },
             registry,
             sourceRegistry,
@@ -358,6 +386,7 @@ namespace TaintedGrailModdingSDK
         BlockerRecord blocker;
         blocker.m_blockerId = "blocker.item";
         blocker.m_subjectRef = "subject:adapter:item";
+        blocker.m_severity = "error";
         blocker.m_status = "open";
         blocker.m_reason = "Item grant safety review remains open.";
         blocker.m_affectedUsages = { "existing_item_grant" };

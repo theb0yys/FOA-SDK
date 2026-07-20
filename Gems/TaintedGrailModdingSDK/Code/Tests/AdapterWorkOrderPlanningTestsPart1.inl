@@ -37,7 +37,8 @@
             fixture.m_catalog,
             fixture.m_blockers);
 
-        ASSERT_EQ(result.m_generatedPlanCount, 1);
+        ASSERT_EQ(result.m_generatedPlanCount, 1)
+            << RefusalSummary(result).c_str();
         EXPECT_EQ(result.m_refusedPlanCount, 0);
         ASSERT_EQ(result.m_plans.size(), 1);
         const AdapterWorkOrderPlan& plan = result.m_plans.front();

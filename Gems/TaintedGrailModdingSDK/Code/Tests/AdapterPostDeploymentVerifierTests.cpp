@@ -15,7 +15,7 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerifierTests,
         ExactAllMatchedVerifierEvidenceIsAccepted)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         EXPECT_TRUE(fixture.m_verifierEvidence.m_contractValid);
         EXPECT_TRUE(fixture.m_verifierEvidence.m_accepted);
         EXPECT_EQ(
@@ -32,7 +32,7 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerifierTests,
         NotRunRemainsContractValidAdverseEvidence)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterPostDeploymentVerifierResultEnvelope envelope =
             fixture.m_verifierEnvelope;
         ASSERT_FALSE(envelope.m_checkResults.empty());
@@ -71,10 +71,11 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerifierTests,
         CallerSelectedVerifierFingerprintFailsClosed)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterPostDeploymentVerifierResultEnvelope envelope =
             fixture.m_verifierEnvelope;
-        envelope.m_resultFingerprint = Test::FixtureFingerprint('0');
+        envelope.m_resultFingerprint =
+            ::TaintedGrailModdingSDK::Test::FixtureFingerprint('0');
 
         AdapterPostDeploymentVerifierEvidenceService service;
         const AdapterPostDeploymentVerifierEvidenceReturn result =
@@ -94,7 +95,7 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerifierTests,
         RegistryRequiresExactBoundValidation)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterPostDeploymentVerifierResultRegistry registry;
         AZStd::string error;
         EXPECT_FALSE(registry.RegisterEnvelope(fixture.m_verifierEnvelope, &error));

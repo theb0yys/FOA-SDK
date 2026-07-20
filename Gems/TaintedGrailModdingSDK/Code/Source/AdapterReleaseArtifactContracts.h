@@ -9,6 +9,7 @@
 
 #include "AdapterPackageAssemblyPreviewService.h"
 #include "AdapterVerifierEvidenceReconciliationService.h"
+#include "SourceEvidenceRegistry.h"
 
 #include <AzCore/base.h>
 #include <AzCore/std/containers/vector.h>
@@ -242,8 +243,11 @@ namespace TaintedGrailModdingSDK
     public:
         static AdapterReleaseArtifactRegistry& Get();
 
-        bool RegisterEnvelope(
-            const AdapterReleaseArtifactEnvelope& envelope,
+        bool RegisterRequest(
+            const AdapterVerifierEvidenceReconciliationResult& reconciliation,
+            const AdapterPackageAssemblyPreview& packagePreview,
+            const SourceEvidenceRegistry& sourceRegistry,
+            const AdapterReleaseArtifactRequest& request,
             AZStd::string* error = nullptr);
         void Clear();
 

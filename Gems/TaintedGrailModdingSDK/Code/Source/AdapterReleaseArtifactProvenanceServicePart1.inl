@@ -51,24 +51,153 @@ namespace TaintedGrailModdingSDK
 
         bool IsSafeReleaseLocator(const AZStd::string& value)
         {
-            if (value.empty())
+            if (value.empty()
+                || value.size() > 512
+                || value.front() == '/'
+                || value.find("//") != AZStd::string::npos)
             {
                 return false;
             }
+            size_t segmentStart = 0;
             for (char character : value)
             {
                 const unsigned char byte = static_cast<unsigned char>(character);
-                if (byte < 0x20 || character == '\\')
+                const bool safeCharacter =
+                    (byte >= 'a' && byte <= 'z')
+                    || (byte >= 'A' && byte <= 'Z')
+                    || (byte >= '0' && byte <= '9')
+                    || character == '-'
+                    || character == '_'
+                    || character == '.'
+                    || character == '/';
+                if (!safeCharacter)
                 {
                     return false;
                 }
             }
+            while (segmentStart <= value.size())
+            {
+                const size_t separator = value.find('/', segmentStart);
+                const size_t segmentLength = separator == AZStd::string::npos
+                    ? value.size() - segmentStart
+                    : separator - segmentStart;
+                const AZStd::string segment = value.substr(
+                    segmentStart,
+                    segmentLength);
+                if (segment.empty() || segment == "." || segment == "..")
+                {
+                    return false;
+                }
+                if (separator == AZStd::string::npos)
+                {
+                    break;
+                }
+                segmentStart = separator + 1;
+            }
             return true;
+        }
+
+        bool IsKnownSigningDecision(
+            AdapterReleaseSigningIntentDecision decision)
+        {
+            switch (decision)
+            {
+            case AdapterReleaseSigningIntentDecision::Unknown:
+            case AdapterReleaseSigningIntentDecision::Unsigned:
+            case AdapterReleaseSigningIntentDecision::SignExternally:
+                return true;
+            default:
+                return false;
+            }
+        }
+
+        bool IsKnownSigningIdentityKind(AdapterReleaseSigningIdentityKind kind)
+        {
+            switch (kind)
+            {
+            case AdapterReleaseSigningIdentityKind::None:
+            case AdapterReleaseSigningIdentityKind::Pgp:
+            case AdapterReleaseSigningIdentityKind::X509:
+            case AdapterReleaseSigningIdentityKind::Sigstore:
+            case AdapterReleaseSigningIdentityKind::Platform:
+            case AdapterReleaseSigningIdentityKind::Other:
+                return true;
+            default:
+                return false;
+            }
+        }
+
+        bool IsKnownPublicationTargetKind(
+            AdapterReleasePublicationTargetKind kind)
+        {
+            switch (kind)
+            {
+            case AdapterReleasePublicationTargetKind::GitHubRelease:
+            case AdapterReleasePublicationTargetKind::ModPortal:
+            case AdapterReleasePublicationTargetKind::InternalArchive:
+            case AdapterReleasePublicationTargetKind::Other:
+                return true;
+            default:
+                return false;
+            }
         }
 
         AZStd::string ReleaseSubject(const AZStd::string& artifactId)
         {
             return "release-artifact:" + artifactId;
+        }
+
+        bool HasBoundReleaseReviewEvidence(
+            const AZStd::vector<AZStd::string>& evidenceIds,
+            const AZStd::string& expectedSubjectRef,
+            const AZStd::string& declaredSourceId,
+            const AZStd::string& declaredSourceFingerprint,
+            const AdapterVerifierEvidenceReconciliationEnvelope& reconciliation,
+            const SourceEvidenceRegistry& sourceRegistry)
+        {
+            if (!HasStableUniqueReleaseIds(evidenceIds)
+                || expectedSubjectRef.empty())
+            {
+                return false;
+            }
+            for (const AZStd::string& evidenceId : evidenceIds)
+            {
+                if (AZStd::find(
+                        reconciliation.m_inputCandidateEvidenceIds.begin(),
+                        reconciliation.m_inputCandidateEvidenceIds.end(),
+                        evidenceId)
+                    == reconciliation.m_inputCandidateEvidenceIds.end())
+                {
+                    return false;
+                }
+                const EvidenceRecord* evidence =
+                    sourceRegistry.FindEvidence(evidenceId);
+                if (!evidence)
+                {
+                    return false;
+                }
+                const SourceRecord* source =
+                    sourceRegistry.FindSource(evidence->m_sourceId);
+                if (!source
+                    || !IsUsableImportStatus(source->m_importStatus)
+                    || evidence->m_sourceFingerprint != source->m_fingerprint
+                    || evidence->m_profileId != reconciliation.m_profileId
+                    || evidence->m_gameVersion != reconciliation.m_gameVersion
+                    || evidence->m_branch != reconciliation.m_branch
+                    || source->m_runtimeTarget != reconciliation.m_runtimeTarget
+                    || evidence->m_subjectRef != expectedSubjectRef)
+                {
+                    return false;
+                }
+                if (!declaredSourceId.empty()
+                    && (evidence->m_sourceId != declaredSourceId
+                        || source->m_sourceId != declaredSourceId
+                        || source->m_fingerprint != declaredSourceFingerprint))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         void AddReleaseArtifactIssue(
@@ -336,6 +465,8 @@ namespace TaintedGrailModdingSDK
         }
 
         void ValidateReleaseArtifactProvenance(
+            const AdapterVerifierEvidenceReconciliationResult& reconciliation,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterReleaseArtifactRequest& request,
             AdapterReleaseArtifactResult& result,
             ReleaseArtifactValidationFlags& flags)
@@ -353,6 +484,13 @@ namespace TaintedGrailModdingSDK
                     || !IsAdapterPostDeploymentVerifierFingerprint(
                         record.m_sourceFingerprint)
                     || !HasStableUniqueReleaseIds(record.m_evidenceIds)
+                    || !HasBoundReleaseReviewEvidence(
+                        record.m_evidenceIds,
+                        record.m_subjectRef,
+                        record.m_sourceId,
+                        record.m_sourceFingerprint,
+                        reconciliation.m_envelope,
+                        sourceRegistry)
                     || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                         record.m_capturedAtUtc)
                     || record.m_capturedAtUtc > request.m_evaluatedAtUtc)
@@ -405,6 +543,8 @@ namespace TaintedGrailModdingSDK
         }
 
         void ValidateReleaseArtifactLegalDispositions(
+            const AdapterVerifierEvidenceReconciliationResult& reconciliation,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterReleaseArtifactRequest& request,
             AdapterReleaseArtifactResult& result,
             ReleaseArtifactValidationFlags& flags)
@@ -424,6 +564,13 @@ namespace TaintedGrailModdingSDK
                         != AdapterReleaseLegalDisposition::Approved
                     || disposition.m_reviewer.empty()
                     || !HasStableUniqueReleaseIds(disposition.m_evidenceIds)
+                    || !HasBoundReleaseReviewEvidence(
+                        disposition.m_evidenceIds,
+                        "release-content:" + disposition.m_contentId,
+                        {},
+                        {},
+                        reconciliation.m_envelope,
+                        sourceRegistry)
                     || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                         disposition.m_reviewedAtUtc)
                     || disposition.m_reviewedAtUtc > request.m_evaluatedAtUtc
@@ -481,15 +628,26 @@ namespace TaintedGrailModdingSDK
         }
 
         void ValidateReleaseArtifactSigningIntent(
+            const AdapterVerifierEvidenceReconciliationResult& reconciliation,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterReleaseArtifactRequest& request,
             AdapterReleaseArtifactResult& result,
             ReleaseArtifactValidationFlags& flags)
         {
             const AdapterReleaseSigningIntent& intent = request.m_signingIntent;
             bool invalid = !IsAdapterPostDeploymentVerifierStableId(intent.m_intentId)
+                || !IsKnownSigningDecision(intent.m_decision)
+                || !IsKnownSigningIdentityKind(intent.m_identityKind)
                 || intent.m_decision == AdapterReleaseSigningIntentDecision::Unknown
                 || intent.m_reviewer.empty()
                 || !HasStableUniqueReleaseIds(intent.m_evidenceIds)
+                || !HasBoundReleaseReviewEvidence(
+                    intent.m_evidenceIds,
+                    ReleaseSubject(request.m_artifactId),
+                    {},
+                    {},
+                    reconciliation.m_envelope,
+                    sourceRegistry)
                 || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                     intent.m_reviewedAtUtc)
                 || intent.m_reviewedAtUtc > request.m_evaluatedAtUtc
@@ -531,6 +689,8 @@ namespace TaintedGrailModdingSDK
         }
 
         void ValidateReleaseArtifactPublicationTargets(
+            const AdapterVerifierEvidenceReconciliationResult& reconciliation,
+            const SourceEvidenceRegistry& sourceRegistry,
             const AdapterReleaseArtifactRequest& request,
             AdapterReleaseArtifactResult& result,
             ReleaseArtifactValidationFlags& flags)
@@ -541,10 +701,18 @@ namespace TaintedGrailModdingSDK
             {
                 targetIds.push_back(target.m_targetId);
                 if (!IsAdapterPostDeploymentVerifierStableId(target.m_targetId)
+                    || !IsKnownPublicationTargetKind(target.m_kind)
                     || !IsSafeReleaseLocator(target.m_locator)
                     || target.m_channel.empty()
                     || target.m_reviewer.empty()
                     || !HasStableUniqueReleaseIds(target.m_evidenceIds)
+                    || !HasBoundReleaseReviewEvidence(
+                        target.m_evidenceIds,
+                        ReleaseSubject(request.m_artifactId),
+                        {},
+                        {},
+                        reconciliation.m_envelope,
+                        sourceRegistry)
                     || !IsAdapterPostDeploymentVerifierUtcTimestamp(
                         target.m_reviewedAtUtc)
                     || target.m_reviewedAtUtc > request.m_evaluatedAtUtc

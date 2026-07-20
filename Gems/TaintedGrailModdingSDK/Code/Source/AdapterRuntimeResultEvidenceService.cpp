@@ -8,6 +8,7 @@
 #include "AdapterRuntimeResultEvidenceService.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
 #include <AzCore/std/utility/move.h>
 
 namespace TaintedGrailModdingSDK

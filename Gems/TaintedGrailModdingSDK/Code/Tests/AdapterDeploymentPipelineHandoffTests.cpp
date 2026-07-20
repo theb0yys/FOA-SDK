@@ -83,9 +83,6 @@ namespace TaintedGrailModdingSDK
                 "BepInEx/plugins/owner.preview-pack";
             request.m_packagePreview.m_status =
                 AdapterPackageAssemblyPreviewStatus::Ready;
-            request.m_packagePreview.m_canonicalJson =
-                "{\"AssemblyAllowed\":false,\"ArchiveAllowed\":false,"
-                "\"DeploymentAllowed\":false}";
             request.m_packagePreview.m_assemblyAllowed = false;
             request.m_packagePreview.m_archiveAllowed = false;
             request.m_packagePreview.m_deploymentAllowed = false;
@@ -105,6 +102,9 @@ namespace TaintedGrailModdingSDK
                     "text/markdown",
                     '2'),
             };
+            AdapterPackageAssemblyPreviewService packageService;
+            request.m_packagePreview.m_canonicalJson =
+                packageService.SerializeCanonicalPreview(request.m_packagePreview);
             request.m_packagePreviewFingerprint =
                 CalculateCanonicalSha256(request.m_packagePreview.m_canonicalJson);
 

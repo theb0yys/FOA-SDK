@@ -7,7 +7,10 @@
 
 #include "AdapterReleaseArtifactProvenanceService.h"
 
+#include "ResearchContractValidation.h"
+
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
 #include <AzCore/std/utility/move.h>
 
 #include <cstddef>

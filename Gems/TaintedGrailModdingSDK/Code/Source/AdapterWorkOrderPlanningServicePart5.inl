@@ -111,9 +111,9 @@
             }
             if (RequiresTypedRecipePayload(capability))
             {
-                const EconomyRecipeProfile* profile =
+                const EconomyRecipeProfile* recipeProfile =
                     catalog.FindEconomyRecipe(record.m_recordId);
-                if (!profile)
+                if (!recipeProfile)
                 {
                     reason =
                         "Recipe append and custom registration require a typed recipe profile.";

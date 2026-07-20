@@ -173,6 +173,10 @@ namespace TaintedGrailModdingSDK
         bool backupIncomplete = false;
         bool rollbackIncomplete = false;
 
+        AdapterPackageAssemblyPreviewService packagePreviewService;
+        const AZStd::string derivedPackageCanonicalJson =
+            packagePreviewService.SerializeCanonicalPreview(request.m_packagePreview);
+
         if (request.m_packagePreview.m_status
                 != AdapterPackageAssemblyPreviewStatus::Ready
             || request.m_packagePreview.m_layout.empty()
@@ -180,6 +184,8 @@ namespace TaintedGrailModdingSDK
             || request.m_packagePreview.m_archiveAllowed
             || request.m_packagePreview.m_deploymentAllowed
             || request.m_packagePreview.m_canonicalJson.empty()
+            || request.m_packagePreview.m_canonicalJson
+                != derivedPackageCanonicalJson
             || !IsSha256Fingerprint(request.m_packagePreviewFingerprint)
             || !CanonicalSha256Matches(
                 request.m_packagePreview.m_canonicalJson,

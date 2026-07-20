@@ -6,6 +6,7 @@
  */
 
 #include "AdapterPackageAssemblyPreviewService.h"
+#include "CanonicalFingerprint.h"
 
 #include <AzTest/AzTest.h>
 
@@ -94,7 +95,9 @@ namespace TaintedGrailModdingSDK
 
             request.m_review.m_reviewId = "owner.manifest-review";
             request.m_review.m_manifestId = request.m_manifest.m_manifestId;
-            request.m_review.m_manifestFingerprint = Fingerprint('a');
+            const AZStd::string manifestFingerprint =
+                CalculateCanonicalSha256(request.m_manifest.m_canonicalJson);
+            request.m_review.m_manifestFingerprint = manifestFingerprint;
             request.m_review.m_decision =
                 AdapterBuildManifestReviewDecision::Accepted;
             request.m_review.m_reviewer = "package-reviewer";
@@ -102,7 +105,7 @@ namespace TaintedGrailModdingSDK
 
             request.m_inventory.m_inventoryId = "owner.staging-inventory";
             request.m_inventory.m_manifestId = request.m_manifest.m_manifestId;
-            request.m_inventory.m_manifestFingerprint = Fingerprint('a');
+            request.m_inventory.m_manifestFingerprint = manifestFingerprint;
             request.m_inventory.m_packId = request.m_manifest.m_packId;
             request.m_inventory.m_packageRoot = request.m_manifest.m_packageRoot;
             char digit = '1';

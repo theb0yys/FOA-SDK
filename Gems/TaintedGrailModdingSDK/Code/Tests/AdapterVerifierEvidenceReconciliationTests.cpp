@@ -15,7 +15,7 @@ namespace TaintedGrailModdingSDK
         AdapterVerifierEvidenceReconciliationTests,
         ExactAllMatchedPipelineRequiresExplicitHumanApproval)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         EXPECT_TRUE(fixture.m_reconciliation.m_accepted);
         EXPECT_EQ(
             fixture.m_reconciliation.m_envelope.m_status,
@@ -39,7 +39,7 @@ namespace TaintedGrailModdingSDK
         AdapterVerifierEvidenceReconciliationTests,
         MissingReviewIsNotMisclassifiedAsBindingMismatch)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterVerifierEvidenceReconciliationRequest request =
             fixture.m_reconciliationRequest;
         request.m_reconciliationId = "owner.reconciliation.missing-review";
@@ -67,7 +67,7 @@ namespace TaintedGrailModdingSDK
         AdapterVerifierEvidenceReconciliationTests,
         HumanReviewCandidateClaimsMustMatchExactCandidateSet)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterVerifierEvidenceReconciliationRequest request =
             fixture.m_reconciliationRequest;
         request.m_reconciliationId = "owner.reconciliation.candidate-drift";
@@ -96,7 +96,7 @@ namespace TaintedGrailModdingSDK
         AdapterVerifierEvidenceReconciliationTests,
         ReviewEvidenceMustBelongToCandidateEvidence)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterVerifierEvidenceReconciliationRequest request =
             fixture.m_reconciliationRequest;
         request.m_reconciliationId = "owner.reconciliation.unbound-evidence";
@@ -123,7 +123,7 @@ namespace TaintedGrailModdingSDK
         AdapterVerifierEvidenceReconciliationTests,
         RegistryStoresOnlyCompleteAcceptedReconciliations)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterVerifierEvidenceReconciliationRegistry registry;
         AZStd::string error;
         EXPECT_FALSE(registry.RegisterRequest(

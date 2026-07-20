@@ -285,7 +285,7 @@ namespace TaintedGrailModdingSDK
                 const AdapterVerifierFindingDisposition* disposition =
                     FindDisposition(envelope.m_releaseReview, finding.m_findingId);
                 if (!disposition
-                    || disposition.m_decision
+                    || disposition->m_decision
                         != AdapterVerifierFindingDispositionDecision::Accepted)
                 {
                     return false;

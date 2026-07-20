@@ -51,14 +51,23 @@
         ASSERT_EQ(result.m_refusedPlanCount, 1);
         EXPECT_TRUE(Contains(
             result.m_refusals.front().m_failedCapabilities,
-            "planning_payload"));
+            "vendor_mutation"))
+            << RefusalSummary(result).c_str();
+        EXPECT_TRUE(Contains(
+            result.m_refusals.front().m_compatibilityStatuses,
+            "vendor_mutation:proof_missing"))
+            << RefusalSummary(result).c_str();
         bool relationshipReasonFound = false;
         for (const AZStd::string& reason : result.m_refusals.front().m_reasons)
         {
             relationshipReasonFound = relationshipReasonFound
-                || reason.find("relationship.vendor") != AZStd::string::npos;
+                || (reason.find("relationship and target proof chain")
+                        != AZStd::string::npos
+                    && reason.find("vendor_or_loot_injection")
+                        != AZStd::string::npos);
         }
-        EXPECT_TRUE(relationshipReasonFound);
+        EXPECT_TRUE(relationshipReasonFound)
+            << RefusalSummary(result).c_str();
     }
 
     TEST(TaintedGrailAdapterWorkOrderPlanningTests, InvalidTypedPayloadEvidenceRefusesWholePlan)

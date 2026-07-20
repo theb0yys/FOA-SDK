@@ -32,7 +32,7 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerificationTests,
         ExactAcceptedExecutionEvidenceProducesReviewReadyReport)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         ASSERT_TRUE(fixture.m_executionEvidence.m_accepted);
         EXPECT_EQ(
             fixture.m_report.m_status,
@@ -55,7 +55,7 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerificationTests,
         EvidenceKindAloneCannotSatisfyRequiredBindingEvidence)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterDeploymentExecutionEvidenceReturn tampered =
             fixture.m_executionEvidence;
         bool changed = false;
@@ -91,10 +91,11 @@ namespace TaintedGrailModdingSDK
         AdapterPostDeploymentVerificationTests,
         CallerSelectedExecutionFingerprintCannotEnterReport)
     {
-        Test::AdapterResearchPipelineFixture fixture;
+        ::TaintedGrailModdingSDK::Test::AdapterResearchPipelineFixture fixture;
         AdapterDeploymentExecutionResultEnvelope tampered =
             fixture.m_executionEnvelope;
-        tampered.m_resultFingerprint = Test::FixtureFingerprint('0');
+        tampered.m_resultFingerprint =
+            ::TaintedGrailModdingSDK::Test::FixtureFingerprint('0');
 
         AdapterPostDeploymentVerificationService service;
         const AdapterPostDeploymentVerificationReport report = service.BuildReport(

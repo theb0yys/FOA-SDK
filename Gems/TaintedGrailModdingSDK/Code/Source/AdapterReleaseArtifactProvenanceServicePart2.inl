@@ -662,17 +662,11 @@ namespace TaintedGrailModdingSDK
         }
     } // namespace
 
-    AZStd::string
-    AdapterReleaseArtifactProvenanceService::SerializeCanonicalEnvelope(
-        const AdapterReleaseArtifactEnvelope& envelope) const
-    {
-        return SerializeReleaseArtifactEnvelope(envelope);
-    }
-
     AdapterReleaseArtifactResult
     AdapterReleaseArtifactProvenanceService::BuildEnvelope(
         const AdapterVerifierEvidenceReconciliationResult& reconciliation,
         const AdapterPackageAssemblyPreview& packagePreview,
+        const SourceEvidenceRegistry& sourceRegistry,
         const AdapterReleaseArtifactRequest& request) const
     {
         AdapterReleaseArtifactResult result;
@@ -739,10 +733,14 @@ namespace TaintedGrailModdingSDK
             request,
             result,
             flags);
-        ValidateReleaseArtifactProvenance(request, result, flags);
-        ValidateReleaseArtifactLegalDispositions(request, result, flags);
-        ValidateReleaseArtifactSigningIntent(request, result, flags);
-        ValidateReleaseArtifactPublicationTargets(request, result, flags);
+        ValidateReleaseArtifactProvenance(
+            reconciliation, sourceRegistry, request, result, flags);
+        ValidateReleaseArtifactLegalDispositions(
+            reconciliation, sourceRegistry, request, result, flags);
+        ValidateReleaseArtifactSigningIntent(
+            reconciliation, sourceRegistry, request, result, flags);
+        ValidateReleaseArtifactPublicationTargets(
+            reconciliation, sourceRegistry, request, result, flags);
 
         envelope.m_status = ResolveReleaseArtifactStatus(flags);
         envelope.m_metadataReady = envelope.m_status

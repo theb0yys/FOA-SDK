@@ -87,7 +87,6 @@ namespace TaintedGrailModdingSDK
             request.m_plan.m_gameVersion = request.m_profile.m_gameVersion;
             request.m_plan.m_branch = request.m_profile.m_branch;
             request.m_plan.m_runtimeTarget = request.m_profile.m_runtimeTarget;
-            request.m_plan.m_canonicalJson = "{\"ExecutionAllowed\":false}";
             request.m_plan.m_executionAllowed = false;
 
             AdapterWorkOrderStep step;
@@ -98,6 +97,9 @@ namespace TaintedGrailModdingSDK
             step.m_subjectId = "item.preview";
             step.m_executionAllowed = false;
             request.m_plan.m_steps.push_back(step);
+            AdapterWorkOrderPlanningService planningService;
+            request.m_plan.m_canonicalJson =
+                planningService.SerializeCanonicalPlan(request.m_plan);
 
             request.m_environment.m_builderId = "tg.builder.dotnet";
             request.m_environment.m_builderVersion = "1.0.0";

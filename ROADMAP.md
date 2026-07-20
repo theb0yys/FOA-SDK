@@ -417,9 +417,35 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no registration, review-authoring, file, archive, signing, upload, publication, launch, adapter, or deployment action;
 - the Windows manual UI checklist includes all twenty-one panes and the default zero-release-assembly-result state.
 
-### Next ordered slice — release-signing result envelope
+### Release-signing result envelope
 
-Bind one exact accepted release-assembly/checksum result to a separately reviewed external signing result while preserving signing identity, signature-artifact fingerprints, attempted outcome, failures, and safe diagnostics as supplied evidence. Upload, publication, FoA launch, adapter calls, and deployment mutation remain outside the contract.
+Status: implemented, continuing hardening and exact-head host/UI validation.
+
+- Bind one exact accepted release-assembly/checksum result and successful supplied archive to one separately supplied external signing result.
+- Require one ready release artifact with reviewed `sign_externally` intent and exact signer identity metadata.
+- Require an accepted evidence-backed external signer review with strict tool version, lowercase SHA-256 fingerprint, named reviewer, UTC review time, and archive-signing plus signature-artifact-fingerprint capabilities.
+- Preserve typed `not_attempted`, `succeeded`, `failed`, and `skipped` outcomes, attempted state, completion/capture times, signature artifacts, failures, retryable state, and safe diagnostics.
+- Require exact release-artifact, assembly-result, archive, reconciliation, package, manifest, pack, profile, game, branch, runtime, and signing-intent binding.
+- Keep structurally valid failed outcomes representable as adverse evidence instead of rewriting operational failure as contract failure or success.
+- Deterministic `assembly_result_not_accepted`, `signing_not_requested`, `signer_unreviewed`, `assembly_binding_mismatch`, `signing_intent_binding_mismatch`, `envelope_invalid`, `signing_outcome_mismatch`, `signature_artifact_binding_mismatch`, `failure_diagnostic_binding_mismatch`, and `accepted` states.
+- Return exact binding, signer review, signing outcome, signature-artifact, failure, and diagnostic claims as candidate evidence by value without automatic registration, trust, or promotion.
+- Transient `AdapterReleaseSigningResultRegistry` and read-only **Tainted Grail Release Signing Results** pane with registry rows labelled `contract status=not evaluated`.
+- Focused repository validator, local-validation integration, public contract documentation, and twenty-two-pane Windows manual UI coverage.
+- **No archive access, key loading, identity resolution, signing, signature verification, artifact writing, upload, publication, FoA launch, adapter call, deployment mutation, or save mutation** is implemented or authorised.
+
+Exit criteria:
+
+- only an exact accepted release-assembly/checksum result for a `sign_externally` artifact can produce accepted signing evidence;
+- signer review and required capabilities are complete, evidence-backed, named, time-bounded, fingerprinted, and exact-bound;
+- signing outcomes, attempted state, timestamps, signature artifacts, and failures are self-consistent without erasing adverse results;
+- signature artifacts and diagnostics use stable identities, safe relative references, exact fingerprints, exact archive bindings, unique Windows path identities, and reciprocal references;
+- candidate evidence is returned only for a structurally valid result and is never automatically registered, persisted, promoted, trusted, uploaded, or published;
+- validation does not mutate the release artifact, assembly result, accepted assembly evidence, signing result, or transient registries;
+- all SDK file, archive, key, identity, cryptographic, copy/write, upload, publication, launch, adapter, deployment, and save flags remain false;
+- the Editor pane remains non-editable, explicitly separates registry display from contract acceptance, and exposes no operational action;
+- the Windows manual UI checklist includes all twenty-two panes and the default zero-release-signing-result state.
+
+### Remaining Phase 8 release work
 
 Controlled pipeline:
 
@@ -427,7 +453,10 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, signing results, publication results, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted
+identity/time providers, acknowledgement and key custody, actual backup/restore and deployment implementations,
+actual independent verifier execution and target access, cryptographic signing and verification, publication
+results, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

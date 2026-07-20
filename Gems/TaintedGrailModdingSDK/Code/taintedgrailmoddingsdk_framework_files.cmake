@@ -21,6 +21,7 @@ set(FILES
     Source/FoundationNotificationBus.h
     Source/FoundationPersistenceBoundary.cpp
     Source/FoundationPersistenceBoundary.h
+    Source/FoundationPopulationService.cpp
     Source/FoundationService.cpp
     Source/FoundationService.h
     Source/FoundationServiceConstruction.cpp
@@ -34,6 +35,8 @@ set(FILES
     Source/PathPolicyService.h
     Source/PathPolicyWorkspaceValidation.cpp
     Source/PersistenceJsonUtils.h
+    Source/PopulationAuthoringService.cpp
+    Source/PopulationAuthoringService.h
     Source/SourceEvidencePersistenceService.cpp
     Source/SourceEvidencePersistenceService.h
     Source/SourceImportService.cpp

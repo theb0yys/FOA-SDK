@@ -17,6 +17,7 @@
 #include "FoundationPersistenceBoundary.h"
 #include "FoundationValidationService.h"
 #include "FoundationWorkspaceLoadService.h"
+#include "PopulationAuthoringService.h"
 #include "SourceEvidencePersistenceService.h"
 #include "SourceEvidenceRegistry.h"
 #include "SourceImportService.h"
@@ -79,6 +80,18 @@ namespace TaintedGrailModdingSDK
         bool UpsertEconomyRecipeOutput(
             const EconomyRecipeOutput& output,
             AZStd::string* error = nullptr);
+        bool UpsertPopulationActorProfile(
+            const PopulationActorProfile& actor,
+            AZStd::string* error = nullptr);
+        bool UpsertPopulationTroopDefinition(
+            const PopulationTroopDefinition& definition,
+            AZStd::string* error = nullptr);
+        bool UpsertPopulationTroopProfile(
+            const PopulationTroopProfile& troop,
+            AZStd::string* error = nullptr);
+        bool UpsertPopulationTroopMember(
+            const PopulationTroopMember& member,
+            AZStd::string* error = nullptr);
         bool SaveCatalog(AZStd::string* error = nullptr);
         bool ReloadCatalog(AZStd::string* error = nullptr);
 
@@ -135,6 +148,7 @@ namespace TaintedGrailModdingSDK
         CatalogTransactionService m_catalogTransaction;
         CatalogPromotionService m_catalogPromotion;
         CatalogGovernanceService m_catalogGovernance;
+        PopulationAuthoringService m_populationAuthoring;
         FoundationWorkspaceLoadService m_workspaceLoadService;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;

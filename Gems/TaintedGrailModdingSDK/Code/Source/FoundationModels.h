@@ -8,6 +8,7 @@
 #pragma once
 
 #include "EconomyModels.h"
+#include "PopulationModels.h"
 
 #include <AzCore/RTTI/RTTI.h>
 #include <AzCore/std/containers/vector.h>
@@ -327,7 +328,7 @@ namespace TaintedGrailModdingSDK
         static void Reflect(AZ::ReflectContext* context);
         bool UsesSupportedSchema() const;
 
-        AZ::u32 m_schemaVersion = 1;
+        AZ::u32 m_schemaVersion = LegacyCatalogSchemaVersion;
         AZStd::string m_workspaceId;
         AZStd::string m_profileId;
         AZStd::string m_gameVersion;
@@ -340,6 +341,9 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<EconomyRecipeProfile> m_economyRecipes;
         AZStd::vector<EconomyRecipeIngredient> m_recipeIngredients;
         AZStd::vector<EconomyRecipeOutput> m_recipeOutputs;
+        AZStd::vector<PopulationActorProfile> m_actorProfiles;
+        AZStd::vector<PopulationTroopProfile> m_troopProfiles;
+        AZStd::vector<PopulationTroopMember> m_troopMembers;
     };
 
     struct CatalogPromotionRequest

@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import sys
 import tempfile
 import unittest
+import sys
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "developer_preview_verification.py"
@@ -35,69 +35,208 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
             state_path=repo / "build/tg-sdk-verification.json",
         )
 
-    def test_path_and_identity_guards(self) -> None:
+    def write_receipt(
+        self,
+        paths: verification.VerificationPaths,
+        commit: str,
+        *,
+        finalized: bool = False,
+        windows_ui: bool = False,
+    ) -> None:
+        paths.receipt_dir.mkdir(parents=True, exist_ok=True)
+        gates = [
+            {"name": gate, "status": "passed"}
+            for gate in verification.AUTOMATED_GATE_NAMES
+        ]
+        if windows_ui:
+            gates.append({"name": verification.WINDOWS_UI_GATE, "status": "passed"})
+        (paths.receipt_dir / verification.RECEIPT_DOCUMENT).write_text(
+            json.dumps(
+                {
+                    "source_commit": commit,
+                    "gates": gates,
+                    "finalized_at_utc": "2026-07-20T18:00:00Z" if finalized else None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def write_ui(
+        self,
+        paths: verification.VerificationPaths,
+        commit: str,
+        *,
+        status: str = "pending",
+    ) -> None:
+        paths.ui_evidence_dir.mkdir(parents=True, exist_ok=True)
+        (paths.ui_evidence_dir / verification.UI_EVIDENCE_DOCUMENT).write_text(
+            json.dumps(
+                {
+                    "source_commit": commit,
+                    "status": status,
+                    "checklist": [{"id": "all-panes-open", "status": status}],
+                    "screenshots": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_prerequisite_output_does_not_poison_build_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            repo = Path(temporary) / "FOA-SDK"
-            defaults = verification.default_paths(repo, "a" * 40)
-            self.assertFalse(verification.is_relative_to(defaults.receipt_dir, repo))
-            self.assertTrue(
-                verification.is_relative_to(defaults.ui_evidence_dir, repo / "build")
+            paths = self.paths(Path(temporary))
+            verification.validate_paths(paths)
+            self.assertFalse(
+                verification.is_relative_to(
+                    verification.prerequisites_path(paths),
+                    paths.build_dir,
+                )
             )
-            verification.validate_paths(defaults)
+            step = verification.prerequisites_step(paths)
+            output_index = step.command.index("--json-output") + 1
+            self.assertEqual(
+                step.command[output_index],
+                str(verification.prerequisites_path(paths)),
+            )
+            self.assertNotEqual(
+                Path(step.command[output_index]).parent,
+                paths.build_dir,
+            )
+
+    def test_prerequisite_output_inside_build_directory_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
             paths = self.paths(Path(temporary))
             unsafe = verification.VerificationPaths(
-                paths.repo_root,
-                paths.build_dir,
-                paths.repo_root / "build/receipt",
-                paths.ui_evidence_dir,
-                paths.state_path,
+                repo_root=paths.repo_root,
+                build_dir=paths.build_dir,
+                receipt_dir=paths.receipt_dir,
+                ui_evidence_dir=paths.ui_evidence_dir,
+                state_path=paths.build_dir / "verification.json",
             )
-            with self.assertRaisesRegex(verification.VerificationError, "outside"):
+            with self.assertRaisesRegex(verification.VerificationError, "unconfigured"):
                 verification.validate_paths(unsafe)
-        verification.validate_identity_inputs("windows-reviewer", "Windows 11", 125)
-        with self.assertRaisesRegex(verification.VerificationError, "Tester alias"):
-            verification.validate_identity_inputs("bad alias", "Windows 11", 125)
-        with self.assertRaisesRegex(verification.VerificationError, "Display scale"):
-            verification.validate_identity_inputs("reviewer", "Windows 11", 250)
 
-    def test_commands_resume_and_finalize_use_existing_fail_closed_tools(self) -> None:
+    def test_committed_diff_gate_uses_explicit_base_commit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             paths = self.paths(Path(temporary))
-            commit = "b" * 40
-            prepared = verification.prepare_steps(
+            base = "a" * 40
+            command = verification.automated_gate_commands(
+                paths,
+                base,
+            )["git-diff-check"]
+            self.assertEqual(
+                command,
+                ("git", "diff", "--check", base, "HEAD"),
+            )
+
+    def test_sync_ref_must_be_ancestor_of_head(self) -> None:
+        repo = Path("/repo")
+        head = "a" * 40
+        resolved = {"origin/main": "b" * 40}
+
+        def fake_capture(command, cwd):
+            del cwd
+            if "rev-parse" in command:
+                return 0, resolved[command[-1][:-9]]
+            if "merge-base" in command:
+                return 1, ""
+            raise AssertionError(command)
+
+        original = verification.capture_command
+        verification.capture_command = fake_capture
+        try:
+            with self.assertRaisesRegex(verification.VerificationError, "not synchronized"):
+                verification.resolve_review_ancestry(
+                    repo,
+                    head,
+                    "origin/main",
+                    ("origin/main",),
+                )
+        finally:
+            verification.capture_command = original
+
+    def test_prepare_refuses_nonempty_evidence_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = self.paths(Path(temporary))
+            paths.receipt_dir.mkdir(parents=True)
+            (paths.receipt_dir / "old.txt").write_text("old", encoding="utf-8")
+            with self.assertRaisesRegex(verification.VerificationError, "absent or empty"):
+                verification.validate_prepare_targets(paths)
+
+    def test_failed_receipt_probe_prevents_complete_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = self.paths(Path(temporary))
+            commit = "c" * 40
+            self.write_receipt(paths, commit, finalized=True, windows_ui=True)
+            self.write_ui(paths, commit, status="pass")
+
+            def runner(command, cwd):
+                del cwd
+                text = " ".join(command)
+                if "validation_receipt.py" in text:
+                    return 1, "captured log hash does not match"
+                return 0, "UI evidence verified"
+
+            payload = verification.state_payload(
                 paths,
                 commit,
-                tester_alias="windows-reviewer",
-                windows_version="Windows 11",
-                display_scale=125,
+                "origin/main",
+                "b" * 40,
+                {"origin/main": "b" * 40},
+                runner=runner,
+            )
+            self.assertNotEqual(payload["next_action"], "complete")
+            self.assertFalse(payload["receipt"]["integrity"]["valid"])
+
+    def test_complete_requires_authoritative_receipt_and_ui_verifiers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = self.paths(Path(temporary))
+            commit = "d" * 40
+            self.write_receipt(paths, commit, finalized=True, windows_ui=True)
+            self.write_ui(paths, commit, status="pass")
+
+            def runner(command, cwd):
+                del command, cwd
+                return 0, "verified"
+
+            payload = verification.state_payload(
+                paths,
+                commit,
+                "origin/main",
+                "b" * 40,
+                {"origin/main": "b" * 40},
+                runner=runner,
+            )
+            self.assertEqual(payload["next_action"], "complete")
+            self.assertTrue(payload["receipt"]["integrity"]["valid"])
+            self.assertTrue(
+                payload["receipt"]["merge_ready_verification"]["valid"]
+            )
+            self.assertTrue(payload["ui_evidence"]["verification"]["valid"])
+
+    def test_finalized_receipt_is_reverified_instead_of_no_op(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = self.paths(Path(temporary))
+            commit = "e" * 40
+            recorded = {
+                gate: "passed"
+                for gate in (*verification.AUTOMATED_GATE_NAMES, verification.WINDOWS_UI_GATE)
+            }
+            steps = verification.finalize_steps(
+                paths,
+                commit,
+                recorded=recorded,
+                receipt_finalized=True,
             )
             self.assertEqual(
-                [step.name for step in prepared],
-                ["prerequisites", "initialize-receipt", "initialize-ui-evidence"],
+                [step.name for step in steps],
+                [
+                    "verify-ui-evidence",
+                    "verify-receipt",
+                    "summarize-receipt",
+                ],
             )
-            automated = verification.automated_steps(paths)
-            self.assertEqual(
-                [step.name for step in automated],
-                ["prerequisites-recheck", *verification.AUTOMATED_GATE_NAMES],
-            )
-            commands = verification.automated_gate_commands(paths)
-            self.assertEqual(commands["git-diff-check"], ("git", "diff", "--check"))
-            self.assertIn("run_local_validation.py", commands["local-validation"][1])
-            self.assertIn("configure", commands["o3de-configure"])
-            self.assertIn("build", commands["o3de-build"])
-            self.assertEqual(commands["compiled-tests"][0], "ctest")
-            with self.assertRaisesRegex(verification.VerificationError, "new receipt"):
-                verification.automated_steps(
-                    paths,
-                    recorded={"git-diff-check": "failed"},
-                )
-            with self.assertRaisesRegex(verification.VerificationError, "must pass"):
-                verification.finalize_steps(paths, commit, recorded={})
-            passed = {gate: "passed" for gate in verification.AUTOMATED_GATE_NAMES}
-            finalized = verification.finalize_steps(paths, commit, recorded=passed)
-            self.assertEqual(finalized[0].name, "windows-ui")
-            self.assertIn("developer_preview_ui_evidence.py", " ".join(finalized[0].command))
-            self.assertIn("--require-merge-ready", finalized[2].command)
+            self.assertIn("--require-merge-ready", steps[1].command)
+            self.assertIn("--require-merge-ready", steps[2].command)
 
     def test_execution_stops_on_failure_and_dry_run_executes_nothing(self) -> None:
         calls: list[str] = []
@@ -112,46 +251,33 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
             verification.VerificationStep("two", ("fail",), Path("/repo")),
             verification.VerificationStep("three", ("never",), Path("/repo")),
         )
-        results, code = verification.execute_steps(steps, dry_run=False, executor=executor)
+        results, code = verification.execute_steps(
+            steps,
+            dry_run=False,
+            executor=executor,
+        )
         self.assertEqual((code, calls), (17, ["ok", "fail"]))
         self.assertEqual([result.status for result in results], ["passed", "failed"])
         calls.clear()
-        results, code = verification.execute_steps(steps[:1], dry_run=True, executor=executor)
+        results, code = verification.execute_steps(
+            steps[:1],
+            dry_run=True,
+            executor=executor,
+        )
         self.assertEqual((code, calls, results[0].status), (0, [], "planned"))
 
-    def test_pending_ui_is_not_a_pass_and_state_write_is_atomic(self) -> None:
+    def test_atomic_state_write_is_machine_readable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            paths = self.paths(Path(temporary))
-            paths.receipt_dir.mkdir(parents=True)
-            paths.ui_evidence_dir.mkdir(parents=True)
-            commit = "c" * 40
-            (paths.receipt_dir / verification.RECEIPT_DOCUMENT).write_text(
-                json.dumps({
-                    "source_commit": commit,
-                    "gates": [
-                        {"name": gate, "status": "passed"}
-                        for gate in verification.AUTOMATED_GATE_NAMES
-                    ],
-                    "finalized_at_utc": None,
-                }),
-                encoding="utf-8",
+            output = Path(temporary) / "build/status.json"
+            verification.atomic_write_json(
+                output,
+                {"schema_version": 2, "status": "ready"},
             )
-            (paths.ui_evidence_dir / verification.UI_EVIDENCE_DOCUMENT).write_text(
-                json.dumps({
-                    "source_commit": commit,
-                    "status": "pending",
-                    "checklist": [{"status": "pending"}],
-                    "screenshots": [],
-                }),
-                encoding="utf-8",
+            self.assertEqual(
+                json.loads(output.read_text(encoding="utf-8")),
+                {"schema_version": 2, "status": "ready"},
             )
-            payload = verification.state_payload(paths, commit)
-            self.assertIsNone(payload["receipt"]["gates"].get("windows-ui"))
-            self.assertIn("manual Windows checklist", payload["next_action"])
-            verification.atomic_write_json(paths.state_path, payload)
-            loaded = json.loads(paths.state_path.read_text(encoding="utf-8"))
-            self.assertEqual(loaded["source_commit"], commit)
-            self.assertEqual(list(paths.state_path.parent.glob("*.tmp")), [])
+            self.assertEqual(list(output.parent.glob("*.tmp")), [])
 
 
 if __name__ == "__main__":

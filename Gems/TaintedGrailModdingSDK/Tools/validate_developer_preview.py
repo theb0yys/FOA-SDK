@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the Developer Preview 0 command-layer contract."""
+"""Validate the Developer Preview command layer and exact-head coordinator contract."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def fail(message: str) -> None:
 
 def require_file(path: Path) -> str:
     if not path.is_file():
-        fail(f"Required Developer Preview 0 file is missing: {path}")
+        fail(f"Required Developer Preview file is missing: {path}")
     return path.read_text(encoding="utf-8")
 
 
@@ -43,12 +43,24 @@ def require_order(text: str, fragments: tuple[str, ...], path: Path) -> None:
         position = current
 
 
+def reject_fragments(text: str, fragments: tuple[str, ...], path: Path) -> None:
+    for fragment in fragments:
+        if fragment in text:
+            fail(f"Developer Preview tooling contains unsafe behavior {fragment!r}: {path}")
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
     tools_root = repo_root / "Gems/TaintedGrailModdingSDK/Tools"
     script_path = tools_root / "developer_preview.py"
     tests_path = tools_root / "tests/test_developer_preview.py"
+    coordinator_path = tools_root / "developer_preview_verification.py"
+    coordinator_tests_path = tools_root / "tests/test_developer_preview_verification.py"
     guide_path = repo_root / "docs/tainted-grail-sdk/DEVELOPER_PREVIEW_0.md"
+    verification_guide_path = (
+        repo_root / "docs/tainted-grail-sdk/DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md"
+    )
+    documentation_hub_path = repo_root / "docs/tainted-grail-sdk/README.md"
     workflow_path = repo_root / ".github/workflows/tainted-grail-sdk-foundation.yml"
 
     try:
@@ -79,16 +91,17 @@ def main() -> int:
                 "does not launch FoA, deploy files, modify saves",
             ),
         )
-        for forbidden in (
-            "shell=True",
-            "os.system(",
-            "Popen(",
-            'subprocess.run(["FoA',
-            'subprocess.run(("FoA',
-        ):
-            if forbidden in script:
-                fail(f"Developer Preview command must not use unsafe or runtime behavior: {forbidden}")
-
+        reject_fragments(
+            script,
+            (
+                "shell=True",
+                "os.system(",
+                "Popen(",
+                'subprocess.run(["FoA',
+                'subprocess.run(("FoA',
+            ),
+            script_path,
+        )
         require_order(
             script,
             (
@@ -119,6 +132,72 @@ def main() -> int:
             ),
         )
 
+        coordinator = require_fragments(
+            coordinator_path,
+            (
+                'DEFAULT_BASE_REF = "origin/main"',
+                'DEFAULT_SYNC_REFS = ("origin/main", "origin/foa-development")',
+                "def resolve_review_ancestry(",
+                "merge-base",
+                "--is-ancestor",
+                "def prerequisites_step(",
+                "prerequisites_path",
+                "Prerequisite output must not make an unconfigured O3DE build directory non-empty.",
+                "def automated_gate_commands(",
+                '"git-diff-check": ("git", "diff", "--check", base_commit, "HEAD")',
+                "def probe_receipt(",
+                "def probe_ui_evidence(",
+                "validation_receipt.py",
+                "developer_preview_ui_evidence.py",
+                "--require-merge-ready",
+                "Authoritative receipt verification failed before execution",
+                "receipt_finalized",
+                "verify-ui-evidence",
+                "replace the invalid or tampered finalized receipt",
+                "The authoritative validators remain",
+            ),
+        )
+        reject_fragments(
+            coordinator,
+            (
+                "shell=True",
+                "os.system(",
+                "subprocess.Popen(",
+                "pyautogui",
+                "ImageGrab",
+                "win32gui",
+                "SendKeys",
+                'return "complete" if receipt.get("finalized_at_utc")',
+            ),
+            coordinator_path,
+        )
+        require_order(
+            coordinator,
+            (
+                '"git-diff-check"',
+                '"local-validation"',
+                '"o3de-configure"',
+                '"o3de-build"',
+                '"compiled-tests"',
+            ),
+            coordinator_path,
+        )
+
+        require_fragments(
+            coordinator_tests_path,
+            (
+                "test_prerequisite_output_does_not_poison_build_directory",
+                "test_prerequisite_output_inside_build_directory_is_rejected",
+                "test_committed_diff_gate_uses_explicit_base_commit",
+                "test_sync_ref_must_be_ancestor_of_head",
+                "test_failed_receipt_probe_prevents_complete_status",
+                "test_complete_requires_authoritative_receipt_and_ui_verifiers",
+                "test_finalized_receipt_is_reverified_instead_of_no_op",
+                "test_execution_stops_on_failure_and_dry_run_executes_nothing",
+                "test_atomic_state_write_is_machine_readable",
+            ),
+        )
+
         require_fragments(
             guide_path,
             (
@@ -133,6 +212,24 @@ def main() -> int:
                 "tg-sdk-developer-preview-validation.json",
             ),
         )
+        require_fragments(
+            verification_guide_path,
+            (
+                "Developer Preview Exact-Head Verification",
+                "git fetch --prune origin",
+                "origin/main",
+                "origin/foa-development",
+                "committed review range",
+                "prerequisite result",
+                "authoritative receipt verifier",
+                "authoritative Windows UI evidence verifier",
+                "already-finalized receipt",
+                "All twenty-two TG SDK panes",
+            ),
+        )
+        documentation_hub = require_file(documentation_hub_path)
+        if "DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md" not in documentation_hub:
+            fail("The documentation hub does not link the exact-head verification runbook.")
 
         require_fragments(
             workflow_path,
@@ -144,10 +241,16 @@ def main() -> int:
             ),
         )
     except (OSError, RuntimeError) as exc:
-        print(f"Developer Preview 0 command contract validation failed: {exc}", file=sys.stderr)
+        print(
+            f"Developer Preview command and exact-head coordinator validation failed: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
-    print("Developer Preview 0 prerequisite/configure/build/validate command contract passed.")
+    print(
+        "Developer Preview prerequisite/configure/build/validate and exact-head "
+        "verification coordinator contracts passed."
+    )
     return 0
 
 

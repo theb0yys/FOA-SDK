@@ -8,6 +8,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 - [Open and Test the Actual Editor](OPEN_AND_TEST_EDITOR.md) — shortest Windows path from a fresh pull to the dedicated O3DE project, source build, trusted clickable entry, native log, and synthetic workspace.
 - [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, manual UI evidence tooling, and current limitations.
+- [Developer Preview Exact-Head Verification](DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md) — synchronized-ref checks, committed-range whitespace validation, exact-head build and CTest coordination, and authoritative receipt/UI reverification.
 - [Windows Manual UI Smoke](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md) — real Windows checklist, screenshot-evidence initializer/verifier, exact-commit binding, privacy attestation, and evidence handling.
 - [Developer Preview Troubleshooting](DEVELOPER_PREVIEW_TROUBLESHOOTING.md) — missing Editor output, path-policy and clickable-entry failures, absent TG SDK panes, native log locations, diagnostics failures, and verification guidance.
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.

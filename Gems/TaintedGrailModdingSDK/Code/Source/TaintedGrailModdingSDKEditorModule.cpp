@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
+#include "ActorTroopEditorPaneSystemComponent.h"
 #include "AdapterReleaseArtifactPaneSystemComponent.h"
 #include "AdapterReleaseAssemblyPaneSystemComponent.h"
 #include "AdapterReleaseSigningPaneSystemComponent.h"
@@ -23,7 +24,9 @@ namespace TaintedGrailModdingSDK
             TaintedGrailModdingSDKEditorModule,
             "{EEB18F9A-E681-4287-AA41-ECEC87D4ED21}",
             AZ::Module);
-        AZ_CLASS_ALLOCATOR(TaintedGrailModdingSDKEditorModule, AZ::SystemAllocator);
+        AZ_CLASS_ALLOCATOR(
+            TaintedGrailModdingSDKEditorModule,
+            AZ::SystemAllocator);
 
         TaintedGrailModdingSDKEditorModule()
         {
@@ -31,6 +34,7 @@ namespace TaintedGrailModdingSDK
                 m_descriptors.end(),
                 {
                     TaintedGrailModdingSDKSystemComponent::CreateDescriptor(),
+                    ActorTroopEditorPaneSystemComponent::CreateDescriptor(),
                     AdapterReleaseArtifactPaneSystemComponent::CreateDescriptor(),
                     AdapterReleaseAssemblyPaneSystemComponent::CreateDescriptor(),
                     AdapterReleaseSigningPaneSystemComponent::CreateDescriptor(),
@@ -41,6 +45,7 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::ComponentTypeList{
                 azrtti_typeid<TaintedGrailModdingSDKSystemComponent>(),
+                azrtti_typeid<ActorTroopEditorPaneSystemComponent>(),
                 azrtti_typeid<AdapterReleaseArtifactPaneSystemComponent>(),
                 azrtti_typeid<AdapterReleaseAssemblyPaneSystemComponent>(),
                 azrtti_typeid<AdapterReleaseSigningPaneSystemComponent>(),

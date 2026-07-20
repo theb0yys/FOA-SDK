@@ -6,6 +6,30 @@
 #
 
 set(FILES
+    Source/ActorTroopEditorPaneSystemComponent.cpp
+    Source/ActorTroopEditorPaneSystemComponent.h
+    Source/ActorTroopEditorWidget.cpp
+    Source/ActorTroopEditorWidget.h
+    Source/ActorTroopEditorWidgetActor.cpp
+    Source/ActorTroopEditorWidgetTroop.cpp
+    Source/ActorTroopEditorWidgetActorPart1A.inl
+    Source/ActorTroopEditorWidgetActorPart1B.inl
+    Source/ActorTroopEditorWidgetActorPart2A.inl
+    Source/ActorTroopEditorWidgetActorPart2B.inl
+    Source/ActorTroopEditorWidgetActorPart3.inl
+    Source/ActorTroopEditorWidgetMainPart1.inl
+    Source/ActorTroopEditorWidgetMainPart2.inl
+    Source/ActorTroopEditorWidgetMainPart3A.inl
+    Source/ActorTroopEditorWidgetMainPart3B.inl
+    Source/ActorTroopEditorWidgetMainPart4.inl
+    Source/ActorTroopEditorWidgetTroopPart1A.inl
+    Source/ActorTroopEditorWidgetTroopPart1B.inl
+    Source/ActorTroopEditorWidgetTroopPart2A.inl
+    Source/ActorTroopEditorWidgetTroopPart2B.inl
+    Source/ActorTroopEditorWidgetTroopPart3A.inl
+    Source/ActorTroopEditorWidgetTroopPart3B.inl
+    Source/ActorTroopEditorWidgetTroopPart4A.inl
+    Source/ActorTroopEditorWidgetTroopPart4B.inl
     Source/AdapterBuildManifestWidget.cpp
     Source/AdapterBuildManifestWidget.h
     Source/AdapterCapabilityMatrixWidget.cpp

@@ -30,6 +30,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — preserved report blockers, adverse verifier observations, separate compatibility/release/human-review axes, explicit dispositions, and no automatic approval or publication.
 - [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact approved reconciliation/package binding, declared checksums, provenance, legal review, signing intent, publication targets, and no performed release operations.
 - [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md) — exact ready-artifact binding, reviewed external assembler/checksummer results, archive identity, per-content checksum observations, failures, safe diagnostics, and no SDK release operations.
+- [FoA Release-Signing Result Evidence](FOA_RELEASE_SIGNING_RESULTS.md) — exact accepted assembly/archive and signing-intent binding, reviewed signer metadata, typed outcomes, signature artifacts, failures, safe diagnostics, and no SDK signing or verification.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -62,6 +63,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — exact immutable binding, preserved blockers, typed human dispositions, deterministic compatibility/release decisions, non-mutation, and no-publication enforcement.
 - [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact content/checksum/provenance/legal/signing/publication declarations, deterministic fail-closed status, and no file or release operations.
 - [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md) — contract-validated external archive/checksum observations, deterministic fail-closed binding, candidate evidence, and no file or release operations.
+- [FoA Release-Signing Result Evidence](FOA_RELEASE_SIGNING_RESULTS.md) — exact upstream/signing-intent binding, reviewed signer capabilities, typed outcomes and artifacts, deterministic candidate evidence, transient registry, and no signing, verification, or publication.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -108,11 +110,13 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed transient independent-verifier result envelopes with exact canonical-report binding, reviewed verifier capabilities, one check per mutation step, independent observations, typed failures, safe diagnostics, and candidate evidence returned without automatic promotion;
 - deterministic transient verifier-evidence reconciliations with preserved blockers, separate compatibility/release/human-review axes, typed dispositions, canonical JSON, and no automatic approval, signing, or publication;
 - deterministic transient release-artifact envelopes with exact approved reconciliation and ready-package binding, declared checksums/provenance/legal review/signing intent/publication targets, and every file, archive, signing, upload, publication, adapter, launch, and deployment operation disabled;
+- typed transient release-assembly/checksum result envelopes with exact artifact and archive binding, one checksum observation per content row, reviewed external assembler/checksummer metadata, failures, safe diagnostics, and no file, archive, signing, upload, publication, launch, adapter, or deployment operation;
+- typed transient release-signing result envelopes with exact accepted assembly/archive and signing-intent binding, reviewed signer metadata, typed outcomes, signature artifacts, failures, safe diagnostics, candidate evidence, and no key, signing, verification, upload, publication, launch, adapter, deployment, or save operation;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.
 
-The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing/signing/publication, runtime adapters, production deployment, live executor capture, and remaining specialised domain tools are not complete.
+The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

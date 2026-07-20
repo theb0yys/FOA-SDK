@@ -160,6 +160,19 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py
 
 Use this when collecting wrapper-owned stdout, stderr, and launch-result data.
 
+The tracked `TaintedGrailModdingEditor/Levels` root must remain present. The
+Editor creates new levels beneath that directory and cannot create a level when
+the parent is missing.
+
+On Windows, Controlled Folder Access can still deny the Editor permission to
+write beneath a protected checkout even when the directory exists. Event Viewer
+records this as Windows Defender event 1123. If that event names `Editor.exe` or
+`AssetProcessor.exe`, either move the checkout outside a protected folder or
+use Windows Security's **Allow an app through Controlled folder access** flow
+for the exact source-built executables. Do not disable Controlled Folder Access
+globally, and do not treat running the Editor as administrator as the normal
+solution.
+
 ## 6. Open the TG SDK panes
 
 After the Editor opens, use:

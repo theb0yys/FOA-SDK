@@ -6,7 +6,7 @@ Status: checklist and evidence tooling implemented; the actual Windows screensho
 
 This checklist proves the source-built TG SDK panes are usable in a **real Windows x64 Profile** Editor session. It complements automated and compiled tests and does not prove FoA runtime compatibility.
 
-Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**. Slice 18 requires **All nineteen TG SDK panes**. The release-artifact provenance/signing-intent slice requires **All twenty TG SDK panes**. The release-assembly/checksum-result slice requires **All twenty-one TG SDK panes**. The release-signing result slice requires **All twenty-two TG SDK panes**.
+Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**. Slice 18 requires **All nineteen TG SDK panes**. The release-artifact provenance/signing-intent slice requires **All twenty TG SDK panes**. The release-assembly/checksum-result slice requires **All twenty-one TG SDK panes**. The release-signing result slice requires **All twenty-two TG SDK panes**. The Actor and Troop Editor slice requires **All twenty-three TG SDK panes**. The FOA Development Hub slice requires **All twenty-four TG SDK panes**.
 
 ## Safety and privacy boundary
 
@@ -77,12 +77,14 @@ Initialization creates pending evidence and captures nothing.
 
 From **Tools → Tainted Grail SDK**, open:
 
+- FOA Development Hub;
 - Tainted Grail SDK Status;
 - Tainted Grail Pack Manager;
 - Tainted Grail Source Intake;
 - Tainted Grail Catalog Browser;
 - Tainted Grail Catalog Governance;
 - Tainted Grail Item and Recipe Editor;
+- Tainted Grail Actor and Troop Editor;
 - Tainted Grail Economy Acquisition Coverage;
 - Tainted Grail Economy Cross-Pack Duplicates;
 - Tainted Grail Adapter Capability Matrix;
@@ -100,14 +102,14 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Release Assembly and Checksum Results;
 - Tainted Grail Release Signing Results.
 
-Confirm every pane opens and remains interactive. **All twenty-two TG SDK panes** must be present.
+Confirm every pane opens and remains interactive. **All twenty-four TG SDK panes** must be present. The Hub must open automatically after Editor initialization and every Hub route must open its named specialist pane.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All twenty-two TG SDK panes opened from the Tools menu."
+  --notes "All twenty-four TG SDK panes opened; the Hub opened automatically and all twenty-three specialist routes resolved."
 ```
 
 Screenshot required.

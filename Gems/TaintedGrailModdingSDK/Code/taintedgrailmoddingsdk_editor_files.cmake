@@ -46,6 +46,8 @@ set(FILES
     Source/CatalogBrowserWidget.h
     Source/CatalogGovernanceWidget.cpp
     Source/CatalogGovernanceWidget.h
+    Source/DevelopmentHubWidget.cpp
+    Source/DevelopmentHubWidget.h
     Source/EconomyCoverageDashboardWidget.cpp
     Source/EconomyCoverageDashboardWidget.h
     Source/EconomyDuplicateReportWidget.cpp

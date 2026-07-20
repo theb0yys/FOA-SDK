@@ -77,6 +77,18 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "another source tree"):
                 preview.validate_build_directory(root, build_dir, require_configured=True)
 
+    def test_build_directory_requires_dedicated_project_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = self.make_repo(Path(temporary) / "repo")
+            build_dir = Path(temporary) / "build"
+            build_dir.mkdir()
+            (build_dir / "CMakeCache.txt").write_text(
+                f"CMAKE_HOME_DIRECTORY:INTERNAL={root}\nLY_PROJECTS:STRING=\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "dedicated TaintedGrailModdingEditor"):
+                preview.validate_build_directory(root, build_dir, require_configured=True)
+
     def test_configure_command_uses_approved_windows_x64_preset(self) -> None:
         repo = Path("C:/src/o3de")
         build = Path("D:/build/tg")

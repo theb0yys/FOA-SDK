@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Read-only **FOA Development Hub** default entry pane with live Foundation workspace/profile/pack context, explicit blocker and persistence-state visibility, task-first navigation, and deep-links to all existing specialist panes without duplicated domain logic or new runtime authority.
+- Twenty-four-pane Windows manual UI checklist coverage for Hub launch, live context, deep-links, and the existing accessibility and runtime-separation checks.
+- Tracked Developer Preview `Levels` root, contract regression coverage, and explicit Windows Controlled Folder Access diagnostics for level-authoring readiness.
 - Pure-Core `AdapterReleaseArtifactProvenanceService` and typed release-artifact contracts for exact approved-reconciliation/ready-package binding, complete content coverage, declared SHA-256 values, provenance, legal dispositions, signing intent, publication targets, deterministic canonical JSON, and candidate evidence return.
 - Transient `AdapterReleaseArtifactRegistry`, focused repository validator, required pane system component, and read-only **Tainted Grail Release Artifact Provenance and Signing Intent** pane; no file read/hash/copy, archive assembly, signing, upload, publication, launch, adapter call, or deployment mutation is performed.
 - Public release-artifact provenance/signing-intent documentation and twenty-pane Windows manual UI coverage.

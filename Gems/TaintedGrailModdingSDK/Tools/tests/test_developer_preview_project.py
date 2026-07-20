@@ -51,6 +51,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
         tools = repo / "Gems/TaintedGrailModdingSDK/Tools"
         (project / "cmake").mkdir(parents=True)
         (project / "ShaderLib").mkdir(parents=True)
+        (project / "Levels").mkdir()
         (repo / "AutomatedTesting").mkdir(parents=True)
         tools.mkdir(parents=True)
         (repo / "docs/tainted-grail-sdk").mkdir(parents=True)
@@ -219,6 +220,16 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             repo = self.make_repo(Path(temporary))
             (repo / "TaintedGrailModdingEditor/ShaderLib/viewsrg.srgi").unlink()
             with self.assertRaisesRegex(contract.PreviewProjectContractError, "view SRG"):
+                contract.validate_preview_project(repo)
+
+    def test_level_root_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            (repo / "TaintedGrailModdingEditor/Levels").rmdir()
+            with self.assertRaisesRegex(
+                contract.PreviewProjectContractError,
+                "level root is missing",
+            ):
                 contract.validate_preview_project(repo)
 
     def test_quickstart_must_name_path_policy(self) -> None:

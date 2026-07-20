@@ -123,7 +123,10 @@ def validate_editor_foundation(gem_root: Path) -> None:
         "class SourceEvidenceRegistry", "class CatalogDatabase", "class FoundationValidationService",
         "class FoundationService", "FoundationNotificationBus", "class FoundationStatusWidget",
         "RegisterViewPane<FoundationStatusWidget>", "LoadObjectFromFile", "TaintedGrailModdingSDKService",
-        "FoA runtime execution remains disabled",
+        "FoA runtime execution remains disabled", "class DevelopmentHubWidget", "FOA Development Hub",
+        "RegisterViewPane<DevelopmentHubWidget>", "OpenViewPane(DevelopmentHubViewPaneName)",
+        'tr("Setup and readiness")', 'tr("Research and author")', 'tr("Package and verify")',
+        'tr("Diagnostics")', 'tr("Advanced")', "FoundationService::Get().GetSnapshot()",
     )
     for fragment in required:
         if fragment not in combined:
@@ -134,6 +137,29 @@ def validate_editor_foundation(gem_root: Path) -> None:
     ):
         if token in combined:
             fail(f"Editor-only foundation contains forbidden runtime integration {token!r}")
+
+    editor_manifest = (gem_root / "Code/taintedgrailmoddingsdk_editor_files.cmake").read_text(
+        encoding="utf-8"
+    )
+    for fragment in ("Source/DevelopmentHubWidget.cpp", "Source/DevelopmentHubWidget.h"):
+        require_contains(
+            editor_manifest,
+            fragment,
+            gem_root / "Code/taintedgrailmoddingsdk_editor_files.cmake",
+        )
+
+    hub_source = (gem_root / "Code/Source/DevelopmentHubWidget.cpp").read_text(
+        encoding="utf-8"
+    )
+    for fragment in (
+        "Tainted Grail Actor and Troop Editor",
+        "Tainted Grail Release Signing Results",
+    ):
+        require_contains(
+            hub_source,
+            fragment,
+            gem_root / "Code/Source/DevelopmentHubWidget.cpp",
+        )
 
 
 def validate_source_intake(gem_root: Path) -> None:

@@ -152,6 +152,11 @@ def validate_preview_project(repo_root: Path) -> None:
         path = project_root / required
         if not path.is_file():
             raise PreviewProjectContractError(f"Dedicated project build file is missing: {path}")
+    levels_path = project_root / "Levels"
+    if not levels_path.is_dir():
+        raise PreviewProjectContractError(
+            f"Dedicated project level root is missing: {levels_path}"
+        )
     validate_png(project_root / PREVIEW_PNG)
     validate_ico(project_root / PREVIEW_ICO)
     require_fragments(
@@ -285,8 +290,9 @@ def main() -> int:
         print(f"Developer Preview project contract validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Developer Preview project contract passed: dedicated project, repository-derived "
-        "project SRGs, path policy, and trusted source-built clickable entry are complete."
+        "Developer Preview project contract passed: dedicated project, tracked level root, "
+        "repository-derived project SRGs, path policy, and trusted source-built clickable "
+        "entry are complete."
     )
     return 0
 

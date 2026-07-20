@@ -46,7 +46,8 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
         editor.parent.mkdir(parents=True)
         write_test_editor(editor)
         (build / "CMakeCache.txt").write_text(
-            f"CMAKE_HOME_DIRECTORY:INTERNAL={repo.resolve()}\n",
+            f"CMAKE_HOME_DIRECTORY:INTERNAL={repo.resolve()}\n"
+            f"LY_PROJECTS:STRING={project.resolve()}\n",
             encoding="utf-8",
         )
         return repo, build, editor
@@ -123,7 +124,10 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
     def test_source_build_requires_explicit_cmake_source_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo, build, _ = self.make_repo(Path(temporary))
-            (build / "CMakeCache.txt").write_text("cache-without-source-binding\n", encoding="utf-8")
+            (build / "CMakeCache.txt").write_text(
+                f"LY_PROJECTS:STRING={(repo / policy.PREVIEW_PROJECT).resolve()}\n",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(policy.PathPolicyError, "CMAKE_HOME_DIRECTORY"):
                 policy.resolve_source_built_entry(
                     repo,

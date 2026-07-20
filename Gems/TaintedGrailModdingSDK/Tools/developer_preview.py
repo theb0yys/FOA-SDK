@@ -131,6 +131,19 @@ def validate_build_directory(repo_root: Path, build_dir: Path, *, require_config
                 raise RuntimeError(
                     f"The build directory belongs to another source tree: {configured_source}"
                 )
+        if require_configured:
+            projects_match = re.search(r"^LY_PROJECTS:STRING=(.*)$", cache, re.MULTILINE)
+            configured_projects = {
+                resolve_path(Path(value.strip()), repo_root)
+                for value in (projects_match.group(1).split(";") if projects_match else ())
+                if value.strip()
+            }
+            required_project = (repo_root / PREVIEW_PROJECT_DIRECTORY).resolve(strict=False)
+            if required_project not in configured_projects:
+                raise RuntimeError(
+                    "The build directory is not configured for the dedicated "
+                    f"{PREVIEW_PROJECT_DIRECTORY} project. Run the configure command first."
+                )
     elif build_dir.exists() and any(build_dir.iterdir()):
         raise RuntimeError(
             f"The build directory is non-empty but has no CMakeCache.txt: {build_dir}"

@@ -29,6 +29,7 @@
 #include "ActorTroopEditorWidget.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
+#include "DevelopmentHubWidget.h"
 #include "EconomyCoverageDashboardWidget.h"
 #include "EconomyDuplicateReportWidget.h"
 #include "EconomyModels.h"
@@ -42,15 +43,18 @@
 #include <AzCore/Debug/Trace.h>
 #include <AzCore/Math/Crc.h>
 #include <AzCore/Serialization/SerializeContext.h>
+#include <AzToolsFramework/API/ToolsApplicationAPI.h>
 #include <AzToolsFramework/API/ViewPaneOptions.h>
 #include <QtCore/QRect>
 #include <QtCore/QString>
+#include <QtCore/QTimer>
 #include <QtCore/qnamespace.h>
 
 namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        constexpr const char* DevelopmentHubViewPaneName = "FOA Development Hub";
         constexpr const char* FoundationStatusViewPaneName = "Tainted Grail SDK Status";
         constexpr const char* PackManagerViewPaneName = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakeViewPaneName = "Tainted Grail Source Intake";
@@ -139,6 +143,7 @@ namespace TaintedGrailModdingSDK
     {
         if (m_viewRegistered)
         {
+            AzToolsFramework::UnregisterViewPane(DevelopmentHubViewPaneName);
             AzToolsFramework::UnregisterViewPane(FoundationStatusViewPaneName);
             AzToolsFramework::UnregisterViewPane(PackManagerViewPaneName);
             AzToolsFramework::UnregisterViewPane(SourceIntakeViewPaneName);
@@ -181,6 +186,17 @@ namespace TaintedGrailModdingSDK
         {
             return;
         }
+
+        AzToolsFramework::ViewPaneOptions hubOptions;
+        hubOptions.paneRect = QRect(80, 80, 1180, 980);
+        hubOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
+        hubOptions.isDeletable = true;
+        hubOptions.isPreview = true;
+        hubOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.DevelopmentHub");
+        AzToolsFramework::RegisterViewPane<DevelopmentHubWidget>(
+            DevelopmentHubViewPaneName,
+            "Tainted Grail SDK",
+            hubOptions);
 
         AzToolsFramework::ViewPaneOptions statusOptions;
         statusOptions.paneRect = QRect(100, 100, 760, 900);
@@ -416,5 +432,18 @@ namespace TaintedGrailModdingSDK
             verifierReconciliationOptions);
 
         m_viewRegistered = true;
+    }
+
+    void TaintedGrailModdingSDKSystemComponent::NotifyEditorInitialized()
+    {
+        if (m_viewRegistered)
+        {
+            QTimer::singleShot(
+                0,
+                []()
+                {
+                    AzToolsFramework::OpenViewPane(DevelopmentHubViewPaneName);
+                });
+        }
     }
 } // namespace TaintedGrailModdingSDK

@@ -105,6 +105,7 @@ Feature-specific validators additionally enforce:
 - exact package/target review binding, ownership and management gates, add/replace/remove/unchanged classification, conflicts, backup and rollback completeness, deterministic canonical output, `DeploymentMutationAllowed=false`, and a non-editable staging/deployment preview;
 - exact deployment confirmation/work-order binding, typed scope and expiry, reviewed maintenance window, required preflight kinds, exact step/checklist coverage, deterministic canonical output, `ExecutionAllowed=false`, and a non-editable deployment work-order pane;
 - exact reviewed work-order and executor binding, attempted-step/backup/verification/rollback/failure/log contracts, candidate evidence-only return, non-mutation, no executor invocation, no automatic evidence promotion, and a non-editable deployment execution-result pane.
+- exact ready release-artifact and reviewed external assembler/checksummer binding, per-content checksum observations, archive-result identity/fingerprint, failures, safe diagnostics, candidate evidence-only return, non-mutation, and a non-editable release assembly-result pane.
 
 ## Runtime boundary
 

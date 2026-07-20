@@ -95,6 +95,18 @@ Before any future package assembler or release step is enabled:
 
 A ready preview is not proof that files exist, were copied, or were archived.
 
+### Release-assembly/checksum-result evidence gate
+
+After release-artifact metadata is `ready`, the SDK may validate a separately supplied external assembler/checksummer result only when:
+
+- the result binds to the exact release-artifact canonical JSON and SHA-256 fingerprint;
+- the assembler/checksummer has an accepted evidence-backed review for content checksums, archive assembly, and archive checksums;
+- every declared release content has exactly one observation bound to its identity, path, and expected checksum;
+- archive outcome, identity, safe reference, size, fingerprint, timestamp, failures, and diagnostics are self-consistent;
+- adverse or incomplete results remain visible and are not converted into successful release claims.
+
+An accepted result proves only that the supplied metadata passed the contract. The SDK does not read or hash package files, assemble or open an archive, generate a checksum, sign, upload, or publish. See [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md).
+
 ### Staging/deployment-preview gate
 
 Before any future deployer or deployment work order can be enabled:

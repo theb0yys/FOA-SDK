@@ -59,6 +59,10 @@ set(FILES
     Source/AdapterReleaseArtifactProvenanceService.h
     Source/AdapterReleaseArtifactProvenanceServicePart1.inl
     Source/AdapterReleaseArtifactProvenanceServicePart2.inl
+    Source/AdapterReleaseAssemblyEvidenceService.cpp
+    Source/AdapterReleaseAssemblyEvidenceService.h
+    Source/AdapterReleaseAssemblyResultContracts.cpp
+    Source/AdapterReleaseAssemblyResultContracts.h
     Source/AdapterRuntimeResultCanonical.cpp
     Source/AdapterRuntimeResultCanonical.h
     Source/AdapterRuntimeResultContracts.cpp

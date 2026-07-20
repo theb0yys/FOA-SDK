@@ -6,7 +6,7 @@ Status: checklist and evidence tooling implemented; the actual Windows screensho
 
 This checklist proves the source-built TG SDK panes are usable in a **real Windows x64 Profile** Editor session. It complements automated and compiled tests and does not prove FoA runtime compatibility.
 
-Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**. Slice 18 requires **All nineteen TG SDK panes**. The release-artifact provenance/signing-intent slice requires **All twenty TG SDK panes**. The release-assembly/checksum-result slice requires **All twenty-one TG SDK panes**.
+Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**. Slice 18 requires **All nineteen TG SDK panes**. The release-artifact provenance/signing-intent slice requires **All twenty TG SDK panes**. The release-assembly/checksum-result slice requires **All twenty-one TG SDK panes**. The release-signing result slice requires **All twenty-two TG SDK panes**.
 
 ## Safety and privacy boundary
 
@@ -41,7 +41,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
 
 Prepare `preview.duplicate-companion`, then import `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion` exactly as documented in `Preview/DuplicateReview/README.md`.
 
-The normal fixture has no adapter declaration, runtime-result envelope, package-preview input, staging/deployment-preview input, deployment confirmation/work-order input, deployment execution-result envelope, independent-verifier envelope, verifier-reconciliation request, release-artifact envelope, or release assembly-result envelope. It therefore has no post-deployment report, independent-verifier result, release-decision reconciliation, release-artifact metadata, or archive/checksum result evidence. Expected defaults are:
+The normal fixture has no adapter declaration, runtime-result envelope, package-preview input, staging/deployment-preview input, deployment confirmation/work-order input, deployment execution-result envelope, independent-verifier envelope, verifier-reconciliation request, release-artifact envelope, release assembly-result envelope, or release signing-result envelope. It therefore has no post-deployment report, independent-verifier result, release-decision reconciliation, release-artifact metadata, archive/checksum result evidence, or release-signing result evidence. Expected defaults are:
 
 - the Adapter Capability Matrix shows `unsupported` rows when no adapter declaration is registered;
 - Work-Order Plans shows **one refused plan group and zero generated steps** per loaded pack;
@@ -55,7 +55,8 @@ The normal fixture has no adapter declaration, runtime-result envelope, package-
 - Independent Post-Deployment Verifier Results shows **zero registered verifier envelopes**;
 - Verifier Evidence Reconciliation and Release Decision shows **zero registered reconciliation requests**;
 - Release Artifact Provenance and Signing Intent shows **zero registered release-artifact envelopes**;
-- Release Assembly and Checksum Results shows **zero registered release assembly-result envelopes**.
+- Release Assembly and Checksum Results shows **zero registered release assembly-result envelopes**;
+- Release Signing Results shows **zero registered release signing-result envelopes**.
 
 ## Initialize evidence
 
@@ -96,16 +97,17 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Independent Post-Deployment Verifier Results;
 - Tainted Grail Verifier Evidence Reconciliation and Release Decision;
 - Tainted Grail Release Artifact Provenance and Signing Intent;
-- Tainted Grail Release Assembly and Checksum Results.
+- Tainted Grail Release Assembly and Checksum Results;
+- Tainted Grail Release Signing Results.
 
-Confirm every pane opens and remains interactive. **All twenty-one TG SDK panes** must be present.
+Confirm every pane opens and remains interactive. **All twenty-two TG SDK panes** must be present.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All twenty-one TG SDK panes opened from the Tools menu."
+  --notes "All twenty-two TG SDK panes opened from the Tools menu."
 ```
 
 Screenshot required.
@@ -148,7 +150,9 @@ Open the synthetic workspace and duplicate companion. Confirm:
 - release-artifact columns expose exact reconciliation/package/manifest/pack binding, content paths/roles/media types/sizes, declared SHA-256 values, provenance, legal dispositions, signing intent, publication targets, status, safety flags, and blockers;
 - **Tainted Grail Release Assembly and Checksum Results** shows **zero registered release assembly-result envelopes**;
 - release assembly-result columns expose exact artifact/result fingerprints, reviewed assembler/checksummer identity, archive attempt/outcome/path/size/fingerprint, per-content expected/observed checksums and outcomes, failures, safe diagnostics, exact release context, and the SDK safety boundary;
-- every analysis/planning/result/build/package/deployment/work-order/evidence/report/verifier/reconciliation/release-artifact/release-assembly pane is **non-editable** and exposes no registration, review authoring, acknowledgement, import, promotion, save/export, compiler, executor, verifier, target-filesystem access, file read/hash/copy, checksum generation, replace, delete, backup, restore, archive, signing, upload, publication, deploy, launch, execution, or save-mutation action.
+- **Tainted Grail Release Signing Results** shows **zero registered release signing-result envelopes**;
+- release signing-result columns expose exact result/artifact/assembly/archive fingerprints and context, supplied signer review/tool/version/fingerprint/reviewer/timestamp/capabilities/evidence, approved signing identity, attempted outcome/completion/capture time, signature artifacts, failures/retryable state, safe diagnostics, `contract status=not evaluated`, and explicit SDK no-operation state;
+- every analysis/planning/result/build/package/deployment/work-order/evidence/report/verifier/reconciliation/release-artifact/release-assembly/release-signing pane is **non-editable** and exposes no registration, review authoring, acknowledgement, import, promotion, save/export, compiler, executor, verifier, target-filesystem access, file read/hash/copy, checksum generation, replace, delete, backup, restore, archive access, key loading, identity resolution, signing, signature verification, signature-artifact writing, upload, publication, deploy, launch, execution, or save-mutation action.
 
 Record under `preview-data-displayed`. Screenshot required.
 
@@ -162,7 +166,7 @@ Confirm resolved and intentionally unresolved station/learnability rows, evidenc
 
 ### 7. Save, close, reopen
 
-Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, independent-verifier, verifier-reconciliation, release-artifact, and release-assembly-result registries and derived post-deployment reports must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview/target-inventory/deployment-preview/backup/rollback/confirmation/window/preflight/checklist/deployment-execution-result/post-deployment-report/independent-verifier-result/verifier-reconciliation/release-artifact/release-assembly-result file may appear. Screenshot required.
+Perform the full **save, close, reopen** sequence. Durable workspace, pack, source/evidence, catalog, governance, economy, and derived analysis state must survive. Transient adapter, runtime-result, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, independent-verifier, verifier-reconciliation, release-artifact, release-assembly-result, and release-signing-result registries and derived post-deployment reports must reset; no adapter/work-order/runtime-result/build-manifest/staging-inventory/package-preview/target-inventory/deployment-preview/backup/rollback/confirmation/window/preflight/checklist/deployment-execution-result/post-deployment-report/independent-verifier-result/verifier-reconciliation/release-artifact/release-assembly-result/release-signing-result file may appear. Screenshot required.
 
 ### 8. Actionable failure message
 
@@ -170,7 +174,7 @@ Trigger a safe reversible validation failure. Confirm the **failure message** id
 
 ### 9. Runtime/deployment boundary absent
 
-Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, executor invocation, independent verifier execution or target access, release-review authoring, file read/hash/copy, checksum generation, archive creation, signing, upload, publication, compiler, replace/delete, backup/restore, package assembly, deployment-directory mutation, checklist acknowledgement, rollback execution, automatic evidence promotion, release action, or launch action exists. Record under `runtime-deployment-absent`.
+Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack rejection, winner selection, adapter loading, work-order execution, result promotion, executor invocation, independent verifier execution or target access, release-review authoring, file read/hash/copy, checksum generation, archive creation/opening, key or credential loading, identity resolution/authentication, signing, signature verification, signature-artifact copying/writing, upload, publication, compiler, replace/delete, backup/restore, package assembly, deployment-directory mutation, checklist acknowledgement, rollback execution, automatic evidence promotion, release action, or launch action exists. Record under `runtime-deployment-absent`.
 
 ## Attach reviewed screenshots
 
@@ -226,4 +230,4 @@ Verification does not inspect screenshot pixels. Human privacy review remains ma
 
 ## Evidence handling
 
-Verified evidence may be attached privately to a review/release record and **must not be committed**. Record exact source commit, Windows version/scale, tester alias, screenshot hashes, verifier result, reconciliation result, release-artifact result, limitations, and blocked observations.
+Verified evidence may be attached privately to a review/release record and **must not be committed**. Record exact source commit, Windows version/scale, tester alias, screenshot hashes, verifier result, reconciliation result, release-artifact result, release-assembly result, release-signing result, limitations, and blocked observations.

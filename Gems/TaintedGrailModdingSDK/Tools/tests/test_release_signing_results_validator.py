@@ -120,7 +120,7 @@ class ReleaseSigningValidatorTests(unittest.TestCase):
             "ROADMAP.md",
             lambda text: text.replace(
                 "### Release-signing result envelope",
-                "### Next ordered slice — release-signing result envelope",
+                "### Next ordered slice \u2014 release-signing result envelope",
             ),
         )
         self.assert_validation_fails("roadmap")

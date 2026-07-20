@@ -373,13 +373,18 @@ def validate_reconciliation_and_release(repo_root: Path) -> None:
             "### Verifier evidence reconciliation and release-decision envelope",
             "### Release-artifact provenance and signing-intent contract",
             "### Release-assembly and checksum-result envelope",
-            "### Next ordered slice \u2014 release-signing result envelope",
+            "### Release-signing result envelope",
         ),
         "Roadmap state",
     )
     forbid(
         roadmap,
         "### Next ordered slice \u2014 release-assembly and checksum-result envelope",
+        "Roadmap state",
+    )
+    forbid(
+        roadmap,
+        "### Next ordered slice \u2014 release-signing result envelope",
         "Roadmap state",
     )
 
@@ -414,6 +419,9 @@ def validate_catalog_planning_and_paths(repo_root: Path) -> None:
     catalog_integrity = read(
         repo_root,
         source_root + "CatalogDatabaseIntegrity.cpp",
+    ) + read(
+        repo_root,
+        source_root + "CatalogDatabaseIntegrityBase.inl",
     )
     require_all(
         catalog_integrity,

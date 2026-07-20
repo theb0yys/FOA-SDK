@@ -6,6 +6,9 @@
 # Developer Preview fixtures are byte-canonical JSON and must remain LF on Windows.
 /Gems/TaintedGrailModdingSDK/Preview/Template/** text eol=lf
 
+# Preserved research intake is byte-canonical and must retain its recorded SHA-256.
+/Research/o3de-to-unity-conversion-and-runtime-bridge/inputs/FOA_SDK_O3DE_TO_UNITY_CONVERSION_AND_RUNTIME_BRIDGE_RESEARCH_REPORT.md text eol=lf
+
 *.3ds filter=lfs diff=lfs merge=lfs -text
 *.DLL filter=lfs diff=lfs merge=lfs -text
 *.FBX filter=lfs diff=lfs merge=lfs -text

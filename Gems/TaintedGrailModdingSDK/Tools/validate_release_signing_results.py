@@ -346,7 +346,7 @@ def validate(repo_root: Path) -> None:
         "The roadmap does not record the implemented release-signing slice and UI coverage.",
     )
     require(
-        "next ordered slice — release-signing result envelope" not in roadmap_lower,
+        "next ordered slice \u2014 release-signing result envelope" not in roadmap_lower,
         "The roadmap still describes the implemented release-signing slice as future work.",
     )
 

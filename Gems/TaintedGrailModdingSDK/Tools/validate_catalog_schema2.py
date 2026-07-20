@@ -112,7 +112,11 @@ def validate_catalog_schema2(repo_root: Path) -> None:
     )
     require_fragments(
         test_manifest,
-        ("Tests/CatalogSchemaMigrationPersistenceTests.cpp",),
+        (
+            "Tests/CatalogSchemaMigrationPersistenceTests.cpp",
+            "Tests/PopulationAuthoringTests.cpp",
+            "Tests/PopulationCatalogTests.cpp",
+        ),
         "Catalog test manifest",
     )
 
@@ -303,6 +307,50 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         "Compiled catalog schema-2 tests",
     )
 
+    population_catalog_tests = read_text(tests_root / "PopulationCatalogTests.cpp")
+    require_fragments(
+        population_catalog_tests,
+        (
+            "ClosedKindsAndRolesRoundTripAndRejectUnknownValues",
+            "ActorProfilesAcceptExactResolvedAndUnresolvedTemplates",
+            "ActorProfilesRejectKindsBindingsBoundsAndDuplicates",
+            "TroopsAcceptExactResolvedAndUnresolvedLeaders",
+            "TroopProfilesRejectKindsLeaderBindingsAndBounds",
+            "MembersRejectBindingsBoundsRolesAndDuplicateConflicts",
+            "CollectionsAreCanonicalAndDoNotMutateInputs",
+            "CompleteCatalogIntegrityAcceptsExactComposition",
+            "CompleteCatalogIntegrityRejectsEvidenceAndCompositionGaps",
+            "PopulationUpsertsDoNotGrantGovernanceOrActionAuthority",
+        ),
+        "Compiled Core population-authoring tests",
+    )
+    population_authoring_tests = read_text(tests_root / "PopulationAuthoringTests.cpp")
+    require_fragments(
+        population_authoring_tests,
+        (
+            "ActorProfilePersistsPublishesSnapshotAndNotifiesOnce",
+            "TroopDefinitionIsAtomicOrderIndependentAndPreservesOmittedMembers",
+            "StandaloneUpdatesPreserveCompleteCatalogIntegrity",
+            "StructuralFailuresAndLinkOwnerMovesDoNotPublish",
+            "ContextEvidenceAndPrimaryOwnershipFailClosed",
+            "WrongProfileSourceAndCrossPackReferencesAreHandledExplicitly",
+            "CandidateContextRejectsUnboundWorkspaceAndPackWithoutMutation",
+            "PersistenceFailureLeavesPublishedCatalogUnchangedAndSilent",
+            "ReflectPopulationPersistenceTypes",
+            "AZ::JsonSystemComponent::Reflect",
+            "AZ::ComponentApplication m_application",
+            "service.ClearActivePack()",
+            "validCandidate.IsSuccess()",
+            "Unable to create the catalog directory",
+        ),
+        "Compiled Framework population-authoring tests",
+    )
+    reject_fragments(
+        population_authoring_tests,
+        ("ReplacesMemberSet",),
+        "Compiled Framework population-authoring tests",
+    )
+
     migration_test = section_from_marker(
         tests,
         "SchemaOnePreviewMigratesToSchemaTwoWithEmptyPopulationAndPreservesLegacyProjection",
@@ -374,12 +422,19 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         catalog_validator,
         (
             '"Tests/CatalogSchemaMigrationPersistenceTests.cpp"',
+            '"Tests/PopulationAuthoringTests.cpp"',
+            '"Tests/PopulationCatalogTests.cpp"',
             '"Source/CatalogDatabaseIntegrity.cpp"',
             '"Source/CatalogDatabasePopulation.cpp"',
             '"Source/PopulationModels.cpp"',
+            '"Source/FoundationPopulationService.cpp"',
+            '"Source/PopulationAuthoringService.cpp"',
             "SchemaOnePreviewMigratesToSchemaTwoWithEmptyPopulationAndPreservesLegacyProjection",
             "SchemaTwoSaveLoadSaveIsByteStable",
             "PopulationCandidateSaveFailureDoesNotPublish",
+            "TroopDefinitionIsAtomicOrderIndependentAndPreservesOmittedMembers",
+            "PopulationUpsertsDoNotGrantGovernanceOrActionAuthority",
+            "ReplacesMemberSet",
         ),
         "Aggregate catalog validator",
     )
@@ -472,8 +527,10 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "actor/troop contracts, reflection",
             "CatalogDatabase validation, queries",
             "schema-1 migration, schema-2-only writing",
-            "4. **Complete** \u2014 Framework evidence-bound authoring, atomic troop-definition bootstrap",
-            "5. **Next** \u2014 Core and Framework positive/negative authoring tests",
+            "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources",
+            "compiled-target wiring",
+            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration",
+            "population-specific action-lane",
             "does not claim that",
             "loaded candidate remains schema 1",
             "direct save is refused",
@@ -484,8 +541,9 @@ def validate_catalog_schema2(repo_root: Path) -> None:
     require_order(
         actor_design,
         (
-            "4. **Complete** \u2014 Framework evidence-bound authoring, atomic troop-definition bootstrap",
-            "5. **Next** \u2014 Core and Framework positive/negative authoring tests",
+            "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources",
+            "compiled-target wiring",
+            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration",
         ),
         "Actor/troop implementation sequence",
     )
@@ -495,9 +553,10 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         (
             "### Actors and population",
             "Status: active development. Core contracts, CatalogDatabase integration",
-            "Schema-1 catalog migration, schema-2-only catalog writing",
-            "evidence-bound Framework candidate publication are implemented; the complete Core",
-            "Actor and Troop Editor remains pending",
+            "evidence-bound Framework candidate publication",
+            "positive/negative Core and",
+            "Framework population-authoring test sources with compiled-target wiring are implemented",
+            "The Actor and Troop Editor pane is next",
         ),
         "Roadmap population status",
     )
@@ -541,7 +600,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         (
             "Actor and Troop Editor Design",
             "ACTOR_TROOP_EDITOR_DESIGN.md",
-            "completed Core, schema-2 persistence, and Framework candidate-publication units",
+            "completed Core, schema-2 persistence, Framework candidate-publication, and population-authoring test-source",
         ),
         "Documentation hub",
     )
@@ -557,7 +616,8 @@ def main() -> int:
     print(
         "Tainted Grail catalog schema-2 contract passed: retained schema-1 load state, "
         "validated schema-2 projection, schema-2-only atomic writing, population "
-        "persistence, compiled coverage, validators, and public documentation are present."
+        "persistence, population test sources and compiled-target wiring, validators, "
+        "and public documentation are present."
     )
     return 0
 

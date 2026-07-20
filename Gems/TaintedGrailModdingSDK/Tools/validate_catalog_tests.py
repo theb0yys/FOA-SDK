@@ -98,6 +98,8 @@ def main() -> int:
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
             "Tests/FoundationWorkspaceIsolationTests.cpp",
             "Tests/Main.cpp",
+            "Tests/PopulationAuthoringTests.cpp",
+            "Tests/PopulationCatalogTests.cpp",
             "Tests/SourceImportServiceTests.cpp",
         }
         if test_entries != expected_tests:
@@ -158,8 +160,10 @@ def main() -> int:
             "Source/CatalogPromotionService.cpp",
             "Source/EconomyAuthoringService.cpp",
             "Source/FoundationCatalogService.cpp",
+            "Source/FoundationPopulationService.cpp",
             "Source/FoundationValidationService.cpp",
             "Source/PackPersistenceService.cpp",
+            "Source/PopulationAuthoringService.cpp",
             "Source/SourceEvidencePersistenceService.cpp",
             "Source/SourceImportService.cpp",
             "Source/WorkspacePersistenceService.cpp",
@@ -294,6 +298,35 @@ def main() -> int:
                 "CatalogValidationFailurePreservesAllLiveState",
                 "StateSignature",
             ),
+            "PopulationAuthoringTests.cpp": (
+                "ActorProfilePersistsPublishesSnapshotAndNotifiesOnce",
+                "TroopDefinitionIsAtomicOrderIndependentAndPreservesOmittedMembers",
+                "StandaloneUpdatesPreserveCompleteCatalogIntegrity",
+                "StructuralFailuresAndLinkOwnerMovesDoNotPublish",
+                "ContextEvidenceAndPrimaryOwnershipFailClosed",
+                "WrongProfileSourceAndCrossPackReferencesAreHandledExplicitly",
+                "CandidateContextRejectsUnboundWorkspaceAndPackWithoutMutation",
+                "PersistenceFailureLeavesPublishedCatalogUnchangedAndSilent",
+                "ReflectPopulationPersistenceTypes",
+                "AZ::JsonSystemComponent::Reflect",
+                "AZ::ComponentApplication m_application",
+                "FoundationActorPublicationObserver",
+                "service.ClearActivePack()",
+                "validCandidate.IsSuccess()",
+                "Unable to create the catalog directory",
+            ),
+            "PopulationCatalogTests.cpp": (
+                "ClosedKindsAndRolesRoundTripAndRejectUnknownValues",
+                "ActorProfilesAcceptExactResolvedAndUnresolvedTemplates",
+                "ActorProfilesRejectKindsBindingsBoundsAndDuplicates",
+                "TroopsAcceptExactResolvedAndUnresolvedLeaders",
+                "TroopProfilesRejectKindsLeaderBindingsAndBounds",
+                "MembersRejectBindingsBoundsRolesAndDuplicateConflicts",
+                "CollectionsAreCanonicalAndDoNotMutateInputs",
+                "CompleteCatalogIntegrityAcceptsExactComposition",
+                "CompleteCatalogIntegrityRejectsEvidenceAndCompositionGaps",
+                "PopulationUpsertsDoNotGrantGovernanceOrActionAuthority",
+            ),
             "WorkspaceSchemaServiceTests.cpp": (
                 "UnknownSchemaVersionIsRejected",
                 "UnknownSchemaVersionCannotHideBehindLegacyEnvelope",
@@ -305,6 +338,13 @@ def main() -> int:
         }
         for filename, fragments in checks.items():
             require_fragments(tests_root / filename, fragments)
+
+        population_authoring_tests = require_file(tests_root / "PopulationAuthoringTests.cpp")
+        if "ReplacesMemberSet" in population_authoring_tests:
+            fail(
+                "Population authoring tests must preserve additive troop-definition semantics; "
+                "the stale ReplacesMemberSet expectation is forbidden"
+            )
 
         work_order_tests = "\n".join(
             require_file(code_root / entry) for entry in sorted(work_order_entries)
@@ -489,7 +529,8 @@ def main() -> int:
 
     print(
         "Tainted Grail catalog, governance, economy analysis, adapter contracts, work-order plans, "
-        "atomic workspace, linked-target, and persistence-smoke contract passed."
+        "population authoring test sources, atomic workspace, linked-target, and persistence-smoke "
+        "contract passed."
     )
     return 0
 

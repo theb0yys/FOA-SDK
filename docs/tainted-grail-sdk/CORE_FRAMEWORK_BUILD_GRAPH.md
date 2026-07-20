@@ -51,7 +51,10 @@ Editor depends privately on Framework and does not recompile Core or Framework s
 
 ## Tests
 
-Tests link Framework and receive Core transitively. Test manifests contain tests and included test fragments only. Every production `.cpp` has exactly one production owner.
+Tests link Framework and receive Core transitively. The positive and negative Core/Framework population-authoring
+test sources are wired into the existing compiled Catalog test target; that wiring does not claim that an
+exact-head configured build or compiled test run has completed. Test manifests contain tests and included test
+fragments only. Every production `.cpp` has exactly one production owner.
 
 ## Dependency direction
 

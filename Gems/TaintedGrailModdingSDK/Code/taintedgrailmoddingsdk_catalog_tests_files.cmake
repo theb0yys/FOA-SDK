@@ -19,5 +19,7 @@ set(FILES
     Tests/EconomyDuplicateDetectionServiceTests.cpp
     Tests/FoundationWorkspaceIsolationTests.cpp
     Tests/Main.cpp
+    Tests/PopulationAuthoringTests.cpp
+    Tests/PopulationCatalogTests.cpp
     Tests/SourceImportServiceTests.cpp
 )

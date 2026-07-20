@@ -1,7 +1,9 @@
 # Actor and Troop Editor Design
 
-Status: active implementation — Core contracts/database, schema-2 migration/persistence, and Framework
-evidence-bound candidate publication are implemented; Core and Framework authoring tests are next
+Status: active implementation — Core contracts/database, schema-2 migration/persistence, Framework
+evidence-bound candidate publication, and the Core/Framework positive and negative population-authoring
+test sources with compiled-target wiring are implemented; the Actor and Troop Editor pane is next. Test-source
+wiring does not claim that an exact-head compiled test run or the complete vertical slice has passed.
 
 Target: first Phase 6 functional-expansion vertical slice
 
@@ -55,10 +57,12 @@ Core owns:
 - intrinsic field validation;
 - canonical-record and relationship queries;
 - deterministic troop composition and evidence views;
-- action-lane derivation;
 - Catalog schema-2 in-memory storage and integrity checks.
 
 Core does not read or write files and does not depend on Qt or FoA runtime libraries.
+
+Population-specific action-lane derivation remains assigned to Core but is not part of the implemented unit-5
+surface. Its production contract and Editor presentation are deferred together to unit 6.
 
 ### Framework
 
@@ -413,7 +417,7 @@ Cover:
 - duplicate and conflicting bindings;
 - deterministic ordering;
 - complete-catalog integrity;
-- action-lane derivation;
+- preservation of governance and action authority without population authoring silently granting either;
 - input non-mutation.
 
 ### Framework and persistence tests
@@ -434,7 +438,9 @@ Cover:
 Cover:
 
 - pane and module registration;
-- non-editable governance and action-lane surfaces;
+- non-editable governance surfaces;
+- population-specific action-lane derivation and presentation once their production contract is introduced
+  in unit 6;
 - absence of runtime, process, deployment, and save-mutation APIs;
 - required controls and error text;
 - deterministic synthetic fixture coverage;
@@ -451,15 +457,20 @@ After design approval, implementation proceeds in focused reviewable units:
    rejection, and focused repository validation;
 4. **Complete** — Framework evidence-bound authoring, atomic troop-definition bootstrap, candidate validation,
    save-before-publish persistence, Foundation snapshot counts, and single-change notification;
-5. **Next** — Core and Framework positive/negative authoring tests;
-6. Actor and Troop Editor pane and lifecycle registration;
+5. **Complete** — Core and Framework positive/negative population-authoring test sources and compiled-target wiring;
+6. **Next** — Actor and Troop Editor pane and lifecycle registration;
 7. deterministic synthetic population fixture and full vertical-slice local-validation integration;
 8. remaining public user documentation, changelog, and twenty-three-pane checklist updates;
 9. exact-head configure/build, compiled tests, and Windows UI evidence.
 
-Completion of units 1–4 establishes durable population contracts, persistence, and the Framework authoring
-commands. It does not claim that the complete Core/Framework authoring test matrix, Actor and Troop Editor
-pane, action-lane presentation, or complete vertical slice exist yet.
+Completion of units 1–5 establishes durable population contracts, persistence, Framework authoring commands,
+and the positive/negative Core and Framework population-authoring test sources wired into the existing
+compiled test target. It does not claim that those tests have run in an exact-head configured build, or that
+the Actor and Troop Editor pane, population-specific action-lane production contract/presentation, or complete
+vertical slice exist yet.
+
+Unit 6 also owns introduction of the population-specific action-lane derivation and read-only presentation
+contract. Unit 5 cannot test that behavior because no production contract exists yet.
 
 Every commit receives complete staged-diff self-review, DCO sign-off, relevant focused validation, and
 `FOA-plug-in-development` synchronization before and after publication.

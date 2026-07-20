@@ -63,7 +63,9 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         )
         self._write(
             "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_catalog_tests_files.cmake",
-            "Tests/CatalogSchemaMigrationPersistenceTests.cpp\n",
+            "Tests/CatalogSchemaMigrationPersistenceTests.cpp\n"
+            "Tests/PopulationAuthoringTests.cpp\n"
+            "Tests/PopulationCatalogTests.cpp\n",
         )
         self._write(
             source_root + "PopulationModels.h",
@@ -176,14 +178,51 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             '"ActorProfiles"\n"TroopProfiles"\n"TroopMembers"\n',
         )
         self._write(
+            "Gems/TaintedGrailModdingSDK/Code/Tests/PopulationCatalogTests.cpp",
+            "ClosedKindsAndRolesRoundTripAndRejectUnknownValues\n"
+            "ActorProfilesAcceptExactResolvedAndUnresolvedTemplates\n"
+            "ActorProfilesRejectKindsBindingsBoundsAndDuplicates\n"
+            "TroopsAcceptExactResolvedAndUnresolvedLeaders\n"
+            "TroopProfilesRejectKindsLeaderBindingsAndBounds\n"
+            "MembersRejectBindingsBoundsRolesAndDuplicateConflicts\n"
+            "CollectionsAreCanonicalAndDoNotMutateInputs\n"
+            "CompleteCatalogIntegrityAcceptsExactComposition\n"
+            "CompleteCatalogIntegrityRejectsEvidenceAndCompositionGaps\n"
+            "PopulationUpsertsDoNotGrantGovernanceOrActionAuthority\n",
+        )
+        self._write(
+            "Gems/TaintedGrailModdingSDK/Code/Tests/PopulationAuthoringTests.cpp",
+            "ActorProfilePersistsPublishesSnapshotAndNotifiesOnce\n"
+            "TroopDefinitionIsAtomicOrderIndependentAndPreservesOmittedMembers\n"
+            "StandaloneUpdatesPreserveCompleteCatalogIntegrity\n"
+            "StructuralFailuresAndLinkOwnerMovesDoNotPublish\n"
+            "ContextEvidenceAndPrimaryOwnershipFailClosed\n"
+            "WrongProfileSourceAndCrossPackReferencesAreHandledExplicitly\n"
+            "CandidateContextRejectsUnboundWorkspaceAndPackWithoutMutation\n"
+            "PersistenceFailureLeavesPublishedCatalogUnchangedAndSilent\n"
+            "ReflectPopulationPersistenceTypes\n"
+            "AZ::JsonSystemComponent::Reflect\n"
+            "AZ::ComponentApplication m_application\n"
+            "service.ClearActivePack()\n"
+            "validCandidate.IsSuccess()\n"
+            "Unable to create the catalog directory\n",
+        )
+        self._write(
             tools_root + "validate_catalog_tests.py",
             '"Tests/CatalogSchemaMigrationPersistenceTests.cpp"\n'
+            '"Tests/PopulationAuthoringTests.cpp"\n'
+            '"Tests/PopulationCatalogTests.cpp"\n'
             '"Source/CatalogDatabaseIntegrity.cpp"\n'
             '"Source/CatalogDatabasePopulation.cpp"\n'
             '"Source/PopulationModels.cpp"\n'
+            '"Source/FoundationPopulationService.cpp"\n'
+            '"Source/PopulationAuthoringService.cpp"\n'
             "SchemaOnePreviewMigratesToSchemaTwoWithEmptyPopulationAndPreservesLegacyProjection\n"
             "SchemaTwoSaveLoadSaveIsByteStable\n"
-            "PopulationCandidateSaveFailureDoesNotPublish\n",
+            "PopulationCandidateSaveFailureDoesNotPublish\n"
+            "TroopDefinitionIsAtomicOrderIndependentAndPreservesOmittedMembers\n"
+            "PopulationUpsertsDoNotGrantGovernanceOrActionAuthority\n"
+            "ReplacesMemberSet\n",
         )
         self._write(
             tools_root + "validate_foundation.py",
@@ -220,8 +259,11 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "CatalogDatabase validation, queries\n"
             "schema-1 migration, schema-2-only writing\n"
             "4. **Complete** \u2014 Framework evidence-bound authoring, atomic troop-definition bootstrap\n"
-            "5. **Next** \u2014 Core and Framework positive/negative authoring tests\n"
-            "does not claim that the Editor exists\n"
+            "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources "
+            "and compiled-target wiring\n"
+            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration\n"
+            "population-specific action-lane contract\n"
+            "does not claim that an exact-head compiled test run exists\n"
             "loaded candidate remains schema 1\n"
             "direct save is refused\n"
             "successful bound replacement and `BuildDocument`\n",
@@ -230,9 +272,9 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "ROADMAP.md",
             "### Actors and population\n"
             "Status: active development. Core contracts, CatalogDatabase integration\n"
-            "Schema-1 catalog migration, schema-2-only catalog writing\n"
-            "evidence-bound Framework candidate publication are implemented; the complete Core\n"
-            "Actor and Troop Editor remains pending\n",
+            "evidence-bound Framework candidate publication and positive/negative Core and\n"
+            "Framework population-authoring test sources with compiled-target wiring are implemented\n"
+            "The Actor and Troop Editor pane is next\n",
         )
         self._write(
             "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
@@ -256,7 +298,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/README.md",
             "Actor and Troop Editor Design ACTOR_TROOP_EDITOR_DESIGN.md "
-            "completed Core, schema-2 persistence, and Framework candidate-publication units\n",
+            "completed Core, schema-2 persistence, Framework candidate-publication, and "
+            "population-authoring test-source units\n",
         )
 
     def test_valid_contract_passes(self) -> None:
@@ -273,14 +316,48 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogSchema2ContractError, "must not remain bound"):
             validate_catalog_schema2(self.repo_root)
 
-    def test_rejects_stale_framework_implementation_status(self) -> None:
+    def test_rejects_stale_population_test_implementation_status(self) -> None:
         path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
         text = path.read_text(encoding="utf-8").replace(
-            "4. **Complete** \u2014 Framework evidence-bound authoring",
-            "4. **Pending** \u2014 Framework evidence-bound authoring",
+            "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources",
+            "5. **Pending** \u2014 Core and Framework positive/negative population-authoring test sources",
         )
         path.write_text(text, encoding="utf-8")
-        with self.assertRaisesRegex(CatalogSchema2ContractError, r"4\. \*\*Complete"):
+        with self.assertRaisesRegex(CatalogSchema2ContractError, r"5\. \*\*Complete"):
+            validate_catalog_schema2(self.repo_root)
+
+    def test_rejects_stale_editor_next_status(self) -> None:
+        path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
+        text = path.read_text(encoding="utf-8").replace(
+            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration",
+            "6. **Pending** \u2014 Actor and Troop Editor pane and lifecycle registration",
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(CatalogSchema2ContractError, r"6\. \*\*Next"):
+            validate_catalog_schema2(self.repo_root)
+
+    def test_rejects_stale_replacement_semantics(self) -> None:
+        self._append(
+            "Gems/TaintedGrailModdingSDK/Code/Tests/PopulationAuthoringTests.cpp",
+            "ReplacesMemberSet\n",
+        )
+        with self.assertRaisesRegex(CatalogSchema2ContractError, "ReplacesMemberSet"):
+            validate_catalog_schema2(self.repo_root)
+
+    def test_rejects_missing_population_persistence_fixture(self) -> None:
+        path = (
+            self.repo_root
+            / "Gems/TaintedGrailModdingSDK/Code/Tests/PopulationAuthoringTests.cpp"
+        )
+        text = path.read_text(encoding="utf-8").replace(
+            "ReflectPopulationPersistenceTypes",
+            "missing population persistence reflection",
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(
+            CatalogSchema2ContractError,
+            "ReflectPopulationPersistenceTypes",
+        ):
             validate_catalog_schema2(self.repo_root)
 
     def test_rejects_non_atomic_catalog_writer(self) -> None:

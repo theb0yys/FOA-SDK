@@ -46,8 +46,9 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — current manual-only workflow state, authoritative local command, self-hosted runner boundary, token handling, and restoration conditions.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
 - [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — active population implementation,
-  completed Core, schema-2 persistence, and Framework candidate-publication units, the next authoring-test
-  boundary, and deferred runtime or spawn authority.
+  completed Core, schema-2 persistence, Framework candidate-publication, and population-authoring test-source
+  units, with the Actor/Troop pane and population action-lane contract next and runtime or spawn authority
+  still deferred.
 - [Editor Toolchain and Unity Interchange Design](EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md) — located O3DE,
   Blender, and Unity components; provider qualification; deterministic interchange; loss reporting; and
   staged delivery gates.

@@ -109,9 +109,6 @@ set(FILES
     Source/CatalogDatabaseIntegrity.cpp
     Source/CatabaseIntegrityBase.inl
     Source/CatalogDatabasePopulation.cpp
-    Source/CatalogDatabasePopulationPart1.inl
-    Source/CatalogDatabasePopulationPart2.inl
-    Source/CatalogDatabasePopulationPart3.inl
     Source/CatalogGovernanceBlockerService.cpp
     Source/CatalogGovernanceBlockerService.h
     Source/CatalogGovernanceTypes.cpp

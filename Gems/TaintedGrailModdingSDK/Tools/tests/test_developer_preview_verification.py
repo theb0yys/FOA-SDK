@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SCRIPT_PATH = Path(__file__).resolve().parent / "developer_preview_verification.py"
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "developer_preview_verification.py"
 SPEC = importlib.util.spec_from_file_location("tg_developer_preview_verification", SCRIPT_PATH)
 assert SPEC and SPEC.loader
 verification = importlib.util.module_from_spec(SPEC)
@@ -67,7 +67,7 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(verification.VerificationError, "Tester alias"):
             verification.validate_identity_inputs("bad alias", "Windows 11", 125)
-        with self.assertRaisesRegex(verification.VerificationError, "Windows version"):
+        with self.assertRaisesRegexhverification.VerificationError, "Windows version"):
             verification.validate_identity_inputs("reviewer", "Windows 11\nprivate", 125)
         with self.assertRaisesRegex(verification.VerificationError, "Display scale"):
             verification.validate_identity_inputs("reviewer", "Windows 11", 250)
@@ -137,7 +137,7 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
                 [step.name for step in steps],
                 ["prerequisites-recheck", "o3de-configure", "o3de-build", "compiled-tests"],
             )
-            with self.assertRaisesRegex(verification.VerificationError, "new receipt"):
+            with self.assertRaisesRegexhverification.VerificationError, "new receipt"):
                 verification.automated_steps(
                     paths,
                     recorded={"git-diff-check": "failed"},
@@ -169,7 +169,7 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
     def test_finalize_refuses_missing_or_failed_mandatory_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             paths = self.paths(Path(temporary))
-            with self.assertRaisesRegex(verification.VerificationError, "must pass"):
+            with self.assertRaisesRegexhverification.VerificationError, "must pass"):
                 verification.finalize_steps(paths, "d" * 40, recorded={})
             recorded = {gate: "passed" for gate in verification.AUTOMATED_GATE_NAMES}
             recorded["compiled-tests"] = "failed"

@@ -7,494 +7,104 @@
 
 #include "CatalogDatabase.h"
 
-#include "CatalogGovernanceTypes.h"
-#include "ResearchContractValidation.h"
+// Preserve the established governance/economy integrity implementation while
+// extending its bound-document and whole-catalog entry points with population
+// checks. The renamed methods remain private implementation details.
+#define ReplaceFromBoundDocument ReplaceFromBoundDocumentWithoutPopulation
+#define ValidateIntegrity ValidateIntegrityWithoutPopulation
+#include "CatalogDatabaseIntegrityBase.inl"
+#undef ValidateIntegrity
+#undef ReplaceFromBoundDocument
 
 #include <AzCore/std/algorithm.h>
-#include <AzCore/std/sort.h>
 
 namespace TaintedGrailModdingSDK
 {
     namespace
     {
-        void SetError(AZStd::string* error, AZStd::string message)
+        void AppendUniquePopulationSubject(
+            AZStd::vector<AZStd::string>& subjects,
+            const AZStd::string& subject)
         {
-            if (error)
+            if (!subject.empty()
+                && AZStd::find(subjects.begin(), subjects.end(), subject)
+                    == subjects.end())
             {
-                *error = AZStd::move(message);
+                subjects.push_back(subject);
             }
         }
 
-        bool SameProfile(
-            const GameProfile& left,
-            const GameProfile& right)
-        {
-            return left.m_profileId == right.m_profileId
-                && left.m_gameVersion == right.m_gameVersion
-                && left.m_branch == right.m_branch
-                && left.m_runtimeTarget == right.m_runtimeTarget;
-        }
-
-        bool HasUniqueStableIds(
-            const AZStd::vector<AZStd::string>& values,
-            bool allowEmpty,
-            AZStd::string& error)
-        {
-            if (!allowEmpty && values.empty())
-            {
-                error = "At least one stable evidence identity is required.";
-                return false;
-            }
-            AZStd::vector<AZStd::string> sorted = values;
-            for (const AZStd::string& value : sorted)
-            {
-                if (!IsStableContractId(value))
-                {
-                    error = "Every evidence and validation reference must be a bounded stable identity.";
-                    return false;
-                }
-            }
-            AZStd::sort(sorted.begin(), sorted.end());
-            if (AZStd::adjacent_find(sorted.begin(), sorted.end()) != sorted.end())
-            {
-                error = "Evidence and validation reference identities must be unique.";
-                return false;
-            }
-            return true;
-        }
-
-        AZStd::string ExpectedSubjectRef(
-            const CatalogDatabase& catalog,
-            const AZStd::string& subjectKind,
-            const AZStd::string& subjectId)
-        {
-            if (subjectKind == "record")
-            {
-                const CatalogRecord* record = catalog.FindByRecordId(subjectId);
-                return record ? record->m_subjectRef : AZStd::string{};
-            }
-            if (subjectKind == "relationship")
-            {
-                return catalog.FindRelationshipById(subjectId)
-                    ? "relationship:" + subjectId
-                    : AZStd::string{};
-            }
-            return {};
-        }
-
-        bool ValidateEvidenceForSubject(
+        bool ValidateEvidenceForAnyPopulationSubject(
             const AZStd::vector<AZStd::string>& evidenceIds,
-            const AZStd::string& expectedSubjectRef,
+            const AZStd::vector<AZStd::string>& allowedSubjects,
             const GameProfile& profile,
             const SourceEvidenceRegistry& sourceRegistry,
-            bool allowEmpty,
             AZStd::string& error)
         {
-            if (expectedSubjectRef.empty())
+            if (allowedSubjects.empty())
             {
-                error = "Evidence validation requires one exact known subject.";
+                error = "Population evidence validation requires at least one exact subject.";
                 return false;
             }
-            if (!HasUniqueStableIds(evidenceIds, allowEmpty, error))
+            if (!HasUniqueStableIds(evidenceIds, false, error))
             {
                 return false;
             }
+
             for (const AZStd::string& evidenceId : evidenceIds)
             {
-                const EvidenceRecord* evidence = sourceRegistry.FindEvidence(evidenceId);
-                if (!evidence)
+                bool matched = false;
+                AZStd::vector<AZStd::string> singleEvidence{ evidenceId };
+                for (const AZStd::string& subject : allowedSubjects)
                 {
-                    error = "Evidence reference is not registered: " + evidenceId;
-                    return false;
+                    AZStd::string subjectError;
+                    if (ValidateEvidenceForSubject(
+                            singleEvidence,
+                            subject,
+                            profile,
+                            sourceRegistry,
+                            false,
+                            subjectError))
+                    {
+                        matched = true;
+                        break;
+                    }
                 }
-                const SourceRecord* source = sourceRegistry.FindSource(evidence->m_sourceId);
-                if (!source || !IsUsableImportStatus(source->m_importStatus))
+                if (!matched)
                 {
-                    error = "Evidence is not backed by one successfully imported source: "
-                        + evidenceId;
-                    return false;
-                }
-                if (evidence->m_sourceFingerprint != source->m_fingerprint
-                    || !IsSha256Fingerprint(evidence->m_sourceFingerprint)
-                    || evidence->m_profileId != profile.m_profileId
-                    || evidence->m_gameVersion != profile.m_gameVersion
-                    || evidence->m_branch != profile.m_branch
-                    || source->m_runtimeTarget != profile.m_runtimeTarget)
-                {
-                    error = "Evidence is outside the exact active profile and source fingerprint: "
-                        + evidenceId;
-                    return false;
-                }
-                if (evidence->m_subjectRef != expectedSubjectRef)
-                {
-                    error = "Evidence does not prove the exact catalog subject "
-                        + expectedSubjectRef + ": " + evidenceId;
-                    return false;
-                }
-                if (evidence->m_claim.empty()
-                    || evidence->m_evidenceKind.empty()
-                    || evidence->m_locator.empty()
-                    || evidence->m_recordPath.empty()
-                    || !IsStrictUtcTimestamp(evidence->m_extractedAt))
-                {
-                    error = "Evidence lacks complete claim, kind, locator, record path, or UTC extraction provenance: "
-                        + evidenceId;
+                    error = "Population evidence does not prove any exact subject "
+                        "represented by the authored row: " + evidenceId;
                     return false;
                 }
             }
             return true;
         }
 
-        bool ValidateEventProfile(
-            const AZStd::string& profileId,
-            const AZStd::string& gameVersion,
-            const AZStd::string& branch,
-            const GameProfile& profile,
-            AZStd::string& error)
-        {
-            if (profileId != profile.m_profileId
-                || gameVersion != profile.m_gameVersion
-                || branch != profile.m_branch)
-            {
-                error = "Catalog history is bound to a different active profile, game version, or branch.";
-                return false;
-            }
-            return true;
-        }
-
-        bool ValidateGovernanceValue(
-            const CatalogGovernanceEvent& event,
+        AZStd::string ResolvePopulationActorSubject(
             const CatalogDatabase& catalog,
-            AZStd::string& error)
+            const AZStd::string& actorRecordId,
+            const AZStd::string& actorSubjectRef)
         {
-            const AZ::Outcome<GovernanceAxis, AZStd::string> axisResult =
-                ParseGovernanceAxis(event.m_axis);
-            if (!axisResult.IsSuccess())
+            if (!actorRecordId.empty())
             {
-                error = AZStd::string(axisResult.GetError());
-                return false;
+                const CatalogRecord* actor = catalog.FindByRecordId(actorRecordId);
+                return actor ? actor->m_subjectRef : AZStd::string{};
             }
-            switch (axisResult.GetValue())
-            {
-            case GovernanceAxis::Maturity:
-            {
-                const auto result = ParseResearchStage(event.m_newValue);
-                if (!result.IsSuccess() || result.GetValue() == ResearchStage::Unset)
-                {
-                    error = "Maturity governance history contains an invalid decision value.";
-                    return false;
-                }
-                break;
-            }
-            case GovernanceAxis::Confidence:
-            {
-                const auto result = ParseConfidenceLevel(event.m_newValue);
-                if (!result.IsSuccess() || result.GetValue() == ConfidenceLevel::Unset)
-                {
-                    error = "Confidence governance history contains an invalid decision value.";
-                    return false;
-                }
-                break;
-            }
-            case GovernanceAxis::OperationalRisk:
-            {
-                const auto result = ParseOperationalRisk(event.m_newValue);
-                if (!result.IsSuccess() || result.GetValue() == OperationalRisk::Unset)
-                {
-                    error = "Operational-risk governance history contains an invalid decision value.";
-                    return false;
-                }
-                break;
-            }
-            case GovernanceAxis::Staleness:
-            {
-                const auto result = ParseStalenessState(event.m_newValue);
-                if (!result.IsSuccess() || result.GetValue() == StalenessState::Unset)
-                {
-                    error = "Staleness governance history contains an invalid decision value.";
-                    return false;
-                }
-                break;
-            }
-            case GovernanceAxis::Permission:
-            {
-                const auto result = ParsePermissionDecision(event.m_newValue);
-                if (!result.IsSuccess() || event.m_usage.empty())
-                {
-                    error = "Permission governance history requires one supported decision and exact usage.";
-                    return false;
-                }
-                break;
-            }
-            case GovernanceAxis::Supersession:
-                if (event.m_newValue.empty()
-                    || event.m_newValue == event.m_subjectId
-                    || (event.m_subjectKind == "record"
-                        && !catalog.FindByRecordId(event.m_newValue))
-                    || (event.m_subjectKind == "relationship"
-                        && !catalog.FindRelationshipById(event.m_newValue)))
-                {
-                    error = "Supersession governance history requires a different existing replacement subject.";
-                    return false;
-                }
-                break;
-            }
-            return true;
+            return actorSubjectRef;
         }
 
-        bool IsNewer(
-            const AZStd::string& candidateTime,
-            const AZStd::string& candidateId,
-            const AZStd::string& currentTime,
-            const AZStd::string& currentId)
+        bool MemberMatchesActorSubject(
+            const CatalogDatabase& catalog,
+            const PopulationTroopMember& member,
+            const AZStd::string& actorSubject)
         {
-            return candidateTime > currentTime
-                || (candidateTime == currentTime && candidateId > currentId);
-        }
-
-        bool Contains(
-            const AZStd::vector<AZStd::string>& values,
-            const AZStd::string& value)
-        {
-            return AZStd::find(values.begin(), values.end(), value) != values.end();
+            return !actorSubject.empty()
+                && ResolvePopulationActorSubject(
+                    catalog,
+                    member.m_actorRecordId,
+                    member.m_actorSubjectRef) == actorSubject;
         }
     } // namespace
-
-    const CatalogValidationEvent* CatalogDatabase::FindLatestValidationForSubject(
-        const AZStd::string& subjectKind,
-        const AZStd::string& subjectId) const
-    {
-        const CatalogValidationEvent* latest = nullptr;
-        for (const CatalogValidationEvent& validation : m_validationHistory)
-        {
-            if (validation.GetSubjectKind() != subjectKind
-                || validation.GetSubjectId() != subjectId)
-            {
-                continue;
-            }
-            if (!latest
-                || IsNewer(
-                    validation.m_checkedAt,
-                    validation.m_validationId,
-                    latest->m_checkedAt,
-                    latest->m_validationId))
-            {
-                latest = &validation;
-            }
-        }
-        return latest;
-    }
-
-    const CatalogGovernanceEvent* CatalogDatabase::FindEffectiveGovernanceEvent(
-        const AZStd::string& subjectKind,
-        const AZStd::string& subjectId,
-        const AZStd::string& axis,
-        const AZStd::string& usage) const
-    {
-        const CatalogGovernanceEvent* latest = nullptr;
-        for (const CatalogGovernanceEvent& event : m_governanceHistory)
-        {
-            if (event.m_subjectKind != subjectKind
-                || event.m_subjectId != subjectId
-                || event.m_axis != axis
-                || (axis == "permission" && event.m_usage != usage))
-            {
-                continue;
-            }
-            if (!latest
-                || IsNewer(
-                    event.m_decidedAt,
-                    event.m_eventId,
-                    latest->m_decidedAt,
-                    latest->m_eventId))
-            {
-                latest = &event;
-            }
-        }
-        return latest;
-    }
-
-    bool CatalogDatabase::AddValidationEventBound(
-        const CatalogValidationEvent& validation,
-        const WorkspaceModel& workspace,
-        const GameProfile& profile,
-        const SourceEvidenceRegistry& sourceRegistry,
-        AZStd::string* error)
-    {
-        const GameProfile* activeProfile = workspace.FindActiveGameProfile();
-        AZStd::string validationError;
-        if (!activeProfile || !SameProfile(*activeProfile, profile))
-        {
-            SetError(error, "Validation history requires the exact active workspace profile.");
-            return false;
-        }
-        const AZStd::string subjectKind = validation.GetSubjectKind();
-        const AZStd::string subjectId = validation.GetSubjectId();
-        if (!IsStableContractId(validation.m_validationId)
-            || !IsStableContractId(subjectId)
-            || (subjectKind != "record" && subjectKind != "relationship")
-            || !IsStrictUtcTimestamp(validation.m_checkedAt)
-            || validation.m_method.empty()
-            || validation.m_validator.empty())
-        {
-            SetError(
-                error,
-                "Validation history requires stable identities, supported subject kind, "
-                "method, validator, and a real UTC date/time. Received validation='"
-                    + validation.m_validationId + "', subjectKind='" + subjectKind
-                    + "', subjectId='" + subjectId + "', method='"
-                    + validation.m_method + "', validator='" + validation.m_validator
-                    + "', checkedAt='" + validation.m_checkedAt + "'.");
-            return false;
-        }
-        const auto stateResult = ParseValidationState(validation.m_state);
-        if (!stateResult.IsSuccess()
-            || stateResult.GetValue() == ValidationState::Unset)
-        {
-            SetError(error, "Validation history contains an unsupported validation state.");
-            return false;
-        }
-        if (!ValidateEventProfile(
-                validation.m_profileId,
-                validation.m_gameVersion,
-                validation.m_branch,
-                profile,
-                validationError))
-        {
-            SetError(error, AZStd::move(validationError));
-            return false;
-        }
-        const AZStd::string subjectRef =
-            ExpectedSubjectRef(*this, subjectKind, subjectId);
-        if (!ValidateEvidenceForSubject(
-                validation.m_evidenceIds,
-                subjectRef,
-                profile,
-                sourceRegistry,
-                false,
-                validationError))
-        {
-            SetError(error, AZStd::move(validationError));
-            return false;
-        }
-        if (const CatalogValidationEvent* latest =
-                FindLatestValidationForSubject(subjectKind, subjectId))
-        {
-            if (validation.m_checkedAt < latest->m_checkedAt)
-            {
-                SetError(error, "Backdated validation history cannot supersede a newer validation decision.");
-                return false;
-            }
-        }
-        return AddValidationEvent(validation, error);
-    }
-
-    bool CatalogDatabase::AddGovernanceEventBound(
-        const CatalogGovernanceEvent& event,
-        const WorkspaceModel& workspace,
-        const GameProfile& profile,
-        const SourceEvidenceRegistry& sourceRegistry,
-        AZStd::string* error)
-    {
-        const GameProfile* activeProfile = workspace.FindActiveGameProfile();
-        AZStd::string validationError;
-        if (!activeProfile || !SameProfile(*activeProfile, profile))
-        {
-            SetError(error, "Governance history requires the exact active workspace profile.");
-            return false;
-        }
-        if (!IsStableContractId(event.m_eventId)
-            || !IsStableContractId(event.m_subjectId)
-            || (event.m_subjectKind != "record"
-                && event.m_subjectKind != "relationship")
-            || event.m_reviewer.empty()
-            || !IsStrictUtcTimestamp(event.m_decidedAt)
-            || !ValidateGovernanceValue(event, *this, validationError))
-        {
-            SetError(
-                error,
-                validationError.empty()
-                    ? "Governance history requires stable identity, exact subject, supported decision, reviewer, and a real UTC date/time."
-                    : AZStd::move(validationError));
-            return false;
-        }
-        const bool evidenceMayBeEmpty =
-            event.m_axis == "permission" && event.m_newValue == "clear";
-        const AZStd::string subjectRef =
-            ExpectedSubjectRef(*this, event.m_subjectKind, event.m_subjectId);
-        if (!ValidateEvidenceForSubject(
-                event.m_evidenceIds,
-                subjectRef,
-                profile,
-                sourceRegistry,
-                evidenceMayBeEmpty,
-                validationError))
-        {
-            SetError(error, AZStd::move(validationError));
-            return false;
-        }
-        if (!HasUniqueStableIds(
-                event.m_validationIds,
-                true,
-                validationError))
-        {
-            SetError(error, AZStd::move(validationError));
-            return false;
-        }
-        for (const AZStd::string& validationId : event.m_validationIds)
-        {
-            const CatalogValidationEvent* validation = FindValidationById(validationId);
-            if (!validation
-                || validation->GetSubjectKind() != event.m_subjectKind
-                || validation->GetSubjectId() != event.m_subjectId
-                || validation->m_profileId != profile.m_profileId
-                || validation->m_gameVersion != profile.m_gameVersion
-                || validation->m_branch != profile.m_branch)
-            {
-                SetError(error, "Every governance validation reference must be an exact-subject active-profile event.");
-                return false;
-            }
-            if (event.m_axis == "permission"
-                && event.m_newValue == "allow"
-                && (validation->m_state != "validated"
-                    || event.m_decidedAt < validation->m_checkedAt))
-            {
-                SetError(error, "Permission allow validation references must be validated exact-subject events recorded no later than the permission decision.");
-                return false;
-            }
-        }
-        if (event.m_axis == "permission" && event.m_newValue == "allow")
-        {
-            const CatalogValidationEvent* latest =
-                FindLatestValidationForSubject(event.m_subjectKind, event.m_subjectId);
-            if (!latest
-                || latest->m_state != "validated"
-                || !Contains(event.m_validationIds, latest->m_validationId))
-            {
-                SetError(error, "Permission allow requires the current effective validated proof event, not stale historical validation.");
-                return false;
-            }
-        }
-        if (const CatalogGovernanceEvent* current = FindEffectiveGovernanceEvent(
-                event.m_subjectKind,
-                event.m_subjectId,
-                event.m_axis,
-                event.m_usage))
-        {
-            if (event.m_decidedAt < current->m_decidedAt)
-            {
-                SetError(error, "Backdated governance history cannot become the effective decision.");
-                return false;
-            }
-            if (!event.m_previousValue.empty()
-                && event.m_previousValue != current->m_newValue)
-            {
-                SetError(error, "Governance previous value does not match the current effective decision.");
-                return false;
-            }
-        }
-        return AddGovernanceEvent(event, error);
-    }
 
     bool CatalogDatabase::ReplaceFromBoundDocument(
         const CatalogDocument& document,
@@ -511,7 +121,10 @@ namespace TaintedGrailModdingSDK
             || document.m_gameVersion != profile.m_gameVersion
             || document.m_branch != profile.m_branch)
         {
-            SetError(error, "Catalog document binding does not match the exact active workspace and game profile.");
+            SetError(
+                error,
+                "Catalog document binding does not match the exact active "
+                "workspace and game profile.");
             return false;
         }
 
@@ -526,6 +139,10 @@ namespace TaintedGrailModdingSDK
             return false;
         }
         *this = AZStd::move(candidate);
+        if (error)
+        {
+            error->clear();
+        }
         return true;
     }
 
@@ -535,289 +152,204 @@ namespace TaintedGrailModdingSDK
         const SourceEvidenceRegistry& sourceRegistry,
         AZStd::string* error) const
     {
-        const GameProfile* activeProfile = workspace.FindActiveGameProfile();
-        if (!activeProfile
-            || !SameProfile(*activeProfile, profile)
-            || workspace.m_workspaceId.empty())
+        if (!ValidateIntegrityWithoutPopulation(
+                workspace,
+                profile,
+                sourceRegistry,
+                error))
         {
-            SetError(error, "Catalog integrity requires one exact active workspace profile.");
             return false;
         }
 
         AZStd::string validationError;
-        for (const CatalogRecord& record : m_records)
+        for (const PopulationActorProfile& actor : m_populationActorProfiles)
         {
-            if (!ValidateRecord(record, &record, &validationError)
-                || !ValidateEvidenceForSubject(
-                    record.m_evidenceIds,
-                    record.m_subjectRef,
+            if (!ValidatePopulationActorProfile(actor, &validationError))
+            {
+                SetError(
+                    error,
+                    "Population actor profile integrity failed for "
+                        + actor.m_recordId + ": " + validationError);
+                return false;
+            }
+
+            AZStd::vector<AZStd::string> allowedSubjects;
+            const CatalogRecord* actorRecord = FindByRecordId(actor.m_recordId);
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                actorRecord ? actorRecord->m_subjectRef : AZStd::string{});
+            if (!actor.m_templateRecordId.empty())
+            {
+                const CatalogRecord* templateRecord =
+                    FindByRecordId(actor.m_templateRecordId);
+                AppendUniquePopulationSubject(
+                    allowedSubjects,
+                    templateRecord
+                        ? templateRecord->m_subjectRef
+                        : AZStd::string{});
+            }
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                actor.m_templateSubjectRef);
+            if (!ValidateEvidenceForAnyPopulationSubject(
+                    actor.m_evidenceIds,
+                    allowedSubjects,
                     profile,
                     sourceRegistry,
-                    false,
                     validationError))
             {
-                SetError(error, "Catalog record integrity failed for "
-                    + record.m_recordId + ": " + validationError);
-                return false;
-            }
-            for (const AZStd::string& usage : record.m_allowedUsages)
-            {
-                const CatalogGovernanceEvent* effective =
-                    FindEffectiveGovernanceEvent(
-                        "record",
-                        record.m_recordId,
-                        "permission",
-                        usage);
-                if (!effective || effective->m_newValue != "allow")
-                {
-                    SetError(error, "Allowed record usage has no current effective allow decision: "
-                        + record.m_recordId + "/" + usage);
-                    return false;
-                }
-                const CatalogValidationEvent* latest =
-                    FindLatestValidationForSubject("record", record.m_recordId);
-                if (!latest
-                    || latest->m_state != "validated"
-                    || effective->m_decidedAt < latest->m_checkedAt
-                    || !Contains(
-                        effective->m_validationIds,
-                        latest->m_validationId))
-                {
-                    SetError(error, "Allowed record usage is not bound to the current effective validated proof: "
-                        + record.m_recordId + "/" + usage);
-                    return false;
-                }
-            }
-        }
-
-        for (const CatalogRelationship& relationship : m_relationships)
-        {
-            if (!ValidateRelationship(relationship, &validationError))
-            {
-                SetError(error, "Catalog relationship integrity failed for "
-                    + relationship.m_relationshipId + ": " + validationError);
-                return false;
-            }
-            const bool hasRecordTarget = !relationship.m_toRecordId.empty();
-            const bool hasSubjectTarget = !relationship.m_targetSubjectRef.empty();
-            if (hasRecordTarget == hasSubjectTarget)
-            {
-                SetError(error, "Catalog relationships require exactly one target record ID or unresolved subject reference: "
-                    + relationship.m_relationshipId);
-                return false;
-            }
-            if (!ValidateEvidenceForSubject(
-                    relationship.m_evidenceIds,
-                    "relationship:" + relationship.m_relationshipId,
-                    profile,
-                    sourceRegistry,
-                    false,
-                    validationError))
-            {
-                SetError(error, "Relationship evidence does not prove the exact association "
-                    + relationship.m_relationshipId + ": " + validationError);
-                return false;
-            }
-            for (const AZStd::string& usage : relationship.m_allowedUsages)
-            {
-                const CatalogGovernanceEvent* effective =
-                    FindEffectiveGovernanceEvent(
-                        "relationship",
-                        relationship.m_relationshipId,
-                        "permission",
-                        usage);
-                if (!effective || effective->m_newValue != "allow")
-                {
-                    SetError(error, "Allowed relationship usage has no current effective allow decision: "
-                        + relationship.m_relationshipId + "/" + usage);
-                    return false;
-                }
-                const CatalogValidationEvent* latest =
-                    FindLatestValidationForSubject(
-                        "relationship",
-                        relationship.m_relationshipId);
-                if (!latest
-                    || latest->m_state != "validated"
-                    || effective->m_decidedAt < latest->m_checkedAt
-                    || !Contains(
-                        effective->m_validationIds,
-                        latest->m_validationId))
-                {
-                    SetError(error, "Allowed relationship usage is not bound to the current effective validated proof: "
-                        + relationship.m_relationshipId + "/" + usage);
-                    return false;
-                }
-            }
-        }
-
-        CatalogDatabase replay;
-        for (const CatalogRecord& record : m_records)
-        {
-            if (!replay.InsertNew(record, &validationError))
-            {
-                SetError(error, "Catalog record replay failed: " + validationError);
-                return false;
-            }
-        }
-        for (const CatalogRelationship& relationship : m_relationships)
-        {
-            if (!replay.UpsertRelationship(relationship, &validationError))
-            {
-                SetError(error, "Catalog relationship replay failed: " + validationError);
-                return false;
-            }
-        }
-        struct ReplayEntry
-        {
-            AZStd::string m_timestamp;
-            AZStd::string m_id;
-            const CatalogValidationEvent* m_validation = nullptr;
-            const CatalogGovernanceEvent* m_governance = nullptr;
-        };
-        AZStd::vector<ReplayEntry> history;
-        history.reserve(m_validationHistory.size() + m_governanceHistory.size());
-        for (const CatalogValidationEvent& validation : m_validationHistory)
-        {
-            history.push_back(ReplayEntry{
-                validation.m_checkedAt,
-                validation.m_validationId,
-                &validation,
-                nullptr });
-        }
-        for (const CatalogGovernanceEvent& event : m_governanceHistory)
-        {
-            history.push_back(ReplayEntry{
-                event.m_decidedAt,
-                event.m_eventId,
-                nullptr,
-                &event });
-        }
-        AZStd::sort(
-            history.begin(),
-            history.end(),
-            [](const ReplayEntry& left, const ReplayEntry& right)
-            {
-                if (left.m_timestamp != right.m_timestamp)
-                {
-                    return left.m_timestamp < right.m_timestamp;
-                }
-                if ((left.m_validation != nullptr)
-                    != (right.m_validation != nullptr))
-                {
-                    return left.m_validation != nullptr;
-                }
-                return left.m_id < right.m_id;
-            });
-        for (const ReplayEntry& entry : history)
-        {
-            if (entry.m_validation
-                && !replay.AddValidationEventBound(
-                    *entry.m_validation,
-                    workspace,
-                    profile,
-                    sourceRegistry,
-                    &validationError))
-            {
-                SetError(error, "Catalog validation-history integrity failed for "
-                    + entry.m_validation->m_validationId + ": " + validationError);
-                return false;
-            }
-            if (entry.m_governance
-                && !replay.AddGovernanceEventBound(
-                    *entry.m_governance,
-                    workspace,
-                    profile,
-                    sourceRegistry,
-                    &validationError))
-            {
-                SetError(error, "Catalog governance-history integrity failed for "
-                    + entry.m_governance->m_eventId + ": " + validationError);
+                SetError(
+                    error,
+                    "Population actor evidence integrity failed for "
+                        + actor.m_recordId + ": " + validationError);
                 return false;
             }
         }
 
-        for (const EconomyItemProfile& item : m_economyItems)
+        for (const PopulationTroopProfile& troop : m_populationTroopProfiles)
         {
-            if (!ValidateEconomyItem(item, &validationError)
-                || !IsFiniteNonNegative(item.m_weight)
-                || !IsFiniteNonNegative(item.m_baseValue)
-                || !IsFiniteNonNegative(item.m_durability))
+            if (!ValidatePopulationTroopProfile(troop, &validationError))
             {
-                SetError(error, "Economy item contains non-finite or invalid numeric state: "
-                    + item.m_recordId);
+                SetError(
+                    error,
+                    "Population troop profile integrity failed for "
+                        + troop.m_recordId + ": " + validationError);
                 return false;
             }
-            const CatalogRecord* record = FindByRecordId(item.m_recordId);
-            if (!record
-                || !ValidateEvidenceForSubject(
-                    item.m_evidenceIds,
-                    record->m_subjectRef,
+
+            AZStd::vector<AZStd::string> allowedSubjects;
+            const CatalogRecord* troopRecord = FindByRecordId(troop.m_recordId);
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                troopRecord ? troopRecord->m_subjectRef : AZStd::string{});
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                ResolvePopulationActorSubject(
+                    *this,
+                    troop.m_leaderActorRecordId,
+                    troop.m_leaderActorSubjectRef));
+            if (!ValidateEvidenceForAnyPopulationSubject(
+                    troop.m_evidenceIds,
+                    allowedSubjects,
                     profile,
                     sourceRegistry,
-                    false,
                     validationError))
             {
-                SetError(error, "Economy item evidence integrity failed: "
-                    + item.m_recordId + ": " + validationError);
+                SetError(
+                    error,
+                    "Population troop evidence integrity failed for "
+                        + troop.m_recordId + ": " + validationError);
                 return false;
             }
         }
-        for (const EconomyRecipeProfile& recipe : m_economyRecipes)
+
+        for (const PopulationTroopMember& member : m_populationTroopMembers)
         {
-            if (!ValidateEconomyRecipe(recipe, &validationError))
+            if (!ValidatePopulationTroopMember(member, &validationError))
             {
-                SetError(error, "Economy recipe integrity failed: "
-                    + recipe.m_recordId + ": " + validationError);
+                SetError(
+                    error,
+                    "Population troop-member integrity failed for "
+                        + member.m_linkId + ": " + validationError);
                 return false;
             }
-            const CatalogRecord* record = FindByRecordId(recipe.m_recordId);
-            if (!record
-                || !ValidateEvidenceForSubject(
-                    recipe.m_evidenceIds,
-                    record->m_subjectRef,
+            if (!FindPopulationTroopProfile(member.m_troopRecordId))
+            {
+                SetError(
+                    error,
+                    "Population troop-member rows require one typed troop profile: "
+                        + member.m_linkId);
+                return false;
+            }
+
+            AZStd::vector<AZStd::string> allowedSubjects;
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                "population-troop-member:" + member.m_linkId);
+            const CatalogRecord* troopRecord =
+                FindByRecordId(member.m_troopRecordId);
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                troopRecord ? troopRecord->m_subjectRef : AZStd::string{});
+            AppendUniquePopulationSubject(
+                allowedSubjects,
+                ResolvePopulationActorSubject(
+                    *this,
+                    member.m_actorRecordId,
+                    member.m_actorSubjectRef));
+            if (!ValidateEvidenceForAnyPopulationSubject(
+                    member.m_evidenceIds,
+                    allowedSubjects,
                     profile,
                     sourceRegistry,
-                    false,
                     validationError))
             {
-                SetError(error, "Economy recipe evidence integrity failed: "
-                    + recipe.m_recordId + ": " + validationError);
+                SetError(
+                    error,
+                    "Population troop-member evidence integrity failed for "
+                        + member.m_linkId + ": " + validationError);
                 return false;
             }
         }
-        for (const EconomyRecipeIngredient& ingredient : m_recipeIngredients)
+
+        for (const PopulationTroopProfile& troop : m_populationTroopProfiles)
         {
-            if (!ValidateRecipeIngredient(ingredient, &validationError)
-                || !ValidateEvidenceForSubject(
-                    ingredient.m_evidenceIds,
-                    "economy-recipe-ingredient:" + ingredient.m_linkId,
-                    profile,
-                    sourceRegistry,
-                    false,
-                    validationError))
+            const AZStd::vector<PopulationTroopMember> members =
+                FindPopulationMembersForTroop(troop.m_recordId);
+            if (members.empty())
             {
-                SetError(error, "Recipe ingredient relationship evidence integrity failed: "
-                    + ingredient.m_linkId + ": " + validationError);
+                SetError(
+                    error,
+                    "Population troop profiles require at least one typed member: "
+                        + troop.m_recordId);
+                return false;
+            }
+
+            AZ::u64 totalMinimum = 0;
+            AZ::u64 totalMaximum = 0;
+            size_t leaderRowCount = 0;
+            const PopulationTroopMember* matchingLeader = nullptr;
+            const AZStd::string leaderSubject = ResolvePopulationActorSubject(
+                *this,
+                troop.m_leaderActorRecordId,
+                troop.m_leaderActorSubjectRef);
+            for (const PopulationTroopMember& member : members)
+            {
+                totalMinimum += member.m_minimumCount;
+                totalMaximum += member.m_maximumCount;
+                if (member.m_role == "leader")
+                {
+                    ++leaderRowCount;
+                    if (MemberMatchesActorSubject(
+                            *this,
+                            member,
+                            leaderSubject))
+                    {
+                        matchingLeader = &member;
+                    }
+                }
+            }
+
+            if (totalMinimum > troop.m_maximumSize
+                || totalMaximum < troop.m_minimumSize)
+            {
+                SetError(
+                    error,
+                    "Population troop member ranges do not overlap the declared "
+                    "troop size range: " + troop.m_recordId);
+                return false;
+            }
+            if (!leaderSubject.empty()
+                && (leaderRowCount != 1 || !matchingLeader))
+            {
+                SetError(
+                    error,
+                    "A troop leader binding requires exactly one matching leader "
+                    "membership row: " + troop.m_recordId);
                 return false;
             }
         }
-        for (const EconomyRecipeOutput& output : m_recipeOutputs)
-        {
-            if (!ValidateRecipeOutput(output, &validationError)
-                || !IsFiniteProbability(output.m_chance)
-                || !ValidateEvidenceForSubject(
-                    output.m_evidenceIds,
-                    "economy-recipe-output:" + output.m_linkId,
-                    profile,
-                    sourceRegistry,
-                    false,
-                    validationError))
-            {
-                SetError(error, "Recipe output relationship evidence integrity failed: "
-                    + output.m_linkId + ": " + validationError);
-                return false;
-            }
-        }
+
         if (error)
         {
             error->clear();

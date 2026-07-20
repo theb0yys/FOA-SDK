@@ -48,6 +48,15 @@ namespace TaintedGrailModdingSDK
         bool UpsertRecipeOutput(
             const EconomyRecipeOutput& output,
             AZStd::string* error = nullptr);
+        bool UpsertPopulationActorProfile(
+            const PopulationActorProfile& profile,
+            AZStd::string* error = nullptr);
+        bool UpsertPopulationTroopProfile(
+            const PopulationTroopProfile& profile,
+            AZStd::string* error = nullptr);
+        bool UpsertPopulationTroopMember(
+            const PopulationTroopMember& member,
+            AZStd::string* error = nullptr);
         bool ReplaceFromBoundDocument(
             const CatalogDocument& document,
             const WorkspaceModel& workspace,
@@ -80,6 +89,10 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& recordId) const;
         const EconomyRecipeProfile* FindEconomyRecipe(
             const AZStd::string& recordId) const;
+        const PopulationActorProfile* FindPopulationActorProfile(
+            const AZStd::string& recordId) const;
+        const PopulationTroopProfile* FindPopulationTroopProfile(
+            const AZStd::string& recordId) const;
 
         AZStd::vector<CatalogRecord> Query(const CatalogQuery& query) const;
         AZStd::vector<CatalogRelationship> FindRelationshipsForRecord(
@@ -96,6 +109,8 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& recipeRecordId) const;
         AZStd::vector<EconomyRecipeOutput> FindOutputsForRecipe(
             const AZStd::string& recipeRecordId) const;
+        AZStd::vector<PopulationTroopMember> FindPopulationMembersForTroop(
+            const AZStd::string& troopRecordId) const;
         AZStd::vector<DomainCoverage> BuildCoverage() const;
 
         CatalogDocument BuildDocument(
@@ -110,6 +125,9 @@ namespace TaintedGrailModdingSDK
         const AZStd::vector<EconomyRecipeProfile>& GetEconomyRecipes() const;
         const AZStd::vector<EconomyRecipeIngredient>& GetRecipeIngredients() const;
         const AZStd::vector<EconomyRecipeOutput>& GetRecipeOutputs() const;
+        const AZStd::vector<PopulationActorProfile>& GetPopulationActorProfiles() const;
+        const AZStd::vector<PopulationTroopProfile>& GetPopulationTroopProfiles() const;
+        const AZStd::vector<PopulationTroopMember>& GetPopulationTroopMembers() const;
 
     private:
         friend class CatalogGovernanceService;
@@ -148,6 +166,34 @@ namespace TaintedGrailModdingSDK
         bool ValidateRecipeOutput(
             const EconomyRecipeOutput& output,
             AZStd::string* error) const;
+        bool ValidatePopulationActorProfile(
+            const PopulationActorProfile& profile,
+            AZStd::string* error) const;
+        bool ValidatePopulationTroopProfile(
+            const PopulationTroopProfile& profile,
+            AZStd::string* error) const;
+        bool ValidatePopulationTroopMember(
+            const PopulationTroopMember& member,
+            AZStd::string* error) const;
+
+        bool ReplaceFromDocumentWithoutPopulation(
+            const CatalogDocument& document,
+            AZStd::string* error);
+        void ClearWithoutPopulation();
+        CatalogDocument BuildDocumentWithoutPopulation(
+            const WorkspaceModel& workspace,
+            const GameProfile& profile) const;
+        bool ReplaceFromBoundDocumentWithoutPopulation(
+            const CatalogDocument& document,
+            const WorkspaceModel& workspace,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
+            AZStd::string* error);
+        bool ValidateIntegrityWithoutPopulation(
+            const WorkspaceModel& workspace,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& sourceRegistry,
+            AZStd::string* error) const;
 
         AZStd::vector<CatalogRecord> m_records;
         AZStd::vector<CatalogRelationship> m_relationships;
@@ -157,5 +203,8 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<EconomyRecipeProfile> m_economyRecipes;
         AZStd::vector<EconomyRecipeIngredient> m_recipeIngredients;
         AZStd::vector<EconomyRecipeOutput> m_recipeOutputs;
+        AZStd::vector<PopulationActorProfile> m_populationActorProfiles;
+        AZStd::vector<PopulationTroopProfile> m_populationTroopProfiles;
+        AZStd::vector<PopulationTroopMember> m_populationTroopMembers;
     };
 } // namespace TaintedGrailModdingSDK

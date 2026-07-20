@@ -105,7 +105,13 @@ set(FILES
     Source/DeterministicContractJson.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
+    Source/CatalogDatabaseBase.inl
     Source/CatalogDatabaseIntegrity.cpp
+    Source/CatalogDatabaseIntegrityBase.inl
+    Source/CatalogDatabasePopulation.cpp
+    Source/CatalogDatabasePopulationPart1.inl
+    Source/CatalogDatabasePopulationPart2.inl
+    Source/CatalogDatabasePopulationPart3.inl
     Source/CatalogGovernanceBlockerService.cpp
     Source/CatalogGovernanceBlockerService.h
     Source/CatalogGovernanceTypes.cpp

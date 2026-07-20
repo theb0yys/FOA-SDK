@@ -389,9 +389,37 @@ Exit criteria:
 - the Editor pane remains non-editable and exposes no registration, review-authoring, file, archive, signing, upload, publication, launch, adapter, or deployment action;
 - the Windows manual UI checklist includes all twenty panes and the default zero-release-artifact-envelope state.
 
-### Next ordered slice — release-assembly and checksum-result envelope
+### Release-assembly and checksum-result envelope
 
-Bind one exact ready release-artifact envelope to a separately reviewed external assembler/checksummer result. Preserve attempted archive assembly, per-content checksum observations, archive identity/fingerprint, failures, and safe diagnostics as supplied evidence while keeping signing, upload, publication, FoA launch, adapter calls, and deployment mutation outside the contract.
+Status: implemented, continuing hardening and Windows UI verification.
+
+- Bind one exact ready release-artifact envelope and its canonical SHA-256 fingerprint to one separately supplied external assembler/checksummer result.
+- Require an accepted evidence-backed review for an external tool declaring content-checksum, archive-assembly, and archive-checksum capabilities.
+- Preserve exactly one observation per declared content with exact identity, package path, expected checksum, attempted/recorded state, outcome, observed checksum, timestamp, failures, and diagnostics.
+- Preserve one archive identity, safe relative reference, format, attempt/outcome state, presence, size, fingerprint, timestamp, failures, and diagnostics.
+- Keep valid adverse outcomes representable: contract acceptance does not convert mismatched, failed, inconclusive, not-observed, failed-archive, or skipped-archive results into successful release evidence.
+- Validate stable failure/diagnostic identity, content bindings, safe references, fingerprints, and referential integrity.
+- Return exact binding, review, archive, checksum, failure, and diagnostic claims as candidate evidence by value without automatic registration or promotion.
+- Transient `AdapterReleaseAssemblyResultRegistry` and read-only **Tainted Grail Release Assembly and Checksum Results** pane.
+- Focused repository validator, public contract documentation, and twenty-one-pane Windows manual UI coverage.
+- **No file read/hash/copy, checksum generation, archive assembly, signing, upload, publication, FoA launch, adapter call, or deployment mutation** is implemented or authorised.
+
+Exit criteria:
+
+- only an exact ready release-artifact canonical envelope and fingerprint can be accepted;
+- every declared content has exactly one exact-bound checksum observation and no missing, duplicate, or extra observation can pass;
+- assembler/checksummer review is accepted, evidence-backed, named, time-bounded, fingerprinted, and capability-complete;
+- checksum and archive flags, outcomes, fingerprints, timestamps, failures, and diagnostics are self-consistent;
+- failures and diagnostics remain safe, exact-bound supplied metadata and referenced diagnostic content is never opened;
+- candidate evidence is returned only for a structurally valid result and is never automatically registered or promoted;
+- result validation does not mutate the release artifact, result envelope, evidence registry, filesystem, or transient registries;
+- all SDK file, hash, archive, signing, upload, publication, launch, adapter, and deployment flags remain false;
+- the Editor pane remains non-editable and exposes no registration, review-authoring, file, archive, signing, upload, publication, launch, adapter, or deployment action;
+- the Windows manual UI checklist includes all twenty-one panes and the default zero-release-assembly-result state.
+
+### Next ordered slice — release-signing result envelope
+
+Bind one exact accepted release-assembly/checksum result to a separately reviewed external signing result while preserving signing identity, signature-artifact fingerprints, attempted outcome, failures, and safe diagnostics as supplied evidence. Upload, publication, FoA launch, adapter calls, and deployment mutation remain outside the contract.
 
 Controlled pipeline:
 
@@ -399,7 +427,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, release-assembly/checksum result evidence, signing results, publication results, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement/signing, actual backup/restore and deployment implementations, actual independent verifier execution and target access, signing results, publication results, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 

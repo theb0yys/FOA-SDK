@@ -12,14 +12,14 @@
 
 namespace TaintedGrailModdingSDK
 {
-    class AdapterReleaseArtifactPaneSystemComponent final
+    class AdapterReleaseAssemblyPaneSystemComponent final
         : public AZ::Component
         , private AzToolsFramework::EditorEvents::Bus::Handler
     {
     public:
         AZ_COMPONENT(
-            AdapterReleaseArtifactPaneSystemComponent,
-            "{D45B52D1-77D4-4CDA-9A9C-6DE7F5E88A23}");
+            AdapterReleaseAssemblyPaneSystemComponent,
+            "{C34FD7A4-2A86-4AC8-9A3C-5EE4A7C092A4}");
 
         static void Reflect(AZ::ReflectContext* context);
 

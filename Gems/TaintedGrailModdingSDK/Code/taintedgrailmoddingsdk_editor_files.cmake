@@ -24,6 +24,10 @@ set(FILES
     Source/AdapterReleaseArtifactPaneSystemComponent.h
     Source/AdapterReleaseArtifactWidget.cpp
     Source/AdapterReleaseArtifactWidget.h
+    Source/AdapterReleaseAssemblyPaneSystemComponent.cpp
+    Source/AdapterReleaseAssemblyPaneSystemComponent.h
+    Source/AdapterReleaseAssemblyResultWidget.cpp
+    Source/AdapterReleaseAssemblyResultWidget.h
     Source/AdapterRuntimeResultEvidenceWidget.cpp
     Source/AdapterRuntimeResultEvidenceWidget.h
     Source/AdapterStagingDeploymentPreviewWidget.cpp

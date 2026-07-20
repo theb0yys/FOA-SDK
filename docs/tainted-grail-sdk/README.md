@@ -29,6 +29,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Independent Post-Deployment Verifier Results](FOA_POST_DEPLOYMENT_VERIFIER_RESULTS.md) — separately reviewed verifier identity, exact report/check binding, independent observations, failures, safe diagnostics, and candidate evidence with no verifier execution.
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — preserved report blockers, adverse verifier observations, separate compatibility/release/human-review axes, explicit dispositions, and no automatic approval or publication.
 - [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact approved reconciliation/package binding, declared checksums, provenance, legal review, signing intent, publication targets, and no performed release operations.
+- [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md) — exact ready-artifact binding, reviewed external assembler/checksummer results, archive identity, per-content checksum observations, failures, safe diagnostics, and no SDK release operations.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -60,6 +61,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Independent Post-Deployment Verifier Results](FOA_POST_DEPLOYMENT_VERIFIER_RESULTS.md) — deterministic report serialization, reviewed-verifier capabilities, exact final-state check coverage, failure/diagnostic binding, and no-verifier/no-release enforcement.
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — exact immutable binding, preserved blockers, typed human dispositions, deterministic compatibility/release decisions, non-mutation, and no-publication enforcement.
 - [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact content/checksum/provenance/legal/signing/publication declarations, deterministic fail-closed status, and no file or release operations.
+- [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md) — contract-validated external archive/checksum observations, deterministic fail-closed binding, candidate evidence, and no file or release operations.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.

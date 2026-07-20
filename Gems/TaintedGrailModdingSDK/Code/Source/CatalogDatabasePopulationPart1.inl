@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Contributors to the Open 3D Engine Project.
+ * For complete copyright and license terms please see the LICENSE at the root of this distribution.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+ */
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -118,6 +125,24 @@ namespace TaintedGrailModdingSDK
         {
             AZStd::sort(values.begin(), values.end(), less);
         }
+
+        void CanonicalizePopulationActorProfile(PopulationActorProfile& profile)
+        {
+            AZStd::sort(profile.m_tags.begin(), profile.m_tags.end());
+            AZStd::sort(profile.m_evidenceIds.begin(), profile.m_evidenceIds.end());
+        }
+
+        void CanonicalizePopulationTroopProfile(PopulationTroopProfile& profile)
+        {
+            AZStd::sort(profile.m_tags.begin(), profile.m_tags.end());
+            AZStd::sort(profile.m_evidenceIds.begin(), profile.m_evidenceIds.end());
+        }
+
+        void CanonicalizePopulationTroopMember(PopulationTroopMember& member)
+        {
+            AZStd::sort(member.m_conditions.begin(), member.m_conditions.end());
+            AZStd::sort(member.m_evidenceIds.begin(), member.m_evidenceIds.end());
+        }
     } // namespace
 
     bool CatalogDatabase::UpsertPopulationActorProfile(
@@ -128,11 +153,13 @@ namespace TaintedGrailModdingSDK
         {
             return false;
         }
+        PopulationActorProfile canonical = profile;
+        CanonicalizePopulationActorProfile(canonical);
         for (PopulationActorProfile& existing : m_populationActorProfiles)
         {
-            if (existing.m_recordId == profile.m_recordId)
+            if (existing.m_recordId == canonical.m_recordId)
             {
-                existing = profile;
+                existing = canonical;
                 SortPopulationValues(
                     m_populationActorProfiles,
                     [](const PopulationActorProfile& left,
@@ -143,7 +170,7 @@ namespace TaintedGrailModdingSDK
                 return true;
             }
         }
-        m_populationActorProfiles.push_back(profile);
+        m_populationActorProfiles.push_back(AZStd::move(canonical));
         SortPopulationValues(
             m_populationActorProfiles,
             [](const PopulationActorProfile& left,
@@ -162,11 +189,13 @@ namespace TaintedGrailModdingSDK
         {
             return false;
         }
+        PopulationTroopProfile canonical = profile;
+        CanonicalizePopulationTroopProfile(canonical);
         for (PopulationTroopProfile& existing : m_populationTroopProfiles)
         {
-            if (existing.m_recordId == profile.m_recordId)
+            if (existing.m_recordId == canonical.m_recordId)
             {
-                existing = profile;
+                existing = canonical;
                 SortPopulationValues(
                     m_populationTroopProfiles,
                     [](const PopulationTroopProfile& left,
@@ -177,7 +206,7 @@ namespace TaintedGrailModdingSDK
                 return true;
             }
         }
-        m_populationTroopProfiles.push_back(profile);
+        m_populationTroopProfiles.push_back(AZStd::move(canonical));
         SortPopulationValues(
             m_populationTroopProfiles,
             [](const PopulationTroopProfile& left,
@@ -196,11 +225,13 @@ namespace TaintedGrailModdingSDK
         {
             return false;
         }
+        PopulationTroopMember canonical = member;
+        CanonicalizePopulationTroopMember(canonical);
         for (PopulationTroopMember& existing : m_populationTroopMembers)
         {
-            if (existing.m_linkId == member.m_linkId)
+            if (existing.m_linkId == canonical.m_linkId)
             {
-                existing = member;
+                existing = canonical;
                 SortPopulationValues(
                     m_populationTroopMembers,
                     [](const PopulationTroopMember& left,
@@ -211,7 +242,7 @@ namespace TaintedGrailModdingSDK
                 return true;
             }
         }
-        m_populationTroopMembers.push_back(member);
+        m_populationTroopMembers.push_back(AZStd::move(canonical));
         SortPopulationValues(
             m_populationTroopMembers,
             [](const PopulationTroopMember& left,

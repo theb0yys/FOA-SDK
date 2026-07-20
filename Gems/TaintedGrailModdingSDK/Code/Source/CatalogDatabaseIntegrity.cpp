@@ -339,14 +339,6 @@ namespace TaintedGrailModdingSDK
                     "troop size range: " + troop.m_recordId);
                 return false;
             }
-            if (leaderSubject.empty() && leaderRowCount != 0)
-            {
-                SetError(
-                    error,
-                    "A typed leader membership row requires a matching troop "
-                    "leader binding: " + troop.m_recordId);
-                return false;
-            }
             if (!leaderSubject.empty()
                 && (leaderRowCount != 1 || !matchingLeader))
             {

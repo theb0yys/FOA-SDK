@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Contributors to the Open 3D Engine Project.
+ * For complete copyright and license terms please see the LICENSE at the root of this distribution.
+ *
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+ */
+
 namespace TaintedGrailModdingSDK
 {
     bool CatalogDatabase::ValidatePopulationActorProfile(
@@ -36,7 +43,10 @@ namespace TaintedGrailModdingSDK
                 && (!IsStableContractId(profile.m_templateRecordId)
                     || !IsPopulationTemplateRecord(templateRecord)))
             || (hasTemplateSubject
-                && !IsStableContractId(profile.m_templateSubjectRef))
+                && !IsBoundedPopulationText(
+                    profile.m_templateSubjectRef,
+                    1024,
+                    false))
             || (templateRecord
                 && hasTemplateSubject
                 && templateRecord->m_subjectRef != profile.m_templateSubjectRef))
@@ -44,7 +54,8 @@ namespace TaintedGrailModdingSDK
             SetPopulationError(
                 error,
                 "Actor template bindings require an exact population template "
-                "record or stable unresolved subject, and dual bindings must agree.");
+                "record or bounded exact unresolved subject, and dual bindings "
+                "must agree.");
             return false;
         }
 
@@ -102,7 +113,10 @@ namespace TaintedGrailModdingSDK
                 && (!IsStableContractId(profile.m_leaderActorRecordId)
                     || !IsPopulationRecord(leaderRecord, "actor")))
             || (hasLeaderSubject
-                && !IsStableContractId(profile.m_leaderActorSubjectRef))
+                && !IsBoundedPopulationText(
+                    profile.m_leaderActorSubjectRef,
+                    1024,
+                    false))
             || (leaderRecord
                 && hasLeaderSubject
                 && leaderRecord->m_subjectRef != profile.m_leaderActorSubjectRef))
@@ -110,7 +124,7 @@ namespace TaintedGrailModdingSDK
             SetPopulationError(
                 error,
                 "Troop leader bindings require an exact population actor or "
-                "stable unresolved subject, and dual bindings must agree.");
+                "bounded exact unresolved subject, and dual bindings must agree.");
             return false;
         }
 

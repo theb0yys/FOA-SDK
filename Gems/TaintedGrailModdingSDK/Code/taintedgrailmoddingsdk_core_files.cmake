@@ -124,6 +124,8 @@ set(FILES
     Source/FoundationModels.h
     Source/PackagePathValidation.cpp
     Source/PackagePathValidation.h
+    Source/PopulationModels.cpp
+    Source/PopulationModels.h
     Source/ResearchContractValidation.cpp
     Source/ResearchContractValidation.h
     Source/SourceEvidenceRegistry.cpp

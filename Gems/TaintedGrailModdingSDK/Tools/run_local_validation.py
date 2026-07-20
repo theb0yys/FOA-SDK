@@ -27,6 +27,8 @@ TESTS_ROOT = TOOLS_ROOT / "tests"
 VALIDATORS = (
     "validate_ci_runner_policy.py",
     "validate_core_framework_build_graph.py",
+    "validate_downstream_compiled_tests.py",
+    "validate_research_contract_hardening.py",
     "validate_economy_coverage_dashboard.py",
     "validate_economy_duplicate_detection.py",
     "validate_adapter_contracts.py",
@@ -38,6 +40,7 @@ VALIDATORS = (
     "validate_adapter_deployment_work_orders.py",
     "validate_adapter_deployment_execution_results.py",
     "validate_release_artifact_contract.py",
+    "validate_release_assembly_results.py",
     "validate_developer_preview.py",
     "validate_developer_preview_project.py",
     "validate_path_policy.py",

@@ -1,0 +1,5 @@
+#include "ActorTroopEditorWidgetActorPart1A.inl"
+#include "ActorTroopEditorWidgetActorPart1B.inl"
+#include "ActorTroopEditorWidgetActorPart2A.inl"
+#include "ActorTroopEditorWidgetActorPart2B.inl"
+#include "ActorTroopEditorWidgetActorPart3.inl"

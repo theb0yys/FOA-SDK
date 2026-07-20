@@ -117,6 +117,7 @@ class CiRunnerPolicyTests(unittest.TestCase):
 class LocalValidationEntrypointTests(unittest.TestCase):
     def test_validator_inventory_is_unique_and_present(self) -> None:
         self.assertEqual(len(VALIDATORS), len(set(VALIDATORS)))
+        self.assertIn("validate_population_actor_troop_editor.py", VALIDATORS)
         for validator in VALIDATORS:
             self.assertTrue((REAL_TOOLS_ROOT / validator).is_file(), validator)
 

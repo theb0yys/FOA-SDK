@@ -35,6 +35,7 @@ PREVIEW_NAME = "Developer Preview 0"
 PRIMARY_HOST = "Windows x64 Profile"
 DEFAULT_CONFIGURE_PRESET = "windows-vs-unity"
 DEFAULT_CONFIGURATION = "profile"
+PREVIEW_PROJECT_DIRECTORY = "TaintedGrailModdingEditor"
 EDITOR_TARGET = "Editor"
 CATALOG_TEST_TARGET = "TaintedGrailModdingSDK.Catalog.Tests"
 CATALOG_TEST_PATTERN = r"TaintedGrailModdingSDK\.Catalog\.Tests"
@@ -418,6 +419,7 @@ def configure_command(repo_root: Path, build_dir: Path, cmake: str = "cmake") ->
         str(build_dir),
         "-A",
         "x64",
+        f"-DLY_PROJECTS={repo_root / PREVIEW_PROJECT_DIRECTORY}",
     )
 
 

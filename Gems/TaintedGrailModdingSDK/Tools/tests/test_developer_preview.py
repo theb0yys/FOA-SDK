@@ -93,6 +93,7 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
                 str(build),
                 "-A",
                 "x64",
+                f"-DLY_PROJECTS={repo / 'TaintedGrailModdingEditor'}",
             ),
         )
 

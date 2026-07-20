@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -160,11 +161,32 @@ def build_fixture_commands(temporary_root: Path) -> list[ValidationCommand]:
     ]
 
 
+def find_ctest(build_directory: Path) -> str:
+    discovered = shutil.which("ctest")
+    if discovered:
+        return discovered
+
+    cache = build_directory / "CMakeCache.txt"
+    if cache.is_file():
+        prefix = "CMAKE_COMMAND:INTERNAL="
+        for line in cache.read_text(encoding="utf-8", errors="strict").splitlines():
+            if not line.startswith(prefix):
+                continue
+            cmake = Path(line[len(prefix) :])
+            candidate = cmake.with_name("ctest.exe" if os.name == "nt" else "ctest")
+            if candidate.is_file():
+                return str(candidate)
+            break
+    raise RuntimeError(
+        "Unable to locate ctest from PATH or the configured build's CMakeCache.txt."
+    )
+
+
 def build_ctest_command(build_directory: Path) -> ValidationCommand:
     return ValidationCommand(
         "Compiled TG SDK catalog tests",
         (
-            "ctest",
+            find_ctest(build_directory),
             "--test-dir",
             str(build_directory),
             "-C",

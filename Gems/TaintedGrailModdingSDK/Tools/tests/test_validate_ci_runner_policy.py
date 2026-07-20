@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 TOOLS_ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +22,7 @@ from run_local_validation import (  # noqa: E402
     TOOLS_ROOT as REAL_TOOLS_ROOT,
     VALIDATORS,
     build_static_commands,
+    find_ctest,
 )
 from validate_ci_runner_policy import (  # noqa: E402
     CiRunnerPolicyError,
@@ -128,6 +130,23 @@ class LocalValidationEntrypointTests(unittest.TestCase):
         self.assertTrue(all(isinstance(command.argv, tuple) for command in commands))
         self.assertIn("Python unit tests", commands[0].label)
         self.assertEqual(commands[-1].label, "O3DE source policy")
+
+    def test_ctest_is_derived_from_configured_cmake_when_not_on_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cmake = root / "tools" / "cmake.exe"
+            ctest = root / "tools" / "ctest.exe"
+            cmake.parent.mkdir()
+            cmake.touch()
+            ctest.touch()
+            build = root / "build"
+            build.mkdir()
+            (build / "CMakeCache.txt").write_text(
+                f"CMAKE_COMMAND:INTERNAL={cmake.as_posix()}\n",
+                encoding="utf-8",
+            )
+            with mock.patch("run_local_validation.shutil.which", return_value=None):
+                self.assertEqual(find_ctest(build), str(ctest))
 
 
 if __name__ == "__main__":

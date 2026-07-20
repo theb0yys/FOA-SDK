@@ -95,7 +95,11 @@ namespace TaintedGrailModdingSDK
                     + QStringLiteral("] ")
                     + ToSigningQString(failure->m_code)
                     + QStringLiteral(": ")
-                    + ToSigningQString(failure->m_message);
+                    + ToSigningQString(failure->m_message)
+                    + QStringLiteral(" | retryable=")
+                    + (failure->m_retryable
+                        ? QStringLiteral("yes")
+                        : QStringLiteral("no"));
                 if (!failure->m_signatureArtifactId.empty())
                 {
                     value += QStringLiteral(" | artifact=")
@@ -170,9 +174,10 @@ namespace TaintedGrailModdingSDK
         auto* description = new QLabel(
             tr(
                 "Read-only Phase 8 evidence supplied by a separately reviewed external "
-                "signer. Exact release-artifact, assembly-result, archive, signing-intent, "
-                "signer-review, reported outcome, signature-artifact, failure, and safe "
-                "diagnostic bindings are displayed. This pane does not open or modify "
+                "signer. Supplied release-artifact, assembly-result, archive, signing-"
+                "intent, signer-review, reported-outcome, signature-artifact, failure, "
+                "and safe diagnostic binding fields are displayed. This pane does not "
+                "open or modify "
                 "archives, load keys or credentials, resolve identities, sign or verify "
                 "data, write signature artifacts, upload, publish, launch FoA, call an "
                 "adapter, mutate deployment state, or modify saves."),
@@ -188,8 +193,8 @@ namespace TaintedGrailModdingSDK
         m_table->setHorizontalHeaderLabels({
             tr("Result / contract state"),
             tr("Archive"),
-            tr("Reviewed signer tool"),
-            tr("Approved signing identity"),
+            tr("Supplied signer review"),
+            tr("Supplied signing identity"),
             tr("Reported signing outcome"),
             tr("Signature artifact"),
             tr("Failures"),
@@ -288,10 +293,11 @@ namespace TaintedGrailModdingSDK
                     m_table,
                     rowIndex,
                     0,
-                    tr("%1 | contract status=not evaluated | artifact=%2 (%3) | "
-                       "assembly=%4 (%5)")
+                    tr("%1 (%2) | contract status=not evaluated | artifact=%3 (%4) | "
+                       "assembly=%5 (%6)")
                         .arg(
                             ToSigningQString(envelope.m_resultId),
+                            ToSigningQString(envelope.m_resultFingerprint),
                             ToSigningQString(envelope.m_artifactId),
                             ToSigningQString(envelope.m_artifactFingerprint),
                             ToSigningQString(envelope.m_assemblyResultId),
@@ -312,17 +318,21 @@ namespace TaintedGrailModdingSDK
                     m_table,
                     rowIndex,
                     2,
-                    tr("%1 %2 | review=%3 | decision=%4 | reviewer=%5 | "
-                       "capabilities=%6 | evidence=%7")
+                    tr("%1 %2 (%3) | review=%4 | decision=%5 | reviewer=%6 | "
+                       "reviewed=%7 | capabilities=%8 | evidence=%9")
                         .arg(
                             ToSigningQString(
                                 envelope.m_signerReview.m_signerToolId),
                             ToSigningQString(
                                 envelope.m_signerReview.m_signerToolVersion),
+                            ToSigningQString(
+                                envelope.m_signerReview.m_signerToolFingerprint),
                             ToSigningQString(envelope.m_signerReview.m_reviewId),
                             ToSigningQString(ToString(
                                 envelope.m_signerReview.m_decision)),
                             ToSigningQString(envelope.m_signerReview.m_reviewer),
+                            ToSigningQString(
+                                envelope.m_signerReview.m_reviewedAtUtc),
                             JoinCapabilities(envelope.m_signerReview),
                             JoinSigningIds(
                                 envelope.m_signerReview.m_evidenceIds)));
@@ -360,7 +370,8 @@ namespace TaintedGrailModdingSDK
                         m_table,
                         rowIndex,
                         5,
-                        tr("%1 [%2] | %3 | media=%4 | bytes=%5 | %6 | created=%7")
+                        tr("%1 [%2] | %3 | media=%4 | bytes=%5 | %6 | created=%7 | "
+                           "archive=%8 (%9)")
                             .arg(
                                 ToSigningQString(
                                     signatureArtifact->m_signatureArtifactId),
@@ -371,7 +382,10 @@ namespace TaintedGrailModdingSDK
                                     signatureArtifact->m_byteSize)),
                                 ToSigningQString(signatureArtifact->m_fingerprint),
                                 ToSigningQString(
-                                    signatureArtifact->m_createdAtUtc)));
+                                    signatureArtifact->m_createdAtUtc),
+                                ToSigningQString(signatureArtifact->m_archiveId),
+                                ToSigningQString(
+                                    signatureArtifact->m_archiveFingerprint)));
                 }
                 SetSigningCell(
                     m_table,

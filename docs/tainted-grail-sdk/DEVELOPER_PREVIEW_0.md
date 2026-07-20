@@ -75,7 +75,7 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_ui_evidence.
 
 ## Generate and verify the synthetic fixture
 
-Generate the project-owned fixture:
+Generate the deterministic synthetic fixture from project-owned data:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
@@ -89,13 +89,16 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output build/tg-sdk-developer-preview-0-fixture
 ```
 
+The generated `preview-fixture.manifest.json` makes the output byte-for-byte deterministic.
+The project-owned synthetic data does not prove Editor load/save/reopen behavior; that proof belongs to the compiled service-level smoke below.
+
 The fixture contains one portable workspace and profile, one runtime-disabled pack, source/evidence documents, five synthetic canonical records, resolved and unresolved relationships, validation and governance history, economy profiles and joins, and allowed, forbidden, blocked, stale, and unresolved states.
 
 Every identity uses the reserved `preview.*` or `subject:preview:*` namespace. The fixture contains no proprietary game data, native FoA identifiers, private paths, credentials, saves, or extracted assets.
 
 ## Service-level persistence smoke
 
-The compiled `TaintedGrailModdingSDK.Catalog.Tests` target uses the real workspace, pack, source/evidence, catalog, registry, database, and economy services to prove:
+The compiled `TaintedGrailModdingSDK.Catalog.Tests` target uses the real workspace, pack, source/evidence, catalog, registry, database, and economy services to prove load, save, close-equivalent, and reopen behavior, including proof-backed allowed usages while legacy unproven allowances fail closed:
 
 1. the plain schema fixture loads;
 2. canonical state matches the reviewed expectations;

@@ -1,3 +1,10 @@
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+
 from __future__ import annotations
 
 import importlib.util
@@ -90,7 +97,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "validate_path_policy.py\n"
             "repository-owned path policy\n"
             "Tainted Grail Modding Editor.lnk\n"
-            "Tools → Tainted Grail SDK\n"
+            "Tools \u2192 Tainted Grail SDK\n"
             "TaintedGrailModdingEditor/user/log/Editor.log\n",
             encoding="utf-8",
         )

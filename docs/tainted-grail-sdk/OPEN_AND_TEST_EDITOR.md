@@ -34,7 +34,8 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py
 ```
 
 The commands must report that the dedicated project, icons, opener, persistence
-boundaries, and repository-derived clickable-entry trust contract are complete.
+boundaries, repository-owned path policy, and repository-derived clickable-entry
+trust contract are complete.
 
 ## 2. Check prerequisites
 

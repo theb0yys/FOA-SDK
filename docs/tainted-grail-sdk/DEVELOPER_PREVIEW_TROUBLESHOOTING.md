@@ -155,4 +155,7 @@ under `build/tg-sdk-developer-preview-0-launch`.
 Diagnostics output must be empty, or a previously verified bundle used with
 `--replace`. It must not be inside the project or workspace being inventoried.
 
+Inspect `diagnostics-manifest.json` to confirm the bundle contains only the
+documented allow-listed files and that redaction completed before sharing it.
+
 Nothing is uploaded automatically. Review every generated file before sharing.

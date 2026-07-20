@@ -117,6 +117,14 @@ def assert_redacted_text(text,label):
     if BEARER_PATTERN.search(text) or KNOWN_TOKEN_PATTERN.search(text) or URL_CREDENTIAL_PATTERN.search(text): raise DiagnosticsError(f"Diagnostics redaction failure in {label}: secret-like material remains.")
     if WINDOWS_PATH_PATTERN.search(text) or UNC_PATH_PATTERN.search(text) or PRIVATE_POSIX_PATH_PATTERN.search(text): raise DiagnosticsError(f"Diagnostics redaction failure in {label}: private absolute path remains.")
     if "\x00" in text: raise DiagnosticsError(f"Diagnostics redaction failure in {label}: NUL remains.")
+def assert_redacted_value(value,label):
+    if isinstance(value,dict):
+        for key,item in value.items():
+            assert_redacted_text(str(key),f"{label} key")
+            assert_redacted_value(item,f"{label}.{key}")
+    elif isinstance(value,list):
+        for index,item in enumerate(value): assert_redacted_value(item,f"{label}[{index}]")
+    elif isinstance(value,str): assert_redacted_text(value,label)
 def default_command_runner(command,cwd):
     try:
         p=subprocess.run(list(command),cwd=str(cwd),check=False,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding="utf-8",errors="replace",timeout=30)
@@ -164,7 +172,7 @@ def allowed_bundle_path(relative):
     return relative in {README_NAME,SUMMARY_NAME,SYSTEM_NAME,BUILD_NAME,VALIDATION_NAME,LAUNCH_NAME,INVENTORY_NAME} or (len(path.parts)==2 and path.parts[0]=="logs" and path.suffix==".log")
 def build_manifest(output_dir,generated_at):
     entries=[]
-    for path in sorted(output_dir.rglob("*")):
+    for path in sorted(output_dir.rglob("*"),key=lambda item:item.relative_to(output_dir).as_posix()):
         if not path.is_file() or path.name==MANIFEST_NAME: continue
         relative=path.relative_to(output_dir).as_posix()
         if not allowed_bundle_path(relative): raise DiagnosticsError(f"Diagnostics output contains a prohibited file: {relative}")
@@ -196,7 +204,10 @@ def verify_bundle(output_dir):
         if sha256_file(path)!=entry.get("sha256"): raise DiagnosticsError(f"Diagnostics hash mismatch: {relative}")
         try: text=path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc: raise DiagnosticsError(f"Diagnostics bundle file is not UTF-8 text: {relative}") from exc
-        assert_redacted_text(text,relative)
+        if path.suffix==".json":
+            try: assert_redacted_value(json.loads(text),relative)
+            except json.JSONDecodeError as exc: raise DiagnosticsError(f"Diagnostics bundle JSON is invalid: {relative}") from exc
+        else: assert_redacted_text(text,relative)
     if paths!=sorted(paths) or len(paths)!=len(set(paths)): raise DiagnosticsError("Diagnostics manifest paths must be sorted and unique.")
     actual=sorted(path.relative_to(output_dir).as_posix() for path in output_dir.rglob("*") if path.is_file() and path.name!=MANIFEST_NAME)
     if actual!=paths: raise DiagnosticsError("Diagnostics bundle file set does not match its manifest.")

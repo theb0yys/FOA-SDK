@@ -228,12 +228,7 @@ namespace TaintedGrailModdingSDK
                 return left.m_linkId < right.m_linkId;
             });
 
-        const bool hasPopulationData = !document.m_actorProfiles.empty()
-            || !document.m_troopProfiles.empty()
-            || !document.m_troopMembers.empty();
-        document.m_schemaVersion = hasPopulationData
-            ? PopulationCatalogSchemaVersion
-            : LegacyCatalogSchemaVersion;
+        document.m_schemaVersion = CurrentCatalogSchemaVersion;
         return document;
     }
 } // namespace TaintedGrailModdingSDK

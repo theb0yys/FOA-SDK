@@ -63,6 +63,8 @@ set(FILES
     Source/AdapterReleaseAssemblyEvidenceService.h
     Source/AdapterReleaseAssemblyResultContracts.cpp
     Source/AdapterReleaseAssemblyResultContracts.h
+    Source/AdapterReleaseSigningEvidenceService.cpp
+    Source/AdapterReleaseSigningEvidenceService.h
     Source/AdapterReleaseSigningResultContracts.cpp
     Source/AdapterReleaseSigningResultContracts.h
     Source/AdapterRuntimeResultCanonical.cpp

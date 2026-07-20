@@ -80,6 +80,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
             taintedgrailmoddingsdk_verifier_reconciliation_tests_files.cmake
             taintedgrailmoddingsdk_release_artifact_tests_files.cmake
             taintedgrailmoddingsdk_release_assembly_result_tests_files.cmake
+            taintedgrailmoddingsdk_release_signing_result_tests_files.cmake
         INCLUDE_DIRECTORIES
             PRIVATE
                 Source

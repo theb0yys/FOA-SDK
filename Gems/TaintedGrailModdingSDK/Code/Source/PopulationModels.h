@@ -23,10 +23,10 @@ namespace TaintedGrailModdingSDK
     inline constexpr AZ::u32 LegacyCatalogSchemaVersion = 1;
     inline constexpr AZ::u32 PopulationCatalogSchemaVersion = 2;
 
-    // Schema 2 is represented by the model but is not load/save supported until
-    // the dedicated migration and persistence unit proves lossless preservation.
+    // Schema 1 remains a load-only migration input. New durable catalog output
+    // is schema 2 after migration and complete population database validation.
     inline constexpr AZ::u32 CurrentCatalogSchemaVersion =
-        LegacyCatalogSchemaVersion;
+        PopulationCatalogSchemaVersion;
 
     enum class PopulationActorKind : AZ::u8
     {

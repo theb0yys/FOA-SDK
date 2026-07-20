@@ -10,8 +10,8 @@
 #include "CatalogDatabase.h"
 #include "CatalogGovernanceBlockerService.h"
 #include "CatalogGovernanceService.h"
-#include "CatalogPersistenceService.h"
 #include "CatalogPromotionService.h"
+#include "CatalogSchemaPersistenceService.h"
 #include "CatalogTransactionService.h"
 #include "EconomyBlockerService.h"
 #include "FoundationPersistenceBoundary.h"
@@ -131,7 +131,7 @@ namespace TaintedGrailModdingSDK
         FoundationPackPersistenceBoundary m_packPersistence;
         SourceImportService m_sourceImportService;
         SourceEvidencePersistenceService m_sourceEvidencePersistence;
-        CatalogPersistenceService m_catalogPersistence;
+        CatalogSchemaPersistenceService m_catalogPersistence;
         CatalogTransactionService m_catalogTransaction;
         CatalogPromotionService m_catalogPromotion;
         CatalogGovernanceService m_catalogGovernance;

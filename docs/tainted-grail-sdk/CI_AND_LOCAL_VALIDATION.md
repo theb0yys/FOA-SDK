@@ -26,8 +26,8 @@ This automatic pull-request static validation covers:
 The workflow uses a GitHub-hosted `ubuntu-latest` runner with read-only repository
 permissions. It does not use secrets or a self-hosted runner. Because O3DE is a
 separate pinned checkout, this job explicitly uses `--skip-source-policy`; it does
-not claim pinned O3DE source-policy coverage. A passing static job does not claim an
-O3DE build, compiled C++ execution, Windows editor startup, pane coverage, packaging,
+not claim pinned O3DE source-policy coverage. A passing static job does not claim an O3DE build,
+compiled C++ execution, Windows editor startup, pane coverage, packaging,
 deployment, signing, or FoA runtime behavior.
 
 ### Manual host workflows

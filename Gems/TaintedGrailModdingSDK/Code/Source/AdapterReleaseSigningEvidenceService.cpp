@@ -7,6 +7,7 @@
 
 #include "AdapterReleaseSigningEvidenceService.h"
 
+#include "AdapterReleaseSigningHardening.h"
 #include "CanonicalFingerprint.h"
 #include "PackagePathValidation.h"
 
@@ -52,26 +53,6 @@ namespace TaintedGrailModdingSDK
             result.m_issues.push_back(AZStd::move(issue));
         }
 
-        bool IsBoundedPublicText(
-            const AZStd::string& value,
-            size_t maximumLength,
-            bool requireNonEmpty = true)
-        {
-            if ((requireNonEmpty && value.empty()) || value.size() > maximumLength)
-            {
-                return false;
-            }
-            for (char character : value)
-            {
-                const unsigned char byte = static_cast<unsigned char>(character);
-                if (byte < 0x20 || byte == 0x7f)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         bool ContainsDuplicate(const AZStd::vector<AZStd::string>& values)
         {
             AZStd::vector<AZStd::string> sorted = values;
@@ -108,14 +89,7 @@ namespace TaintedGrailModdingSDK
             }
             AZStd::sort(left.begin(), left.end());
             AZStd::sort(right.begin(), right.end());
-            for (size_t index = 0; index < left.size(); ++index)
-            {
-                if (left[index] != right[index])
-                {
-                    return false;
-                }
-            }
-            return true;
+            return left == right;
         }
 
         bool HasCapability(
@@ -144,6 +118,18 @@ namespace TaintedGrailModdingSDK
                 }
             }
             return false;
+        }
+
+        bool HasOnlyKnownCapabilities(const AdapterReleaseSignerReview& review)
+        {
+            for (AdapterReleaseSignerCapability capability : review.m_capabilities)
+            {
+                if (!IsKnownReleaseSignerCapability(capability))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         const AdapterReleaseSignatureArtifact* FindSignatureArtifact(
@@ -190,39 +176,27 @@ namespace TaintedGrailModdingSDK
             return nullptr;
         }
 
-        AZStd::string UnsignedSigningString(AZ::u64 value)
-        {
-            char buffer[32];
-            size_t position = sizeof(buffer);
-            do
-            {
-                buffer[--position] = static_cast<char>('0' + (value % 10));
-                value /= 10;
-            } while (value != 0);
-            return AZStd::string(buffer + position, sizeof(buffer) - position);
-        }
-
         void ValidateAssemblyAcceptance(
             const AdapterReleaseArtifactEnvelope& artifact,
             const AdapterReleaseAssemblyResultEnvelope& assembly,
-            const AdapterReleaseAssemblyEvidenceReturn& assemblyEvidence,
+            const AdapterReleaseAssemblyEvidenceReturn& suppliedEvidence,
             AdapterReleaseSigningEvidenceReturn& result,
             SigningValidationFlags& flags)
         {
+            const AdapterReleaseAssemblyEvidenceReturn rebuiltEvidence =
+                RebuildReleaseAssemblyEvidence(artifact, assembly);
             const bool artifactReady =
                 artifact.m_status == AdapterReleaseArtifactEnvelopeStatus::Ready
                 && artifact.m_metadataReady
                 && !artifact.m_canonicalJson.empty();
-            const bool acceptedEvidence = assemblyEvidence.m_contractValid
-                && assemblyEvidence.m_accepted
-                && assemblyEvidence.m_status
+            const bool acceptedEvidence =
+                rebuiltEvidence.m_contractValid
+                && rebuiltEvidence.m_accepted
+                && rebuiltEvidence.m_status
                     == AdapterReleaseAssemblyEnvelopeStatus::Accepted
-                && assemblyEvidence.m_resultId == assembly.m_resultId
-                && assemblyEvidence.m_artifactId == assembly.m_artifactId
-                && assemblyEvidence.m_artifactFingerprint
-                    == assembly.m_artifactFingerprint
-                && assemblyEvidence.m_resultFingerprint
-                    == assembly.m_resultFingerprint;
+                && SameReleaseAssemblyEvidenceReturn(
+                    suppliedEvidence,
+                    rebuiltEvidence);
             const bool successfulArchive =
                 assembly.m_archive.m_outcome
                     == AdapterReleaseAssemblyOutcome::Succeeded
@@ -233,7 +207,7 @@ namespace TaintedGrailModdingSDK
                     assembly.m_archive.m_archiveId)
                 && IsAdapterReleaseSigningSafeReference(
                     assembly.m_archive.m_archivePath)
-                && IsBoundedPublicText(
+                && IsReleaseSigningPublicText(
                     assembly.m_archive.m_archiveFormat,
                     64)
                 && IsAdapterReleaseSigningFingerprint(
@@ -247,9 +221,11 @@ namespace TaintedGrailModdingSDK
                     result,
                     flags.m_assemblyResultNotAccepted,
                     "release_signing.assembly_result_not_accepted",
-                    "Release signing evidence requires one ready release artifact and "
-                    "one exact accepted assembly/checksum result with a successful "
-                    "reported archive.");
+                    "Release signing requires a ready artifact, a successful reported "
+                    "archive, and the exact deterministic assembly-evidence return "
+                    "rebuilt from the supplied artifact and assembly result. Counts, "
+                    "issues, candidate documents, and every no-operation flag must "
+                    "match that rebuilt return.");
             }
         }
 
@@ -277,18 +253,22 @@ namespace TaintedGrailModdingSDK
         {
             const AdapterReleaseSignerReview& review = envelope.m_signerReview;
             const bool valid =
-                review.m_decision == AdapterReleaseSignerReviewDecision::Accepted
+                IsKnownReleaseSignerReviewDecision(review.m_decision)
+                && review.m_decision
+                    == AdapterReleaseSignerReviewDecision::Accepted
                 && IsAdapterReleaseSigningStableId(review.m_reviewId)
                 && IsAdapterReleaseSigningStableId(review.m_signerToolId)
                 && IsAdapterReleaseSigningSemanticVersion(
                     review.m_signerToolVersion)
                 && IsAdapterReleaseSigningFingerprint(
                     review.m_signerToolFingerprint)
-                && IsBoundedPublicText(review.m_reviewer, 256)
+                && IsReleaseSigningPublicText(review.m_reviewer, 256)
+                && IsReleaseSigningPublicText(review.m_notes, 2048, true)
                 && HasStableUniqueIds(review.m_evidenceIds, true)
                 && IsAdapterReleaseSigningUtcTimestamp(review.m_reviewedAtUtc)
                 && IsAdapterReleaseSigningUtcTimestamp(envelope.m_capturedAtUtc)
                 && review.m_reviewedAtUtc <= envelope.m_capturedAtUtc
+                && HasOnlyKnownCapabilities(review)
                 && HasCapability(
                     review,
                     AdapterReleaseSignerCapability::ArchiveSigning)
@@ -303,8 +283,8 @@ namespace TaintedGrailModdingSDK
                     flags.m_signerUnreviewed,
                     "release_signing.signer_unreviewed",
                     "The external signer requires an accepted, evidence-backed, "
-                    "time-bounded review with archive-signing and signature-artifact "
-                    "fingerprint capabilities.");
+                    "bounded public review with known archive-signing and "
+                    "signature-artifact-fingerprint capabilities.");
             }
         }
 
@@ -318,7 +298,8 @@ namespace TaintedGrailModdingSDK
         {
             const AZStd::string expectedArtifactFingerprint =
                 CalculateCanonicalSha256(artifact.m_canonicalJson);
-            const bool exactBinding = signing.m_artifactId == artifact.m_artifactId
+            const bool exactBinding =
+                signing.m_artifactId == artifact.m_artifactId
                 && signing.m_artifactId == assembly.m_artifactId
                 && signing.m_artifactFingerprint == expectedArtifactFingerprint
                 && signing.m_artifactFingerprint
@@ -379,13 +360,15 @@ namespace TaintedGrailModdingSDK
         {
             const AdapterReleaseSigningIntent& intent = artifact.m_signingIntent;
             const bool exactBinding =
-                intent.m_decision
+                IsKnownReleaseSigningIntentDecision(intent.m_decision)
+                && IsKnownReleaseSigningIdentityKind(intent.m_identityKind)
+                && intent.m_decision
                     == AdapterReleaseSigningIntentDecision::SignExternally
                 && intent.m_identityKind
                     != AdapterReleaseSigningIdentityKind::None
                 && IsAdapterReleaseSigningStableId(intent.m_intentId)
                 && IsAdapterReleaseSigningStableId(intent.m_signerId)
-                && IsBoundedPublicText(intent.m_identityLocator, 1024)
+                && IsReleaseSigningPublicText(intent.m_identityLocator, 1024)
                 && IsAdapterReleaseSigningFingerprint(
                     intent.m_identityFingerprint)
                 && signing.m_signingIntentId == intent.m_intentId
@@ -402,7 +385,7 @@ namespace TaintedGrailModdingSDK
                     flags.m_signingIntentBindingMismatch,
                     "release_signing.signing_intent_binding_mismatch",
                     "The signing result must reproduce the exact approved external "
-                    "signing intent, signer identity, locator, and fingerprint.");
+                    "signing intent, signer identity, public locator, and fingerprint.");
             }
         }
 
@@ -411,7 +394,11 @@ namespace TaintedGrailModdingSDK
             AdapterReleaseSigningEvidenceReturn& result,
             SigningValidationFlags& flags)
         {
-            const bool valid = envelope.m_contractVersion == 1
+            const bool valid =
+                IsReleaseSigningEnvelopeWithinLimits(envelope)
+                && AreReleaseSigningEnumsKnown(envelope)
+                && IsReleaseSigningEnvelopePublic(envelope)
+                && envelope.m_contractVersion == 1
                 && IsAdapterReleaseSigningStableId(envelope.m_resultId)
                 && IsAdapterReleaseSigningFingerprint(
                     envelope.m_resultFingerprint)
@@ -424,7 +411,6 @@ namespace TaintedGrailModdingSDK
                     envelope.m_assemblyResultFingerprint)
                 && IsAdapterReleaseSigningStableId(envelope.m_archiveId)
                 && IsAdapterReleaseSigningSafeReference(envelope.m_archivePath)
-                && IsBoundedPublicText(envelope.m_archiveFormat, 64)
                 && envelope.m_archiveByteSize > 0
                 && IsAdapterReleaseSigningFingerprint(
                     envelope.m_archiveFingerprint)
@@ -436,15 +422,12 @@ namespace TaintedGrailModdingSDK
                 && IsAdapterReleaseSigningFingerprint(
                     envelope.m_manifestFingerprint)
                 && IsAdapterReleaseSigningStableId(envelope.m_packId)
-                && IsAdapterReleaseSigningSemanticVersion(envelope.m_packVersion)
+                && IsAdapterReleaseSigningSemanticVersion(
+                    envelope.m_packVersion)
                 && IsAdapterReleaseSigningStableId(envelope.m_profileId)
-                && IsBoundedPublicText(envelope.m_gameVersion, 256)
-                && IsBoundedPublicText(envelope.m_branch, 256)
-                && IsBoundedPublicText(envelope.m_runtimeTarget, 64)
                 && IsAdapterReleaseSigningStableId(
                     envelope.m_signingIntentId)
                 && IsAdapterReleaseSigningStableId(envelope.m_signerId)
-                && IsBoundedPublicText(envelope.m_identityLocator, 1024)
                 && IsAdapterReleaseSigningFingerprint(
                     envelope.m_identityFingerprint)
                 && IsAdapterReleaseSigningUtcTimestamp(
@@ -459,18 +442,20 @@ namespace TaintedGrailModdingSDK
                     result,
                     flags.m_envelopeInvalid,
                     "release_signing.envelope_invalid",
-                    "The signing-result envelope requires contract version one, "
-                    "stable exact bindings, bounded public metadata, safe relative "
-                    "references, lowercase SHA-256 fingerprints, and UTC timestamps.");
+                    "The signing-result envelope requires fixed collection/text "
+                    "limits, closed enum values, stable exact bindings, bounded public "
+                    "metadata, safe relative references, lowercase SHA-256 "
+                    "fingerprints, and UTC timestamps.");
             }
         }
 
         void ValidateSigningOutcome(
+            const AdapterReleaseAssemblyResultEnvelope& assembly,
             const AdapterReleaseSigningResultEnvelope& envelope,
             AdapterReleaseSigningEvidenceReturn& result,
             SigningValidationFlags& flags)
         {
-            bool valid = true;
+            bool valid = false;
             switch (envelope.m_outcome)
             {
             case AdapterReleaseSigningOutcome::NotAttempted:
@@ -497,6 +482,9 @@ namespace TaintedGrailModdingSDK
                         envelope.m_completedAtUtc)
                     && !envelope.m_failureIds.empty();
                 break;
+            default:
+                valid = false;
+                break;
             }
             if (!envelope.m_completedAtUtc.empty()
                 && (!IsAdapterReleaseSigningUtcTimestamp(
@@ -507,18 +495,24 @@ namespace TaintedGrailModdingSDK
             {
                 valid = false;
             }
+            if (!ReleaseSigningChronologyIsValid(assembly, envelope))
+            {
+                valid = false;
+            }
             if (!valid)
             {
                 AddSigningIssue(
                     result,
                     flags.m_signingOutcomeMismatch,
                     "release_signing.signing_outcome_mismatch",
-                    "Signing attempted state, outcome, completion time, signature "
-                    "artifacts, and failure references are not self-consistent.");
+                    "Signing attempted state, closed outcome, completion time, "
+                    "signature artifacts, failure references, archive completion, "
+                    "signer review, and capture chronology are not self-consistent.");
             }
         }
 
         void ValidateSignatureArtifacts(
+            const AdapterReleaseAssemblyResultEnvelope& assembly,
             const AdapterReleaseSigningResultEnvelope& envelope,
             AdapterReleaseSigningEvidenceReturn& result,
             SigningValidationFlags& flags)
@@ -539,10 +533,11 @@ namespace TaintedGrailModdingSDK
                         referenceIdentity.m_windowsIdentity);
                 }
                 bool valid =
-                    IsAdapterReleaseSigningStableId(
+                    IsKnownReleaseSignatureArtifactKind(artifact.m_kind)
+                    && IsAdapterReleaseSigningStableId(
                         artifact.m_signatureArtifactId)
                     && safeReference
-                    && IsBoundedPublicText(artifact.m_mediaType, 256)
+                    && IsReleaseSigningPublicText(artifact.m_mediaType, 256)
                     && artifact.m_byteSize > 0
                     && IsAdapterReleaseSigningFingerprint(
                         artifact.m_fingerprint)
@@ -554,6 +549,10 @@ namespace TaintedGrailModdingSDK
                     && HasStableUniqueIds(
                         artifact.m_diagnosticReferenceIds,
                         false)
+                    && assembly.m_archive.m_completedAtUtc
+                        <= artifact.m_createdAtUtc
+                    && envelope.m_signerReview.m_reviewedAtUtc
+                        <= artifact.m_createdAtUtc
                     && artifact.m_createdAtUtc <= envelope.m_capturedAtUtc;
                 if (!envelope.m_completedAtUtc.empty())
                 {
@@ -567,9 +566,11 @@ namespace TaintedGrailModdingSDK
                         result,
                         flags.m_signatureArtifactBindingMismatch,
                         "release_signing.signature_artifact_invalid",
-                        "Each signature artifact requires stable identity, a unique "
-                        "safe relative reference, non-zero size, exact archive binding, "
-                        "a lowercase SHA-256 fingerprint, and a bounded UTC timestamp.",
+                        "Each signature artifact requires a known kind, stable identity, "
+                        "a unique safe relative reference, bounded public media type, "
+                        "non-zero size, exact archive binding, a lowercase SHA-256 "
+                        "fingerprint, and chronology after archive completion and signer "
+                        "review but no later than signing completion/capture.",
                         artifact.m_signatureArtifactId);
                 }
             }
@@ -603,11 +604,10 @@ namespace TaintedGrailModdingSDK
                         envelope,
                         failure.m_signatureArtifactId);
                 const bool valid =
-                    IsAdapterReleaseSigningStableId(failure.m_failureId)
-                    && failure.m_kind
-                        != AdapterReleaseSigningFailureKind::Unknown
-                    && IsBoundedPublicText(failure.m_code, 128)
-                    && IsBoundedPublicText(failure.m_message, 2048)
+                    IsKnownReleaseSigningFailureKind(failure.m_kind)
+                    && IsAdapterReleaseSigningStableId(failure.m_failureId)
+                    && IsReleaseSigningPublicText(failure.m_code, 128)
+                    && IsReleaseSigningPublicText(failure.m_message, 2048)
                     && artifactBindingValid
                     && HasStableUniqueIds(
                         failure.m_diagnosticReferenceIds,
@@ -618,8 +618,9 @@ namespace TaintedGrailModdingSDK
                         result,
                         flags.m_failureDiagnosticBindingMismatch,
                         "release_signing.failure_invalid",
-                        "Signing failures require stable identity, a known kind, bounded "
-                        "public code and message, an optional existing artifact binding, "
+                        "Signing failures require stable identity, a known typed kind "
+                        "(including the representable unknown external kind), bounded "
+                        "public code/message, an optional existing artifact binding, "
                         "and unique diagnostic references.",
                         failure.m_signatureArtifactId,
                         failure.m_failureId);
@@ -640,7 +641,8 @@ namespace TaintedGrailModdingSDK
                         referenceIdentity.m_windowsIdentity);
                 }
                 bool valid =
-                    IsAdapterReleaseSigningStableId(diagnostic.m_diagnosticId)
+                    IsKnownReleaseSigningDiagnosticKind(diagnostic.m_kind)
+                    && IsAdapterReleaseSigningStableId(diagnostic.m_diagnosticId)
                     && safeReference
                     && IsAdapterReleaseSigningFingerprint(
                         diagnostic.m_fingerprint)
@@ -661,9 +663,9 @@ namespace TaintedGrailModdingSDK
                         result,
                         flags.m_failureDiagnosticBindingMismatch,
                         "release_signing.diagnostic_invalid",
-                        "Signing diagnostics require stable identity, a unique safe "
-                        "relative reference, a lowercase SHA-256 fingerprint, and only "
-                        "existing signature-artifact bindings.",
+                        "Signing diagnostics require a known kind, stable identity, a "
+                        "unique safe relative reference, a lowercase SHA-256 fingerprint, "
+                        "and only existing signature-artifact bindings.",
                         {},
                         {},
                         diagnostic.m_diagnosticId);
@@ -902,7 +904,7 @@ namespace TaintedGrailModdingSDK
             document.m_source.m_toolVersion =
                 envelope.m_signerReview.m_signerToolVersion;
             document.m_source.m_importerId = "tg.release-signing-result";
-            document.m_source.m_importerVersion = "1";
+            document.m_source.m_importerVersion = "2";
             document.m_source.m_capturedAt = envelope.m_capturedAtUtc;
             document.m_source.m_importedAt = envelope.m_capturedAtUtc;
             document.m_source.m_limitations = limitations;
@@ -940,6 +942,7 @@ namespace TaintedGrailModdingSDK
 
         void BuildPrimaryEvidence(
             const AdapterReleaseSigningResultEnvelope& envelope,
+            const AZStd::string& authoritativeFingerprint,
             AdapterReleaseSigningEvidenceReturn& result)
         {
             const AZStd::string sourceId =
@@ -951,18 +954,21 @@ namespace TaintedGrailModdingSDK
                 "Release signing result " + envelope.m_resultId,
                 "release_signing_result",
                 locator,
-                envelope.m_resultFingerprint,
+                authoritativeFingerprint,
                 envelope,
                 "application/vnd.taintedgrail.release-signing-result+json",
-                "Contract-validated separately supplied signer metadata only. The TG "
-                "SDK did not open or modify the archive, load a key, resolve an "
-                "identity, sign or verify data, write a signature artifact, upload, "
-                "publish, launch FoA, call an adapter, mutate deployment, or modify a "
-                "save.");
+                "The source fingerprint is deterministically derived by the SDK over "
+                "the bounded signing-result metadata. The separately supplied "
+                "result fingerprint " + envelope.m_resultFingerprint
+                    + " is retained only as an unverified external claim. The TG SDK "
+                      "did not open or modify the archive, load a key, resolve an "
+                      "identity, sign or verify data, write a signature artifact, "
+                      "upload, publish, launch FoA, call an adapter, mutate deployment, "
+                      "or modify a save.");
 
             EvidenceDocument evidenceDocument;
             evidenceDocument.m_sourceId = sourceId;
-            evidenceDocument.m_sourceFingerprint = envelope.m_resultFingerprint;
+            evidenceDocument.m_sourceFingerprint = authoritativeFingerprint;
             evidenceDocument.m_profileId = envelope.m_profileId;
             evidenceDocument.m_gameVersion = envelope.m_gameVersion;
             evidenceDocument.m_branch = envelope.m_branch;
@@ -1038,8 +1044,7 @@ namespace TaintedGrailModdingSDK
             AZStd::sort(
                 artifacts.begin(),
                 artifacts.end(),
-                [](const AdapterReleaseSignatureArtifact* left,
-                   const AdapterReleaseSignatureArtifact* right)
+                [](const auto* left, const auto* right)
                 {
                     return left->m_signatureArtifactId
                         < right->m_signatureArtifactId;
@@ -1071,8 +1076,7 @@ namespace TaintedGrailModdingSDK
             AZStd::sort(
                 failures.begin(),
                 failures.end(),
-                [](const AdapterReleaseSigningFailure* left,
-                   const AdapterReleaseSigningFailure* right)
+                [](const auto* left, const auto* right)
                 {
                     return left->m_failureId < right->m_failureId;
                 });
@@ -1114,8 +1118,7 @@ namespace TaintedGrailModdingSDK
             AZStd::sort(
                 diagnostics.begin(),
                 diagnostics.end(),
-                [](const AdapterReleaseSigningDiagnosticReference* left,
-                   const AdapterReleaseSigningDiagnosticReference* right)
+                [](const auto* left, const auto* right)
                 {
                     return left->m_diagnosticId < right->m_diagnosticId;
                 });
@@ -1133,9 +1136,10 @@ namespace TaintedGrailModdingSDK
                     diagnostic->m_reference,
                     diagnostic->m_fingerprint,
                     envelope,
-                    "text/plain",
-                    "Referenced signer diagnostic content is not opened, persisted, "
-                    "parsed, or inspected by the TG SDK.");
+                    "application/octet-stream",
+                    "The diagnostic media type is unknown because referenced signer "
+                    "diagnostic content is not opened, persisted, parsed, or inspected "
+                    "by the TG SDK.");
 
                 EvidenceDocument evidenceDocument;
                 evidenceDocument.m_sourceId = sourceId;
@@ -1165,10 +1169,11 @@ namespace TaintedGrailModdingSDK
                 }
                 for (size_t index = 0; index < artifactIds.size(); ++index)
                 {
+                    const AZStd::string ordinal =
+                        DeterministicContractJson::UnsignedString(index + 1);
                     evidenceDocument.m_evidence.push_back(BuildEvidence(
                         "evidence.release-signing-diagnostic." + envelope.m_resultId
-                            + "." + diagnostic->m_diagnosticId + "."
-                            + UnsignedSigningString(index + 1),
+                            + "." + diagnostic->m_diagnosticId + "." + ordinal,
                         sourceDocument.m_source,
                         envelope,
                         "release-signature-artifact:" + artifactIds[index],
@@ -1179,7 +1184,7 @@ namespace TaintedGrailModdingSDK
                         "release_signing_diagnostic_reference",
                         diagnostic->m_reference,
                         "Diagnostics/" + diagnostic->m_diagnosticId + "/"
-                            + UnsignedSigningString(index + 1)));
+                            + ordinal));
                 }
                 result.m_sourceDocuments.push_back(AZStd::move(sourceDocument));
                 result.m_evidenceDocuments.push_back(AZStd::move(evidenceDocument));
@@ -1198,6 +1203,7 @@ namespace TaintedGrailModdingSDK
                 envelope.m_diagnosticReferences.size());
             result.m_sourceDocumentCount =
                 static_cast<AZ::u64>(result.m_sourceDocuments.size());
+            result.m_evidenceRecordCount = 0;
             for (const EvidenceDocument& document : result.m_evidenceDocuments)
             {
                 result.m_evidenceRecordCount +=
@@ -1245,6 +1251,7 @@ namespace TaintedGrailModdingSDK
     {
         AdapterReleaseSigningEvidenceReturn result;
         result.m_resultId = signingEnvelope.m_resultId;
+        result.m_reportedResultFingerprint = signingEnvelope.m_resultFingerprint;
         result.m_artifactId = signingEnvelope.m_artifactId;
         result.m_artifactFingerprint = signingEnvelope.m_artifactFingerprint;
         result.m_assemblyResultId = signingEnvelope.m_assemblyResultId;
@@ -1261,23 +1268,40 @@ namespace TaintedGrailModdingSDK
             result,
             flags);
         ValidateSigningRequested(artifactEnvelope, result, flags);
-        ValidateSignerReview(signingEnvelope, result, flags);
-        ValidateAssemblyBinding(
-            artifactEnvelope,
-            assemblyEnvelope,
-            assemblyEvidence,
-            signingEnvelope,
-            result,
-            flags);
-        ValidateSigningIntentBinding(
-            artifactEnvelope,
-            signingEnvelope,
-            result,
-            flags);
+
+        const bool bounded =
+            IsReleaseSigningEnvelopeWithinLimits(signingEnvelope);
         ValidateEnvelopeShape(signingEnvelope, result, flags);
-        ValidateSigningOutcome(signingEnvelope, result, flags);
-        ValidateSignatureArtifacts(signingEnvelope, result, flags);
-        ValidateFailureDiagnosticBindings(signingEnvelope, result, flags);
+        if (bounded)
+        {
+            ValidateSignerReview(signingEnvelope, result, flags);
+            ValidateAssemblyBinding(
+                artifactEnvelope,
+                assemblyEnvelope,
+                assemblyEvidence,
+                signingEnvelope,
+                result,
+                flags);
+            ValidateSigningIntentBinding(
+                artifactEnvelope,
+                signingEnvelope,
+                result,
+                flags);
+            ValidateSigningOutcome(
+                assemblyEnvelope,
+                signingEnvelope,
+                result,
+                flags);
+            ValidateSignatureArtifacts(
+                assemblyEnvelope,
+                signingEnvelope,
+                result,
+                flags);
+            ValidateFailureDiagnosticBindings(
+                signingEnvelope,
+                result,
+                flags);
+        }
 
         result.m_status = ResolveStatus(flags);
         result.m_contractValid = ContractIsValid(flags);
@@ -1286,7 +1310,12 @@ namespace TaintedGrailModdingSDK
         SortIssues(result);
         if (result.m_contractValid)
         {
-            BuildPrimaryEvidence(signingEnvelope, result);
+            result.m_authoritativeResultFingerprint =
+                CalculateReleaseSigningAuthorityFingerprint(signingEnvelope);
+            BuildPrimaryEvidence(
+                signingEnvelope,
+                result.m_authoritativeResultFingerprint,
+                result);
             BuildDiagnosticEvidence(signingEnvelope, result);
         }
         FinalizeCounts(signingEnvelope, result);

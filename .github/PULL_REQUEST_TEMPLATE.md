@@ -75,7 +75,7 @@ Rollback/revert plan:
 - [ ] Persistence round-trip/migration tests passed when applicable.
 - [ ] O3DE prerequisites and configure passed for the applicable host.
 - [ ] O3DE build completed for required targets.
-- [ ] Compiled `TaintedGrailModdingSDK.Catalog.Tests` executed and passed; zero matching tests is an error.
+- [ ] compiled `TaintedGrailModdingSDK.Catalog.Tests` executed and passed; zero matching tests is an error.
 - [ ] Manual editor/UI workflow verification passed, or the permitted risk acceptance is explicit.
 
 Results:

@@ -6,6 +6,6 @@
 #
 
 set(FILES
-    ../Installer/Source/Windows/InstalledEditorLauncher.cpp
-    ../Installer/Source/Windows/InstalledEditorLauncher.rc
+    ../../../Installer/Launcher/Windows/InstalledEditorLauncher.cpp
+    ../../../Installer/Launcher/Windows/InstalledEditorLauncher.rc
 )

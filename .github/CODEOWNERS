@@ -4,6 +4,7 @@
 /.github/ @theb0yys
 /Gems/ExternalToolchain/ @theb0yys
 /Gems/TaintedGrailModdingSDK/ @theb0yys
+/Plugins/ @theb0yys
 /TaintedGrailModdingEditor/ @theb0yys
 /Research/ @theb0yys
 /docs/tainted-grail-sdk/ @theb0yys

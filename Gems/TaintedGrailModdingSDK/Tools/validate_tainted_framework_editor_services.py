@@ -61,6 +61,7 @@ def validate(repo_root: Path) -> None:
         "GetConfigurationDefaults",
         "GetDiagnosticVocabulary",
         "BuildActivationPlan",
+        "m_candidateEvidenceSubmissionEligible",
     ):
         require(required in header, f"Public editor-service contract missing {required}")
 
@@ -99,8 +100,10 @@ def validate(repo_root: Path) -> None:
         "plan.m_catalogMutationAllowed = false",
     ):
         require(false_flag in implementation, f"Permanent no-authority flag missing: {false_flag}")
-    require("plan.m_candidateEvidenceSubmissionAllowed" in implementation,
-            "Governed candidate-evidence readiness must be explicit")
+    require("plan.m_candidateEvidenceSubmissionEligible" in implementation,
+            "Governed candidate-evidence eligibility must be explicit")
+    require("m_candidateEvidenceSubmissionAllowed" not in header + implementation,
+            "Editor service must not claim evidence submission authority")
 
     require("TaintedFrameworkEditorServices::Service m_taintedFrameworkEditorServices" in foundation_header,
             "Foundation must own one persistent editor-service instance")
@@ -124,7 +127,8 @@ def validate(repo_root: Path) -> None:
         "VersionDriftIsUnsupported",
         "OnlyRuntimeReportIsConsumerReady",
         "ActivationPlanIsReadOnlyAndDeterministic",
-        "BlockedPlanCannotSubmitCandidateEvidence",
+        "BlockedPlanIsNotEvidenceEligible",
+        "FoundationOwnsPersistentService",
     ):
         require(test_name in compiled_tests, f"Compiled service coverage missing {test_name}")
 
@@ -141,8 +145,9 @@ def main() -> int:
         return 1
     print(
         "Tainted Framework editor-service validation passed: exact compatibility, "
-        "deterministic read-only projections, persistent Foundation ownership, "
-        "production-linked tests, and no runtime/file/catalog authority."
+        "deterministic read-only projections, governed evidence eligibility, "
+        "persistent Foundation ownership, production-linked tests, and no "
+        "runtime/file/catalog authority."
     )
     return 0
 

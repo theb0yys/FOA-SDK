@@ -313,7 +313,7 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    bool CatalogDatabase::ReplaceFromDocument(const CatalogDocument& document, AZStd::string* error)
+    bool CatalogDatabase::ReplaceFromDocumentWithoutPopulation(const CatalogDocument& document, AZStd::string* error)
     {
         if (!document.UsesSupportedSchema())
         {
@@ -386,7 +386,7 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    void CatalogDatabase::Clear()
+    void CatalogDatabase::ClearWithoutPopulation()
     {
         m_records.clear();
         m_relationships.clear();
@@ -733,7 +733,7 @@ namespace TaintedGrailModdingSDK
         return coverage;
     }
 
-    CatalogDocument CatalogDatabase::BuildDocument(
+    CatalogDocument CatalogDatabase::BuildDocumentWithoutPopulation(
         const WorkspaceModel& workspace,
         const GameProfile& profile) const
     {

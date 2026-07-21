@@ -8,8 +8,8 @@
 
 """Developer Preview 0 prerequisite, configure, build, and validation commands.
 
-This command is a thin, non-installing wrapper around the repository's existing O3DE
-CMake and validation entry points. It does not launch FoA, deploy files, modify saves,
+FOA-SDK is the product checkout. O3DE is a separately resolved, exact-commit
+engine dependency. This command does not launch FoA, deploy files, modify saves,
 or invoke BepInEx, Harmony, Avalon Core runtime, or game APIs.
 """
 
@@ -30,18 +30,31 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Sequence
 
-PREVIEW_SCHEMA_VERSION = 1
+PREVIEW_SCHEMA_VERSION = 2
+ENGINE_LOCK_SCHEMA_VERSION = 1
 PREVIEW_NAME = "Developer Preview 0"
 PRIMARY_HOST = "Windows x64 Profile"
 DEFAULT_CONFIGURE_PRESET = "windows-vs-unity"
 DEFAULT_CONFIGURATION = "profile"
 PREVIEW_PROJECT_DIRECTORY = "TaintedGrailModdingEditor"
+ENGINE_LOCK_FILENAME = "o3de.lock.json"
+ENGINE_ROOT_ENVIRONMENT_VARIABLE = "FOA_O3DE_ROOT"
+BUILD_ROOT_ENVIRONMENT_VARIABLE = "FOA_BUILD_ROOT"
 EDITOR_TARGET = "Editor"
 ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"
 CATALOG_TEST_TARGET = "TaintedGrailModdingSDK.Catalog.Tests"
 CATALOG_TEST_PATTERN = r"TaintedGrailModdingSDK\.Catalog\.Tests"
 MINIMUM_PYTHON = (3, 10, 0)
 MINIMUM_CMAKE = (3, 23, 0)
+
+
+@dataclass(frozen=True)
+class EngineLock:
+    repository: str
+    commit: str
+    engine_name: str
+    engine_version: str
+    checkout_directory: str
 
 
 @dataclass(frozen=True)
@@ -73,12 +86,8 @@ class StepResult:
 ProcessExecutor = Callable[[Sequence[str], Path], int]
 
 
-def repository_root_from_script() -> Path:
+def product_root_from_script() -> Path:
     return Path(__file__).resolve().parents[3]
-
-
-def default_build_directory(repo_root: Path) -> Path:
-    return repo_root / "build" / "tg-sdk-developer-preview-0-windows-profile"
 
 
 def resolve_path(value: Path, base: Path) -> Path:
@@ -86,19 +95,6 @@ def resolve_path(value: Path, base: Path) -> Path:
     if not path.is_absolute():
         path = base / path
     return path.resolve(strict=False)
-
-
-def validate_repository_root(repo_root: Path) -> None:
-    required = (
-        repo_root / "engine.json",
-        repo_root / "CMakePresets.json",
-        repo_root / "Gems" / "TaintedGrailModdingSDK" / "gem.json",
-    )
-    missing = [str(path) for path in required if not path.is_file()]
-    if missing:
-        raise RuntimeError(
-            "The repository root is invalid; missing required files: " + ", ".join(missing)
-        )
 
 
 def is_relative_to(path: Path, parent: Path) -> bool:
@@ -109,13 +105,184 @@ def is_relative_to(path: Path, parent: Path) -> bool:
         return False
 
 
-def validate_build_directory(repo_root: Path, build_dir: Path, *, require_configured: bool) -> None:
-    if build_dir == repo_root:
-        raise RuntimeError("The build directory must not be the repository root.")
-    if is_relative_to(repo_root, build_dir):
-        raise RuntimeError("The build directory must not contain the repository checkout.")
-    if is_relative_to(build_dir, repo_root / ".git"):
-        raise RuntimeError("The build directory must not be inside .git.")
+def validate_product_root(product_root: Path) -> None:
+    required = (
+        product_root / ENGINE_LOCK_FILENAME,
+        product_root / PREVIEW_PROJECT_DIRECTORY / "project.json",
+        product_root / "Gems" / "TaintedGrailModdingSDK" / "gem.json",
+        product_root / "Gems" / "ExternalToolchain" / "gem.json",
+    )
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise RuntimeError(
+            "The FOA-SDK product root is invalid; missing required files: " + ", ".join(missing)
+        )
+
+
+def load_engine_lock(product_root: Path) -> EngineLock:
+    lock_path = product_root / ENGINE_LOCK_FILENAME
+    try:
+        payload = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Unable to read {lock_path}: {exc}") from exc
+
+    required_fields = (
+        "schema_version",
+        "repository",
+        "commit",
+        "engine_name",
+        "engine_version",
+        "checkout_directory",
+    )
+    missing = [field for field in required_fields if field not in payload]
+    if missing:
+        raise RuntimeError(f"{lock_path} is missing required fields: {', '.join(missing)}")
+    if payload["schema_version"] != ENGINE_LOCK_SCHEMA_VERSION:
+        raise RuntimeError(
+            f"Unsupported O3DE lock schema {payload['schema_version']}; "
+            f"expected {ENGINE_LOCK_SCHEMA_VERSION}."
+        )
+
+    string_fields = required_fields[1:]
+    invalid = [
+        field
+        for field in string_fields
+        if not isinstance(payload[field], str) or not payload[field].strip()
+    ]
+    if invalid:
+        raise RuntimeError(f"{lock_path} has invalid string fields: {', '.join(invalid)}")
+
+    commit = payload["commit"].strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+        raise RuntimeError(f"{lock_path} commit must be a full 40-character Git SHA.")
+    checkout_directory = payload["checkout_directory"].strip()
+    if Path(checkout_directory).name != checkout_directory or checkout_directory in {".", ".."}:
+        raise RuntimeError(f"{lock_path} checkout_directory must be one directory name.")
+
+    return EngineLock(
+        repository=payload["repository"].strip(),
+        commit=commit,
+        engine_name=payload["engine_name"].strip(),
+        engine_version=payload["engine_version"].strip(),
+        checkout_directory=checkout_directory,
+    )
+
+
+def default_engine_root(product_root: Path, lock: EngineLock) -> Path:
+    configured = os.environ.get(ENGINE_ROOT_ENVIRONMENT_VARIABLE)
+    if configured:
+        return resolve_path(Path(configured), Path.cwd())
+
+    sibling = product_root.parent / lock.checkout_directory
+    if sibling.is_dir():
+        return sibling.resolve(strict=False)
+
+    # Transitional compatibility while the product still lives in the inherited
+    # engine tree. This fallback is removed by the history-extraction unit.
+    if (product_root / "engine.json").is_file() and (product_root / "CMakePresets.json").is_file():
+        return product_root.resolve(strict=False)
+    return sibling.resolve(strict=False)
+
+
+def default_build_directory(product_root: Path) -> Path:
+    configured = os.environ.get(BUILD_ROOT_ENVIRONMENT_VARIABLE)
+    if configured:
+        build_root = resolve_path(Path(configured), Path.cwd())
+    else:
+        build_root = product_root.parent / "foa-build"
+    return build_root / "tg-sdk-developer-preview-0-windows-profile"
+
+
+def read_engine_descriptor(engine_root: Path) -> dict:
+    descriptor_path = engine_root / "engine.json"
+    try:
+        payload = json.loads(descriptor_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Unable to read O3DE engine descriptor {descriptor_path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"O3DE engine descriptor must be a JSON object: {descriptor_path}")
+    return payload
+
+
+def validate_engine_root(engine_root: Path, lock: EngineLock) -> None:
+    required = (
+        engine_root / "engine.json",
+        engine_root / "CMakePresets.json",
+        engine_root / "scripts" / "commit_validation" / "validate_file_or_folder.py",
+    )
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise RuntimeError(
+            "The O3DE engine root is invalid; missing required files: " + ", ".join(missing)
+        )
+
+    descriptor = read_engine_descriptor(engine_root)
+    if descriptor.get("engine_name") != lock.engine_name:
+        raise RuntimeError(
+            f"O3DE engine name mismatch: expected {lock.engine_name!r}, "
+            f"found {descriptor.get('engine_name')!r}."
+        )
+    if descriptor.get("version") != lock.engine_version:
+        raise RuntimeError(
+            f"O3DE engine version mismatch: expected {lock.engine_version!r}, "
+            f"found {descriptor.get('version')!r}."
+        )
+
+
+def capture_command(command: Sequence[str], cwd: Path) -> tuple[int, str]:
+    try:
+        completed = subprocess.run(
+            list(command),
+            cwd=str(cwd),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError as exc:
+        return 127, str(exc)
+    return int(completed.returncode), completed.stdout.strip()
+
+
+def engine_checkout_commit(engine_root: Path) -> tuple[int, str]:
+    return capture_command(("git", "-C", str(engine_root), "rev-parse", "HEAD"), engine_root)
+
+
+def validate_engine_pin(engine_root: Path, lock: EngineLock) -> None:
+    code, output = engine_checkout_commit(engine_root)
+    if code != 0:
+        raise RuntimeError(f"Unable to resolve the O3DE checkout commit: {output or code}")
+    actual = output.splitlines()[-1].strip().lower()
+    if actual != lock.commit:
+        raise RuntimeError(
+            f"O3DE checkout commit mismatch: expected {lock.commit}, found {actual}. "
+            "Checkout the exact commit recorded in o3de.lock.json."
+        )
+
+
+def validate_build_directory(
+    product_root: Path,
+    engine_root: Path,
+    build_dir: Path,
+    *,
+    require_configured: bool,
+) -> None:
+    if build_dir in {product_root, engine_root}:
+        raise RuntimeError("The build directory must be separate from product_root and engine_root.")
+    if is_relative_to(product_root, build_dir):
+        raise RuntimeError("The build directory must not contain the FOA-SDK checkout.")
+    if is_relative_to(build_dir, product_root):
+        raise RuntimeError("The build directory must not be inside the FOA-SDK checkout.")
+    if is_relative_to(engine_root, build_dir):
+        raise RuntimeError("The build directory must not contain the O3DE checkout.")
+    if is_relative_to(build_dir, engine_root):
+        raise RuntimeError("The build directory must not be inside the O3DE checkout.")
+    if is_relative_to(build_dir, product_root / ".git") or is_relative_to(
+        build_dir, engine_root / ".git"
+    ):
+        raise RuntimeError("The build directory must not be inside a Git metadata directory.")
 
     cache_path = build_dir / "CMakeCache.txt"
     if require_configured and not cache_path.is_file():
@@ -128,18 +295,18 @@ def validate_build_directory(repo_root: Path, build_dir: Path, *, require_config
         match = re.search(r"^CMAKE_HOME_DIRECTORY:INTERNAL=(.+)$", cache, re.MULTILINE)
         if match:
             configured_source = Path(match.group(1).strip()).resolve(strict=False)
-            if configured_source != repo_root:
+            if configured_source != engine_root:
                 raise RuntimeError(
-                    f"The build directory belongs to another source tree: {configured_source}"
+                    f"The build directory belongs to another engine source tree: {configured_source}"
                 )
         if require_configured:
             projects_match = re.search(r"^LY_PROJECTS:STRING=(.*)$", cache, re.MULTILINE)
             configured_projects = {
-                resolve_path(Path(value.strip()), repo_root)
+                resolve_path(Path(value.strip()), engine_root)
                 for value in (projects_match.group(1).split(";") if projects_match else ())
                 if value.strip()
             }
-            required_project = (repo_root / PREVIEW_PROJECT_DIRECTORY).resolve(strict=False)
+            required_project = (product_root / PREVIEW_PROJECT_DIRECTORY).resolve(strict=False)
             if required_project not in configured_projects:
                 raise RuntimeError(
                     "The build directory is not configured for the dedicated "
@@ -173,23 +340,6 @@ def default_executor(command: Sequence[str], cwd: Path) -> int:
     return int(completed.returncode)
 
 
-def capture_command(command: Sequence[str], cwd: Path) -> tuple[int, str]:
-    try:
-        completed = subprocess.run(
-            list(command),
-            cwd=str(cwd),
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-    except OSError as exc:
-        return 127, str(exc)
-    return int(completed.returncode), completed.stdout.strip()
-
-
 def locate_vswhere() -> Path | None:
     from_path = shutil.which("vswhere")
     if from_path:
@@ -202,15 +352,13 @@ def locate_vswhere() -> Path | None:
     return None
 
 
-def visual_studio_detail(repo_root: Path) -> tuple[bool, str]:
+def visual_studio_detail(product_root: Path) -> tuple[bool, str]:
     cl_path = shutil.which("cl")
     if cl_path:
         return True, f"MSVC compiler found on PATH: {cl_path}"
-
     vswhere = locate_vswhere()
     if not vswhere:
         return False, "Visual Studio Build Tools were not found on PATH and vswhere.exe was not found."
-
     code, output = capture_command(
         (
             str(vswhere),
@@ -222,7 +370,7 @@ def visual_studio_detail(repo_root: Path) -> tuple[bool, str]:
             "-property",
             "installationPath",
         ),
-        repo_root,
+        product_root,
     )
     if code == 0 and output:
         return True, f"Visual Studio C++ tools found: {output.splitlines()[-1]}"
@@ -235,13 +383,13 @@ def executable_version_check(
     executable: str,
     arguments: tuple[str, ...],
     minimum: tuple[int, int, int] | None,
-    repo_root: Path,
+    product_root: Path,
     remediation: str,
 ) -> CheckResult:
     path = shutil.which(executable)
     if not path:
         return CheckResult(name, "failed", True, f"{executable} was not found on PATH.", remediation)
-    code, output = capture_command((path, *arguments), repo_root)
+    code, output = capture_command((path, *arguments), product_root)
     if code != 0:
         return CheckResult(name, "failed", True, output or f"{executable} returned {code}.", remediation)
     if minimum is None:
@@ -267,9 +415,13 @@ def editor_candidates(build_dir: Path) -> tuple[Path, ...]:
     )
 
 
-def collect_prerequisite_checks(repo_root: Path, build_dir: Path) -> list[CheckResult]:
+def collect_prerequisite_checks(
+    product_root: Path,
+    engine_root: Path,
+    build_dir: Path,
+    lock: EngineLock,
+) -> list[CheckResult]:
     checks: list[CheckResult] = []
-
     system = platform.system()
     machine = platform.machine().lower()
     windows_ok = system == "Windows"
@@ -296,19 +448,33 @@ def collect_prerequisite_checks(repo_root: Path, build_dir: Path) -> list[CheckR
     )
 
     try:
-        validate_repository_root(repo_root)
-        checks.append(CheckResult("repository", "passed", True, f"Repository root: {repo_root}"))
+        validate_product_root(product_root)
+        checks.append(CheckResult("product-root", "passed", True, f"FOA-SDK: {product_root}"))
     except RuntimeError as exc:
         checks.append(
             CheckResult(
-                "repository",
+                "product-root",
                 "failed",
                 True,
                 str(exc),
-                "Run the command from this O3DE repository or pass --repo-root explicitly.",
+                "Run from the FOA-SDK checkout or pass --product-root explicitly.",
             )
         )
         return checks
+
+    try:
+        validate_engine_root(engine_root, lock)
+        checks.append(CheckResult("engine-root", "passed", True, f"O3DE: {engine_root}"))
+    except RuntimeError as exc:
+        checks.append(
+            CheckResult(
+                "engine-root",
+                "failed",
+                True,
+                str(exc),
+                f"Clone {lock.repository} beside FOA-SDK or pass --engine-root.",
+            )
+        )
 
     checks.append(
         executable_version_check(
@@ -316,32 +482,53 @@ def collect_prerequisite_checks(repo_root: Path, build_dir: Path) -> list[CheckR
             executable="cmake",
             arguments=("--version",),
             minimum=MINIMUM_CMAKE,
-            repo_root=repo_root,
+            product_root=product_root,
             remediation=f"Install CMake {version_text(MINIMUM_CMAKE)} or newer and place it on PATH.",
         )
     )
-    checks.append(
-        executable_version_check(
-            name="git",
-            executable="git",
-            arguments=("--version",),
-            minimum=None,
-            repo_root=repo_root,
-            remediation="Install Git and place it on PATH.",
-        )
+    git_check = executable_version_check(
+        name="git",
+        executable="git",
+        arguments=("--version",),
+        minimum=None,
+        product_root=product_root,
+        remediation="Install Git and place it on PATH.",
     )
+    checks.append(git_check)
     checks.append(
         executable_version_check(
             name="git-lfs",
             executable="git",
             arguments=("lfs", "version"),
             minimum=None,
-            repo_root=repo_root,
+            product_root=product_root,
             remediation="Install Git LFS, then run 'git lfs install'.",
         )
     )
 
-    vs_ok, vs_detail = visual_studio_detail(repo_root)
+    if git_check.status == "passed":
+        try:
+            validate_engine_pin(engine_root, lock)
+            checks.append(
+                CheckResult(
+                    "o3de-commit",
+                    "passed",
+                    True,
+                    f"Pinned O3DE commit: {lock.commit}",
+                )
+            )
+        except RuntimeError as exc:
+            checks.append(
+                CheckResult(
+                    "o3de-commit",
+                    "failed",
+                    True,
+                    str(exc),
+                    f"Run 'git -C {engine_root} checkout {lock.commit}'.",
+                )
+            )
+
+    vs_ok, vs_detail = visual_studio_detail(product_root)
     checks.append(
         CheckResult(
             "visual-studio-cpp",
@@ -370,14 +557,16 @@ def collect_prerequisite_checks(repo_root: Path, build_dir: Path) -> list[CheckR
                 "o3de-third-party-path",
                 "informational",
                 False,
-                "LY_3RDPARTY_PATH is not set; O3DE configure will resolve packages using repository defaults.",
+                "LY_3RDPARTY_PATH is not set; O3DE configure will resolve packages using engine defaults.",
             )
         )
 
     cache_path = build_dir / "CMakeCache.txt"
     if cache_path.is_file():
         try:
-            validate_build_directory(repo_root, build_dir, require_configured=True)
+            validate_build_directory(
+                product_root, engine_root, build_dir, require_configured=True
+            )
             build_status = CheckResult("build-directory", "passed", False, f"Configured: {build_dir}")
         except RuntimeError as exc:
             build_status = CheckResult(
@@ -422,18 +611,23 @@ def required_checks_pass(checks: Sequence[CheckResult]) -> bool:
     return all(check.status == "passed" for check in checks if check.required)
 
 
-def configure_command(repo_root: Path, build_dir: Path, cmake: str = "cmake") -> tuple[str, ...]:
+def configure_command(
+    product_root: Path,
+    engine_root: Path,
+    build_dir: Path,
+    cmake: str = "cmake",
+) -> tuple[str, ...]:
     return (
         cmake,
         "--preset",
         DEFAULT_CONFIGURE_PRESET,
         "-S",
-        str(repo_root),
+        str(engine_root),
         "-B",
         str(build_dir),
         "-A",
         "x64",
-        f"-DLY_PROJECTS={repo_root / PREVIEW_PROJECT_DIRECTORY}",
+        f"-DLY_PROJECTS={product_root / PREVIEW_PROJECT_DIRECTORY}",
     )
 
 
@@ -451,8 +645,14 @@ def build_command(build_dir: Path, cmake: str = "cmake") -> tuple[str, ...]:
     )
 
 
-def validation_plan(repo_root: Path, build_dir: Path, ctest: str = "ctest") -> list[CommandStep]:
-    tools = repo_root / "Gems" / "TaintedGrailModdingSDK" / "Tools"
+def validation_plan(
+    product_root: Path,
+    engine_root: Path,
+    build_dir: Path,
+    ctest: str = "ctest",
+) -> list[CommandStep]:
+    tools = product_root / "Gems" / "TaintedGrailModdingSDK" / "Tools"
+    source_policy = engine_root / "scripts" / "commit_validation" / "validate_file_or_folder.py"
     return [
         CommandStep(
             "developer-preview-command-tests",
@@ -466,38 +666,38 @@ def validation_plan(repo_root: Path, build_dir: Path, ctest: str = "ctest") -> l
                 "-p",
                 "test_developer_preview.py",
             ),
-            str(repo_root),
+            str(product_root),
         ),
         CommandStep(
             "developer-preview-contract",
             (sys.executable, str(tools / "validate_developer_preview.py")),
-            str(repo_root),
+            str(product_root),
         ),
         CommandStep(
             "foundation",
             (sys.executable, str(tools / "validate_foundation.py")),
-            str(repo_root),
+            str(product_root),
         ),
         CommandStep(
             "governance-hardening",
             (sys.executable, str(tools / "validate_governance_hardening.py")),
-            str(repo_root),
+            str(product_root),
         ),
         CommandStep(
             "catalog-contract",
             (sys.executable, str(tools / "validate_catalog_tests.py")),
-            str(repo_root),
+            str(product_root),
         ),
         CommandStep(
             "o3de-source-policy",
             (
                 sys.executable,
                 "-u",
-                str(repo_root / "scripts" / "commit_validation" / "validate_file_or_folder.py"),
+                str(source_policy),
                 "--path",
-                "Gems/TaintedGrailModdingSDK",
+                str(product_root / "Gems" / "TaintedGrailModdingSDK"),
             ),
-            str(repo_root),
+            str(product_root),
         ),
         CommandStep(
             "compiled-catalog-tests",
@@ -511,7 +711,7 @@ def validation_plan(repo_root: Path, build_dir: Path, ctest: str = "ctest") -> l
                 "-R",
                 CATALOG_TEST_PATTERN,
             ),
-            str(repo_root),
+            str(product_root),
         ),
     ]
 
@@ -560,22 +760,32 @@ def atomic_write_json(path: Path, payload: dict) -> None:
     temporary.replace(path)
 
 
-def prerequisite_payload(repo_root: Path, build_dir: Path, checks: Sequence[CheckResult]) -> dict:
+def prerequisite_payload(
+    product_root: Path,
+    engine_root: Path,
+    build_dir: Path,
+    lock: EngineLock,
+    checks: Sequence[CheckResult],
+) -> dict:
     return {
         "schema_version": PREVIEW_SCHEMA_VERSION,
         "preview": PREVIEW_NAME,
         "command": "prerequisites",
         "primary_host": PRIMARY_HOST,
-        "repo_root": str(repo_root),
-        "build_dir": str(build_dir),
+        "product_root": str(product_root),
+        "engine_root": str(engine_root),
+        "engine_commit": lock.commit,
+        "build_root": str(build_dir),
         "status": "passed" if required_checks_pass(checks) else "failed",
         "checks": [asdict(check) for check in checks],
     }
 
 
 def validation_payload(
-    repo_root: Path,
+    product_root: Path,
+    engine_root: Path,
     build_dir: Path,
+    lock: EngineLock,
     results: Sequence[StepResult],
     exit_code: int,
     *,
@@ -585,8 +795,10 @@ def validation_payload(
         "schema_version": PREVIEW_SCHEMA_VERSION,
         "preview": PREVIEW_NAME,
         "command": "validate",
-        "repo_root": str(repo_root),
-        "build_dir": str(build_dir),
+        "product_root": str(product_root),
+        "engine_root": str(engine_root),
+        "engine_commit": lock.commit,
+        "build_root": str(build_dir),
         "configuration": DEFAULT_CONFIGURATION,
         "status": "planned" if dry_run else ("passed" if exit_code == 0 else "failed"),
         "exit_code": None if dry_run else exit_code,
@@ -595,15 +807,26 @@ def validation_payload(
 
 
 def add_common_paths(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--repo-root", type=Path, help="O3DE repository root. Defaults to this checkout.")
-    parser.add_argument("--build-dir", type=Path, help="Explicit preview build directory.")
+    parser.add_argument(
+        "--product-root",
+        "--repo-root",
+        dest="product_root",
+        type=Path,
+        help="FOA-SDK product checkout. --repo-root remains a temporary compatibility alias.",
+    )
+    parser.add_argument(
+        "--engine-root",
+        type=Path,
+        help=f"Exact O3DE checkout. Defaults to ${ENGINE_ROOT_ENVIRONMENT_VARIABLE}, then a sibling checkout.",
+    )
+    parser.add_argument("--build-dir", type=Path, help="Explicit build root.")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    prerequisites = subparsers.add_parser("prerequisites", help="Check the primary host and build prerequisites.")
+    prerequisites = subparsers.add_parser("prerequisites", help="Check host, product, engine, and build prerequisites.")
     add_common_paths(prerequisites)
     prerequisites.add_argument("--json-output", type=Path, help="Optional machine-readable result path.")
 
@@ -628,14 +851,25 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def resolve_common_paths(args: argparse.Namespace) -> tuple[Path, Path]:
-    repo_root = resolve_path(args.repo_root, Path.cwd()) if args.repo_root else repository_root_from_script()
+def resolve_common_paths(args: argparse.Namespace) -> tuple[Path, Path, Path, EngineLock]:
+    product_root = (
+        resolve_path(args.product_root, Path.cwd())
+        if args.product_root
+        else product_root_from_script()
+    )
+    validate_product_root(product_root)
+    lock = load_engine_lock(product_root)
+    engine_root = (
+        resolve_path(args.engine_root, Path.cwd())
+        if args.engine_root
+        else default_engine_root(product_root, lock)
+    )
     build_dir = (
         resolve_path(args.build_dir, Path.cwd())
         if args.build_dir
-        else default_build_directory(repo_root)
+        else default_build_directory(product_root)
     )
-    return repo_root, build_dir
+    return product_root, engine_root, build_dir, lock
 
 
 def require_primary_host() -> None:
@@ -645,43 +879,61 @@ def require_primary_host() -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    repo_root, build_dir = resolve_common_paths(args)
 
     try:
-        validate_repository_root(repo_root)
+        product_root, engine_root, build_dir, lock = resolve_common_paths(args)
 
         if args.command == "prerequisites":
-            checks = collect_prerequisite_checks(repo_root, build_dir)
+            checks = collect_prerequisite_checks(product_root, engine_root, build_dir, lock)
             for check in checks:
                 marker = {"passed": "PASS", "failed": "FAIL"}.get(check.status, "INFO")
                 requirement = "required" if check.required else "optional"
                 print(f"[{marker}] {check.name} ({requirement}): {check.detail}")
                 if check.remediation and check.status != "passed":
                     print(f"       {check.remediation}")
-            payload = prerequisite_payload(repo_root, build_dir, checks)
+            payload = prerequisite_payload(product_root, engine_root, build_dir, lock, checks)
             if args.json_output:
                 output = resolve_path(args.json_output, Path.cwd())
                 atomic_write_json(output, payload)
                 print(f"Wrote prerequisite result: {output}")
             return 0 if required_checks_pass(checks) else 1
 
+        validate_engine_root(engine_root, lock)
+        validate_engine_pin(engine_root, lock)
+
         if args.command == "configure":
             require_primary_host()
-            validate_build_directory(repo_root, build_dir, require_configured=False)
-            step = CommandStep("configure", configure_command(repo_root, build_dir, args.cmake), str(repo_root))
+            validate_build_directory(
+                product_root, engine_root, build_dir, require_configured=False
+            )
+            step = CommandStep(
+                "configure",
+                configure_command(product_root, engine_root, build_dir, args.cmake),
+                str(product_root),
+            )
             _, exit_code = execute_plan((step,), dry_run=args.dry_run)
             return exit_code
 
         if args.command == "build":
             require_primary_host()
-            validate_build_directory(repo_root, build_dir, require_configured=not args.dry_run)
-            step = CommandStep("build", build_command(build_dir, args.cmake), str(repo_root))
+            validate_build_directory(
+                product_root,
+                engine_root,
+                build_dir,
+                require_configured=not args.dry_run,
+            )
+            step = CommandStep("build", build_command(build_dir, args.cmake), str(product_root))
             _, exit_code = execute_plan((step,), dry_run=args.dry_run)
             return exit_code
 
         if args.command == "validate":
-            validate_build_directory(repo_root, build_dir, require_configured=not args.dry_run)
-            plan = validation_plan(repo_root, build_dir, args.ctest)
+            validate_build_directory(
+                product_root,
+                engine_root,
+                build_dir,
+                require_configured=not args.dry_run,
+            )
+            plan = validation_plan(product_root, engine_root, build_dir, args.ctest)
             results, exit_code = execute_plan(plan, dry_run=args.dry_run)
             result_path = (
                 resolve_path(args.result, Path.cwd())
@@ -690,7 +942,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             atomic_write_json(
                 result_path,
-                validation_payload(repo_root, build_dir, results, exit_code, dry_run=args.dry_run),
+                validation_payload(
+                    product_root,
+                    engine_root,
+                    build_dir,
+                    lock,
+                    results,
+                    exit_code,
+                    dry_run=args.dry_run,
+                ),
             )
             print(f"Wrote validation result: {result_path}")
             return exit_code

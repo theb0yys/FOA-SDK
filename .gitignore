@@ -26,3 +26,15 @@ _savebackup/
 CrashDB/
 *.DotSettings.user
 imgui.ini
+
+# FOA-generated evidence and release output must remain outside source control.
+/[Ll]ogs/
+/[Dd]iagnostics/
+/[Vv]alidation-[Rr]eceipts/
+/[Ss]creenshots/
+/[Aa]rtifacts/
+/[Pp]ackages/
+/[Rr]elease-[Oo]utput/
+*.[Dd][Ll][Ll]
+*.[Pp][Dd][Bb]
+*.[Ee][Xx][Ee]

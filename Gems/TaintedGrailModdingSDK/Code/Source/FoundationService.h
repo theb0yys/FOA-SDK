@@ -22,6 +22,7 @@
 #include "SourceEvidencePersistenceService.h"
 #include "SourceEvidenceRegistry.h"
 #include "SourceImportService.h"
+#include "TaintedFrameworkEditorServices.h"
 
 namespace TaintedGrailModdingSDK
 {
@@ -112,6 +113,8 @@ namespace TaintedGrailModdingSDK
         const FoundationSnapshot& GetSnapshot() const;
         ExtensionAPI::Service& GetExtensionAPI();
         const ExtensionAPI::Service& GetExtensionAPI() const;
+        TaintedFrameworkEditorServices::Service& GetTaintedFrameworkEditorServices();
+        const TaintedFrameworkEditorServices::Service& GetTaintedFrameworkEditorServices() const;
 
         void RefreshSnapshot();
 
@@ -139,6 +142,7 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<ImportIssue> m_importIssues;
         CatalogDatabase m_catalog;
         ExtensionAPI::Service m_extensionApi;
+        TaintedFrameworkEditorServices::Service m_taintedFrameworkEditorServices;
         AZStd::string m_catalogFilePath;
         FoundationValidationService m_validationService;
         CatalogGovernanceBlockerService m_governanceBlockerService;

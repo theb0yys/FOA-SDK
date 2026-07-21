@@ -1,4 +1,4 @@
-name: Tainted Grail SDK Foundation
+name: FOA-SDK Foundation
 
 # Automatic triggers are intentionally suspended while repository Actions cannot
 # obtain hosted runners. Run this workflow manually only after Actions is restored.
@@ -6,134 +6,44 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: tg-sdk-${{ github.workflow }}-${{ github.ref }}
+  group: foa-sdk-foundation-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+  O3DE_ROOT: ${{ runner.temp }}/o3de
+  FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build
+
 jobs:
   validate-foundation:
-    name: Validate TG SDK public foundation and catalog
+    name: Validate standalone FOA-SDK product contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 30
 
     steps:
-      - name: Check out repository
+      - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Test Core and Framework build-graph validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_core_framework_build_graph.py" -v
-
-      - name: Validate Core and Framework build graph
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_core_framework_build_graph.py
-
-      - name: Test catalog schema-2 validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_catalog_schema2.py" -v
-
-      - name: Validate catalog schema-1 migration and schema-2 persistence
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_schema2.py
-
-      - name: Test economy coverage dashboard validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_economy_coverage_dashboard.py" -v
-
-      - name: Validate economy coverage dashboard contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_economy_coverage_dashboard.py
-
-      - name: Test economy duplicate detection validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_economy_duplicate_detection.py" -v
-
-      - name: Validate economy duplicate detection contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_economy_duplicate_detection.py
-
-      - name: Test adapter contract validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_contracts.py" -v
-
-      - name: Validate adapter contract foundation
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_contracts.py
-
-      - name: Test adapter work-order plan validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_work_order_plans.py" -v
-
-      - name: Validate adapter work-order plan contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_work_order_plans.py
-
-      - name: Test adapter runtime-result validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_runtime_results.py" -v
-
-      - name: Validate adapter runtime-result evidence contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_runtime_results.py
-
-      - name: Test adapter build-manifest validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_build_manifests.py" -v
-
-      - name: Validate adapter build-manifest contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_build_manifests.py
-
-      - name: Test package-assembly preview validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_package_assembly_preview.py" -v
-
-      - name: Validate package-assembly preview contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_package_assembly_preview.py
-
-      - name: Test staging/deployment preview validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_staging_deployment_preview.py" -v
-
-      - name: Validate staging/deployment preview contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_staging_deployment_preview.py
-
-      - name: Test deployment confirmation/work-order validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_deployment_work_orders.py" -v
-
-      - name: Validate deployment confirmation/work-order contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_work_orders.py
-
-      - name: Test deployment execution-result validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_deployment_execution_results.py" -v
-
-      - name: Validate deployment execution-result evidence contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_execution_results.py
+      - name: Check out exact external O3DE policy surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout https://github.com/o3de/o3de.git "$O3DE_ROOT"
+          git -C "$O3DE_ROOT" sparse-checkout init --no-cone
+          printf '/engine.json\n/CMakePresets.json\n/scripts/commit_validation/\n' \
+            | git -C "$O3DE_ROOT" sparse-checkout set --stdin
+          git -C "$O3DE_ROOT" checkout --detach "$O3DE_COMMIT"
+          test "$(git -C "$O3DE_ROOT" rev-parse HEAD)" = "$O3DE_COMMIT"
 
       - name: Test Developer Preview 0 command layer
         run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview.py" -v
@@ -141,116 +51,10 @@ jobs:
       - name: Validate Developer Preview 0 command contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview.py
 
-      - name: Test Developer Preview 0 project integration
+      - name: Run authoritative FOA-SDK product validation
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
         run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_project.py" -v
-
-      - name: Test Developer Preview 0 project opener
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_open.py" -v
-
-      - name: Test canonical path policy
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_path_policy.py" -v
-
-      - name: Test trusted shortcut generator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_shortcut.py" -v
-
-      - name: Test trusted clickable entry
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_entry.py" -v
-
-      - name: Validate Developer Preview 0 project integration
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
-
-      - name: Validate canonical path and executable policy
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py
-
-      - name: Validate atomic workspace and durable schema policy
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_workspace_atomicity_schema.py
-
-      - name: Test Developer Preview 0 fixture
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_fixture.py" -v
-
-      - name: Validate Developer Preview 0 fixture contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_fixture.py
-
-      - name: Generate Developer Preview 0 fixture
-        run: >-
-          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate
-          --output "${{ runner.temp }}/tg-sdk-developer-preview-0-fixture"
-
-      - name: Verify Developer Preview 0 fixture
-        run: >-
-          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify
-          --output "${{ runner.temp }}/tg-sdk-developer-preview-0-fixture"
-
-      - name: Validate Developer Preview 0 persistence smoke contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_smoke.py
-
-      - name: Test Developer Preview 0 launch wrapper
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_launch.py" -v
-
-      - name: Test Developer Preview 0 diagnostics
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_diagnostics.py" -v
-
-      - name: Validate Developer Preview 0 launch and diagnostics contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_launch_diagnostics.py
-
-      - name: Collect Developer Preview 0 diagnostics fixture
-        run: >-
-          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py collect
-          --repo-root .
-          --output "${{ runner.temp }}/tg-sdk-developer-preview-0-diagnostics"
-
-      - name: Verify Developer Preview 0 diagnostics fixture
-        run: >-
-          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify
-          --output "${{ runner.temp }}/tg-sdk-developer-preview-0-diagnostics"
-
-      - name: Test Developer Preview 0 manual UI evidence tooling
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_ui_evidence.py" -v
-
-      - name: Validate Developer Preview 0 manual UI evidence contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_ui_evidence.py
-
-      - name: Validate foundation and governance contracts
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
-
-      - name: Validate governance hardening contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_governance_hardening.py
-
-      - name: Validate catalog test contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
-
-      - name: Validate O3DE source policy for SDK Gem
-        shell: bash
-        run: |
-          set -o pipefail
-          python -u scripts/commit_validation/validate_file_or_folder.py --path Gems/TaintedGrailModdingSDK 2>&1 \
-            | grep -E \
-              "(^[A-Za-z].*(PASSED|FAILED)$|^VALIDATION FAILURE SUMMARY$|"\
-              "^VALIDATOR_FAILED:|^[0-9]+ (failed|passed))"
+          python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py
+          --engine-root "${{ env.O3DE_ROOT }}"
+          --keep-going

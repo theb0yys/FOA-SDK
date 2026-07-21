@@ -36,7 +36,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — preserved report blockers, adverse verifier observations, separate compatibility/release/human-review axes, explicit dispositions, and no automatic approval or publication.
 - [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact approved reconciliation/package binding, declared checksums, provenance, legal review, signing intent, publication targets, and no performed release operations.
 - [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md) — exact ready-artifact binding, reviewed external assembler/checksummer results, archive identity, per-content checksum observations, failures, safe diagnostics, and no SDK release operations.
-- [FoA Release-Signing Result Evidence](FOA_RELEASE_SIGNING_RESULTS.md) — exact accepted assembly/archive and signing-intent binding, reviewed signer metadata, typed outcomes, signature artifacts, failures, safe diagnostics, and no SDK signing or verification.
+- [FoA Release-Signing Result Evidence](FOA_RELEASE_SIGNING_RESULTS.md) — typed transient release-signing result envelopes with exact accepted assembly/archive and signing-intent binding, reviewed signer metadata, typed outcomes, signature artifacts, failures, safe diagnostics, and no SDK signing or verification.
 - [Data Formats](DATA_FORMATS.md) — workspace, pack, source, evidence, issue, catalog, validation, governance-history, and typed-domain contracts.
 - [Support](../../SUPPORT.md) — where and how to ask for help.
 - [Security](../../SECURITY.md) — private reporting and secure-use guidance.
@@ -48,7 +48,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 - [Contributing](../../CONTRIBUTING.md) — contribution lifecycle and DCO requirements.
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
-- [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — current manual-only workflow state, authoritative local command, self-hosted runner boundary, token handling, and restoration conditions.
+- [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — automatic pull-request static validation, mandatory exact-head host and compiled-test gates, self-hosted runner boundary, and token handling.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
 - [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, MSI/ZIP identity, failure, rollback, and non-release boundary.
 - [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, repair, upgrade, uninstall, and troubleshooting.
@@ -81,7 +81,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [FoA Verifier Evidence Reconciliation and Release Decision](FOA_VERIFIER_EVIDENCE_RECONCILIATION.md) — exact immutable binding, preserved blockers, typed human dispositions, deterministic compatibility/release decisions, non-mutation, and no-publication enforcement.
 - [FoA Release Artifact Provenance and Signing Intent](FOA_RELEASE_ARTIFACT_PROVENANCE_SIGNING_INTENT.md) — exact content/checksum/provenance/legal/signing/publication declarations, deterministic fail-closed status, and no file or release operations.
 - [FoA Release Assembly and Checksum Results](FOA_RELEASE_ASSEMBLY_CHECKSUM_RESULTS.md) — contract-validated external archive/checksum observations, deterministic fail-closed binding, candidate evidence, and no file or release operations.
-- [FoA Release-Signing Result Evidence](FOA_RELEASE_SIGNING_RESULTS.md) — exact upstream/signing-intent binding, reviewed signer capabilities, typed outcomes and artifacts, deterministic candidate evidence, transient registry, and no signing, verification, or publication.
+- [FoA Release-Signing Result Evidence](FOA_RELEASE_SIGNING_RESULTS.md) — typed transient release-signing result envelopes with exact upstream/signing-intent binding, reviewed signer capabilities, typed outcomes and artifacts, deterministic candidate evidence, transient registry, and no signing, verification, or publication.
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
@@ -121,10 +121,10 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed actor profiles, troop profiles, exact troop-member rows, resolved and unresolved template/leader bindings, schema-2 persistence, deterministic project-owned fixture, governed candidate publication, immutable action lanes, and the registered Actor/Troop pane without runtime or save authority;
 - pinned Tainted Framework `0.1.33` knowledge, complete selected-component classification, canonical golden fixtures, exact Mono/IL2CPP evidence separation, the first named governed ExtensionAPI consumer, and persistent engine-neutral Editor services for exact compatibility, API readiness, safe configuration defaults, diagnostics vocabulary, and non-executable activation plans;
 - pinned Tainted Interface `0.2.6` semantic UI metadata, deterministic style/metric/layout utilities, an exact nineteen-ID curated catalog, blocked `NOASSERTION` upstream payloads, and verified project-owned SVG fallbacks without renderer or runtime authority;
-- typed transient adapter declarations, capability compatibility, deterministic work-order plans, runtime-result evidence, build manifests, package/deployment previews, deployment work orders/results, verification/reconciliation, and release metadata contracts with operational permissions disabled;
+- typed transient adapter declarations, capability compatibility, deterministic work-order plans, runtime-result evidence, build manifests, package/deployment previews, deployment work orders/results, verification/reconciliation, typed transient release-signing result envelopes, and release metadata contracts with operational permissions disabled;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
-Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.
+Automatic GitHub-hosted static validation now runs for relevant pull requests and pushes to `main`; exact-head O3DE configure, build, compiled tests, and Windows evidence remain separate mandatory gates.
 
 The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, and remaining specialised domain tools are not complete.
 

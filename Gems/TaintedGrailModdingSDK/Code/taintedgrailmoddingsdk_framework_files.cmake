@@ -43,6 +43,8 @@ set(FILES
     Source/SourceEvidencePersistenceService.h
     Source/SourceImportService.cpp
     Source/SourceImportService.h
+    Source/TaintedFrameworkKnowledge.cpp
+    Source/TaintedFrameworkKnowledge.h
     Source/WorkspacePersistenceService.cpp
     Source/WorkspacePersistenceService.h
     Source/WorkspaceSchemaService.cpp

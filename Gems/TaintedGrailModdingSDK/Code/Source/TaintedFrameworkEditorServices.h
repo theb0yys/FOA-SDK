@@ -25,6 +25,7 @@ namespace TaintedGrailModdingSDK::TaintedFrameworkEditorServices
         AZStd::string m_gameVersion;
         AZStd::string m_branch;
         AZStd::string m_runtime;
+        AZStd::string m_bepInExVersion;
         AZStd::string m_evidencePath;
         AZStd::vector<AZStd::string> m_blockers;
     };
@@ -65,7 +66,11 @@ namespace TaintedGrailModdingSDK::TaintedFrameworkEditorServices
         CompatibilityDecision EvaluateCompatibility(
             const AZStd::string& gameVersion,
             const AZStd::string& branch,
-            const AZStd::string& runtime) const;
+            const AZStd::string& runtime,
+            const AZStd::string& bepInExVersion) const;
+
+        CompatibilityDecision EvaluateCompatibility(
+            const ExtensionAPI::ProfileView& profile) const;
 
         AZStd::vector<ApiSurfaceDecision> GetApiSurfaceDecisions() const;
         AZStd::vector<ConfigurationDefault> GetConfigurationDefaults() const;
@@ -74,6 +79,10 @@ namespace TaintedGrailModdingSDK::TaintedFrameworkEditorServices
         ActivationPlan BuildActivationPlan(
             const AZStd::string& gameVersion,
             const AZStd::string& branch,
-            const AZStd::string& runtime) const;
+            const AZStd::string& runtime,
+            const AZStd::string& bepInExVersion) const;
+
+        ActivationPlan BuildActivationPlan(
+            const ExtensionAPI::ProfileView& profile) const;
     };
 } // namespace TaintedGrailModdingSDK::TaintedFrameworkEditorServices

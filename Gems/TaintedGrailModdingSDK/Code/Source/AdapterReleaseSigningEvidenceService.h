@@ -31,6 +31,8 @@ namespace TaintedGrailModdingSDK
     struct AdapterReleaseSigningEvidenceReturn
     {
         AZStd::string m_resultId;
+        AZStd::string m_reportedResultFingerprint;
+        AZStd::string m_authoritativeResultFingerprint;
         AZStd::string m_artifactId;
         AZStd::string m_artifactFingerprint;
         AZStd::string m_assemblyResultId;
@@ -67,8 +69,11 @@ namespace TaintedGrailModdingSDK
     };
 
     // Validates separately supplied signer metadata and returns candidate evidence
-    // by value. No archive, key, cryptographic, filesystem, upload, publication,
-    // launch, adapter, deployment, or save operation occurs.
+    // by value. The supplied result fingerprint is preserved as a reported claim;
+    // source/evidence identity uses a deterministic SDK-derived fingerprint over
+    // the bounded signing-result metadata. No archive, key, cryptographic,
+    // filesystem, upload, publication, launch, adapter, deployment, or save
+    // operation occurs.
     class AdapterReleaseSigningEvidenceService
     {
     public:

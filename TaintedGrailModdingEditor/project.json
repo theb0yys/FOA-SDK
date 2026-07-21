@@ -18,6 +18,10 @@
     "engine": "o3de",
     "executable_name": "TaintedGrailModdingEditor",
     "modules": [],
+    "external_subdirectories": [
+        "../Gems/ExternalToolchain",
+        "../Gems/TaintedGrailModdingSDK"
+    ],
     "gem_names": [
         "Atom",
         "DiffuseProbeGrid",

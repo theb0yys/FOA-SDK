@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the canonical workspace, pack, and shortcut path-policy contract."""
+"""Validate canonical workspace paths and the external-engine Editor-entry contract."""
 
 from __future__ import annotations
 
@@ -171,20 +171,35 @@ def validate_path_policy(repo_root: Path) -> None:
 
     require_fragments(
         tools_root / "developer_preview.py",
-        ("CMakeCache.txt", "CMAKE_HOME_DIRECTORY:INTERNAL", "configured_source != repo_root"),
+        (
+            "CMakeCache.txt",
+            "CMAKE_HOME_DIRECTORY:INTERNAL",
+            "configured_source != engine_root",
+            "required_project = (product_root / PREVIEW_PROJECT_DIRECTORY)",
+            "The build directory must not be inside the FOA-SDK checkout",
+            "The build directory must not be inside the O3DE checkout",
+        ),
     )
     require_fragments(
         tools_root / "developer_preview_path_policy.py",
         (
             "APPROVED_BUILD_DIRECTORY",
+            "FOA_BUILD_ROOT",
             "TRUST_MODE_SOURCE_BUILD",
             "TRUST_MODE_DIAGNOSTIC_OVERRIDE",
             "def is_contained(",
             "def require_contained(",
+            "developer_preview.load_engine_lock",
+            "developer_preview.validate_engine_root",
+            "developer_preview.validate_engine_pin",
             "developer_preview.validate_build_directory",
             "_require_cmake_source_binding",
             "CMAKE_HOME_DIRECTORY",
-            "must resolve inside the repository checkout",
+            "configured_projects",
+            "required_project",
+            "must resolve inside the FOA-SDK product checkout",
+            "FOA-SDK product_root and O3DE engine_root must be separate checkouts",
+            "approved external Developer Preview build directory",
             "validate_source_editor_binary",
             "PE_MACHINE_AMD64",
             "PE_SUBSYSTEM_WINDOWS_GUI",
@@ -199,6 +214,7 @@ def validate_path_policy(repo_root: Path) -> None:
             '"trust_mode": paths.trust_mode',
             "resolve_source_built_entry",
             "resolve_diagnostic_entry",
+            "TG_ENGINE_PATH",
         ),
     )
     entry_text = require_fragments(
@@ -209,6 +225,7 @@ def validate_path_policy(repo_root: Path) -> None:
             "Diagnostic override shortcuts are not verified source-built entries",
             "allow_diagnostic_override",
             "Verified source-built clickable entry from repository-owned policy",
+            '"--engine-path"',
         ),
     )
     if "expected_target = Path(target_value)" in entry_text:
@@ -220,13 +237,15 @@ def validate_path_policy(repo_root: Path) -> None:
         tool_tests / "test_developer_preview_path_policy.py",
         (
             "test_component_containment_does_not_use_string_prefixes",
-            "test_symlink_escape_is_rejected",
-            "test_repository_project_symlink_escape_is_rejected",
-            "test_shortcut_build_root_symlink_escape_is_rejected",
-            "test_source_build_must_use_exact_approved_directory",
-            "test_source_build_requires_explicit_cmake_source_binding",
+            "test_product_project_symlink_escape_is_rejected",
+            "test_source_build_must_use_exact_external_build_directory",
+            "test_source_build_uses_separate_product_engine_and_build_roots",
+            "test_source_build_rejects_cache_bound_to_product_as_engine",
+            "test_source_build_requires_foa_project_binding",
             "test_source_build_rejects_arbitrary_editor_contents",
-            "test_diagnostic_override_cannot_use_standard_output",
+            "test_diagnostic_override_keeps_external_engine_identity",
+            "test_shortcut_outputs_are_outside_product_checkout",
+            "test_shortcut_output_cannot_escape_external_build_root",
         ),
     )
     require_fragments(
@@ -250,6 +269,8 @@ def validate_path_policy(repo_root: Path) -> None:
         (
             "Test canonical path policy",
             "Validate canonical path and executable policy",
+            "exact external O3DE policy surface",
+            "FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build",
             "diagnostic-only Windows shortcut",
             "--diagnostic-override",
             "--allow-diagnostic-override",
@@ -275,8 +296,8 @@ def main() -> int:
         print(f"Tainted Grail path-policy validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Tainted Grail path policy passed: Framework-owned canonical persistence paths and trusted "
-        "source-built Editor entry are enforced."
+        "Tainted Grail path policy passed: Framework-owned canonical persistence paths and "
+        "separate product, engine, build, and trusted Editor-entry roots are enforced."
     )
     return 0
 

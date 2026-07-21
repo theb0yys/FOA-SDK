@@ -1,4 +1,4 @@
-name: Tainted Grail Repository Hygiene
+name: FOA-SDK Repository Hygiene
 
 # Automatic triggers are intentionally suspended while repository Actions cannot
 # obtain hosted runners. Run this workflow manually only after Actions is restored.
@@ -6,26 +6,37 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: tg-repository-hygiene-${{ github.workflow }}-${{ github.ref }}
+  group: foa-repository-hygiene-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  validate-tracked-paths:
-    name: Validate tracked path portability
+  validate-tracked-tree:
+    name: Validate product-only tracked tree and path portability
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Test product-only repository structure validator
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_validate_repository_structure.py" -v
+
+      - name: Validate standalone FOA-SDK tracked tree
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_repository_structure.py
 
       - name: Test tracked-path collision validator
         run: >-
@@ -33,5 +44,5 @@ jobs:
           -s Gems/TaintedGrailModdingSDK/Tools/tests
           -p "test_validate_tracked_path_collisions.py" -v
 
-      - name: Validate all tracked paths
+      - name: Validate all tracked path spellings
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_tracked_path_collisions.py

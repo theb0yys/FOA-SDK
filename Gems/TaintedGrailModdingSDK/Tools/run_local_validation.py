@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Run the repository-owned TG SDK validation gate without GitHub Actions."""
+"""Run the FOA-SDK validation gate against a separate pinned O3DE checkout."""
 
 from __future__ import annotations
 
@@ -20,12 +20,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOLS_ROOT = Path(__file__).resolve().parent
+if str(TOOLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TOOLS_ROOT))
+
+import developer_preview
+
+PRODUCT_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = TOOLS_ROOT / "tests"
+PRODUCT_GEM_PATHS = (
+    PRODUCT_ROOT / "Gems/ExternalToolchain",
+    PRODUCT_ROOT / "Gems/TaintedGrailModdingSDK",
+)
 
 VALIDATORS = (
+    "validate_repository_structure.py",
     "validate_ci_runner_policy.py",
     "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",
@@ -70,16 +79,32 @@ VALIDATORS = (
 class ValidationCommand:
     label: str
     argv: tuple[str, ...]
+    cwd: Path = PRODUCT_ROOT
 
 
 def python_command(*arguments: str) -> tuple[str, ...]:
     return (sys.executable, "-u", *arguments)
 
 
+def resolve_engine_root(value: Path | None) -> Path:
+    developer_preview.validate_product_root(PRODUCT_ROOT)
+    lock = developer_preview.load_engine_lock(PRODUCT_ROOT)
+    engine_root = (
+        developer_preview.resolve_path(value, Path.cwd())
+        if value is not None
+        else developer_preview.default_engine_root(PRODUCT_ROOT, lock)
+    )
+    developer_preview.validate_engine_root(engine_root, lock)
+    developer_preview.validate_engine_pin(engine_root, lock)
+    if engine_root == PRODUCT_ROOT:
+        raise RuntimeError("FOA-SDK and O3DE must be separate checkouts.")
+    return engine_root
+
+
 def build_static_commands(
     *,
     include_unit_tests: bool,
-    include_source_policy: bool,
+    source_policy_engine_root: Path | None,
 ) -> list[ValidationCommand]:
     commands: list[ValidationCommand] = []
     if include_unit_tests:
@@ -105,20 +130,19 @@ def build_static_commands(
                 python_command(str(TOOLS_ROOT / validator)),
             )
         )
-    if include_source_policy:
-        commands.append(
-            ValidationCommand(
-                "O3DE source policy",
-                python_command(
-                    str(
-                        REPO_ROOT
-                        / "scripts/commit_validation/validate_file_or_folder.py"
-                    ),
-                    "--path",
-                    "Gems/TaintedGrailModdingSDK",
-                ),
-            )
+    if source_policy_engine_root is not None:
+        validator = (
+            source_policy_engine_root
+            / "scripts/commit_validation/validate_file_or_folder.py"
         )
+        for gem_path in PRODUCT_GEM_PATHS:
+            commands.append(
+                ValidationCommand(
+                    f"O3DE source policy: {gem_path.name}",
+                    python_command(str(validator), "--path", str(gem_path)),
+                    cwd=source_policy_engine_root,
+                )
+            )
     return commands
 
 
@@ -169,7 +193,7 @@ def build_fixture_commands(temporary_root: Path) -> list[ValidationCommand]:
                 str(TOOLS_ROOT / "developer_preview_diagnostics.py"),
                 "collect",
                 "--repo-root",
-                str(REPO_ROOT),
+                str(PRODUCT_ROOT),
                 "--output",
                 str(diagnostics),
             ),
@@ -193,16 +217,11 @@ def find_ctest(build_directory: Path) -> str:
     cache = build_directory / "CMakeCache.txt"
     if cache.is_file():
         prefix = "CMAKE_COMMAND:INTERNAL="
-        for line in cache.read_text(
-            encoding="utf-8",
-            errors="strict",
-        ).splitlines():
+        for line in cache.read_text(encoding="utf-8", errors="strict").splitlines():
             if not line.startswith(prefix):
                 continue
             cmake = Path(line[len(prefix) :])
-            candidate = cmake.with_name(
-                "ctest.exe" if os.name == "nt" else "ctest"
-            )
+            candidate = cmake.with_name("ctest.exe" if os.name == "nt" else "ctest")
             if candidate.is_file():
                 return str(candidate)
             break
@@ -244,7 +263,7 @@ def run_commands(
         print(display_command(command), flush=True)
         completed = subprocess.run(
             command.argv,
-            cwd=REPO_ROOT,
+            cwd=command.cwd,
             env=environment,
             check=False,
         )
@@ -259,93 +278,77 @@ def run_commands(
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run TG SDK unit tests, contract validators, fixture checks, path "
+            "Run FOA-SDK unit tests, contract validators, fixture checks, path "
             "hygiene, and source policy locally."
         )
     )
+    parser.add_argument("--list", action="store_true")
+    parser.add_argument("--keep-going", action="store_true")
+    parser.add_argument("--skip-unit-tests", action="store_true")
+    parser.add_argument("--skip-fixtures", action="store_true")
+    parser.add_argument("--skip-source-policy", action="store_true")
     parser.add_argument(
-        "--list",
-        action="store_true",
-        help="Print the static validation commands without running them.",
-    )
-    parser.add_argument(
-        "--keep-going",
-        action="store_true",
-        help="Continue after failures and report all failed commands.",
-    )
-    parser.add_argument(
-        "--skip-unit-tests",
-        action="store_true",
-        help="Skip Python unit-test discovery.",
-    )
-    parser.add_argument(
-        "--skip-fixtures",
-        action="store_true",
-        help="Skip temporary fixture generation and diagnostics verification.",
-    )
-    parser.add_argument(
-        "--skip-source-policy",
-        action="store_true",
-        help="Skip the O3DE source-policy validator.",
+        "--engine-root",
+        type=Path,
+        help="Pinned external O3DE checkout. Defaults to FOA_O3DE_ROOT or sibling o3de/.",
     )
     parser.add_argument(
         "--ctest-build-dir",
         type=Path,
-        help=(
-            "Also run compiled TaintedGrailModdingSDK.Catalog.Tests from this "
-            "configured O3DE build directory."
-        ),
+        help="Also run compiled TaintedGrailModdingSDK.Catalog.Tests from this build root.",
     )
     return parser.parse_args()
 
 
 def main() -> int:
     arguments = parse_arguments()
-    static_commands = build_static_commands(
-        include_unit_tests=not arguments.skip_unit_tests,
-        include_source_policy=not arguments.skip_source_policy,
-    )
-    if arguments.list:
-        for command in static_commands:
-            print(f"{command.label}: {display_command(command)}")
-        return 0
-    print(
-        "TG SDK local validation is authoritative while GitHub Actions remains "
-        "manual-only. No automated per-commit test result is claimed.",
-        flush=True,
-    )
-    failures = run_commands(
-        static_commands,
-        keep_going=arguments.keep_going,
-    )
-    if not failures and not arguments.skip_fixtures:
-        with tempfile.TemporaryDirectory(
-            prefix="tg-sdk-validation-"
-        ) as temporary:
+    try:
+        engine_root = (
+            None
+            if arguments.skip_source_policy
+            else resolve_engine_root(arguments.engine_root)
+        )
+        static_commands = build_static_commands(
+            include_unit_tests=not arguments.skip_unit_tests,
+            source_policy_engine_root=engine_root,
+        )
+        if arguments.list:
+            for command in static_commands:
+                print(f"{command.label}: {display_command(command)}")
+            return 0
+        print(
+            "FOA-SDK local validation is authoritative while GitHub Actions remains "
+            "manual-only. No automated per-commit test result is claimed.",
+            flush=True,
+        )
+        failures = run_commands(static_commands, keep_going=arguments.keep_going)
+        if not failures and not arguments.skip_fixtures:
+            with tempfile.TemporaryDirectory(prefix="foa-sdk-validation-") as temporary:
+                failures.extend(
+                    run_commands(
+                        build_fixture_commands(Path(temporary)),
+                        keep_going=arguments.keep_going,
+                    )
+                )
+        if not failures and arguments.ctest_build_dir:
             failures.extend(
                 run_commands(
-                    build_fixture_commands(Path(temporary)),
+                    [build_ctest_command(arguments.ctest_build_dir.resolve())],
                     keep_going=arguments.keep_going,
                 )
             )
-    if not failures and arguments.ctest_build_dir:
-        failures.extend(
-            run_commands(
-                [build_ctest_command(arguments.ctest_build_dir.resolve())],
-                keep_going=arguments.keep_going,
-            )
-        )
-    if failures:
-        print("\nTG SDK local validation failed:", file=sys.stderr)
-        for failure in failures:
-            print(f"- {failure}", file=sys.stderr)
+        if failures:
+            print("\nFOA-SDK local validation failed:", file=sys.stderr)
+            for failure in failures:
+                print(f"- {failure}", file=sys.stderr)
+            return 1
+        print("\nFOA-SDK local validation passed.")
+        if not arguments.ctest_build_dir:
+            print("Compiled O3DE tests were not run; pass --ctest-build-dir to add them.")
+        return 0
+    except (OSError, RuntimeError) as exc:
+        print(f"FOA-SDK local validation setup failed: {exc}", file=sys.stderr)
         return 1
-    print("\nTG SDK local validation passed.")
-    if not arguments.ctest_build_dir:
-        print(
-            "Compiled O3DE tests were not run; pass --ctest-build-dir to add them."
-        )
-    return 0
 
 
 if __name__ == "__main__":

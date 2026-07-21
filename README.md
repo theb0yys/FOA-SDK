@@ -1,227 +1,161 @@
-# Tainted Grail: The Fall of Avalon Modding Editor and SDK
+# FOA-SDK
 
-An O3DE-based, evidence-governed authoring environment for creating, validating, packaging, and eventually deploying mods for **Tainted Grail: The Fall of Avalon**.
+FOA-SDK is an unofficial, open-source world-authoring and mod-development platform for **Tainted Grail: The Fall of Avalon**.
 
-> **Project status: pre-alpha.** The editor foundation and first specialised domain tool are under active development. The project is not yet a complete mod-production toolchain and must not be treated as a safe runtime executor.
+The project uses O3DE as a governed authoring host while keeping the target game and its Unity runtime outside the editor repository. Editor tooling, content schemas, validation, packaging, AI-assisted authoring, external conversion, and runtime adapters are separated into reviewable systems.
 
-This repository is a fork of Open 3D Engine. O3DE supplies the editor host, UI framework, build system, asset tooling, reflection, automation, and extensibility. Tainted Grail remains a separate Unity runtime target.
+> **Status:** pre-alpha development. This repository is not a finished SDK, does not provide a supported public release, and does not grant runtime compatibility or deployment authority.
 
-## Project goals
+## Repository identity
 
-The project is building a public modding editor and SDK that can:
+FOA-SDK is the product repository. It is **not** an O3DE source fork.
 
-- describe an exact FoA installation and game build;
-- create pack-owned mod projects and manifests;
-- import and fingerprint research, diagnostics, dumps, observations, logs, screenshots, CSV, JSON, and Avalon Core source sets;
-- preserve exact native references, GUIDs, paths, aliases, versions, and evidence;
-- maintain a canonical, queryable game-knowledge catalog;
-- assess maturity, confidence, operational risk, validation, staleness, permissions, prohibitions, and supersession independently;
-- author items, recipes, actors, troops, spawns, routes, factions, quests, state, assets, and localisation through shared governed data;
-- generate reviewed work orders and manifests for separately validated FoA runtime adapters;
-- provide a controlled validate, generate, build, package, deploy, launch, capture, and evidence workflow.
-
-## Safety and architecture boundary
-
-The editor and Avalon Core knowledge layer do **not** execute gameplay actions.
-
-They may:
-
-- manage workspaces and pack ownership;
-- import and preserve evidence;
-- query and inspect game knowledge;
-- validate references and relationships;
-- record reviewed governance decisions and usage constraints;
-- author typed domain data on canonical records;
-- produce blockers, permissions, plans, and handoff documents;
-- build editor-owned packages and reports.
-
-They must not directly:
-
-- call FoA game APIs;
-- patch the game with Harmony;
-- load BepInEx plugins into the game;
-- spawn actors or encounters;
-- grant items or learn recipes;
-- append recipes or register custom templates;
-- mutate quests, saves, vendors, loot, rewards, or world state;
-- claim runtime safety without the required evidence, validation, and reviewed permission decision.
-
-Native execution belongs to separate adapters with their own compatibility, persistence, cleanup, and rollback gates.
-
-## Current editor tools
-
-The `TaintedGrailModdingSDK` Gem currently registers these O3DE tools under **Tools → Tainted Grail SDK**.
-
-### Tainted Grail SDK Status
-
-Configures and reports:
-
-- workspace identity and paths;
-- exact FoA game profile;
-- Mono or IL2CPP target;
-- Unity and BepInEx versions;
-- pack, source, evidence, catalog, governance, economy, and blocker totals;
-- catalog coverage and validation blockers.
-
-Workspace documents use the `*.tgworkspace.json` suffix.
-
-### Tainted Grail Pack Manager
-
-Creates and opens governed `*.tgpack.json` manifests containing:
-
-- stable namespaced pack ID and owner;
-- semantic version;
-- game, Avalon Core, and adapter compatibility;
-- dependencies, required mods, and incompatibilities;
-- save-impact declaration;
-- content, asset, and localisation declarations;
-- build configuration and release channel.
-
-Runtime actions are always persisted as disabled.
-
-### Tainted Grail Source Intake
-
-Imports and fingerprints source artifacts using:
-
-- structured JSON evidence extraction;
-- structured CSV evidence extraction;
-- generic artifact registration without inferred evidence.
-
-Every source is bound to the active profile ID, exact game version, branch, and runtime target. Durable files are written under:
+The supported checkout layout is:
 
 ```text
-Sources/<source-id>/source.tgsource.json
-Sources/<source-id>/evidence.tgevidence.json
+Development/
+├── FOA-SDK/      product source
+├── o3de/         exact upstream engine checkout
+└── foa-build/    generated build and evidence output
 ```
 
-### Tainted Grail Catalog Browser
+The exact O3DE repository, engine identity, version, and commit are recorded in [`o3de.lock.json`](o3de.lock.json). Tooling fails closed when the selected checkout does not match that lock.
 
-Provides:
+Generated builds, caches, diagnostics, screenshots, installers, packages, and validation receipts belong under `foa-build/` or another reviewed output directory—not in either source checkout.
 
-- exact native-reference and GUID search;
-- search by record ID, subject, alias, domain, kind, pack, confidence, risk, validation, staleness, permission, evidence, blocker state, and supersession;
-- inspection of identity, pack ownership, evidence, relationships, validation and governance history, conflicts, missing refs, prohibitions, and blockers;
-- evidence-backed promotion into reviewed-but-unvalidated canonical records;
-- durable `Catalog/catalog.tgcatalog.json` persistence bound to the active workspace and exact game profile.
+## Product structure
 
-Catalog records are never merged by display name. Claim promotion cannot grant allowed usage and automatically adds `no_unvalidated_runtime_use`.
+```text
+.github/                              FOA issue forms, ownership and manual workflows
+Gems/
+├── ExternalToolchain/                bounded external-tool discovery and provider contracts
+└── TaintedGrailModdingSDK/           editor, schemas, services, validators and tests
+Research/                             preserved research inputs and reviewed conclusions
+TaintedGrailModdingEditor/            dedicated O3DE Editor project
 
-### Tainted Grail Catalog Governance
+docs/tainted-grail-sdk/               public architecture, user and contributor documentation
 
-Provides reviewed authoring of independent states for both records and relationships:
+o3de.lock.json                        exact external engine dependency
+README.md                              product overview
+ROADMAP.md                             planned capability sequence
+CHANGELOG.md                           reviewed capability history
+GOVERNANCE.md                         project governance
+CONTRIBUTING.md                        contribution requirements
+SECURITY.md                            vulnerability reporting policy
+SUPPORT.md                             support boundaries
+LICENSE.txt                            repository licence
+```
 
-- maturity/research stage;
-- confidence;
-- operational risk;
-- validation state and proof history;
-- staleness/current-build assessment;
-- named usage permissions and prohibitions;
-- supersession.
+Stock O3DE source, engine Gems, templates, scripts, assets, registries, and build files are deliberately absent. They are supplied by the separately pinned engine checkout.
 
-Validation does not grant permission. An allowed usage requires a separate permission decision backed by a successful validation event for the same catalog subject. Marking a subject stale or superseded automatically removes allowed usages.
+## Obtain the pinned engine
 
-### Tainted Grail Item and Recipe Editor
+From the directory that contains FOA-SDK:
 
-The first specialised domain tool authors typed economy data on existing canonical records:
+```powershell
+git clone https://github.com/o3de/o3de.git o3de
+git -C o3de checkout 68683f23fb747380d3efa2424bd5f30242e9c5a2
+```
 
-- item categories, values, stack, weight, quality, rarity, durability, quest/unique flags, localisation, icon, and asset references;
-- recipe type, tab, station records, unlock data, duplicate key, persistence description, and hidden state;
-- typed ingredient joins with quantity, substitutions, consumption, conditions, and evidence;
-- typed outputs and by-products with quantity, chance, conditions, and evidence;
-- first-class acquisition relationships such as `sold_by`, `dropped_by`, `found_at`, `rewarded_by`, `learned_from`, `granted_by`, and `crafted_at`;
-- read-only action-lane matrices derived from Catalog Governance.
+Do not substitute a branch tip. Engine changes require a reviewed update to `o3de.lock.json` with configure, build, compiled-test, and Editor acceptance evidence.
 
-An item identity remains separate from a recipe identity. The tool does not create canonical identities or execute any displayed action lane.
+Set `FOA_O3DE_ROOT` only when the engine is not the sibling `o3de/` checkout. Set `FOA_BUILD_ROOT` only when generated output should not use the sibling `foa-build/` directory.
 
-## Development roadmap
+## Developer Preview command path
 
-The active roadmap is maintained in [ROADMAP.md](ROADMAP.md). Major capability areas are:
+Run commands from the FOA-SDK product checkout.
 
-1. workspace and exact game-profile management;
-2. mod and content-pack project management;
-3. source and evidence intake;
-4. canonical catalog browser and record inspector;
-5. validation, maturity, risk, and permission engine;
-6. specialised domain authoring tools;
-7. typed FoA adapter contracts;
-8. build, package, deploy, test, and evidence capture.
+### Check prerequisites
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `
+  --engine-root ..\o3de `
+  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+```
+
+### Configure
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
+  --engine-root ..\o3de `
+  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+```
+
+The generated command uses the external engine as the CMake source and the product-owned project as `LY_PROJECTS`:
+
+```text
+-S <engine-root>
+-B <build-root>
+-DLY_PROJECTS=<product-root>/TaintedGrailModdingEditor
+```
+
+### Build
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py build `
+  --engine-root ..\o3de `
+  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+```
+
+The current command-layer targets are:
+
+```text
+Editor
+AssetProcessorBatch
+TaintedGrailModdingSDK.Catalog.Tests
+```
+
+### Validate
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
+  --engine-root ..\o3de `
+  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+```
+
+For the complete local gate, including both custom Gems and O3DE source-policy validation:
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
+  --engine-root ..\o3de `
+  --ctest-build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+```
+
+The local gate does not claim a hosted CI result. Repository Actions remain manual-only until the reviewed runner policy is restored.
+
+## Architecture boundary
+
+FOA-SDK owns authoring data, Editor panes, typed contracts, validation, evidence, packaging previews, and governed work-order planning.
+
+O3DE owns engine and host functionality. The target Unity game owns final runtime interpretation. Cross-engine conversion is performed through deterministic, reviewable file handoff; Unity-native files remain Unity-owned.
+
+No editor action silently promotes evidence, mutates a game installation, launches FoA, injects code, modifies saves, signs artifacts, or publishes a release. Mono and IL2CPP runtime support remain separate adapter paths and require exact-install evidence.
 
 ## Documentation
 
-Start with the [TG SDK documentation hub](docs/tainted-grail-sdk/README.md).
+Start with:
 
-- [User guide](docs/tainted-grail-sdk/USER_GUIDE.md)
-- [Catalog guide](docs/tainted-grail-sdk/CATALOG_GUIDE.md)
-- [Governance engine guide](docs/tainted-grail-sdk/GOVERNANCE_ENGINE_GUIDE.md)
-- [Item and Recipe Editor guide](docs/tainted-grail-sdk/ITEM_RECIPE_EDITOR_GUIDE.md)
+- [FOA-SDK documentation index](docs/tainted-grail-sdk/README.md)
 - [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
 - [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
-- [Code quality standard](docs/tainted-grail-sdk/CODE_QUALITY.md)
+- [Developer Preview 0](docs/tainted-grail-sdk/DEVELOPER_PREVIEW_0.md)
+- [External O3DE dependency boundary](docs/tainted-grail-sdk/EXTERNAL_O3DE_DEPENDENCY.md)
+- [Open and test the Editor](docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md)
+- [CI and local validation](docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md)
 - [Review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md)
-- [Data formats](docs/tainted-grail-sdk/DATA_FORMATS.md)
-- [Release process](docs/tainted-grail-sdk/RELEASE_PROCESS.md)
 - [Legal and content policy](docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md)
-- [Privacy and telemetry](docs/tainted-grail-sdk/PRIVACY.md)
-- [Accessibility](docs/tainted-grail-sdk/ACCESSIBILITY.md)
-- [Glossary](docs/tainted-grail-sdk/GLOSSARY.md)
-- [Governance](GOVERNANCE.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security](SECURITY.md)
-- [Support](SUPPORT.md)
-
-## Repository layout
-
-```text
-Gems/TaintedGrailModdingSDK/       TG editor/SDK Gem
-Gems/TaintedGrailModdingSDK/Code/  C++ editor models, services, tests, and tools
-Gems/TaintedGrailModdingSDK/Tools/ Repository contract validation
-docs/tainted-grail-sdk/            Public user and contributor documentation
-.github/                            Issue forms, pull-request template, ownership
-engine.json                         O3DE engine registration
-```
-
-The remaining repository content is inherited from O3DE and remains subject to O3DE's build, licence, and contribution requirements.
-
-## Building
-
-This fork uses the standard O3DE source build process. Follow the upstream O3DE source-build requirements for your platform, configure the engine with a supported compiler and third-party package cache, and build the O3DE Editor host.
-
-Before opening a pull request, run:
-
-```shell
-python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
-python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
-```
-
-A complete contribution must also pass the catalog/governance/economy unit tests, repository validation workflow, and applicable O3DE host build jobs.
 
 ## Branch and review model
 
-The public project uses two long-lived branches:
+- `main` is reviewed integrated product state.
+- Development occurs on short-lived branches and enters `main` through pull requests.
+- Significant changes require design review, focused validation, exact-head evidence where applicable, and maintainer approval.
+- Direct runtime authority, automatic evidence promotion, and unreviewed generated artifacts are prohibited.
 
-- `main` — reviewed, integrated project state;
-- `foa-development` — the single active development line.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), and the [review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md).
 
-Direct development on `main` is prohibited. Significant changes require design review before implementation, self-review before push, a pull request, successful required checks, and maintainer approval before merge. See [Review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md).
+## Legal status
 
-## Contributing
+Tainted Grail: The Fall of Avalon and related names, assets, and marks belong to their respective rights holders. FOA-SDK is an independent community project and is not affiliated with or endorsed by the game’s developers or publishers.
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before filing an issue or changing code.
-
-All commits must include Developer Certificate of Origin sign-off:
-
-```shell
-git commit -s -m "Describe the change"
-```
-
-Contributors must follow the [Code of Conduct](CODE_OF_CONDUCT.md), code-quality rules, evidence governance, and review requirements.
-
-## Security
-
-Do not disclose vulnerabilities, unsafe deployment paths, or save-corruption risks in public issues. Follow [SECURITY.md](SECURITY.md).
-
-## Licence and upstream attribution
-
-This repository retains the O3DE licence files and third-party notices at the repository root. Contributions must be compatible with those terms.
-
-Tainted Grail: The Fall of Avalon and related names, assets, and marks belong to their respective rights holders. This is an independent community project and is not affiliated with or endorsed by the game's rights holders. Do not submit copyrighted game assets or proprietary source material that you do not have permission to distribute.
+Do not contribute proprietary game source, copyrighted assets without permission, credentials, private paths, saves, extracted commercial content, or material whose redistribution status is unknown.

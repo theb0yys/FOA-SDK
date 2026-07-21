@@ -1,33 +1,34 @@
+# IDE and local environments
 .idea/
 .venv/
 .vs/
 .vscode/
-.gradle/
-__pycache__
-/[Bb]uild
-[Oo]ut/**
-CMakeUserPresets.json
-[Cc]ache/
-/[Ii]nstall/
-**/*egg-info/**
-**/*egg-link
-**/[Rr]estricted
-[Uu]ser/
-FrameCapture/**
 .DS_Store
-user*.cfg
-client*.cfg
-server*.cfg
-.mayaSwatches/
-_savebackup/
-*.swatches
-/imgui.ini
-.command_settings
-CrashDB/
 *.DotSettings.user
-imgui.ini
 
-# FOA-generated evidence and release output must remain outside source control.
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# CMake and O3DE generated state
+/[Bb]uild/
+/[Oo]ut/
+/[Ii]nstall/
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+**/[Cc]ache/
+**/[Uu]ser/
+**/[Ll]og/
+CrashDB/
+FrameCapture/
+imgui.ini
+.command_settings
+
+# Generated validation, evidence, packaging and release output
 /[Ll]ogs/
 /[Dd]iagnostics/
 /[Vv]alidation-[Rr]eceipts/
@@ -35,6 +36,17 @@ imgui.ini
 /[Aa]rtifacts/
 /[Pp]ackages/
 /[Rr]elease-[Oo]utput/
-*.[Dd][Ll][Ll]
-*.[Pp][Dd][Bb]
-*.[Ee][Xx][Ee]
+*.dll
+*.pdb
+*.exe
+*.msi
+*.zip
+*.7z
+
+# Local configuration and editor backups
+user*.cfg
+client*.cfg
+server*.cfg
+_savebackup/
+.mayaSwatches/
+*.swatches

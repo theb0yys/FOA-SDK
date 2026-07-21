@@ -1,14 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: TG SDK User Guide
+  - name: FOA-SDK User Guide
     about: Read the current workspace, pack, source-intake, blocker, and troubleshooting guidance
-    url: https://github.com/theb0yys/o3de/blob/main/docs/tainted-grail-sdk/USER_GUIDE.md
-  - name: TG SDK Support Policy
+    url: https://github.com/theb0yys/FOA-SDK/blob/main/docs/tainted-grail-sdk/USER_GUIDE.md
+  - name: FOA-SDK Support Policy
     about: Check supported questions, required report details, and project scope
-    url: https://github.com/theb0yys/o3de/blob/main/SUPPORT.md
+    url: https://github.com/theb0yys/FOA-SDK/blob/main/SUPPORT.md
   - name: Security Vulnerability Reporting
     about: Do not disclose vulnerabilities in a public issue; follow the private reporting policy
-    url: https://github.com/theb0yys/o3de/blob/main/SECURITY.md
+    url: https://github.com/theb0yys/FOA-SDK/blob/main/SECURITY.md
   - name: Upstream O3DE Issues
-    about: Report defects that reproduce in unmodified upstream O3DE to the upstream project
+    about: Report defects that reproduce in the exact unmodified upstream O3DE checkout
     url: https://github.com/o3de/o3de/issues/new/choose

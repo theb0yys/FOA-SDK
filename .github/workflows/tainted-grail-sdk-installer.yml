@@ -1,4 +1,4 @@
-name: Tainted Grail SDK Windows Installer
+name: FOA-SDK Windows Installer
 
 # Automatic triggers are intentionally suspended while repository Actions cannot
 # obtain hosted runners. This workflow never publishes a public release.
@@ -47,7 +47,7 @@ on:
         type: string
 
 concurrency:
-  group: tg-sdk-installer-${{ github.ref }}
+  group: foa-sdk-installer-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -59,7 +59,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 360
     env:
-      SDK_BUILD: ${{ github.workspace }}/build/tg-sdk-installer-engine
+      O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+      O3DE_ROOT: ${{ runner.temp }}/o3de
+      FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build
+      SDK_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-engine
       SDK_INSTALL: ${{ runner.temp }}/tg-sdk-install
       SDK_INVENTORY: ${{ runner.temp }}/tg-sdk-installer-inventory.json
       SDK_NOTICES: ${{ runner.temp }}/NOTICES.txt
@@ -71,10 +74,20 @@ jobs:
       WIX_EXTENSIONS: ${{ runner.temp }}/wix-extensions
 
     steps:
-      - name: Check out exact source
+      - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Check out exact external O3DE source
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none https://github.com/o3de/o3de.git $env:O3DE_ROOT
+          git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT
+          $actual = git -C $env:O3DE_ROOT rev-parse HEAD
+          if ($actual -cne $env:O3DE_COMMIT) {
+            throw "External O3DE commit mismatch: $actual"
+          }
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -88,8 +101,11 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Run authoritative repository validation
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
         run: >-
           python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py
+          --engine-root "${{ env.O3DE_ROOT }}"
           --keep-going
 
       - name: Configure prebuilt O3DE SDK layout
@@ -97,7 +113,7 @@ jobs:
         run: |
           $project = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
           $packages = Join-Path $env:RUNNER_TEMP "o3de-packages"
-          cmake -S . -B $env:SDK_BUILD -G "Visual Studio 17 2022" -A x64 `
+          cmake -S $env:O3DE_ROOT -B $env:SDK_BUILD -G "Visual Studio 17 2022" -A x64 `
             -DLY_PROJECTS="$project" `
             -DLY_3RDPARTY_PATH="$packages" `
             -DLY_DISABLE_TEST_MODULES=ON `
@@ -109,7 +125,7 @@ jobs:
 
       - name: Generate notices and third-party package inventory
         run: >-
-          python scripts/license_scanner/license_scanner.py
+          python "$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"
           --scan-path "$env:SDK_INSTALL"
           --license-file-path "$env:SDK_NOTICES"
           --package-file-path "$env:SDK_PACKAGES"
@@ -131,7 +147,7 @@ jobs:
       - name: Upload inventory for redistribution review
         uses: actions/upload-artifact@v4
         with:
-          name: tg-sdk-installer-inventory-${{ github.run_id }}
+          name: foa-sdk-installer-inventory-${{ github.run_id }}
           path: |
             ${{ env.SDK_INVENTORY }}
             ${{ env.SDK_NOTICES }}
@@ -213,14 +229,14 @@ jobs:
           $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_ARTIFACTS -Filter *.msi -File -ErrorAction Stop)
           if ($msiFiles.Count -ne 1) { throw "Expected exactly one MSI; found $($msiFiles.Count)." }
           $msi = $msiFiles[0]
-          $installRoot = Join-Path $env:RUNNER_TEMP "installed-tg-sdk"
+          $installRoot = Join-Path $env:RUNNER_TEMP "installed-foa-sdk"
           $externalWorkspace = Join-Path $env:RUNNER_TEMP "external-workspace"
           New-Item -ItemType Directory -Path $externalWorkspace | Out-Null
           Set-Content -LiteralPath (Join-Path $externalWorkspace "preserve.txt") -Value "preserve"
 
           $install = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
             "/i", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"",
-            "/l*v", "`"$env:RUNNER_TEMP/tg-sdk-install.log`"")
+            "/l*v", "`"$env:RUNNER_TEMP/foa-sdk-install.log`"")
           if ($install.ExitCode -ne 0) { throw "MSI install failed with exit $($install.ExitCode)." }
 
           $launcher = Join-Path $installRoot `
@@ -254,7 +270,7 @@ jobs:
         if: inputs.mode == 'package'
         uses: actions/upload-artifact@v4
         with:
-          name: tg-sdk-unsigned-installer-${{ inputs.version }}-${{ github.run_id }}
+          name: foa-sdk-unsigned-installer-${{ inputs.version }}-${{ github.run_id }}
           path: ${{ env.SDK_ARTIFACTS }}
           if-no-files-found: error
           retention-days: 14

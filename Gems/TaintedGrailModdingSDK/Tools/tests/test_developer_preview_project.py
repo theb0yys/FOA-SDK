@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import struct
 import sys
@@ -16,12 +15,11 @@ import unittest
 import zlib
 from pathlib import Path
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "validate_developer_preview_project.py"
-SPEC = importlib.util.spec_from_file_location("tg_validate_developer_preview_project", SCRIPT_PATH)
-assert SPEC and SPEC.loader
-contract = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = contract
-SPEC.loader.exec_module(contract)
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+import validate_developer_preview_project as contract
 
 
 def png_chunk(kind: bytes, data: bytes) -> bytes:
@@ -45,37 +43,36 @@ def write_png(path: Path, width: int = 256, height: int = 256) -> None:
 
 
 class DeveloperPreviewProjectContractTests(unittest.TestCase):
-    def make_repo(self, root: Path) -> Path:
-        repo = root / "repo"
-        project = repo / "TaintedGrailModdingEditor"
-        tools = repo / "Gems/TaintedGrailModdingSDK/Tools"
+    def make_product(self, root: Path) -> Path:
+        product = root / "FOA-SDK"
+        project = product / "TaintedGrailModdingEditor"
+        tools = product / "Gems/TaintedGrailModdingSDK/Tools"
+        external = product / "Gems/ExternalToolchain"
         (project / "cmake").mkdir(parents=True)
         (project / "ShaderLib").mkdir(parents=True)
-        (project / "Levels").mkdir()
-        (project / "Levels/DefaultLevel").mkdir()
-        (repo / "Assets/Editor/Prefabs").mkdir(parents=True)
-        (repo / "AutomatedTesting").mkdir(parents=True)
+        (project / "Levels/DefaultLevel").mkdir(parents=True)
         tools.mkdir(parents=True)
-        (repo / "docs/tainted-grail-sdk").mkdir(parents=True)
+        external.mkdir(parents=True)
+        (product / "docs/tainted-grail-sdk").mkdir(parents=True)
 
-        default_level = {"ContainerEntity": {}, "Entities": {"Grid": {}, "Ground": {}}}
-        (repo / "Assets/Editor/Prefabs/Default_Level.prefab").write_text(
-            json.dumps(default_level),
-            encoding="utf-8",
-        )
-        (project / "Levels/DefaultLevel/DefaultLevel.prefab").write_text(
-            json.dumps(default_level),
-            encoding="utf-8",
-        )
-
-        (repo / "engine.json").write_text(
+        (product / "o3de.lock.json").write_text(
             json.dumps(
                 {
-                    "external_subdirectories": ["Gems/TaintedGrailModdingSDK"],
-                    "projects": ["AutomatedTesting", "TaintedGrailModdingEditor"],
+                    "schema_version": 1,
+                    "repository": "https://github.com/o3de/o3de.git",
+                    "commit": "68683f23fb747380d3efa2424bd5f30242e9c5a2",
+                    "engine_name": "o3de",
+                    "engine_version": "2.7.0",
+                    "checkout_directory": "o3de",
                 }
             ),
             encoding="utf-8",
+        )
+        (product / "Gems/TaintedGrailModdingSDK/gem.json").write_text(
+            '{"gem_name":"TaintedGrailModdingSDK"}\n', encoding="utf-8"
+        )
+        (external / "gem.json").write_text(
+            '{"gem_name":"ExternalToolchain"}\n', encoding="utf-8"
         )
         (project / "project.json").write_text(
             json.dumps(
@@ -86,6 +83,10 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
                     "executable_name": "TaintedGrailModdingEditor",
                     "icon_path": "preview.png",
                     "engine": "o3de",
+                    "external_subdirectories": [
+                        "../Gems/ExternalToolchain",
+                        "../Gems/TaintedGrailModdingSDK",
+                    ],
                     "gem_names": [
                         "Atom",
                         "DiffuseProbeGrid",
@@ -99,18 +100,24 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
         )
         (project / "CMakeLists.txt").write_text("o3de_initialize()\n", encoding="utf-8")
         (project / "cmake/EngineFinder.cmake").write_text(
-            "list(APPEND CMAKE_MODULE_PATH engine)\n",
+            "FOA_O3DE_ROOT\n"
+            "o3de.lock.json\n"
+            "External O3DE commit mismatch\n"
+            "tg_editor_product_root\n"
+            "tg_editor_engine_root\n"
+            "set(tg_editor_engine_root)\n",
             encoding="utf-8",
         )
+        (project / "Levels/DefaultLevel/DefaultLevel.prefab").write_text(
+            json.dumps({"ContainerEntity": {}, "Entities": {}}), encoding="utf-8"
+        )
         (project / "ShaderLib/scenesrg.srgi").write_text(
-            "#pragma once\n"
-            "#include <Atom/Features/SrgSemantics.azsli>\n"
+            "#pragma once\nSrgSemantics.azsli\n"
             "partial ShaderResourceGroup SceneSrg : SRG_PerScene {};\n",
             encoding="utf-8",
         )
         (project / "ShaderLib/viewsrg.srgi").write_text(
-            "#pragma once\n"
-            "#include <Atom/Features/SrgSemantics.azsli>\n"
+            "#pragma once\nSrgSemantics.azsli\n"
             "partial ShaderResourceGroup ViewSrg : SRG_PerView {};\n",
             encoding="utf-8",
         )
@@ -118,11 +125,8 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
         (project / "TaintedGrailModdingEditor.ico").write_bytes(
             b"\x00\x00\x01\x00\x01\x00icon"
         )
-        (repo / "AutomatedTesting/project.json").write_text(
-            json.dumps({"project_name": "AutomatedTesting", "gem_names": ["Atom"]}),
-            encoding="utf-8",
-        )
-        (repo / "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md").write_text(
+
+        (product / "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md").write_text(
             "TaintedGrailModdingEditor\n"
             "developer_preview_entry.py create\n"
             "developer_preview_entry.py verify\n"
@@ -130,18 +134,8 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "validate_path_policy.py\n"
             "bounded per-user storage\n"
             "Tainted Grail Modding Editor.lnk\n"
-            "Tools \u2192 Tainted Grail SDK\n"
+            "Tools → Tainted Grail SDK\n"
             "LOCALAPPDATA\n",
-            encoding="utf-8",
-        )
-        (tools / "developer_preview_open.py").write_text(
-            "validate_preview_project(repo_root)\n"
-            "materialize_preview_workspace(repo_root)\n"
-            '"--project-cache"\n'
-            '"--project-user"\n'
-            '"--project-log"\n'
-            "developer_preview_assets.prepare_assets()\n"
-            "developer_preview_launch.main(arguments)\n",
             encoding="utf-8",
         )
         (tools / "developer_preview_path_policy.py").write_text(
@@ -152,196 +146,99 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "PREVIEW_STARTUP_LEVEL\n"
             "verify_preview_workspace\n"
             "developer_preview.validate_build_directory\n"
+            "FOA-SDK product_root and O3DE engine_root must be separate checkouts\n"
             "Diagnostic overrides must not replace\n",
             encoding="utf-8",
         )
         (tools / "developer_preview_shortcut.py").write_text(
-            "WScript.Shell\n"
-            "TG_SHORTCUT_OUTPUT\n"
-            "TG_ENGINE_PATH\n"
-            "TG_PROJECT_CACHE_PATH\n"
-            "TG_PROJECT_USER_PATH\n"
-            "TG_PROJECT_LOG_PATH\n"
-            "TG_STARTUP_LEVEL\n"
-            "developer_preview_assets.prepare_assets()\n"
-            "developer_preview_path_policy\n"
-            "resolve_source_built_entry\n"
+            "TG_ENGINE_PATH\nTG_PROJECT_CACHE_PATH\nTG_PROJECT_USER_PATH\n"
+            "TG_PROJECT_LOG_PATH\nTG_STARTUP_LEVEL\nresolve_source_built_entry\n"
             "resolve_diagnostic_entry\n"
-            "diagnostic_override\n"
-            '"trust_mode": paths.trust_mode\n'
-            "validate_preview_project\n",
+            '"trust_mode": paths.trust_mode\n',
             encoding="utf-8",
         )
         (tools / "developer_preview_entry.py").write_text(
-            "WScript.Shell\n"
-            "developer_preview_shortcut.verify_shortcut\n"
-            "developer_preview_shortcut.create_shortcut\n"
-            "resolve_source_built_entry\n"
+            "verify_shortcut\ncreate_shortcut\nresolve_source_built_entry\n"
             "_require_manifest_matches_policy\n"
-            "Diagnostic override shortcuts are not verified source-built entries\n"
-            "allow_diagnostic_override\n"
-            "inspect_shortcut\n"
-            "expected.startup_level\n"
-            "expected.project_cache\n"
-            "expected.project_user\n"
-            "expected.project_log\n",
+            "Diagnostic override shortcuts are not verified source-built entries\n",
             encoding="utf-8",
         )
         (tools / "developer_preview_workspace.py").write_text(
-            "LOCALAPPDATA\n"
-            "MANAGED_PROJECT_FILES\n"
-            "PRESERVED_PROJECT_FILES\n"
-            "materialize_preview_workspace\n"
-            "verify_preview_workspace\n"
-            "refusing to overwrite\n",
-            encoding="utf-8",
-        )
-        (tools / "developer_preview_launch.py").write_text(
-            'parser.add_argument("--project")\n'
-            'parser.add_argument("--level")\n'
-            'parser.add_argument("--engine")\n'
-            'parser.add_argument("--project-cache")\n'
-            'parser.add_argument("--project-user")\n'
-            'parser.add_argument("--project-log")\n'
-            'command.extend(("--project-path", str(project)))\n'
-            "validate_project_path(project)\n"
-            "validate_write_paths(cache, user, log)\n"
-            "validate_startup_level(project, level)\n",
+            "LOCALAPPDATA\nMANAGED_PROJECT_FILES\nPRESERVED_PROJECT_FILES\n"
+            "materialize_preview_workspace\nverify_preview_workspace\nrefusing to overwrite\n",
             encoding="utf-8",
         )
         (tools / "developer_preview_assets.py").write_text(
-            "AssetProcessorBatch.exe\n"
-            "--project-cache-path\n"
-            "--project-user-path\n"
-            "--project-log-path\n"
-            "--platforms=pc\n"
-            "verify_preview_workspace\n"
-            "Asset preparation failed\n",
+            "AssetProcessorBatch.exe\n--project-cache-path\n--project-user-path\n"
+            "--project-log-path\nverify_preview_workspace\nAsset preparation failed\n",
             encoding="utf-8",
         )
-        (tools / "developer_preview.py").write_text(
-            'ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"\n'
-            "targets = (ASSET_PROCESSOR_BATCH_TARGET,)\n",
-            encoding="utf-8",
-        )
-        return repo
+        return product
 
-    def test_valid_dedicated_project_contract_passes(self) -> None:
+    def test_valid_extracted_product_contract_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            contract.validate_preview_project(self.make_repo(Path(temporary)))
+            contract.validate_preview_project(self.make_product(Path(temporary)))
 
-    def test_missing_gem_fails(self) -> None:
+    def test_inherited_engine_root_path_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "TaintedGrailModdingEditor/project.json"
+            product = self.make_product(Path(temporary))
+            (product / "Code").mkdir()
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "Inherited O3DE path"):
+                contract.validate_preview_project(product)
+
+    def test_stock_or_unknown_gem_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            product = self.make_product(Path(temporary))
+            stock = product / "Gems/Atom"
+            stock.mkdir()
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "exactly the two"):
+                contract.validate_preview_project(product)
+
+    def test_project_must_register_exact_product_gem_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            product = self.make_product(Path(temporary))
+            path = product / "TaintedGrailModdingEditor/project.json"
             document = json.loads(path.read_text(encoding="utf-8"))
-            document["gem_names"] = []
+            document["external_subdirectories"] = ["../Gems/TaintedGrailModdingSDK"]
             path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "must enable"):
-                contract.validate_preview_project(repo)
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "exactly the two"):
+                contract.validate_preview_project(product)
 
-    def test_automated_testing_must_not_host_preview(self) -> None:
+    def test_missing_required_gem_name_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "AutomatedTesting/project.json"
+            product = self.make_product(Path(temporary))
+            path = product / "TaintedGrailModdingEditor/project.json"
             document = json.loads(path.read_text(encoding="utf-8"))
-            document["gem_names"].append("TaintedGrailModdingSDK")
+            document["gem_names"].remove("ExternalToolchain")
             path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "must not host"):
-                contract.validate_preview_project(repo)
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "ExternalToolchain"):
+                contract.validate_preview_project(product)
 
-    def test_project_identity_and_icons_are_required(self) -> None:
+    def test_startup_level_is_product_owned_and_structurally_canonical(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "TaintedGrailModdingEditor/project.json"
-            document = json.loads(path.read_text(encoding="utf-8"))
-            document["display_name"] = "Wrong"
-            path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "display_name"):
-                contract.validate_preview_project(repo)
+            product = self.make_product(Path(temporary))
+            startup = product / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab"
+            startup.write_text('{"Entities": {}}\n', encoding="utf-8")
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "ContainerEntity"):
+                contract.validate_preview_project(product)
 
-    def test_missing_renderer_host_gem_fails(self) -> None:
+    def test_dependency_lock_requires_full_commit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "TaintedGrailModdingEditor/project.json"
-            document = json.loads(path.read_text(encoding="utf-8"))
-            document["gem_names"].remove("DiffuseProbeGrid")
-            path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "DiffuseProbeGrid"):
-                contract.validate_preview_project(repo)
+            product = self.make_product(Path(temporary))
+            lock = product / "o3de.lock.json"
+            document = json.loads(lock.read_text(encoding="utf-8"))
+            document["commit"] = "short"
+            lock.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "full commit SHA"):
+                contract.validate_preview_project(product)
 
-    def test_project_scene_and_view_srgs_are_required(self) -> None:
+    def test_engine_finder_must_enforce_exact_commit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            (repo / "TaintedGrailModdingEditor/ShaderLib/scenesrg.srgi").unlink()
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "scene SRG"):
-                contract.validate_preview_project(repo)
-
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            (repo / "TaintedGrailModdingEditor/ShaderLib/viewsrg.srgi").unlink()
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "view SRG"):
-                contract.validate_preview_project(repo)
-
-    def test_level_root_is_required(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            (repo / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab").unlink()
-            (repo / "TaintedGrailModdingEditor/Levels/DefaultLevel").rmdir()
-            (repo / "TaintedGrailModdingEditor/Levels").rmdir()
-            with self.assertRaisesRegex(
-                contract.PreviewProjectContractError,
-                "level root is missing",
-            ):
-                contract.validate_preview_project(repo)
-
-    def test_default_startup_level_is_required_and_must_match_template(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            startup = repo / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab"
-            startup.unlink()
-            with self.assertRaisesRegex(
-                contract.PreviewProjectContractError,
-                "startup level is missing",
-            ):
-                contract.validate_preview_project(repo)
-
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            startup = repo / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab"
-            startup.write_text('{"different": true}\n', encoding="utf-8")
-            with self.assertRaisesRegex(
-                contract.PreviewProjectContractError,
-                "must remain the O3DE default level template",
-            ):
-                contract.validate_preview_project(repo)
-
-    def test_quickstart_must_name_path_policy(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
-            path.write_text("developer_preview_entry.py create\n", encoding="utf-8")
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "missing required"):
-                contract.validate_preview_project(repo)
-
-    def test_sidecar_cannot_be_source_trust_root(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py"
-            path.write_text(
-                path.read_text(encoding="utf-8") + "expected_target = Path(target_value)\n",
-                encoding="utf-8",
-            )
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "sidecar"):
-                contract.validate_preview_project(repo)
-
-    def test_path_policy_file_is_required(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            repo = self.make_repo(Path(temporary))
-            path = repo / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_path_policy.py"
-            path.unlink()
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "path and executable"):
-                contract.validate_preview_project(repo)
+            product = self.make_product(Path(temporary))
+            finder = product / "TaintedGrailModdingEditor/cmake/EngineFinder.cmake"
+            finder.write_text("FOA_O3DE_ROOT\no3de.lock.json\n", encoding="utf-8")
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "External O3DE commit mismatch"):
+                contract.validate_preview_project(product)
 
 
 if __name__ == "__main__":

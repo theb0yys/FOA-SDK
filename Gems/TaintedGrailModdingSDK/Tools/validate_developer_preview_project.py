@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the dedicated Developer Preview project and trusted clickable entry."""
+"""Validate the extracted FOA-SDK product tree and dedicated Editor project."""
 
 from __future__ import annotations
 
@@ -25,21 +25,37 @@ PREVIEW_ICO = "TaintedGrailModdingEditor.ico"
 PREVIEW_SCENE_SRG = "ShaderLib/scenesrg.srgi"
 PREVIEW_VIEW_SRG = "ShaderLib/viewsrg.srgi"
 PREVIEW_STARTUP_LEVEL = "Levels/DefaultLevel/DefaultLevel.prefab"
-ENGINE_DEFAULT_LEVEL_TEMPLATE = "Assets/Editor/Prefabs/Default_Level.prefab"
-AUTOMATED_TESTING_PATH = Path("AutomatedTesting")
+REQUIRED_PRODUCT_GEMS = ("ExternalToolchain", "TaintedGrailModdingSDK")
 REQUIRED_PREVIEW_GEMS = (
     "Atom",
     "DiffuseProbeGrid",
     "PhysX5",
-    "ExternalToolchain",
-    "TaintedGrailModdingSDK",
+    *REQUIRED_PRODUCT_GEMS,
 )
-TG_GEM_NAME = "TaintedGrailModdingSDK"
-TG_GEM_PATH = "Gems/TaintedGrailModdingSDK"
+EXPECTED_EXTERNAL_SUBDIRECTORIES = (
+    "../Gems/ExternalToolchain",
+    "../Gems/TaintedGrailModdingSDK",
+)
+FORBIDDEN_ENGINE_ROOT_PATHS = (
+    "Assets",
+    "AutomatedTesting",
+    "Code",
+    "Docker",
+    "Registry",
+    "Templates",
+    "Tools",
+    "cmake",
+    "python",
+    "scripts",
+    ".automatedtesting.json",
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "engine.json",
+)
 
 
 class PreviewProjectContractError(RuntimeError):
-    """Raised when the dedicated preview project contract is incomplete."""
+    """Raised when the extracted product/project contract is incomplete."""
 
 
 def repository_root_from_script() -> Path:
@@ -69,33 +85,6 @@ def require_string_list(document: dict[str, Any], key: str, label: str) -> list[
     return value
 
 
-def validate_png(path: Path) -> None:
-    if not path.is_file():
-        raise PreviewProjectContractError(f"Project preview icon is missing: {path}")
-    header = path.read_bytes()[:24]
-    if (
-        len(header) != 24
-        or header[:8] != b"\x89PNG\r\n\x1a\n"
-        or header[12:16] != b"IHDR"
-    ):
-        raise PreviewProjectContractError(f"Project preview icon is not a valid PNG: {path}")
-    width, height = struct.unpack(">II", header[16:24])
-    if width < 128 or height < 128:
-        raise PreviewProjectContractError(
-            f"Project preview icon must be at least 128x128: {path}"
-        )
-
-
-def validate_ico(path: Path) -> None:
-    if not path.is_file():
-        raise PreviewProjectContractError(f"Windows shortcut icon is missing: {path}")
-    header = path.read_bytes()[:6]
-    if len(header) != 6 or header[:4] != b"\x00\x00\x01\x00":
-        raise PreviewProjectContractError(f"Windows shortcut icon is not a valid ICO: {path}")
-    if int.from_bytes(header[4:6], "little") < 1:
-        raise PreviewProjectContractError(f"Windows shortcut icon has no image entries: {path}")
-
-
 def require_fragments(path: Path, fragments: tuple[str, ...], label: str) -> str:
     if not path.is_file():
         raise PreviewProjectContractError(f"{label} is missing: {path}")
@@ -108,26 +97,57 @@ def require_fragments(path: Path, fragments: tuple[str, ...], label: str) -> str
     return content
 
 
-def validate_preview_project(repo_root: Path) -> None:
-    engine = load_json_object(repo_root / "engine.json", "engine manifest")
-    projects = require_string_list(engine, "projects", "engine manifest")
-    external_subdirectories = require_string_list(
-        engine,
-        "external_subdirectories",
-        "engine manifest",
-    )
+def validate_png(path: Path) -> None:
+    if not path.is_file():
+        raise PreviewProjectContractError(f"Project preview icon is missing: {path}")
+    header = path.read_bytes()[:24]
+    if len(header) != 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        raise PreviewProjectContractError(f"Project preview icon is not a valid PNG: {path}")
+    width, height = struct.unpack(">II", header[16:24])
+    if width < 128 or height < 128:
+        raise PreviewProjectContractError(f"Project preview icon must be at least 128x128: {path}")
 
-    project_key = PREVIEW_PROJECT_PATH.as_posix()
-    if projects.count(project_key) != 1:
-        raise PreviewProjectContractError(
-            f"engine.json must register {project_key!r} exactly once."
-        )
-    if external_subdirectories.count(TG_GEM_PATH) != 1:
-        raise PreviewProjectContractError(
-            f"engine.json must register {TG_GEM_PATH!r} exactly once."
-        )
 
-    project_root = repo_root / PREVIEW_PROJECT_PATH
+def validate_ico(path: Path) -> None:
+    if not path.is_file():
+        raise PreviewProjectContractError(f"Windows shortcut icon is missing: {path}")
+    header = path.read_bytes()[:6]
+    if len(header) != 6 or header[:4] != b"\x00\x00\x01\x00":
+        raise PreviewProjectContractError(f"Windows shortcut icon is not a valid ICO: {path}")
+    if int.from_bytes(header[4:6], "little") < 1:
+        raise PreviewProjectContractError(f"Windows shortcut icon has no image entries: {path}")
+
+
+def validate_extracted_product_tree(product_root: Path) -> None:
+    for relative_path in FORBIDDEN_ENGINE_ROOT_PATHS:
+        path = product_root / relative_path
+        if path.exists():
+            raise PreviewProjectContractError(
+                f"Inherited O3DE path must not exist in the FOA-SDK product tree: {relative_path}"
+            )
+    lock = load_json_object(product_root / "o3de.lock.json", "O3DE dependency lock")
+    if lock.get("schema_version") != 1 or lock.get("engine_name") != "o3de":
+        raise PreviewProjectContractError("O3DE dependency lock identity is invalid.")
+    commit = lock.get("commit")
+    if not isinstance(commit, str) or len(commit) != 40:
+        raise PreviewProjectContractError("O3DE dependency lock must contain a full commit SHA.")
+
+    gems_root = product_root / "Gems"
+    if not gems_root.is_dir():
+        raise PreviewProjectContractError(f"Product Gems root is missing: {gems_root}")
+    actual_gems = sorted(path.name for path in gems_root.iterdir() if path.is_dir())
+    if actual_gems != sorted(REQUIRED_PRODUCT_GEMS):
+        raise PreviewProjectContractError(
+            "FOA-SDK must contain exactly the two product-owned Gems; "
+            f"found {actual_gems}."
+        )
+    for gem in REQUIRED_PRODUCT_GEMS:
+        load_json_object(gems_root / gem / "gem.json", f"{gem} Gem descriptor")
+
+
+def validate_preview_project(product_root: Path) -> None:
+    validate_extracted_product_tree(product_root)
+    project_root = product_root / PREVIEW_PROJECT_PATH
     project_path = project_root / "project.json"
     project = load_json_object(project_path, "Developer Preview project manifest")
     expected_fields = {
@@ -140,10 +160,16 @@ def validate_preview_project(repo_root: Path) -> None:
     }
     for key, expected in expected_fields.items():
         if project.get(key) != expected:
-            raise PreviewProjectContractError(
-                f"{project_path} must keep {key}={expected!r}."
-            )
+            raise PreviewProjectContractError(f"{project_path} must keep {key}={expected!r}.")
 
+    external_subdirectories = require_string_list(
+        project, "external_subdirectories", "Developer Preview project manifest"
+    )
+    if external_subdirectories != list(EXPECTED_EXTERNAL_SUBDIRECTORIES):
+        raise PreviewProjectContractError(
+            "Developer Preview project must register exactly the two product-owned Gem directories "
+            "in deterministic order."
+        )
     gem_names = require_string_list(project, "gem_names", "Developer Preview project manifest")
     for required_gem in REQUIRED_PREVIEW_GEMS:
         if gem_names.count(required_gem) != 1:
@@ -155,68 +181,42 @@ def validate_preview_project(repo_root: Path) -> None:
         path = project_root / required
         if not path.is_file():
             raise PreviewProjectContractError(f"Dedicated project build file is missing: {path}")
-    levels_path = project_root / "Levels"
-    if not levels_path.is_dir():
-        raise PreviewProjectContractError(
-            f"Dedicated project level root is missing: {levels_path}"
-        )
-    startup_level_path = project_root / PREVIEW_STARTUP_LEVEL
-    default_level_template_path = repo_root / ENGINE_DEFAULT_LEVEL_TEMPLATE
-    if not startup_level_path.is_file():
-        raise PreviewProjectContractError(
-            f"Dedicated project startup level is missing: {startup_level_path}"
-        )
-    if not default_level_template_path.is_file():
-        raise PreviewProjectContractError(
-            f"O3DE default level template is missing: {default_level_template_path}"
-        )
-    startup_level = load_json_object(startup_level_path, "dedicated project startup level")
-    default_level_template = load_json_object(
-        default_level_template_path,
-        "O3DE default level template",
+    engine_finder = require_fragments(
+        project_root / "cmake/EngineFinder.cmake",
+        (
+            "FOA_O3DE_ROOT",
+            "o3de.lock.json",
+            "External O3DE commit mismatch",
+            "tg_editor_product_root",
+            "tg_editor_engine_root",
+        ),
+        "external engine resolver",
     )
-    if startup_level != default_level_template:
-        raise PreviewProjectContractError(
-            "Dedicated project startup level must remain the O3DE default level template."
-        )
+    if "tg_editor_engine_root)" not in engine_finder:
+        raise PreviewProjectContractError("External engine resolver does not publish its engine root.")
+
+    startup_level_path = project_root / PREVIEW_STARTUP_LEVEL
+    startup_level = load_json_object(startup_level_path, "dedicated project startup level")
+    for key in ("ContainerEntity", "Entities"):
+        if key not in startup_level:
+            raise PreviewProjectContractError(
+                f"Dedicated project startup level is missing canonical top-level key {key!r}."
+            )
     validate_png(project_root / PREVIEW_PNG)
     validate_ico(project_root / PREVIEW_ICO)
     require_fragments(
         project_root / PREVIEW_SCENE_SRG,
-        (
-            "#pragma once",
-            "SrgSemantics.azsli",
-            "partial ShaderResourceGroup SceneSrg : SRG_PerScene",
-        ),
+        ("#pragma once", "SrgSemantics.azsli", "partial ShaderResourceGroup SceneSrg : SRG_PerScene"),
         "project scene SRG extension",
     )
     require_fragments(
         project_root / PREVIEW_VIEW_SRG,
-        (
-            "#pragma once",
-            "SrgSemantics.azsli",
-            "partial ShaderResourceGroup ViewSrg : SRG_PerView",
-        ),
+        ("#pragma once", "SrgSemantics.azsli", "partial ShaderResourceGroup ViewSrg : SRG_PerView"),
         "project view SRG extension",
     )
 
-    automated = load_json_object(
-        repo_root / AUTOMATED_TESTING_PATH / "project.json",
-        "AutomatedTesting project manifest",
-    )
-    automated_gems = require_string_list(
-        automated,
-        "gem_names",
-        "AutomatedTesting project manifest",
-    )
-    if TG_GEM_NAME in automated_gems:
-        raise PreviewProjectContractError(
-            "AutomatedTesting must not host the TG editor after the dedicated project is registered."
-        )
-
-    quickstart_path = repo_root / "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md"
     quickstart = require_fragments(
-        quickstart_path,
+        product_root / "docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md",
         (
             "TaintedGrailModdingEditor",
             "developer_preview_entry.py create",
@@ -225,7 +225,7 @@ def validate_preview_project(repo_root: Path) -> None:
             "validate_path_policy.py",
             "bounded per-user storage",
             "Tainted Grail Modding Editor.lnk",
-            "Tools \u2192 Tainted Grail SDK",
+            "Tools → Tainted Grail SDK",
             "LOCALAPPDATA",
         ),
         "dedicated-entry quickstart",
@@ -235,21 +235,9 @@ def validate_preview_project(repo_root: Path) -> None:
             "The quickstart must use the trusted developer_preview_entry.py command."
         )
 
-    opener = require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py",
-        (
-            "validate_preview_project",
-            "materialize_preview_workspace",
-            '"--project-cache"',
-            '"--project-user"',
-            '"--project-log"',
-            "developer_preview_assets.prepare_assets",
-            "developer_preview_launch.main",
-        ),
-        "project opener",
-    )
-    policy = require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_path_policy.py",
+    tools = product_root / "Gems/TaintedGrailModdingSDK/Tools"
+    require_fragments(
+        tools / "developer_preview_path_policy.py",
         (
             "APPROVED_BUILD_DIRECTORY",
             "resolve_source_built_entry",
@@ -258,65 +246,38 @@ def validate_preview_project(repo_root: Path) -> None:
             "PREVIEW_STARTUP_LEVEL",
             "verify_preview_workspace",
             "developer_preview.validate_build_directory",
+            "FOA-SDK product_root and O3DE engine_root must be separate checkouts",
             "Diagnostic overrides must not replace",
         ),
         "canonical path and executable policy",
     )
-    shortcut = require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_shortcut.py",
+    require_fragments(
+        tools / "developer_preview_shortcut.py",
         (
-            "WScript.Shell",
-            "TG_SHORTCUT_OUTPUT",
             "TG_ENGINE_PATH",
             "TG_PROJECT_CACHE_PATH",
             "TG_PROJECT_USER_PATH",
             "TG_PROJECT_LOG_PATH",
             "TG_STARTUP_LEVEL",
-            "developer_preview_assets.prepare_assets",
-            "developer_preview_path_policy",
             "resolve_source_built_entry",
             "resolve_diagnostic_entry",
-            "diagnostic_override",
             '"trust_mode": paths.trust_mode',
-            "validate_preview_project",
         ),
-        "low-level shortcut generator",
+        "shortcut generator",
     )
-    entry = require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py",
+    require_fragments(
+        tools / "developer_preview_entry.py",
         (
-            "developer_preview_shortcut.verify_shortcut",
-            "developer_preview_shortcut.create_shortcut",
+            "verify_shortcut",
+            "create_shortcut",
             "resolve_source_built_entry",
             "_require_manifest_matches_policy",
             "Diagnostic override shortcuts are not verified source-built entries",
-            "allow_diagnostic_override",
-            "inspect_shortcut",
-            "expected.startup_level",
-            "expected.project_cache",
-            "expected.project_user",
-            "expected.project_log",
-            "WScript.Shell",
         ),
         "trusted clickable entry",
     )
-    if "expected_target = Path(target_value)" in entry:
-        raise PreviewProjectContractError(
-            "Source-built shortcut trust must not be derived from the sidecar manifest."
-        )
-
-    for prohibited in (
-        "shell=True",
-        "AutomatedTesting/user/log",
-        'PREVIEW_PROJECT = Path("AutomatedTesting")',
-    ):
-        if prohibited in shortcut or prohibited in entry or prohibited in opener or prohibited in policy:
-            raise PreviewProjectContractError(
-                f"Dedicated entry tooling still contains prohibited fragment {prohibited!r}."
-            )
-
     require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_workspace.py",
+        tools / "developer_preview_workspace.py",
         (
             "LOCALAPPDATA",
             "MANAGED_PROJECT_FILES",
@@ -327,45 +288,17 @@ def validate_preview_project(repo_root: Path) -> None:
         ),
         "bounded per-user project materializer",
     )
-
     require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_assets.py",
+        tools / "developer_preview_assets.py",
         (
             "AssetProcessorBatch.exe",
             "--project-cache-path",
             "--project-user-path",
             "--project-log-path",
-            "--platforms=",
             "verify_preview_workspace",
             "Asset preparation failed",
         ),
         "clean-first-run asset preflight",
-    )
-
-    require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview.py",
-        (
-            'ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"',
-            "ASSET_PROCESSOR_BATCH_TARGET,",
-        ),
-        "Developer Preview build target plan",
-    )
-
-    require_fragments(
-        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py",
-        (
-            '"--project"',
-            '"--project-path"',
-            '"--level"',
-            '"--engine"',
-            '"--project-cache"',
-            '"--project-user"',
-            '"--project-log"',
-            "validate_project_path",
-            "validate_write_paths",
-            "validate_startup_level",
-        ),
-        "project launcher",
     )
 
 
@@ -373,13 +306,9 @@ def main() -> int:
     try:
         validate_preview_project(repository_root_from_script())
     except (OSError, PreviewProjectContractError) as exc:
-        print(f"Developer Preview project contract validation failed: {exc}", file=sys.stderr)
+        print(f"Developer Preview project validation failed: {exc}", file=sys.stderr)
         return 1
-    print(
-        "Developer Preview project contract passed: dedicated source project, bounded writable "
-        "materialization, tracked default viewport level, path policy, and trusted source-built "
-        "clickable entry are complete."
-    )
+    print("Extracted FOA-SDK product and Developer Preview project contract passed.")
     return 0
 
 

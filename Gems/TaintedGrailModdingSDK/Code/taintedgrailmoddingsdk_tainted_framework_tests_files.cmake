@@ -6,5 +6,6 @@
 #
 
 set(FILES
+    Tests/TaintedFrameworkEditorServicesTests.cpp
     Tests/TaintedFrameworkKnowledgeTests.cpp
 )

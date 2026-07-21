@@ -34,6 +34,7 @@ VALIDATORS = (
     "validate_population_actor_troop_editor.py",
     "validate_population_contract_hardening.py",
     "validate_tainted_framework_knowledge.py",
+    "validate_tainted_framework_editor_services.py",
     "validate_catalog_schema2.py",
     "validate_economy_coverage_dashboard.py",
     "validate_economy_duplicate_detection.py",

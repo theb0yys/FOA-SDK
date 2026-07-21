@@ -67,8 +67,9 @@ remain outside the O3DE Framework and Editor targets.
 `golden/fixtures.json` records deterministic expectations for plugin-catalog
 ordering, duplicate refusal, known and unknown capabilities, exact Mono/IL2CPP
 separation, configuration canonicalization, diagnostics ordering and future
-schema rejection. `manifest.json` binds every canonical knowledge file by byte
-count and SHA-256.
+schema rejection. The Editor-service validator binds its compatibility,
+configuration, diagnostics and surface projections to those canonical fixtures.
+`manifest.json` binds every canonical knowledge file by byte count and SHA-256.
 
 ## ExtensionAPI consumer
 
@@ -88,6 +89,10 @@ catalog, workspace, profile or source-registry reference and no automatic
 promotion, governance, validation, save, signing, publication, deployment or
 runtime authority.
 
+The reviewed Editor-service binding consumes the sanitized profile copy and
+requires exact game, branch, runtime and BepInEx agreement before reporting a
+profile ready. It does not expand ExtensionAPI authority.
+
 ## Validation
 
 The repository validator fails closed on:
@@ -105,11 +110,14 @@ The repository validator fails closed on:
 
 Production-linked compiled tests cover pinned identity, Mono/IL2CPP separation,
 consumer-ready surface uniqueness, deterministic ExtensionAPI registration,
-duplicate refusal and branch-drift authorization refusal.
+duplicate refusal, branch-drift authorization refusal, exact BepInEx matching,
+and sanitized-profile Editor-service planning.
 
 ## Deferred work
 
-This unit does not port runtime code. The next unit may port only reviewed,
-engine-neutral Tainted Framework editor-facing services. UI Framework utilities
-and reviewed embedded assets follow after that. Local/pinned-GitHub acquisition,
-Mono/IL2CPP adapters and exact-install parity remain later units.
+The canonical intake and engine-neutral Editor-service port do not port runtime
+code. The next governed unit is the acquisition-provider layer: local filesystem,
+pinned GitHub and optional Merlin routes with exact provenance, licence, branch,
+version and runtime-applicability records plus candidate-evidence return without
+automatic promotion. Road Atlas, Avalon AI, Mono/IL2CPP adapters and exact-install
+parity remain later units.

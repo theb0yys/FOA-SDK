@@ -55,6 +55,17 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
                 ("git", "diff", "--check", base, "HEAD"),
             )
 
+    def test_local_and_compiled_gates_cannot_silently_skip_essential_layers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            values = self.paths(Path(temporary))
+            commands = verification.gate_commands(values, "a" * 40)
+            local = commands["local-validation"]
+            compiled = commands["compiled-tests"]
+            self.assertIn("--keep-going", local)
+            self.assertIn("--static-only", local)
+            self.assertIn("--no-tests=error", compiled)
+            self.assertIn(verification.TEST_PATTERN, compiled)
+
     def test_finalized_receipt_reruns_both_authoritative_verifiers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             values = self.paths(Path(temporary))
@@ -100,11 +111,28 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
             with patch.object(verification, "invoke", side_effect=successful):
                 report = verification.status(values, head, base)
             self.assertTrue(report["complete_verified"])
+            self.assertEqual(verification.status_exit_code(report), 0)
             self.assertEqual(len(calls), 2)
 
-            with patch.object(verification, "invoke", return_value=(1, "hash mismatch")):
+            with patch.object(
+                verification,
+                "invoke",
+                return_value=(1, "hash mismatch"),
+            ):
                 report = verification.status(values, head, base)
             self.assertFalse(report["complete_verified"])
+            self.assertEqual(verification.status_exit_code(report), 1)
+
+    def test_incomplete_status_is_a_gating_failure(self) -> None:
+        self.assertEqual(
+            verification.status_exit_code({"complete_verified": False}),
+            1,
+        )
+        self.assertEqual(verification.status_exit_code({}), 1)
+        self.assertEqual(
+            verification.status_exit_code({"complete_verified": True}),
+            0,
+        )
 
     def test_raw_passed_strings_cannot_claim_completion(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -127,16 +155,27 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            with patch.object(verification, "invoke", return_value=(1, "tampered evidence")):
+            with patch.object(
+                verification,
+                "invoke",
+                return_value=(1, "tampered evidence"),
+            ):
                 report = verification.status(values, "f" * 40, base)
             self.assertFalse(report["complete_verified"])
-            self.assertEqual(report["receipt_metadata_unverified"][verification.UI_GATE], "passed")
+            self.assertEqual(
+                report["receipt_metadata_unverified"][verification.UI_GATE],
+                "passed",
+            )
 
     def test_review_base_must_be_nonempty_ancestor(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary) / "repo"
             repo.mkdir()
-            subprocess.run(["git", "-C", str(repo), "init"], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "init"],
+                check=True,
+                capture_output=True,
+            )
             (repo / "engine.json").write_text("{}\n", encoding="utf-8")
             tools = repo / "Gems/TaintedGrailModdingSDK/Tools"
             tools.mkdir(parents=True)
@@ -147,17 +186,36 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
             ):
                 (tools / name).write_text("# fixture\n", encoding="utf-8")
             (repo / "file.txt").write_text("base\n", encoding="utf-8")
-            subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "add", "."],
+                check=True,
+            )
             commit = [
-                "git", "-C", str(repo), "-c", "user.name=Test",
-                "-c", "user.email=test@example.invalid", "commit", "-m",
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "commit",
+                "-m",
             ]
             subprocess.run([*commit, "base"], check=True, capture_output=True)
-            base = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            base = subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
             (repo / "file.txt").write_text("head\n", encoding="utf-8")
-            subprocess.run(["git", "-C", str(repo), "add", "file.txt"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "add", "file.txt"],
+                check=True,
+            )
             subprocess.run([*commit, "head"], check=True, capture_output=True)
-            head = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            head = subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
             args = Namespace(repo_root=repo, review_base=base)
             self.assertEqual(verification.repository(args), (repo, head, base))
             args.review_base = head

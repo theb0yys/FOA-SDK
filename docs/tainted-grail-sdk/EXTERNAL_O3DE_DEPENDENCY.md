@@ -42,14 +42,35 @@ The Developer Preview coordinator resolves `engine_root` in this order:
 1. explicit `--engine-root`;
 2. `FOA_O3DE_ROOT`;
 3. the sibling directory named by `checkout_directory`;
-4. the current combined source tree as a temporary migration fallback.
+4. legacy combined-tree detection for a migration diagnostic.
 
-The fourth route exists only so this contract can land before history
-extraction. It must be removed after the FOA-only repository has passed its
-clean-clone acceptance gate.
+The fourth route does not authorise configure, build, or validation and does not
+bypass exact-commit enforcement. Because the inherited product checkout has a
+FOA commit at `HEAD`, the pin check directs the developer to the required
+external O3DE checkout. Combined-tree detection is removed after the FOA-only
+repository passes its clean-clone acceptance gate.
 
 The build root resolves from explicit `--build-dir`, then `FOA_BUILD_ROOT`, then
 the sibling `foa-build/` directory.
+
+## Product-owned Gem discovery
+
+The external engine does not own the FOA Gems. Therefore
+`TaintedGrailModdingEditor/project.json` registers exactly these project-relative
+external subdirectories:
+
+```text
+../Gems/ExternalToolchain
+../Gems/TaintedGrailModdingSDK
+```
+
+The same project manifest enables both Gem names exactly once. This allows the
+pinned engine to discover the product-owned Gem descriptors without adding FOA
+paths to upstream `engine.json` or relying on a user-global O3DE manifest.
+
+The standalone project `EngineFinder.cmake` resolves `FOA_O3DE_ROOT` first and
+then the sibling directory named by the lock. It no longer treats FOA-SDK as the
+owning engine tree.
 
 ## Configure boundary
 

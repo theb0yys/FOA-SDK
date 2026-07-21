@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -29,6 +30,15 @@ def read(path: Path) -> str:
         ) from exc
 
 
+def load_json(path: Path) -> object:
+    try:
+        return json.loads(read(path))
+    except json.JSONDecodeError as exc:
+        raise TaintedFrameworkEditorServicesError(
+            f"Unable to parse {path}: {exc}"
+        ) from exc
+
+
 def ordered(text: str, fragments: tuple[str, ...], message: str) -> None:
     cursor = -1
     for fragment in fragments:
@@ -46,6 +56,7 @@ def validate(repo_root: Path) -> None:
     source = gem / "Code" / "Source"
     tests = gem / "Code" / "Tests"
     tools = gem / "Tools"
+    docs = repo_root / "docs" / "tainted-grail-sdk"
 
     header = read(source / "TaintedFrameworkEditorServices.h")
     implementation = read(source / "TaintedFrameworkEditorServices.cpp")
@@ -63,6 +74,13 @@ def validate(repo_root: Path) -> None:
         tests / "TaintedFrameworkEditorServicesTests.cpp"
     )
     local_runner = read(tools / "run_local_validation.py")
+    fixtures = load_json(
+        gem / "Knowledge" / "TaintedFramework" / "golden" / "fixtures.json"
+    )
+    service_document = read(docs / "TAINTED_FRAMEWORK_EDITOR_SERVICES.md")
+    review_document = read(
+        docs / "TAINTED_FRAMEWORK_EDITOR_SERVICES_REVIEW.md"
+    )
 
     for required in (
         "CompatibilityDecision",
@@ -74,6 +92,8 @@ def validate(repo_root: Path) -> None:
         "GetConfigurationDefaults",
         "GetDiagnosticVocabulary",
         "BuildActivationPlan",
+        "m_bepInExVersion",
+        "ExtensionAPI::ProfileView",
         "m_candidateEvidenceSubmissionEligible",
     ):
         require(
@@ -110,19 +130,29 @@ def validate(repo_root: Path) -> None:
         "row.m_runtime != runtime" not in implementation,
         "Compatibility uses a nonexistent runtime field",
     )
+    require(
+        "row.m_bepInExVersion != bepInExVersion" in implementation,
+        "Ready compatibility must bind the exact evidence-backed BepInEx version",
+    )
+    require(
+        '"exact_bepinex_version_not_evidence_backed"' in implementation,
+        "BepInEx drift reason must be stable",
+    )
+    require(
+        '"ambiguous_exact_compatibility_observations"' in implementation,
+        "Conflicting exact observations must fail closed",
+    )
     ordered(
         implementation,
         (
+            'if (row.m_status == "blocked")',
             'if (row.m_status == "live_load_validated")',
-            "if (row.m_gameVersion == gameVersion)",
-            "result.m_status = ReadinessStatus::Ready",
+            "if (row.m_gameVersion != gameVersion)",
+            "if (row.m_bepInExVersion != bepInExVersion)",
+            "++exactMatchCount",
         ),
-        "Compatibility readiness must require exact evidence-backed "
-        "game-version matching",
-    )
-    require(
-        'row.m_status == "blocked"' in implementation,
-        "Blocked upstream branches must remain blocked",
+        "Compatibility matching must check blocked state, exact game version, "
+        "and exact BepInEx version before recording readiness",
     )
     require(
         '"upstream_branch_blocked"' in implementation,
@@ -137,6 +167,30 @@ def validate(repo_root: Path) -> None:
         "Unknown branch/runtime pairs must fail closed",
     )
 
+    for profile_field in (
+        "profile.m_gameVersion",
+        "profile.m_branch",
+        "profile.m_runtimeTarget",
+        "profile.m_bepInExVersion",
+    ):
+        require(
+            profile_field in implementation,
+            f"Sanitized ProfileView binding missing {profile_field}",
+        )
+
+    require(
+        'surface.m_status == "candidate"' in implementation,
+        "Consumer readiness must require a candidate API-surface status",
+    )
+    require(
+        'surface.m_consumerBinding != "disabled"' in implementation,
+        "Consumer readiness must reject disabled bindings",
+    )
+    require(
+        '"surface_status_blocked"' in implementation,
+        "Blocked API surfaces need a stable fail-closed reason",
+    )
+
     for false_flag in (
         "plan.m_runtimeInvocationAllowed = false",
         "plan.m_fileWriteAllowed = false",
@@ -147,8 +201,8 @@ def validate(repo_root: Path) -> None:
             f"Permanent no-authority flag missing: {false_flag}",
         )
     require(
-        "plan.m_candidateEvidenceSubmissionEligible" in implementation,
-        "Governed candidate-evidence eligibility must be explicit",
+        "&& hasConsumerReadySurface" in implementation,
+        "Evidence eligibility must also require one approved consumer-ready surface",
     )
     require(
         "m_candidateEvidenceSubmissionAllowed" not in header + implementation,
@@ -187,15 +241,71 @@ def validate(repo_root: Path) -> None:
         "ExactMonoEvidenceIsReady",
         "Il2CppRemainsBlocked",
         "VersionDriftIsUnsupported",
+        "BepInExVersionDriftIsUnsupported",
         "OnlyRuntimeReportIsConsumerReady",
+        "BlockedSurfaceHasStableReason",
         "ActivationPlanIsReadOnlyAndDeterministic",
         "BlockedPlanIsNotEvidenceEligible",
+        "SanitizedProfileBindingIsExact",
+        "SanitizedProfileBepInExDriftFailsClosed",
         "FoundationOwnsPersistentService",
     ):
         require(
             test_name in compiled_tests,
             f"Compiled service coverage missing {test_name}",
         )
+
+    require(isinstance(fixtures, dict), "Golden fixtures must be a JSON object")
+    require(
+        fixtures.get("branch_compatibility", {}).get("Mono")
+        == "supported_exact_1.23.401",
+        "Golden fixture must preserve exact Mono game compatibility",
+    )
+    require(
+        fixtures.get("branch_compatibility", {}).get("IL2CPP") == "blocked",
+        "Golden fixture must preserve IL2CPP blocking",
+    )
+    require(
+        fixtures.get("configuration")
+        == [
+            ["General.Enabled", "true"],
+            ["Safety.DryRunOnly", "true"],
+            ["Safety.ReportOnlyMode", "true"],
+        ],
+        "Editor-service configuration projection drifted from the golden fixture",
+    )
+    require(
+        fixtures.get("diagnostics")
+        == [
+            "contract-manifest",
+            "host-safety",
+            "plugin-registration",
+            "runtime-compatibility",
+            "runtime-fingerprint",
+            "runtime-readiness",
+            "runtime-report",
+            "service-activation",
+            "service-registry",
+        ],
+        "Editor-service diagnostic projection drifted from the golden fixture",
+    )
+
+    require(
+        "BepInEx `5.4.23.3`" in service_document,
+        "Public service documentation must record the exact ready BepInEx version",
+    )
+    require(
+        "sanitized `ExtensionAPI::ProfileView`" in service_document,
+        "Public service documentation must describe the safe profile binding",
+    )
+    require(
+        "acquisition-provider layer" in service_document,
+        "Public service documentation must point to the governed next unit",
+    )
+    require(
+        "acquisition-provider layer" in review_document,
+        "Review gate must keep acquisition work behind service acceptance",
+    )
 
     require(
         "validate_tainted_framework_editor_services.py" in local_runner,
@@ -214,10 +324,11 @@ def main() -> int:
         )
         return 1
     print(
-        "Tainted Framework editor-service validation passed: exact "
-        "compatibility, deterministic read-only projections, governed "
-        "evidence eligibility, persistent Foundation ownership, "
-        "production-linked tests, and no runtime/file/catalog authority."
+        "Tainted Framework editor-service validation passed: exact game, branch, "
+        "runtime, and BepInEx compatibility; sanitized profile binding; "
+        "deterministic golden projections; governed evidence eligibility; "
+        "persistent Foundation ownership; production-linked tests; and no "
+        "runtime/file/catalog authority."
     )
     return 0
 

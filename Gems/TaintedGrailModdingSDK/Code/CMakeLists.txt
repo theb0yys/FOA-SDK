@@ -76,6 +76,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
         NO_UNITY
         FILES_CMAKE
             taintedgrailmoddingsdk_catalog_tests_files.cmake
+            taintedgrailmoddingsdk_population_hardening_tests_files.cmake
             taintedgrailmoddingsdk_path_policy_tests_files.cmake
             taintedgrailmoddingsdk_work_order_tests_files.cmake
             taintedgrailmoddingsdk_runtime_result_tests_files.cmake

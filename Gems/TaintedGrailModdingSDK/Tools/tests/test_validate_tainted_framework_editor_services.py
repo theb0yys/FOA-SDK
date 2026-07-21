@@ -20,7 +20,10 @@ VALIDATOR_PATH = (
     / "Tools"
     / "validate_tainted_framework_editor_services.py"
 )
-SPEC = importlib.util.spec_from_file_location("tf_editor_validator", VALIDATOR_PATH)
+SPEC = importlib.util.spec_from_file_location(
+    "tf_editor_validator",
+    VALIDATOR_PATH,
+)
 validator = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 SPEC.loader.exec_module(validator)
@@ -81,6 +84,14 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
         )
         self.assert_fails("Permanent no-authority flag missing")
 
+    def test_runtime_target_field_drift_fails(self) -> None:
+        self.replace(
+            "Code/Source/TaintedFrameworkEditorServices.cpp",
+            "row.m_runtimeTarget != runtime",
+            "row.m_runtime != runtime",
+        )
+        self.assert_fails("canonical runtime-target field")
+
     def test_version_check_removal_fails(self) -> None:
         self.replace(
             "Code/Source/TaintedFrameworkEditorServices.cpp",
@@ -92,7 +103,8 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
     def test_bepinex_include_fails(self) -> None:
         path = self.path("Code/Source/TaintedFrameworkEditorServices.h")
         path.write_text(
-            path.read_text(encoding="utf-8") + "\n#include <BepInEx/BaseUnityPlugin.h>\n",
+            path.read_text(encoding="utf-8")
+            + "\n#include <BepInEx/BaseUnityPlugin.h>\n",
             encoding="utf-8",
         )
         self.assert_fails("prohibited authority")
@@ -108,7 +120,8 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
     def test_foundation_service_ownership_removal_fails(self) -> None:
         self.replace(
             "Code/Source/FoundationService.h",
-            "        TaintedFrameworkEditorServices::Service m_taintedFrameworkEditorServices;\n",
+            "        TaintedFrameworkEditorServices::Service "
+            "m_taintedFrameworkEditorServices;\n",
             "",
         )
         self.assert_fails("Foundation must own")

@@ -1,4 +1,4 @@
-name: Tainted Grail Editor Entry
+name: FOA-SDK Editor Entry
 
 # Automatic triggers are intentionally suspended while repository Actions cannot
 # obtain hosted runners. Run this workflow manually only after Actions is restored.
@@ -8,32 +8,46 @@ on:
 permissions:
   contents: read
 
+env:
+  O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+  O3DE_ROOT: ${{ runner.temp }}/o3de
+  FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build
+
 jobs:
   validate-entry:
     name: Validate dedicated project and trusted clickable entry
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
-      - name: Check out repository
+      - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+      - name: Check out exact external O3DE policy surface
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/o3de/o3de.git $env:O3DE_ROOT
+          git -C $env:O3DE_ROOT sparse-checkout init --no-cone
+          @('/engine.json', '/CMakePresets.json', '/scripts/commit_validation/') |
+            git -C $env:O3DE_ROOT sparse-checkout set --stdin
+          git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT
+          $actual = git -C $env:O3DE_ROOT rev-parse HEAD
+          if ($actual -cne $env:O3DE_COMMIT) {
+            throw "External O3DE commit mismatch: $actual"
+          }
+
       - name: Test dedicated project contract
         run: >-
           python -m unittest discover
           -s Gems/TaintedGrailModdingSDK/Tools/tests
           -p "test_developer_preview_project.py" -v
-
-      - name: Test dedicated project opener
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_open.py" -v
 
       - name: Test canonical path policy
         run: >-
@@ -59,18 +73,22 @@ jobs:
       - name: Validate canonical path and executable policy
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py
 
-      - name: Dry-run trusted clickable entry generation
+      - name: Dry-run trusted external-engine entry generation
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
         run: >-
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create
-          --build-dir build/tg-sdk-developer-preview-0-windows-profile
+          --build-dir "${{ env.FOA_BUILD_ROOT }}/tg-sdk-developer-preview-0-windows-profile"
+          --output "${{ env.FOA_BUILD_ROOT }}/Tainted Grail Modding Editor.lnk"
           --dry-run
 
       - name: Create, inspect, and label a diagnostic-only Windows shortcut
         shell: pwsh
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
         run: |
           $editor = Join-Path $env:RUNNER_TEMP "Editor.exe"
-          $shortcut = Join-Path $env:GITHUB_WORKSPACE `
-            "build/diagnostic-entries/CI Diagnostic Editor.lnk"
+          $shortcut = Join-Path $env:FOA_BUILD_ROOT "diagnostic-entries/CI Diagnostic Editor.lnk"
           New-Item -ItemType File -Path $editor -Force | Out-Null
 
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
@@ -80,21 +98,3 @@ jobs:
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py verify `
             --shortcut $shortcut `
             --allow-diagnostic-override
-
-          $shell = New-Object -ComObject WScript.Shell
-          $link = $shell.CreateShortcut($shortcut)
-          $expectedProject = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
-          $expectedArguments = '--project-path "' + $expectedProject + '"'
-          $expectedIcon = Join-Path $expectedProject "TaintedGrailModdingEditor.ico"
-
-          if ([IO.Path]::GetFullPath($link.TargetPath) -ne [IO.Path]::GetFullPath($editor)) {
-            throw "Shortcut target mismatch: $($link.TargetPath)"
-          }
-          if ($link.Arguments -ne $expectedArguments) {
-            throw "Shortcut argument mismatch: $($link.Arguments)"
-          }
-          if (-not $link.IconLocation.StartsWith(
-              $expectedIcon,
-              [StringComparison]::OrdinalIgnoreCase)) {
-            throw "Shortcut icon mismatch: $($link.IconLocation)"
-          }

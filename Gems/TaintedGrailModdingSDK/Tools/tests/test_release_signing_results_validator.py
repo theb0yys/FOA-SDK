@@ -80,6 +80,32 @@ class ReleaseSigningValidatorTests(unittest.TestCase):
     def test_repository_fixture_passes(self) -> None:
         validator.validate(self.root)
 
+    def test_registry_capacity_check_must_precede_append(self) -> None:
+        def move_append_before_capacity(text: str) -> str:
+            text = text.replace(
+                "        if (m_envelopes.size() >= "
+                "MaximumReleaseSigningRegistryEnvelopes)",
+                "        m_envelopes.push_back(envelope);\n"
+                "        if (m_envelopes.size() >= "
+                "MaximumReleaseSigningRegistryEnvelopes)",
+                1,
+            )
+            return text.replace(
+                "        m_envelopes.push_back(envelope);\n"
+                "        if (error)",
+                "        if (error)",
+                1,
+            )
+
+        self.mutate(
+            (
+                "Gems/TaintedGrailModdingSDK/Code/Source/"
+                "AdapterReleaseSigningResultContracts.cpp"
+            ),
+            move_append_before_capacity,
+        )
+        self.assert_validation_fails("fixed capacity")
+
     def test_missing_hardening_test_fails_closed(self) -> None:
         path = (
             self.root

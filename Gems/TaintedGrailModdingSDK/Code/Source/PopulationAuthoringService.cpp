@@ -144,6 +144,17 @@ namespace TaintedGrailModdingSDK
             }
         }
 
+        bool EvidenceIsCompleteAndBound(
+            const EvidenceRecord& evidence,
+            const SourceRecord& source,
+            const GameProfile& profile)
+        {
+            return PopulationEvidenceIsCompleteAndBound(
+                evidence,
+                source,
+                profile);
+        }
+
         bool ValidateEvidence(
             const AZStd::vector<AZStd::string>& evidenceIds,
             const AZStd::vector<AZStd::string>& requiredSubjects,
@@ -152,6 +163,27 @@ namespace TaintedGrailModdingSDK
             const char* authoredArea,
             AZStd::string& error)
         {
+            for (const AZStd::string& evidenceId : evidenceIds)
+            {
+                const EvidenceRecord* evidence =
+                    sourceRegistry.FindEvidence(evidenceId);
+                const SourceRecord* source = evidence
+                    ? sourceRegistry.FindSource(evidence->m_sourceId)
+                    : nullptr;
+                if (!evidence
+                    || !source
+                    || !EvidenceIsCompleteAndBound(
+                        *evidence,
+                        *source,
+                        profile))
+                {
+                    error = AZStd::string(authoredArea)
+                        + " evidence is missing, incomplete, or bound to a "
+                          "different profile: "
+                        + evidenceId;
+                    return false;
+                }
+            }
             return ValidatePopulationEvidenceCoverage(
                 evidenceIds,
                 requiredSubjects,
@@ -442,8 +474,13 @@ namespace TaintedGrailModdingSDK
                 "A troop definition cannot contain duplicate member-link IDs."));
         }
 
+        AZStd::vector<AZStd::string> troopEvidenceIds =
+            definition.m_profile.m_evidenceIds;
+        AppendUniquePopulationEvidenceIds(
+            troopEvidenceIds,
+            TroopEvidenceIds(definition.m_profile, catalog));
         if (!ValidateEvidence(
-                TroopEvidenceIds(definition.m_profile, catalog),
+                troopEvidenceIds,
                 TroopEvidenceSubjects(definition.m_profile, catalog),
                 profile,
                 sourceRegistry,
@@ -454,8 +491,13 @@ namespace TaintedGrailModdingSDK
         }
         for (const PopulationTroopMember& member : definition.m_members)
         {
+            AZStd::vector<AZStd::string> memberEvidenceIds =
+                member.m_evidenceIds;
+            AppendUniquePopulationEvidenceIds(
+                memberEvidenceIds,
+                MemberEvidenceIds(member, catalog));
             if (!ValidateEvidence(
-                    MemberEvidenceIds(member, catalog),
+                    memberEvidenceIds,
                     MemberEvidenceSubjects(member, catalog),
                     profile,
                     sourceRegistry,

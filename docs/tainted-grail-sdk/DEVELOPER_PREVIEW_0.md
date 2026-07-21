@@ -144,9 +144,10 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output ..\foa-build\tg-sdk-developer-preview-0-fixture
 ```
 
-The fixture uses reserved `preview.*` identities and contains no proprietary
-game data, native FoA identifiers, private paths, credentials, saves, or
-extracted assets.
+The generated `preview-fixture.manifest.json` binds every fixture file by exact
+byte count and SHA-256 fingerprint. The fixture uses reserved `preview.*`
+identities and contains no proprietary game data, native FoA identifiers,
+private paths, credentials, saves, or extracted assets.
 
 ## Compiled persistence smoke
 
@@ -158,8 +159,9 @@ ctest --test-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
   -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-This service-level persistence smoke proves load, save, close-equivalent clear,
-reopen, and canonical equivalence. It does not prove FoA runtime compatibility.
+This service-level persistence smoke proves load, save, close-equivalent, and
+reopen behavior plus canonical equivalence. It does not prove FoA runtime
+compatibility.
 
 ## Launch and diagnostics
 
@@ -176,9 +178,20 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
 It uses O3DE’s `--project-path` switch, exposes no arbitrary Editor passthrough
 arguments, waits for the Editor process, and returns its exit code.
 
-Diagnostics and screenshot evidence must also remain under the external build
-root or another reviewed output directory. Nothing is uploaded automatically.
-Review every generated file before sharing.
+Collect and verify a redacted diagnostic bundle with:
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py collect `
+  --repo-root . `
+  --output ..\foa-build\tg-sdk-developer-preview-0-diagnostics
+
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify `
+  --output ..\foa-build\tg-sdk-developer-preview-0-diagnostics
+```
+
+Diagnostics and screenshot evidence must remain under the external build root or
+another reviewed output directory. Nothing is uploaded automatically. Review
+every generated file before sharing.
 
 ## Windows manual UI smoke
 
@@ -188,8 +201,9 @@ defines the accepted real-session pass. Initialize and verify that evidence with
 commit, hashes reviewed PNG files, checks required coverage, and enforces privacy
 and runtime-boundary attestations.
 
-The tooling does not take screenshots automatically, inspect pixels, use OCR,
-or fabricate release evidence.
+Manual screenshot capture remains an operator action. The tooling does not take
+screenshots automatically, inspect pixels, use OCR, or fabricate release
+evidence.
 
 ## Failure behavior
 

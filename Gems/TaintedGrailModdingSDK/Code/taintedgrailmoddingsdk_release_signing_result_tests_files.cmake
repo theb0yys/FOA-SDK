@@ -6,5 +6,6 @@
 #
 
 set(FILES
+    Tests/AdapterReleaseSigningHardeningTests.cpp
     Tests/AdapterReleaseSigningResultTests.cpp
 )

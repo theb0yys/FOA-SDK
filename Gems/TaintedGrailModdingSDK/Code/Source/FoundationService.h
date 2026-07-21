@@ -14,6 +14,7 @@
 #include "CatalogPromotionService.h"
 #include "CatalogTransactionService.h"
 #include "EconomyBlockerService.h"
+#include "ExtensionAPI.h"
 #include "FoundationPersistenceBoundary.h"
 #include "FoundationValidationService.h"
 #include "FoundationWorkspaceLoadService.h"
@@ -109,6 +110,8 @@ namespace TaintedGrailModdingSDK
         const CatalogDatabase& GetCatalog() const;
         const AZStd::string& GetCatalogFilePath() const;
         const FoundationSnapshot& GetSnapshot() const;
+        ExtensionAPI::Service& GetExtensionAPI();
+        const ExtensionAPI::Service& GetExtensionAPI() const;
 
         void RefreshSnapshot();
 
@@ -135,6 +138,7 @@ namespace TaintedGrailModdingSDK
         SourceEvidenceRegistry m_sourceRegistry;
         AZStd::vector<ImportIssue> m_importIssues;
         CatalogDatabase m_catalog;
+        ExtensionAPI::Service m_extensionApi;
         AZStd::string m_catalogFilePath;
         FoundationValidationService m_validationService;
         CatalogGovernanceBlockerService m_governanceBlockerService;

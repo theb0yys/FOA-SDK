@@ -111,25 +111,18 @@ Status: implemented, continuing hardening and Windows UI verification.
 
 ### Actors and population
 
-Status: active development. Core contracts, CatalogDatabase integration, durable catalog schema-2
-migration/persistence, evidence-bound Framework candidate publication, and the positive/negative Core and
-Framework population-authoring test sources with compiled-target wiring are implemented. The immutable
-seven-lane population action contract and registered Actor and Troop Editor pane are also implemented.
-The deterministic synthetic fixture and complete local-validation integration are next; this status does not
-claim an exact-head compiled test run, Windows UI evidence, or a complete vertical slice.
+Status: implemented vertical slice, continuing hardening and exact-head host/UI verification.
 
-- Typed actor profiles, troop profiles, and troop membership with exact canonical identity and evidence
-  boundaries.
-- Schema-1 catalog migration, schema-2-only catalog writing, deterministic population ordering, malformed
-  input rejection, and save/reopen equivalence.
-- Atomic troop-definition bootstrap upserts a troop profile and its supplied members as one validated,
-  persisted candidate without removing omitted members; failed evidence, integrity, or persistence never
-  publishes partial population state.
-- Actor and Troop Editor pane, lifecycle registration, and population-specific action-lane
-  derivation/presentation are implemented without runtime, spawn, deployment, or save-mutation authority.
-- Deterministic synthetic population fixture and complete vertical-slice local-validation integration are next.
-- Spawn and Encounter Editor.
-- Templates, identities, pools, routes, lifecycle, uniqueness, density, cleanup, and rollback research.
+- Core contracts, CatalogDatabase integration, durable catalog schema-2 migration/persistence, evidence-bound Framework candidate publication, and positive/negative production-linked population tests are implemented.
+- The immutable seven-lane population action contract and registered **Tainted Grail Actor and Troop Editor** pane are implemented.
+- The project-owned deterministic schema-2 population fixture, manifest verification, focused negative tests, public user/architecture/format/release-readiness documentation, and focused Windows evidence checklist are implemented.
+- Typed actor profiles, troop profiles, and troop membership use exact canonical identity and evidence boundaries.
+- Schema-1 catalog migration, schema-2-only writing, deterministic population ordering, malformed input rejection, and save/reopen equivalence are implemented.
+- Atomic troop-definition bootstrap persists a troop profile and supplied members as one validated candidate without removing omitted members; failed evidence, integrity, or persistence never publishes partial state.
+- The Actor/Troop pane derives and presents population action lanes without runtime, spawn, deployment, or save-mutation authority.
+- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-four-pane evidence pass remain the active acceptance gate; no host-verification result is claimed by documentation or fixture success alone.
+- Spawn and Encounter Editor is the next population authoring capability.
+- Templates, identities, pools, routes, lifecycle, uniqueness, density, cleanup, and rollback research continue behind separate reviewed contracts.
 
 ### World and societies
 
@@ -378,8 +371,9 @@ Exit criteria:
 - approval is impossible while compatibility is unclear, release blockers remain, verifier evidence is adverse, or required dispositions are unresolved or rejected;
 - equivalent inputs produce identical findings, disposition coverage, status, axes, canonical JSON, and candidate evidence ordering;
 - reconciliation does not mutate reports, verifier evidence, work orders, execution results, reviews, or registries;
-- the Editor pane remains non-editable and exposes no review-authoring, verifier, filesystem, deployment, launch, adapter, promotion, archive, signing, publication, or release action;
-- the Windows manual UI checklist includes all nineteen panes and the default zero-verifier-reconciliation-request state.
+- candidate evidence remains transient and cannot become permission, publication, signing, or runtime authority automatically;
+- the Editor pane remains non-editable and exposes no review-authoring, verifier, deployment, signing, publication, or release action;
+- the Windows manual UI checklist includes all nineteen panes and the default zero-reconciliation-request state.
 
 ### Release-artifact provenance and signing-intent contract
 
@@ -475,10 +469,7 @@ Controlled pipeline:
 validate → generate → build → package → deploy → launch → capture → attach evidence
 ```
 
-Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted
-identity/time providers, acknowledgement and key custody, actual backup/restore and deployment implementations,
-actual independent verifier execution and target access, cryptographic signing and verification, publication
-results, and separately reviewed runtime adapters.
+Remaining Phase 8 work includes controlled package assembly, trusted filesystem inventory and hashing, trusted identity/time providers, acknowledgement and key custody, actual backup/restore and deployment implementations, actual independent verifier execution and target access, cryptographic signing and verification, publication results, and separately reviewed runtime adapters.
 
 ## Phase 9 — Ecosystem and automation
 
@@ -491,26 +482,18 @@ results, and separately reviewed runtime adapters.
 
 Status: Gate 0 contract-only precursor in development; Phase 9 provider and execution work remains proposed.
 
-- Gate 0 adds only inert Core handoff/result envelopes, canonical bindings, validation, tests, and
-  documentation. It introduces no service, process, filesystem, provider, build, deployment, or runtime
-  authority and does not change the active Phase 6 first-party domain order.
-
+- Gate 0 adds only inert Core handoff/result envelopes, canonical bindings, validation, tests, and documentation. It introduces no service, process, filesystem, provider, build, deployment, or runtime authority and does not change the active Phase 6 first-party domain order.
 - Use ordinary O3DE Tool Gems and the existing `ExternalToolchain` host; do not add another plugin loader.
 - Qualify the in-tree DCCsi Blender integration and Scene Exporter against exact supported Blender versions.
 - Add separate `foa.blender` and `foa.unity-editor` provider Gems with discovery-only first slices.
-- Define a deterministic FBX-plus-sidecar interchange for project-owned assets, identities, provenance,
-  transformations, losses, validation evidence, and exact toolchain locks.
+- Define a deterministic FBX-plus-sidecar interchange for project-owned assets, identities, provenance, transformations, losses, validation evidence, and exact toolchain locks.
 - Add a Unity editor-only interchange package for synthetic or user-owned test projects.
-- Keep the Unity authoring lane separate from FoA runtime adapters, BepInEx/Harmony execution, deployment,
-  game launch, and save mutation.
+- Keep the Unity authoring lane separate from FoA runtime adapters, BepInEx/Harmony execution, deployment, game launch, and save mutation.
 - Treat glTF/GLB and USD as later qualification candidates instead of claiming current cross-engine support.
-- Preserve the existing `ExternalToolchain` follow-on order: separately review host process supervision before
-  provider execution, and keep structured IPC or live connection behind later independent gates.
+- Preserve the existing `ExternalToolchain` follow-on order: separately review host process supervision before provider execution, and keep structured IPC or live connection behind later independent gates.
 
-See
-[Editor Toolchain and Unity Interchange Design](docs/tainted-grail-sdk/EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md).
-The exact Gate 0 boundary is documented in
-[External Tool Interchange Gate 0](docs/tainted-grail-sdk/EXTERNAL_TOOL_INTERCHANGE_GATE_0.md).
+See [Editor Toolchain and Unity Interchange Design](docs/tainted-grail-sdk/EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md).
+The exact Gate 0 boundary is documented in [External Tool Interchange Gate 0](docs/tainted-grail-sdk/EXTERNAL_TOOL_INTERCHANGE_GATE_0.md).
 
 ## Cross-cutting requirements
 

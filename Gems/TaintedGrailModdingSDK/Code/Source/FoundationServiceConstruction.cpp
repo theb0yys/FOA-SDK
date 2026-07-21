@@ -12,7 +12,8 @@
 namespace TaintedGrailModdingSDK
 {
     FoundationService::FoundationService()
-        : m_workspacePersistence(m_pathPolicy)
+        : m_extensionApi(m_workspace, m_catalog, m_sourceRegistry)
+        , m_workspacePersistence(m_pathPolicy)
         , m_packPersistence(
             m_pathPolicy,
             [this]() -> const WorkspaceModel&
@@ -83,7 +84,8 @@ namespace TaintedGrailModdingSDK
 
     FoundationService::FoundationService(
         FoundationWorkspaceLoadDependencies workspaceLoadDependencies)
-        : m_workspacePersistence(m_pathPolicy)
+        : m_extensionApi(m_workspace, m_catalog, m_sourceRegistry)
+        , m_workspacePersistence(m_pathPolicy)
         , m_packPersistence(
             m_pathPolicy,
             [this]() -> const WorkspaceModel&

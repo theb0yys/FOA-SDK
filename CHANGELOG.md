@@ -8,11 +8,12 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
-- Approved Windows prebuilt SDK installer path using O3DE's canonical `INSTALL`
-  layout, an installed project launcher, exact redistribution-reviewed inventory,
-  canonical manifest/checksums/provenance/SPDX metadata, deterministic portable
-  ZIP, CPack/WiX MSI, manual-only artifact workflow, and install/repair/uninstall
-  smoke contract without public release or FoA runtime authority.
+- Public **Actor and Troop Editor Guide** covering typed actor/troop/member authoring, exact template and leader bindings, governed action lanes, dirty-draft protection, deterministic fixture use, persistence, and runtime limits.
+- Public **Actor and Troop Architecture and Data Formats** contract covering Core/Framework/Editor ownership, catalog schema 2, exact evidence and identity, deterministic serialization, fixture format, and deferred spawn/runtime contracts.
+- Public **Actor and Troop Release Readiness** gate covering local validation, exact-head O3DE configure/build, compiled catalog tests, Windows evidence, release claims, and rollback.
+- Focused **Actor and Troop Windows UI Evidence** checklist for the current twenty-four-pane surface, including resolved/unresolved templates, exact troop composition, allow/forbid governance, dirty drafts, save/reopen, actionable failure, and runtime separation.
+- Deterministic project-owned schema-2 population fixture with two typed actors, one actor template, one patrol troop, two exact member rows, resolved and unresolved template coverage, exact evidence, and allowed/forbidden `spawn_candidate` examples.
+- Approved Windows prebuilt SDK installer path using O3DE's canonical `INSTALL` layout, an installed project launcher, exact redistribution-reviewed inventory, canonical manifest/checksums/provenance/SPDX metadata, deterministic portable ZIP, CPack/WiX MSI, manual-only artifact workflow, and install/repair/uninstall smoke contract without public release or FoA runtime authority.
 - Read-only **FOA Development Hub** default entry pane with live Foundation workspace/profile/pack context, explicit blocker and persistence-state visibility, task-first navigation, and deep-links to all existing specialist panes without duplicated domain logic or new runtime authority.
 - Twenty-four-pane Windows manual UI checklist coverage for Hub launch, live context, deep-links, and the existing accessibility and runtime-separation checks.
 - Repository-owned standard default level plus a bounded writable per-user project materialization, synchronous clean-first-run asset preflight, and canonical opener/shortcut arguments that start a visible lit 3D viewport without Windows security exceptions; managed bootstrap updates fail closed and user-created levels are preserved.
@@ -33,7 +34,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Public Slice 16 contract documentation and seventeen-pane Windows manual UI coverage for post-deployment reports.
 - Repository-owned `run_local_validation.py` entry point for Python unit tests, contract validators, temporary fixture/diagnostics verification, tracked-path hygiene, O3DE source policy, and optional compiled catalog tests.
 - CI/runner policy validator, negative regression tests, and public manual-validation documentation covering unavailable Actions, self-hosted runner isolation, registration-token handling, and restoration gates.
-- Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, deployed fingerprints, target verification, rollback, failures, safe logs, and candidate evidence return.
+- Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, target verification, rollback, failures, safe logs, and candidate evidence return.
 - Transient `AdapterDeploymentExecutionResultRegistry` and read-only **Tainted Grail Deployment Execution Result Evidence** pane; no executor is invoked and there is no automatic evidence promotion.
 - Deployment execution-result production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and sixteen-pane Windows UI coverage.
 - Pure-Core `AdapterDeploymentWorkOrderService` for exact ready-preview binding, typed named confirmation, confirmation scope, expiry, UTC maintenance windows, required preflight evidence, deterministic non-executable work-order steps, and an operator-facing checklist.
@@ -67,23 +68,26 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Changed
 
+- Actor/Troop status now records the deterministic fixture and public documentation as implemented; exact-head O3DE configure/build, compiled catalog tests, and Windows evidence remain the active acceptance gate before the slice is described as exact-head verified.
+- The focused Actor/Troop checklist supplements the current twenty-four-pane Hub-plus-specialist checklist instead of regressing the repository to the historical twenty-three-pane count.
 - Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.
 - The inherited full-engine `AR` workflow and generic upstream `Validation` workflow are removed from this fork so queued checks are not misrepresented as TG SDK test evidence.
 - Exact local validation evidence is the development merge gate until automatic Actions are safely restored; **no automated per-commit test result is claimed**.
 - Phase 8 now includes deterministic release-artifact provenance/signing-intent metadata; an externally supplied release-assembly and checksum-result envelope is the next ordered slice.
 - Focused execution-result validators continue to enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
-- The Windows manual UI checklist now covers all twenty panes and the default zero-release-artifact-envelope state.
-- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, post-deployment-report, independent-verifier, and reconciliation contracts as prerequisite handoffs; metadata readiness never authorises file, archive, signing, upload, publication, or runtime operations.
+- The Windows manual UI checklist now covers all twenty-four panes and the default Hub plus zero-transient-input states.
+- Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, post-deployment-report, independent-verifier, reconciliation, release-artifact, release-assembly, and release-signing contracts as prerequisite handoffs; metadata readiness never authorises file, archive, signing, upload, publication, or runtime operations.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.
 - Workspace loading publishes only complete validated candidates, and durable workspace persistence emits explicit schema-1 JSON.
 - Catalog governance remains typed, append-only, save-before-publish, evidence-backed, and separate from validation.
-- Runtime execution remains disabled across editor-owned workspace, catalog, economy, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, post-deployment-report, independent-verifier-result, verifier-reconciliation, and release-artifact workflows.
+- Runtime execution remains disabled across editor-owned workspace, catalog, economy, population, adapter, planning, result-evidence, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, deployment-execution-result, post-deployment-report, independent-verifier-result, verifier-reconciliation, release-artifact, release-assembly, and release-signing workflows.
 
 ### Security
 
 - Public pull requests must not execute on a general-purpose self-hosted runner; any future self-hosted design requires disposable isolation, no secrets or personal files, narrow labels, restricted triggers, and explicit operator ownership.
 - Runner registration tokens exposed in screenshots, messages, logs, or shell history are treated as compromised and must be abandoned and regenerated.
+- Population fixtures and UI evidence use only project-owned synthetic data, portable paths, exact evidence subjects, canonical hashes, and no game process, proprietary content, deployment, runtime spawning, or save mutation.
 - Release-artifact envelopes are transient declared metadata. Exact reconciliation/package JSON, content coverage, checksum declarations, provenance, legal dispositions, signing intent, and publication targets fail closed before metadata becomes `ready`.
 - A declared checksum is not generated or verified, a signing identity intent is not a signature, and a publication target is not an upload or release.
 - Verifier-reconciliation requests are transient caller-supplied metadata. Exact report JSON, work-order/execution/verifier fingerprints, candidate identities, preserved blockers, adverse findings, named review, and per-finding dispositions fail closed before a contract is accepted.
@@ -110,13 +114,12 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 ### Known limitations
 
 - Automatic GitHub Actions are unavailable in the current repository/account state; manual workflow definitions remain present, but full local and compiled validation must be run and recorded from a real checkout.
+- Exact-head Actor/Troop O3DE configure/build, compiled catalog tests, and Windows Editor evidence remain pending; documentation and deterministic fixture success alone are not host verification.
 - Release-artifact checksums, provenance, legal review, signing identities, publication targets, reviewer identities, and timestamps are caller-supplied metadata; no trusted filesystem reader, hasher, identity provider, signing service, uploader, or publication system exists.
 - A `ready` release-artifact envelope proves exact metadata shape only. It does not prove files exist, checksums match file bytes, legal rights exist, a signature was produced, or a target accepted a release.
 - Verifier-reconciliation reviewer identity, review time, decision, rationale, evidence IDs, and dispositions are caller-supplied metadata; no trusted identity provider, clock, signature, timestamp authority, or publication system exists.
 - An `accepted` reconciliation proves contract shape only. `clear` compatibility and `approved` release metadata are not trusted certification, signing, packaging, upload, or proof that any verifier ran.
-- Independent-verifier identity, capabilities, observations, failures, timestamps, fingerprints, and diagnostics are caller-supplied metadata; no verifier is discovered or run and no target file is independently read or hashed by the Editor.
-- `accepted` independent-verifier metadata means exact contract shape and all-matched supplied observations only; it is not compatibility certification, release approval, trusted attestation, or proof that a verifier actually ran.
-- Post-deployment reports aggregate supplied execution evidence and blockers only; they do not independently verify a target or publish a release decision.
+- Independent-verifier identity, capabilities, observations, failures, timestamps, and diagnostics are caller-supplied metadata; no trusted verifier process, target scanner, clock, identity provider, or evidence signer exists.
 - Executor review, step outcomes, fingerprints, backup/restore results, verification observations, rollback outcomes, failures, and logs are caller-supplied metadata; no executor, trusted target scanner, or automatic evidence promotion exists.
 - An `accepted` execution-result envelope proves contract shape only, not deployment success, safety, target existence, backup integrity, rollback correctness, or release readiness.
 - Confirmations, timestamps, maintenance-window evidence, preflight results, and reviewer identities are caller-supplied metadata; no trusted clock, identity provider, independent preflight runner, acknowledgement system, or deployment executor exists.
@@ -129,7 +132,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Runtime-result envelopes are transient and add no file loader, transport, automatic import, or live proof capture.
 - Adapter declarations and work-order plans are transient and are not dispatched or executed.
 - FoA runtime adapters, cleanup/rollback behavior, production deployment, and save integration are not implemented.
-- Remaining actor, spawn, world, faction, narrative/state, asset, and localisation authoring tools are not implemented.
+- Spawn, encounter, world, faction, narrative/state, asset, and localisation authoring tools remain incomplete.
 - The **actual Windows screenshot pass remains pending**.
 - The project has not published a supported binary release.
 

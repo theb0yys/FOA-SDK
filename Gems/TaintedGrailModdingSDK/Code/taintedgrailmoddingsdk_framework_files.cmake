@@ -14,8 +14,11 @@ set(FILES
     Source/CatalogPromotionService.h
     Source/EconomyAuthoringService.cpp
     Source/EconomyAuthoringService.h
+    Source/ExtensionAPI.cpp
+    Source/ExtensionAPI.h
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
+    Source/FoundationExtensionAPI.cpp
     Source/FoundationGovernanceService.cpp
     Source/FoundationNotificationBus.h
     Source/FoundationPersistenceBoundary.cpp

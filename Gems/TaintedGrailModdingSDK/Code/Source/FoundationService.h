@@ -23,6 +23,7 @@
 #include "SourceEvidenceRegistry.h"
 #include "SourceImportService.h"
 #include "TaintedFrameworkEditorServices.h"
+#include "TaintedInterfaceUiUtilities.h"
 
 namespace TaintedGrailModdingSDK
 {
@@ -115,6 +116,8 @@ namespace TaintedGrailModdingSDK
         const ExtensionAPI::Service& GetExtensionAPI() const;
         TaintedFrameworkEditorServices::Service& GetTaintedFrameworkEditorServices();
         const TaintedFrameworkEditorServices::Service& GetTaintedFrameworkEditorServices() const;
+        TaintedInterfaceUi::Service& GetTaintedInterfaceUiUtilities();
+        const TaintedInterfaceUi::Service& GetTaintedInterfaceUiUtilities() const;
 
         void RefreshSnapshot();
 
@@ -143,6 +146,7 @@ namespace TaintedGrailModdingSDK
         CatalogDatabase m_catalog;
         ExtensionAPI::Service m_extensionApi;
         TaintedFrameworkEditorServices::Service m_taintedFrameworkEditorServices;
+        TaintedInterfaceUi::Service m_taintedInterfaceUiUtilities;
         AZStd::string m_catalogFilePath;
         FoundationValidationService m_validationService;
         CatalogGovernanceBlockerService m_governanceBlockerService;

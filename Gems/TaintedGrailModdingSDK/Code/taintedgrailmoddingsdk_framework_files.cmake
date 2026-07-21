@@ -28,6 +28,7 @@ set(FILES
     Source/FoundationService.h
     Source/FoundationServiceConstruction.cpp
     Source/FoundationTaintedFrameworkEditorServices.cpp
+    Source/FoundationTaintedInterfaceUiUtilities.cpp
     Source/FoundationValidationService.cpp
     Source/FoundationValidationService.h
     Source/FoundationWorkspaceLoadService.cpp
@@ -48,6 +49,8 @@ set(FILES
     Source/TaintedFrameworkEditorServices.h
     Source/TaintedFrameworkKnowledge.cpp
     Source/TaintedFrameworkKnowledge.h
+    Source/TaintedInterfaceUiUtilities.cpp
+    Source/TaintedInterfaceUiUtilities.h
     Source/WorkspacePersistenceService.cpp
     Source/WorkspacePersistenceService.h
     Source/WorkspaceSchemaService.cpp

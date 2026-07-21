@@ -19,6 +19,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Actor and Troop Windows UI Evidence](ACTOR_TROOP_WINDOWS_UI_EVIDENCE.md) — focused exact-head checks for resolved/unresolved templates, troop composition, governance lanes, dirty drafts, persistence, errors, and runtime separation within the current twenty-four-pane surface.
 - [Tainted Framework Canonical Knowledge](TAINTED_FRAMEWORK_KNOWLEDGE.md) — pinned upstream identity, component classification, compatibility observations, golden fixtures, first ExtensionAPI consumer, provenance gates, and runtime-host prohibition.
 - [Tainted Framework Editor Services](TAINTED_FRAMEWORK_EDITOR_SERVICES.md) — exact compatibility projection, API-surface readiness, safe configuration defaults, diagnostic vocabulary, deterministic activation plans, and permanent no-runtime authority.
+- [Tainted Interface UI Utilities](TAINTED_INTERFACE_UI_UTILITIES.md) — pinned semantic UI catalog, deterministic style/layout helpers, blocked upstream payloads, and verified project-owned SVG fallbacks.
 - [Recipe Station Evidence View](RECIPE_STATION_EVIDENCE_VIEW.md) — read-only station visibility and learnability research, evidence health, governance, and blockers.
 - [Economy Acquisition Coverage](ECONOMY_ACQUISITION_COVERAGE.md) — read-only vendor, loot, reward, learnability, and crafting coverage derived from canonical relationships, exact evidence binding, governance, and blockers.
 - [Economy Cross-Pack Duplicate Report](ECONOMY_CROSS_PACK_DUPLICATES.md) — exact cross-pack subject and recipe-key candidates, evidence health, governance state, blockers, and read-only review results.
@@ -56,6 +57,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE build, compiled-test and Windows evidence requirements, release claims, rollback, and next population work.
 - [Tainted Framework Canonical Knowledge](TAINTED_FRAMEWORK_KNOWLEDGE.md) — authoritative intake, inventory, schema, fixtures, ExtensionAPI boundary, validation and deferred runtime/editor work.
 - [Tainted Framework Editor Services](TAINTED_FRAMEWORK_EDITOR_SERVICES.md) — reviewed engine-neutral service ownership, exact evidence projection, deterministic plans, tests, validation, and deferred UI/runtime work.
+- [Tainted Interface UI Utilities](TAINTED_INTERFACE_UI_UTILITIES.md) — engine-neutral token/catalog/layout contracts, exact upstream metadata, licence blocking, project-owned fallback assets and runtime separation.
+- [Tainted Interface UI Utilities Review](TAINTED_INTERFACE_UI_UTILITIES_REVIEW.md) — exact provenance, embedded-byte, build-graph, authority, test and host-verification acceptance gate.
 - [Editor Toolchain and Unity Interchange Design](EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md) — located O3DE, Blender, and Unity components; provider qualification; deterministic interchange; loss reporting; and staged delivery gates.
 - [External Tool Interchange Gate 0](EXTERNAL_TOOL_INTERCHANGE_GATE_0.md) — Core-only disabled handoff and result envelopes, canonical binding, fail-closed validation, and the boundary before any process work.
 - [O3DE-to-Unity Bridge Research Archive](../../Research/o3de-to-unity-conversion-and-runtime-bridge/README.md) — supplied report, durable source and claim registers, research areas, and gate reconciliation.
@@ -117,12 +120,13 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - typed item/recipe authoring, station/learnability evidence, economy acquisition coverage, and exact cross-pack duplicate candidates;
 - typed actor profiles, troop profiles, exact troop-member rows, resolved and unresolved template/leader bindings, schema-2 persistence, deterministic project-owned fixture, governed candidate publication, immutable action lanes, and the registered Actor/Troop pane without runtime or save authority;
 - pinned Tainted Framework `0.1.33` knowledge, complete selected-component classification, canonical golden fixtures, exact Mono/IL2CPP evidence separation, the first named governed ExtensionAPI consumer, and persistent engine-neutral Editor services for exact compatibility, API readiness, safe configuration defaults, diagnostics vocabulary, and non-executable activation plans;
+- pinned Tainted Interface `0.2.6` semantic UI metadata, deterministic style/metric/layout utilities, an exact nineteen-ID curated catalog, blocked `NOASSERTION` upstream payloads, and verified project-owned SVG fallbacks without renderer or runtime authority;
 - typed transient adapter declarations, capability compatibility, deterministic work-order plans, runtime-result evidence, build manifests, package/deployment previews, deployment work orders/results, verification/reconciliation, and release metadata contracts with operational permissions disabled;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.
 
-The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, and remaining specialised domain tools are not complete.
+The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

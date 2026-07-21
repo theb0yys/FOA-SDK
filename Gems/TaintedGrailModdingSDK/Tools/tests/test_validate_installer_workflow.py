@@ -36,6 +36,7 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
         runner.parent.mkdir(parents=True, exist_ok=True)
         runner.write_text(
             '"validate_installer_workflow.py"\n'
+            "source_policy_engine_root = None\n"
             "def resolve_engine_root(value):\n"
             "    return value\n",
             encoding="utf-8",
@@ -67,7 +68,7 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(
                 InstallerWorkflowValidationError,
-                "forbidden automatic or product-root behavior",
+                "forbidden automatic/product-root behavior",
             ):
                 validate_installer_workflow(repo)
 

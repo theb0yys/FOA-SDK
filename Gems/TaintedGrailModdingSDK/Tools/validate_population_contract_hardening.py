@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate exact population evidence, required-member, and workspace-root semantics."""
+"""Validate population contracts and explicit catalog helper extraction."""
 
 from __future__ import annotations
 
@@ -56,7 +56,10 @@ def validate(repo_root: Path) -> None:
 
     evidence = read(source / "PopulationEvidenceValidation.h")
     authoring = read(source / "PopulationAuthoringService.cpp")
+    catalog_database = read(source / "CatalogDatabase.cpp")
+    catalog_base = read(source / "CatalogDatabaseBase.inl")
     integrity = read(source / "CatalogDatabaseIntegrity.cpp")
+    integrity_base = read(source / "CatalogDatabaseIntegrityBase.inl")
     member_validation = read(source / "CatalogDatabasePopulationPart3.inl")
     hardening_tests = read(tests / "PopulationContractHardeningTests.cpp")
     authoring_tests = read(tests / "PopulationAuthoringTests.cpp")
@@ -135,6 +138,59 @@ def validate(repo_root: Path) -> None:
             "The public population candidate service must validate the canonical "
             "workspace path before accepting the active pack."
         )
+
+    for fragment in (
+        '#include "CatalogDatabaseBase.inl"',
+        "candidate.ReplaceFromDocumentWithoutPopulation(",
+        "ClearWithoutPopulation();",
+        "BuildDocumentWithoutPopulation(",
+    ):
+        require(catalog_database, fragment, "Population-aware catalog wrapper")
+    for fragment in (
+        "bool CatalogDatabase::ReplaceFromDocumentWithoutPopulation(",
+        "void CatalogDatabase::ClearWithoutPopulation()",
+        "CatalogDocument CatalogDatabase::BuildDocumentWithoutPopulation(",
+    ):
+        require(catalog_base, fragment, "Explicit catalog base helpers")
+    for fragment in (
+        "bool CatalogDatabase::ReplaceFromDocument(",
+        "void CatalogDatabase::Clear()",
+        "CatalogDocument CatalogDatabase::BuildDocument(",
+    ):
+        reject(catalog_base, fragment, "Explicit catalog base helpers")
+
+    for fragment in (
+        '#include "CatalogDatabaseIntegrityBase.inl"',
+        "ValidateIntegrityWithoutPopulation(",
+    ):
+        require(integrity, fragment, "Population-aware catalog integrity wrapper")
+    for fragment in (
+        "bool CatalogDatabase::ReplaceFromBoundDocumentWithoutPopulation(",
+        "bool CatalogDatabase::ValidateIntegrityWithoutPopulation(",
+        "candidate.ValidateIntegrityWithoutPopulation(",
+    ):
+        require(integrity_base, fragment, "Explicit catalog integrity helpers")
+    for fragment in (
+        "bool CatalogDatabase::ReplaceFromBoundDocument(",
+        "bool CatalogDatabase::ValidateIntegrity(",
+    ):
+        reject(integrity_base, fragment, "Explicit catalog integrity helpers")
+
+    macro_renames = (
+        "#define ReplaceFromDocument",
+        "#define Clear",
+        "#define BuildDocument",
+        "#define ReplaceFromBoundDocument",
+        "#define ValidateIntegrity",
+    )
+    for label, text in (
+        ("Catalog wrapper", catalog_database),
+        ("Catalog base implementation", catalog_base),
+        ("Catalog integrity wrapper", integrity),
+        ("Catalog integrity base implementation", integrity_base),
+    ):
+        for macro in macro_renames:
+            reject(text, macro, label)
 
     for fragment in (
         "if (member.m_required)",
@@ -228,8 +284,8 @@ def main() -> int:
         return 1
     print(
         "Population contract hardening passed: every authored binding requires exact "
-        "evidence, optional member minima remain optional, and public candidate "
-        "construction enforces the canonical workspace path."
+        "evidence, optional member minima remain optional, public candidate construction "
+        "enforces the canonical workspace path, and catalog helpers are macro-free."
     )
     return 0
 

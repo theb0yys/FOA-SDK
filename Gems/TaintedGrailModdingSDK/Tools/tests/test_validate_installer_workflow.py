@@ -34,7 +34,12 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             path.write_text("\n".join(fragments) + "\n", encoding="utf-8")
         runner = repo / "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
         runner.parent.mkdir(parents=True, exist_ok=True)
-        runner.write_text('"validate_installer_workflow.py"\n', encoding="utf-8")
+        runner.write_text(
+            '"validate_installer_workflow.py"\n'
+            "def resolve_engine_root(value):\n"
+            "    return value\n",
+            encoding="utf-8",
+        )
         return repo
 
     def test_approved_installer_contract_passes(self) -> None:
@@ -60,7 +65,10 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
                 workflow.read_text(encoding="utf-8") + "gh release create v0.1.0\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(InstallerWorkflowValidationError, "public action"):
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "forbidden automatic or product-root behavior",
+            ):
                 validate_installer_workflow(repo)
 
     def test_installer_validator_is_in_authoritative_gate(self) -> None:

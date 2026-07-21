@@ -13,7 +13,7 @@ It is not a standalone installer or production mod toolchain. It does not launch
 invoke BepInEx or Harmony, deploy files, modify saves, collect telemetry, upload
 diagnostics, or install prerequisites automatically.
 
-FOA-SDK and O3DE now have separate identities:
+FOA-SDK and O3DE have separate identities and checkouts:
 
 ```text
 Development/
@@ -21,6 +21,10 @@ Development/
 ├── o3de/         exact O3DE checkout
 └── foa-build/    generated build and evidence output
 ```
+
+The FOA-SDK working tree contains only the product project, the two product Gems,
+research, documentation, and governance. Stock O3DE source and engine Gems are
+provided only by the external engine checkout.
 
 The exact engine dependency is recorded in `o3de.lock.json`. The command checks
 the engine name, version, and full Git commit before configure, build, or
@@ -75,12 +79,13 @@ The generated CMake command uses:
 -DLY_PROJECTS=<product-root>/TaintedGrailModdingEditor
 ```
 
-This binds O3DE to the repository-owned editor project and its `Atom`,
+This binds O3DE to the product-owned editor project and its `Atom`,
 `DiffuseProbeGrid`, `ExternalToolchain`, and `TaintedGrailModdingSDK` Gems. Use
 `--dry-run` to inspect the exact `windows-vs-unity` x64 command.
 
 `--product-root` is available for non-standard checkouts. `--repo-root` remains
-a temporary compatibility alias during extraction preparation.
+a deprecated compatibility alias for existing command invocations; it refers to
+the FOA-SDK product root and never to the O3DE engine root.
 
 ### 3. Build
 
@@ -107,8 +112,8 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
 ```
 
 FOA validators run from the product checkout. The O3DE source-policy validator
-is loaded from the pinned engine checkout. Compiled tests run from the build
-root. Validation stops on the first failure and writes:
+is loaded from the pinned engine checkout and scans both product Gems. Compiled
+tests run from the build root. Validation stops on the first failure and writes:
 
 ```text
 <build-root>/tg-sdk-developer-preview-validation.json
@@ -116,6 +121,14 @@ root. Validation stops on the first failure and writes:
 
 The result records `product_root`, `engine_root`, `build_root`, and the pinned
 engine commit.
+
+Run the complete local product gate with:
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
+  --engine-root ..\o3de `
+  --ctest-build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+```
 
 ## Synthetic fixture
 
@@ -177,7 +190,7 @@ or fabricate release evidence.
 The preview fails closed for:
 
 - a missing, invalid, or wrongly pinned O3DE checkout;
-- an invalid FOA-SDK product checkout;
+- an invalid or engine-contaminated FOA-SDK product checkout;
 - a build directory overlapping either source checkout;
 - a build cache configured from another engine or without the FOA project;
 - unsupported launch hosts;
@@ -192,9 +205,9 @@ installation.
 
 ## Current limitations
 
-The source tree still contains inherited O3DE content while the external-engine
-path is proven. The temporary in-tree fallback will be removed by the history
-extraction unit.
+The visible working tree is extracted into the product-only structure. Earlier
+Git commits still contain the inherited O3DE fork until the separately reviewed
+filtered-history migration is completed and content-equivalence is proven.
 
 The preview still lacks completed Windows manual UI evidence and a CI-produced
 runnable Windows archive. Until those gates pass, it remains a source-built

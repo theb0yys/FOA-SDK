@@ -8,15 +8,15 @@ This directory contains the public documentation for the TG SDK layer in this O3
 
 - [Open and Test the Actual Editor](OPEN_AND_TEST_EDITOR.md) — shortest Windows path from a fresh pull to the dedicated O3DE project, source build, trusted clickable entry, native log, and synthetic workspace.
 - [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, manual UI evidence tooling, and current limitations.
-- [Developer Preview Exact-Head Verification](DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md) — explicit
-  reviewed-range whitespace checking, external receipts, O3DE configure/build, compiled tests, authoritative
-  receipt/UI re-verification, and Windows evidence finalization.
+- [Developer Preview Exact-Head Verification](DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md) — reviewed-range whitespace checking, external receipts, O3DE configure/build, compiled tests, authoritative receipt/UI re-verification, and Windows evidence finalization.
 - [Windows Manual UI Smoke](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md) — real Windows checklist, screenshot-evidence initializer/verifier, exact-commit binding, privacy attestation, and evidence handling.
 - [Developer Preview Troubleshooting](DEVELOPER_PREVIEW_TROUBLESHOOTING.md) — missing Editor output, path-policy and clickable-entry failures, absent TG SDK panes, native log locations, diagnostics failures, and verification guidance.
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
 - [Item and Recipe Editor Guide](ITEM_RECIPE_EDITOR_GUIDE.md) — typed item and recipe profiles, ingredients, outputs, stations, acquisition relationships, and governed action lanes.
+- [Actor and Troop Editor Guide](ACTOR_TROOP_EDITOR_GUIDE.md) — typed actor and troop authoring, exact template/leader/member bindings, atomic persistence, action lanes, deterministic fixture, dirty-draft protection, and current runtime boundary.
+- [Actor and Troop Windows UI Evidence](ACTOR_TROOP_WINDOWS_UI_EVIDENCE.md) — focused exact-head checks for resolved/unresolved templates, troop composition, governance lanes, dirty drafts, persistence, errors, and runtime separation within the current twenty-four-pane surface.
 - [Recipe Station Evidence View](RECIPE_STATION_EVIDENCE_VIEW.md) — read-only station visibility and learnability research, evidence health, governance, and blockers.
 - [Economy Acquisition Coverage](ECONOMY_ACQUISITION_COVERAGE.md) — read-only vendor, loot, reward, learnability, and crafting coverage derived from canonical relationships, exact evidence binding, governance, and blockers.
 - [Economy Cross-Pack Duplicate Report](ECONOMY_CROSS_PACK_DUPLICATES.md) — exact cross-pack subject and recipe-key candidates, evidence health, governance state, blockers, and read-only review results.
@@ -49,17 +49,12 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
 - [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, MSI/ZIP identity, failure, rollback, and non-release boundary.
 - [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, repair, upgrade, uninstall, and troubleshooting.
-- [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — active population implementation,
-  completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source,
-  immutable action-lane, and registered Actor/Troop pane units, with the deterministic fixture and full
-  local-validation integration next and runtime or spawn authority still deferred.
-- [Editor Toolchain and Unity Interchange Design](EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md) — located O3DE,
-  Blender, and Unity components; provider qualification; deterministic interchange; loss reporting; and
-  staged delivery gates.
-- [External Tool Interchange Gate 0](EXTERNAL_TOOL_INTERCHANGE_GATE_0.md) — Core-only disabled handoff and
-  result envelopes, canonical binding, fail-closed validation, and the boundary before any process work.
-- [O3DE-to-Unity Bridge Research Archive](../../Research/o3de-to-unity-conversion-and-runtime-bridge/README.md)
-  — supplied report, durable source and claim registers, research areas, and gate reconciliation.
+- [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — approved population design and implementation history for Core, schema-2 persistence, Framework publication, action lanes, Editor registration, deterministic fixture, validation, and deferred runtime scope.
+- [Actor and Troop Architecture and Data Formats](ACTOR_TROOP_ARCHITECTURE_AND_DATA_FORMATS.md) — Core/Framework/Editor ownership, schema-2 actor/troop/member shapes, identity, evidence, governance, ordering, fixture format, and deferred contracts.
+- [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE build, compiled-test and Windows evidence requirements, release claims, rollback, and next population work.
+- [Editor Toolchain and Unity Interchange Design](EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md) — located O3DE, Blender, and Unity components; provider qualification; deterministic interchange; loss reporting; and staged delivery gates.
+- [External Tool Interchange Gate 0](EXTERNAL_TOOL_INTERCHANGE_GATE_0.md) — Core-only disabled handoff and result envelopes, canonical binding, fail-closed validation, and the boundary before any process work.
+- [O3DE-to-Unity Bridge Research Archive](../../Research/o3de-to-unity-conversion-and-runtime-bridge/README.md) — supplied report, durable source and claim registers, research areas, and gate reconciliation.
 - [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, and separation from engine testing projects.
 - [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, and diagnostic overrides.
 - [Atomic Workspace Transition and Schema Contract](WORKSPACE_ATOMICITY_AND_SCHEMA.md) — schema-0 migration, durable schema 1, candidate construction, cross-binding validation, atomic publication, rollback, and failure-stage tests.
@@ -116,18 +111,8 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - durable workspace schema 1 with validated schema-0 migration and atomic all-or-nothing workspace transitions;
 - workspace, exact game profiles, packs, source/evidence intake, canonical catalog, validation, governance, and blockers;
 - typed item/recipe authoring, station/learnability evidence, economy acquisition coverage, and exact cross-pack duplicate candidates;
-- typed transient adapter declarations, capability compatibility, deterministic work-order plans, and typed runtime-result evidence candidates;
-- deterministic transient adapter build-manifest definitions with exact toolchain/material/output declarations and `BuildAllowed` disabled;
-- deterministic transient package-assembly previews with accepted manifest reviews, project-owned staging inventories, exact package layouts and output digests, omissions, collisions, redistribution blockers, and all assembly/archive/deployment permissions disabled;
-- deterministic transient staging/deployment previews with accepted target reviews, exact target inventories, additions, replacements, removals, unchanged paths, conflicts, backups, rollback steps, and all mutation/launch permissions disabled;
-- typed transient deployment confirmations and work orders with exact scope, expiry, maintenance windows, preflight evidence, deterministic operator steps/checklists, and all execution/mutation permissions disabled;
-- typed transient deployment execution-result envelopes with exact work-order/executor binding, attempted steps, backup/restore outcomes, target verification, rollback, safe logs, and candidate evidence returned without automatic promotion;
-- deterministic post-deployment reports with exact current-work-order/candidate-evidence binding, target-verification and rollback analysis, explicit compatibility/release blockers, mandatory human review, and no independent verifier or release publication path;
-- typed transient independent-verifier result envelopes with exact canonical-report binding, reviewed verifier capabilities, one check per mutation step, independent observations, typed failures, safe diagnostics, and candidate evidence returned without automatic promotion;
-- deterministic transient verifier-evidence reconciliations with preserved blockers, separate compatibility/release/human-review axes, typed dispositions, canonical JSON, and no automatic approval, signing, or publication;
-- deterministic transient release-artifact envelopes with exact approved reconciliation and ready-package binding, declared checksums/provenance/legal review/signing intent/publication targets, and every file, archive, signing, upload, publication, adapter, launch, and deployment operation disabled;
-- typed transient release-assembly/checksum result envelopes with exact artifact and archive binding, one checksum observation per content row, reviewed external assembler/checksummer metadata, failures, safe diagnostics, and no file, archive, signing, upload, publication, launch, adapter, or deployment operation;
-- typed transient release-signing result envelopes with exact accepted assembly/archive and signing-intent binding, reviewed signer metadata, typed outcomes, signature artifacts, failures, safe diagnostics, candidate evidence, and no key, signing, verification, upload, publication, launch, adapter, deployment, or save operation;
+- typed actor profiles, troop profiles, exact troop-member rows, resolved and unresolved template/leader bindings, schema-2 persistence, deterministic project-owned fixture, governed candidate publication, immutable action lanes, and the registered Actor/Troop pane without runtime or save authority;
+- typed transient adapter declarations, capability compatibility, deterministic work-order plans, runtime-result evidence, build manifests, package/deployment previews, deployment work orders/results, verification/reconciliation, and release metadata contracts with operational permissions disabled;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub Actions triggers are currently suspended; the local validation command is the documented test gate and no automated per-commit result is claimed.

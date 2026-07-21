@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/o3de/o3de.git",
+  "commit": "68683f23fb747380d3efa2424bd5f30242e9c5a2",
+  "engine_name": "o3de",
+  "engine_version": "2.7.0",
+  "checkout_directory": "o3de"
+}

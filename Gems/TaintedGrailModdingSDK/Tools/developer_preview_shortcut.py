@@ -27,6 +27,8 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import developer_preview_path_policy
+import developer_preview_assets
+import developer_preview_workspace
 import validate_developer_preview_project
 
 SCHEMA_VERSION = 1
@@ -44,7 +46,12 @@ $ErrorActionPreference = 'Stop'
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($env:TG_SHORTCUT_OUTPUT)
 $shortcut.TargetPath = $env:TG_EDITOR_EXE
-$shortcut.Arguments = '--project-path "' + $env:TG_PROJECT_PATH + '"'
+$shortcut.Arguments = '--project-path "' + $env:TG_PROJECT_PATH + '"' +
+    ' --engine-path "' + $env:TG_ENGINE_PATH + '"' +
+    ' --project-cache-path "' + $env:TG_PROJECT_CACHE_PATH + '"' +
+    ' --project-user-path "' + $env:TG_PROJECT_USER_PATH + '"' +
+    ' --project-log-path "' + $env:TG_PROJECT_LOG_PATH + '"' +
+    ' "' + $env:TG_STARTUP_LEVEL + '"'
 $shortcut.WorkingDirectory = $env:TG_EDITOR_WORKING_DIRECTORY
 $shortcut.IconLocation = $env:TG_SHORTCUT_ICON + ',0'
 $shortcut.Description = 'Tainted Grail Modding Editor'
@@ -144,6 +151,10 @@ def create_shortcut(
 ) -> dict[str, object]:
     validate_developer_preview_project.validate_preview_project(repo_root)
     try:
+        workspace = developer_preview_workspace.materialize_preview_workspace(
+            repo_root,
+            dry_run=dry_run,
+        )
         if explicit_editor is not None:
             if not diagnostic_override:
                 raise ShortcutError(
@@ -168,7 +179,17 @@ def create_shortcut(
             output,
             diagnostic_override=diagnostic_override,
         )
-    except developer_preview_path_policy.PathPolicyError as exc:
+        developer_preview_assets.prepare_assets(
+            editor=paths.editor,
+            repo_root=repo_root,
+            workspace=workspace,
+            dry_run=dry_run,
+        )
+    except (
+        developer_preview_assets.AssetPreparationError,
+        developer_preview_path_policy.PathPolicyError,
+        developer_preview_workspace.WorkspaceError,
+    ) as exc:
         raise ShortcutError(str(exc)) from exc
     validate_output_path(output)
 
@@ -178,7 +199,19 @@ def create_shortcut(
         "trust_mode": paths.trust_mode,
         "shortcut": str(output),
         "target": str(paths.editor),
-        "arguments": ["--project-path", str(paths.project)],
+        "arguments": [
+            "--project-path",
+            str(paths.project),
+            "--engine-path",
+            str(paths.engine),
+            "--project-cache-path",
+            str(paths.project_cache),
+            "--project-user-path",
+            str(paths.project_user),
+            "--project-log-path",
+            str(paths.project_log),
+            str(paths.startup_level),
+        ],
         "working_directory": str(paths.working_directory),
         "icon": str(paths.icon),
     }
@@ -188,7 +221,12 @@ def create_shortcut(
     print(f"Shortcut: {output}")
     print(f"Trust mode: {paths.trust_mode}")
     print(f"Target: {paths.editor}")
-    print(f'Arguments: --project-path "{paths.project}"')
+    print(
+        f'Arguments: --project-path "{paths.project}" --engine-path "{paths.engine}" '
+        f'--project-cache-path "{paths.project_cache}" '
+        f'--project-user-path "{paths.project_user}" '
+        f'--project-log-path "{paths.project_log}" "{paths.startup_level}"'
+    )
     print(f"Icon: {paths.icon}")
 
     if dry_run:
@@ -208,6 +246,11 @@ def create_shortcut(
             "TG_SHORTCUT_OUTPUT": str(output),
             "TG_EDITOR_EXE": str(paths.editor),
             "TG_PROJECT_PATH": str(paths.project),
+            "TG_ENGINE_PATH": str(paths.engine),
+            "TG_PROJECT_CACHE_PATH": str(paths.project_cache),
+            "TG_PROJECT_USER_PATH": str(paths.project_user),
+            "TG_PROJECT_LOG_PATH": str(paths.project_log),
+            "TG_STARTUP_LEVEL": str(paths.startup_level),
             "TG_EDITOR_WORKING_DIRECTORY": str(paths.working_directory),
             "TG_SHORTCUT_ICON": str(paths.icon),
         }

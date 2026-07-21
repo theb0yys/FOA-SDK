@@ -6,9 +6,10 @@ source-built **Tainted Grail Modding Editor**.
 The editor is an O3DE project named `TaintedGrailModdingEditor`. It is separate
 from `AutomatedTesting`, enables `TaintedGrailModdingSDK` and
 `ExternalToolchain` directly, and owns the project and Windows shortcut icons.
-The project also enables O3DE's `Atom` and `DiffuseProbeGrid` Editor host Gems.
-Its `ShaderLib` supplies the required empty Scene and View SRG extensions so
-Atom can compile the project shader registry.
+The project also enables O3DE's `Atom`, `DiffuseProbeGrid`, and `PhysX5` Editor
+host Gems so every component in the standard default level resolves. Its
+`ShaderLib` supplies the required empty Scene and View SRG extensions so Atom
+can compile the project shader registry.
 
 ## Requirements
 
@@ -36,9 +37,10 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py
 ```
 
-The commands must report that the dedicated project, icons, opener, persistence
-boundaries, repository-owned path policy, and repository-derived clickable-entry
-trust contract are complete.
+The commands must report that the dedicated source project, bounded writable
+materialization, tracked default viewport level, icons, opener, persistence
+boundaries, path policy, and repository-derived clickable-entry trust contract
+are complete.
 
 ## 2. Check prerequisites
 
@@ -64,10 +66,13 @@ directory. Its `CMakeCache.txt` must identify the current repository as
 `CMAKE_HOME_DIRECTORY`, and the target must have a valid x64 PE32+ Windows GUI
 executable header.
 
-The actual O3DE Editor executable is expected at:
+The build includes the Editor, the `AssetProcessorBatch` clean-first-run
+preflight, and the compiled TG SDK catalog tests. The executables are expected
+at:
 
 ```text
 build/tg-sdk-developer-preview-0-windows-profile/bin/profile/Editor.exe
+build/tg-sdk-developer-preview-0-windows-profile/bin/profile/AssetProcessorBatch.exe
 ```
 
 ## 4. Create the clickable entry
@@ -78,27 +83,47 @@ Use the hardened entry command:
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create
 ```
 
-This creates and immediately verifies:
+This materializes the small Editor project beneath bounded per-user storage,
+synchronously prepares its `pc` asset cache with `AssetProcessorBatch`, then
+creates and immediately verifies:
 
 ```text
 build/Tainted Grail Modding Editor.lnk
 build/Tainted Grail Modding Editor.shortcut.json
 ```
 
-The trusted target, project, working directory, and icon are derived from the
-repository and approved build policy. The sidecar records the generated file
-size and SHA-256; it is not the root of trust.
+The project is materialized beneath
+`%LOCALAPPDATA%\O3DE\TGEditor`. Repository-owned
+bootstrap files are managed there, while additional user-authored levels are
+preserved. O3DE's conventional `Cache` and `user/log` paths remain inside that
+materialized project, while wrapper logs are a sibling beneath the same bounded
+root. No Defender exclusion or administrator permission is required.
+Asset-preparation stdout and stderr remain beneath the same root in `launcher`.
+The entry is not created if asset preparation fails.
+
+The trusted target, engine, project, writable paths, working directory, and
+icon are derived from repository and per-user path policy. The sidecar records
+the generated file size and SHA-256; it is not the root of trust.
 
 The command inspects the real Windows shortcut through `WScript.Shell`. It
-confirms the target, project argument, working directory, icon, and description
-before reporting success.
+confirms the target, engine, project, cache, user, log, and startup-level
+arguments, working directory, icon, and description before reporting success.
 
 The shortcut has the project-owned icon and launches the source-built
 `Editor.exe` with:
 
 ```text
---project-path <repository>/TaintedGrailModdingEditor
+--project-path %LOCALAPPDATA%\O3DE\TGEditor\project
+--engine-path <repository>
+--project-cache-path %LOCALAPPDATA%\O3DE\TGEditor\project\Cache
+--project-user-path %LOCALAPPDATA%\O3DE\TGEditor\project\user
+--project-log-path %LOCALAPPDATA%\O3DE\TGEditor\project\user\log
+%LOCALAPPDATA%\O3DE\TGEditor\project\Levels\DefaultLevel\DefaultLevel.prefab
 ```
+
+The positional `.prefab` argument makes O3DE open the materialized standard
+default level. Its Sun, sky, camera, ground, grid, and shader ball provide a
+visible, lit 3D authoring viewport instead of an empty grey view.
 
 Double-click **Tainted Grail Modding Editor.lnk**.
 
@@ -117,8 +142,9 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
 ```
 
 Replacement is allowed only when the existing `.lnk` and sidecar pass complete
-repository-derived verification. An unrelated or modified shortcut is not
-deleted.
+repository-derived verification. Earlier verified repository-project shortcuts
+may be replaced to migrate to bounded per-user storage. An unrelated or
+otherwise modified shortcut is not deleted.
 
 Verify the source-built clickable entry again at any time:
 
@@ -152,7 +178,9 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py verify `
 
 ## 5. Command-line fallback
 
-The dedicated opener uses the same project and restricted launcher:
+The dedicated opener refreshes the managed per-user materialization, waits for
+the bounded `pc` asset cache to finish, and uses the same canonical default
+level and restricted launcher:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py
@@ -160,18 +188,19 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py
 
 Use this when collecting wrapper-owned stdout, stderr, and launch-result data.
 
-The tracked `TaintedGrailModdingEditor/Levels` root must remain present. The
-Editor creates new levels beneath that directory and cannot create a level when
-the parent is missing.
+The tracked source
+`TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab` must remain
+present and semantically equal to O3DE's
+`Assets/Editor/Prefabs/Default_Level.prefab` template. It seeds the per-user
+project only when that level is missing. Existing user-created levels and an
+intentionally modified materialized default level are preserved. Managed
+bootstrap files update only when their prior hashes prove they were not edited
+outside the materializer; conflicts fail closed instead of overwriting work.
 
-On Windows, Controlled Folder Access can still deny the Editor permission to
-write beneath a protected checkout even when the directory exists. Event Viewer
-records this as Windows Defender event 1123. If that event names `Editor.exe` or
-`AssetProcessor.exe`, either move the checkout outside a protected folder or
-use Windows Security's **Allow an app through Controlled folder access** flow
-for the exact source-built executables. Do not disable Controlled Folder Access
-globally, and do not treat running the Editor as administrator as the normal
-solution.
+The Editor and Asset Processor write only beneath the per-user root during the
+supported workflow. The repository checkout remains the reviewed source and
+engine root; users do not need to weaken Controlled Folder Access, add security
+exceptions, or run the Editor as administrator.
 
 ## 6. Open the TG SDK panes
 
@@ -180,6 +209,11 @@ After the Editor opens, use:
 ```text
 Tools → Tainted Grail SDK
 ```
+
+Before opening the SDK panes, confirm the viewport shows the standard default
+scene's sky, ground grid, and shader ball. A blank grey viewport means the
+canonical startup level was omitted or failed to load; close the Editor,
+replace the verified shortcut, and inspect `Editor.log` before continuing.
 
 Open:
 
@@ -193,7 +227,7 @@ Open:
 The native Editor log is:
 
 ```text
-TaintedGrailModdingEditor/user/log/Editor.log
+%LOCALAPPDATA%\O3DE\TGEditor\project\user\log\Editor.log
 ```
 
 It should contain `TaintedGrailModdingSDK` and

@@ -52,9 +52,21 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
         (project / "cmake").mkdir(parents=True)
         (project / "ShaderLib").mkdir(parents=True)
         (project / "Levels").mkdir()
+        (project / "Levels/DefaultLevel").mkdir()
+        (repo / "Assets/Editor/Prefabs").mkdir(parents=True)
         (repo / "AutomatedTesting").mkdir(parents=True)
         tools.mkdir(parents=True)
         (repo / "docs/tainted-grail-sdk").mkdir(parents=True)
+
+        default_level = {"ContainerEntity": {}, "Entities": {"Grid": {}, "Ground": {}}}
+        (repo / "Assets/Editor/Prefabs/Default_Level.prefab").write_text(
+            json.dumps(default_level),
+            encoding="utf-8",
+        )
+        (project / "Levels/DefaultLevel/DefaultLevel.prefab").write_text(
+            json.dumps(default_level),
+            encoding="utf-8",
+        )
 
         (repo / "engine.json").write_text(
             json.dumps(
@@ -77,6 +89,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
                     "gem_names": [
                         "Atom",
                         "DiffuseProbeGrid",
+                        "PhysX5",
                         "ExternalToolchain",
                         "TaintedGrailModdingSDK",
                     ],
@@ -113,16 +126,21 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "TaintedGrailModdingEditor\n"
             "developer_preview_entry.py create\n"
             "developer_preview_entry.py verify\n"
+            "DefaultLevel.prefab\n"
             "validate_path_policy.py\n"
-            "repository-owned path policy\n"
+            "bounded per-user storage\n"
             "Tainted Grail Modding Editor.lnk\n"
             "Tools \u2192 Tainted Grail SDK\n"
-            "TaintedGrailModdingEditor/user/log/Editor.log\n",
+            "LOCALAPPDATA\n",
             encoding="utf-8",
         )
         (tools / "developer_preview_open.py").write_text(
-            'PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")\n'
             "validate_preview_project(repo_root)\n"
+            "materialize_preview_workspace(repo_root)\n"
+            '"--project-cache"\n'
+            '"--project-user"\n'
+            '"--project-log"\n'
+            "developer_preview_assets.prepare_assets()\n"
             "developer_preview_launch.main(arguments)\n",
             encoding="utf-8",
         )
@@ -131,6 +149,8 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "resolve_source_built_entry\n"
             "resolve_diagnostic_entry\n"
             "validate_source_editor_binary\n"
+            "PREVIEW_STARTUP_LEVEL\n"
+            "verify_preview_workspace\n"
             "developer_preview.validate_build_directory\n"
             "Diagnostic overrides must not replace\n",
             encoding="utf-8",
@@ -138,6 +158,12 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
         (tools / "developer_preview_shortcut.py").write_text(
             "WScript.Shell\n"
             "TG_SHORTCUT_OUTPUT\n"
+            "TG_ENGINE_PATH\n"
+            "TG_PROJECT_CACHE_PATH\n"
+            "TG_PROJECT_USER_PATH\n"
+            "TG_PROJECT_LOG_PATH\n"
+            "TG_STARTUP_LEVEL\n"
+            "developer_preview_assets.prepare_assets()\n"
             "developer_preview_path_policy\n"
             "resolve_source_built_entry\n"
             "resolve_diagnostic_entry\n"
@@ -154,13 +180,48 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "_require_manifest_matches_policy\n"
             "Diagnostic override shortcuts are not verified source-built entries\n"
             "allow_diagnostic_override\n"
-            "inspect_shortcut\n",
+            "inspect_shortcut\n"
+            "expected.startup_level\n"
+            "expected.project_cache\n"
+            "expected.project_user\n"
+            "expected.project_log\n",
+            encoding="utf-8",
+        )
+        (tools / "developer_preview_workspace.py").write_text(
+            "LOCALAPPDATA\n"
+            "MANAGED_PROJECT_FILES\n"
+            "PRESERVED_PROJECT_FILES\n"
+            "materialize_preview_workspace\n"
+            "verify_preview_workspace\n"
+            "refusing to overwrite\n",
             encoding="utf-8",
         )
         (tools / "developer_preview_launch.py").write_text(
             'parser.add_argument("--project")\n'
+            'parser.add_argument("--level")\n'
+            'parser.add_argument("--engine")\n'
+            'parser.add_argument("--project-cache")\n'
+            'parser.add_argument("--project-user")\n'
+            'parser.add_argument("--project-log")\n'
             'command.extend(("--project-path", str(project)))\n'
-            "validate_project_path(project)\n",
+            "validate_project_path(project)\n"
+            "validate_write_paths(cache, user, log)\n"
+            "validate_startup_level(project, level)\n",
+            encoding="utf-8",
+        )
+        (tools / "developer_preview_assets.py").write_text(
+            "AssetProcessorBatch.exe\n"
+            "--project-cache-path\n"
+            "--project-user-path\n"
+            "--project-log-path\n"
+            "--platforms=pc\n"
+            "verify_preview_workspace\n"
+            "Asset preparation failed\n",
+            encoding="utf-8",
+        )
+        (tools / "developer_preview.py").write_text(
+            'ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"\n'
+            "targets = (ASSET_PROCESSOR_BATCH_TARGET,)\n",
             encoding="utf-8",
         )
         return repo
@@ -225,10 +286,33 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
     def test_level_root_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
+            (repo / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab").unlink()
+            (repo / "TaintedGrailModdingEditor/Levels/DefaultLevel").rmdir()
             (repo / "TaintedGrailModdingEditor/Levels").rmdir()
             with self.assertRaisesRegex(
                 contract.PreviewProjectContractError,
                 "level root is missing",
+            ):
+                contract.validate_preview_project(repo)
+
+    def test_default_startup_level_is_required_and_must_match_template(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            startup = repo / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab"
+            startup.unlink()
+            with self.assertRaisesRegex(
+                contract.PreviewProjectContractError,
+                "startup level is missing",
+            ):
+                contract.validate_preview_project(repo)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            startup = repo / "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab"
+            startup.write_text('{"different": true}\n', encoding="utf-8")
+            with self.assertRaisesRegex(
+                contract.PreviewProjectContractError,
+                "must remain the O3DE default level template",
             ):
                 contract.validate_preview_project(repo)
 

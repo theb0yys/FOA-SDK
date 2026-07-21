@@ -37,6 +37,7 @@ DEFAULT_CONFIGURE_PRESET = "windows-vs-unity"
 DEFAULT_CONFIGURATION = "profile"
 PREVIEW_PROJECT_DIRECTORY = "TaintedGrailModdingEditor"
 EDITOR_TARGET = "Editor"
+ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"
 CATALOG_TEST_TARGET = "TaintedGrailModdingSDK.Catalog.Tests"
 CATALOG_TEST_PATTERN = r"TaintedGrailModdingSDK\.Catalog\.Tests"
 MINIMUM_PYTHON = (3, 10, 0)
@@ -445,6 +446,7 @@ def build_command(build_dir: Path, cmake: str = "cmake") -> tuple[str, ...]:
         DEFAULT_CONFIGURATION,
         "--target",
         EDITOR_TARGET,
+        ASSET_PROCESSOR_BATCH_TARGET,
         CATALOG_TEST_TARGET,
     )
 
@@ -610,7 +612,10 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--cmake", default="cmake", help="CMake executable.")
     configure.add_argument("--dry-run", action="store_true", help="Print the command without executing it.")
 
-    build = subparsers.add_parser("build", help="Build the Editor and TG SDK catalog tests.")
+    build = subparsers.add_parser(
+        "build",
+        help="Build the Editor, asset preflight, and TG SDK catalog tests.",
+    )
     add_common_paths(build)
     build.add_argument("--cmake", default="cmake", help="CMake executable.")
     build.add_argument("--dry-run", action="store_true", help="Print the command without executing it.")

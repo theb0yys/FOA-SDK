@@ -28,6 +28,9 @@ class DeveloperPreviewEntryTests(unittest.TestCase):
         repo = root / "repo"
         project = repo / "TaintedGrailModdingEditor"
         project.mkdir(parents=True)
+        startup_level = project / "Levels/DefaultLevel/DefaultLevel.prefab"
+        startup_level.parent.mkdir(parents=True)
+        startup_level.write_text("{}\n", encoding="utf-8")
         icon = project / "TaintedGrailModdingEditor.ico"
         icon.write_bytes(b"icon")
         build = repo / entry.developer_preview_path_policy.APPROVED_BUILD_DIRECTORY
@@ -48,6 +51,8 @@ class DeveloperPreviewEntryTests(unittest.TestCase):
         editor: Path,
         mode: str = "source-built",
     ):
+        workspace = repo.parent / "local-workspace"
+        local_project = workspace / "project"
         return entry.developer_preview_path_policy.PreviewEntryPaths(
             trust_mode=mode,
             repo_root=repo.resolve(),
@@ -57,7 +62,12 @@ class DeveloperPreviewEntryTests(unittest.TestCase):
                 else None
             ),
             editor=editor.resolve(),
-            project=project.resolve(),
+            engine=repo.resolve(),
+            project=local_project.resolve(),
+            startup_level=(local_project / "Levels/DefaultLevel/DefaultLevel.prefab").resolve(),
+            project_cache=(local_project / "Cache").resolve(),
+            project_user=(local_project / "user").resolve(),
+            project_log=(local_project / "user/log").resolve(),
             icon=icon.resolve(),
             working_directory=editor.parent.resolve(),
         )
@@ -66,7 +76,19 @@ class DeveloperPreviewEntryTests(unittest.TestCase):
         return {
             "trust_mode": expected.trust_mode,
             "target": str(expected.editor),
-            "arguments": ["--project-path", str(expected.project)],
+            "arguments": [
+                "--project-path",
+                str(expected.project),
+                "--engine-path",
+                str(expected.engine),
+                "--project-cache-path",
+                str(expected.project_cache),
+                "--project-user-path",
+                str(expected.project_user),
+                "--project-log-path",
+                str(expected.project_log),
+                str(expected.startup_level),
+            ],
             "working_directory": str(expected.working_directory),
             "icon": str(expected.icon),
         }
@@ -75,7 +97,26 @@ class DeveloperPreviewEntryTests(unittest.TestCase):
         return json.dumps(
             {
                 "target": str(target or expected.editor),
-                "arguments": entry.expected_argument_text(expected.project),
+                "arguments": entry.expected_argument_text(expected),
+                "working_directory": str(expected.working_directory),
+                "icon": f"{expected.icon},0",
+                "description": entry.SHORTCUT_DESCRIPTION,
+            }
+        )
+
+    def legacy_payload(self, expected):
+        payload = self.payload(expected)
+        source_project = expected.repo_root / entry.developer_preview_path_policy.PREVIEW_PROJECT
+        payload["arguments"] = ["--project-path", str(source_project)]
+        return payload
+
+    def legacy_inspection(self, expected) -> str:
+        return json.dumps(
+            {
+                "target": str(expected.editor),
+                "arguments": entry.legacy_argument_text(
+                    expected.repo_root / entry.developer_preview_path_policy.PREVIEW_PROJECT
+                ),
                 "working_directory": str(expected.working_directory),
                 "icon": f"{expected.icon},0",
                 "description": entry.SHORTCUT_DESCRIPTION,
@@ -227,6 +268,38 @@ class DeveloperPreviewEntryTests(unittest.TestCase):
                     dry_run=False,
                 )
             self.assertEqual(order, ["verify", "create", "verify"])
+
+    def test_legacy_project_only_entry_is_replaceable_but_not_normally_verified(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, project, icon, editor, shortcut = self.make_files(Path(temporary))
+            expected = self.expected(repo, project, icon, editor)
+            with mock.patch.object(
+                entry.developer_preview_shortcut,
+                "verify_shortcut",
+                return_value=self.legacy_payload(expected),
+            ), mock.patch.object(
+                entry.developer_preview_path_policy,
+                "resolve_source_built_entry",
+                return_value=expected,
+            ), mock.patch.object(entry, "require_windows_x64"), mock.patch.object(
+                entry,
+                "resolve_powershell",
+                return_value="powershell.exe",
+            ):
+                with self.assertRaisesRegex(
+                    entry.EntryVerificationError,
+                    "manifest arguments",
+                ):
+                    entry.verify_entry(shortcut, repo_root=repo)
+
+                result = entry.verify_entry(
+                    shortcut,
+                    repo_root=repo,
+                    allow_legacy_project_only=True,
+                    runner=lambda *_: (0, self.legacy_inspection(expected)),
+                )
+
+            self.assertEqual(result["arguments"], ["--project-path", str(project.resolve())])
 
     def test_dry_run_does_not_semantically_verify(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

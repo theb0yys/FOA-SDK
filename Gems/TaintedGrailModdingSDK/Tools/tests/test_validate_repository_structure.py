@@ -51,6 +51,29 @@ class RepositoryStructureContractTests(unittest.TestCase):
     def test_reviewed_product_tree_passes(self) -> None:
         contract.validate_paths(valid_tree())
 
+    def test_manifest_backed_plugin_package_passes(self) -> None:
+        paths = valid_tree() | {
+            "Plugins/Authoring/AvalonAI/plugin.json",
+            "Plugins/Authoring/AvalonAI/Code/AvalonAI.cpp",
+            "Plugins/Authoring/AvalonAI/Tests/AvalonAITests.cpp",
+        }
+        contract.validate_paths(paths)
+
+    def test_plugin_package_without_manifest_fails(self) -> None:
+        paths = valid_tree() | {"Plugins/Integrations/MerlinsWorkshop/Code/Provider.cpp"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "missing plugin.json"):
+            contract.validate_paths(paths)
+
+    def test_unknown_plugin_category_fails(self) -> None:
+        paths = valid_tree() | {"Plugins/Misc/Thing/plugin.json"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected plug-in"):
+            contract.validate_paths(paths)
+
+    def test_loose_plugin_category_file_fails(self) -> None:
+        paths = valid_tree() | {"Plugins/Authoring/notes.txt"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected plug-in"):
+            contract.validate_paths(paths)
+
     def test_inherited_engine_root_fails(self) -> None:
         paths = valid_tree() | {"Code/Framework/AzCore/CMakeLists.txt"}
         with self.assertRaisesRegex(contract.RepositoryStructureError, "inherited O3DE"):
@@ -82,13 +105,13 @@ class RepositoryStructureContractTests(unittest.TestCase):
             contract.validate_paths(paths)
 
     def test_missing_required_path_fails(self) -> None:
-        paths = valid_tree() - {"o3de.lock.json"}
+        paths = valid_tree() - {"Plugins/plugin.schema.json"}
         with self.assertRaisesRegex(contract.RepositoryStructureError, "missing required"):
             contract.validate_paths(paths)
 
     def test_noncanonical_path_fails(self) -> None:
         with self.assertRaisesRegex(contract.RepositoryStructureError, "Non-canonical"):
-            contract.validate_paths(valid_tree() | {"Gems/../engine.json"})
+            contract.validate_paths(valid_tree() | {"Plugins/../engine.json"})
 
 
 if __name__ == "__main__":

@@ -114,7 +114,7 @@ namespace TaintedGrailModdingSDK::TaintedFrameworkEditorServices
         plan.m_surfaces = GetApiSurfaceDecisions();
         plan.m_configuration = GetConfigurationDefaults();
         plan.m_diagnostics = GetDiagnosticVocabulary();
-        plan.m_candidateEvidenceSubmissionAllowed =
+        plan.m_candidateEvidenceSubmissionEligible =
             plan.m_compatibility.m_status == ReadinessStatus::Ready;
         plan.m_runtimeInvocationAllowed = false;
         plan.m_fileWriteAllowed = false;

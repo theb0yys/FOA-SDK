@@ -228,10 +228,14 @@ def validate(repo_root: Path) -> None:
     for fragment in (
         "const bool countRangeValid",
         "member.m_minimumCount <= member.m_maximumCount",
-        "(!member.m_required || member.m_minimumCount > 0)",
-        "positive minimum for required rows",
+        "positive minimum ",
+        "required rows",
     ):
         require(member_validation, fragment, "Population member validation")
+    if "(!member.m_required || member.m_minimumCount > 0)" not in member_validation:
+        raise PopulationContractHardeningError(
+            "Population member validation must require a positive minimum for required rows."
+        )
     reject(
         member_validation,
         "member.m_minimumCount == 0\n            || member.m_minimumCount > member.m_maximumCount",

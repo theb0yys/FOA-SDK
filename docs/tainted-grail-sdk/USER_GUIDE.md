@@ -8,7 +8,12 @@ The project is pre-alpha. It does not provide production runtime deployment or c
 
 ## Before you begin
 
-You need a supported O3DE source-build environment, Git LFS, this repository, writable authoring directories, and legally distributable project-owned data. A legitimate FoA installation is needed only when configuring a real game profile.
+Contributors building the Editor need a supported O3DE source-build environment,
+Git LFS, this repository, writable authoring directories, and legally
+distributable project-owned data. Users of a reviewed prebuilt Windows artifact
+do not need Git, Python, CMake, Visual Studio, or an O3DE source build; follow
+[Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md). A legitimate
+FoA installation is needed only when configuring a real game profile.
 
 Keep the workspace, generated output, staging, and deployment directories separate from the game installation.
 

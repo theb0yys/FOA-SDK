@@ -47,6 +47,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
 - [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — current manual-only workflow state, authoritative local command, self-hosted runner boundary, token handling, and restoration conditions.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
+- [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, MSI/ZIP identity, failure, rollback, and non-release boundary.
+- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, repair, upgrade, uninstall, and troubleshooting.
 - [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — active population implementation,
   completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source,
   immutable action-lane, and registered Actor/Troop pane units, with the deterministic fixture and full

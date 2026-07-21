@@ -13,7 +13,13 @@ Status: implemented, continuing hardening.
 - O3DE editor Gem and host-tool registration.
 - Editor-only product boundary.
 - Focused repository validation and public governance/documentation.
-- Two-branch development model: `main` and `foa-development`.
+- Normal two-branch development model: `main` and `foa-development`; the
+  dedicated `installer` branch is a maintainer-authorised feature exception.
+- Approved prebuilt Windows SDK installer implementation is in progress on the
+  maintainer-authorised `installer` branch: canonical O3DE `INSTALL` layout,
+  exact redistribution review, MSI/portable ZIP, manifest/checksums, and
+  install/repair/uninstall smoke. Public release, signing, actual two-version
+  upgrade smoke, and exact-main Windows UI evidence remain gated.
 
 ## Phase 1 — Workspace and exact game profile
 

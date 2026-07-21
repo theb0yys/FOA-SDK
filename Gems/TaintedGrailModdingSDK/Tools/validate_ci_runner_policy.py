@@ -27,6 +27,7 @@ MANUAL_WORKFLOWS = (
     ".github/workflows/tainted-grail-sdk-foundation.yml",
     ".github/workflows/tainted-grail-editor-entry.yml",
     ".github/workflows/tainted-grail-repository-hygiene.yml",
+    ".github/workflows/tainted-grail-sdk-installer.yml",
 )
 
 

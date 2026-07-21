@@ -10,7 +10,8 @@ The following repository-owned workflows are therefore **manual-only**:
 
 - `Tainted Grail SDK Foundation`;
 - `Tainted Grail Editor Entry`;
-- `Tainted Grail Repository Hygiene`.
+- `Tainted Grail Repository Hygiene`;
+- `Tainted Grail SDK Windows Installer`.
 
 The inherited full-engine `AR` workflow and generic upstream `Validation`
 workflow are removed from this fork. They produced broad or unavailable checks
@@ -39,6 +40,14 @@ This command runs:
 - temporary Developer Preview fixture generation and verification;
 - temporary redacted diagnostics collection and verification;
 - the O3DE source-policy validator for the TG SDK Gem.
+- the installer workflow, fail-closed inventory/staging/archive contract, pinned
+  package-tool configuration, and non-publication boundary.
+
+The installer workflow is also manual-only. `inventory` mode creates exact
+hash/notices material for human redistribution review. `package` mode requires
+that inventory's exact SHA-256 plus named review evidence before it can stage,
+archive, build an MSI, or run install/repair/uninstall smoke checks. A manual
+workflow artifact is not a supported or public release.
 
 The command exits non-zero when any included check fails. `--keep-going` reports
 all failures rather than stopping at the first one.

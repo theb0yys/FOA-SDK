@@ -1,0 +1,5 @@
+// Copyright (c) Contributors to the Open 3D Engine Project.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+#define TG_SDK_ICON 101
+TG_SDK_ICON ICON "../../../../../TaintedGrailModdingEditor/TaintedGrailModdingEditor.ico"

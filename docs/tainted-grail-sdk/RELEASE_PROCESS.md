@@ -179,6 +179,20 @@ validate → configure → build → test → package → inspect → checksum �
 
 Until each mutation and verification step has separate reviewed tooling, maintainers document every manual command/input and do not infer authority from a read-only preview, work order, result envelope, or queued workflow.
 
+### Prebuilt SDK installer implementation
+
+The reviewed Windows installer workflow is the narrowly scoped implementation
+of build-to-artifact copying and archive/MSI assembly for the **TG SDK product**.
+It consumes O3DE's `INSTALL` target, binds a human redistribution review to the
+exact inventory fingerprint, creates a new verified staging root, and produces
+an unsigned development MSI and deterministic portable ZIP from that same root.
+
+This implementation does not consume or execute an FoA adapter package-preview,
+deployment work order, or release-artifact envelope. It grants no FoA package,
+deployment, signing, upload, or publication authority. Public release remains
+blocked until automatic hosted CI, exact reviewed `main`, Windows Editor UI,
+legal, security, upgrade, checksum, and signing gates pass.
+
 ## Package and deployment boundaries
 
 Release packages may contain only project-owned or legally redistributable output. Do not package game binaries/assets, extracted proprietary data, private workspace content, personal logs/paths, source trees or work-order plans not intended for distribution, or third-party binaries without redistribution rights.

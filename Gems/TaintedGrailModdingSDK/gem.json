@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "display_name": "Tainted Grail Modding SDK",
     "license": "Apache-2.0 OR MIT",
-    "license_url": "https://github.com/theb0yys/o3de/blob/main/LICENSE.txt",
+    "license_url": "https://github.com/theb0yys/FOA-SDK/blob/main/LICENSE.txt",
     "origin": "theb0yys",
-    "origin_url": "https://github.com/theb0yys/o3de",
+    "origin_url": "https://github.com/theb0yys/FOA-SDK",
     "type": "Tool",
     "summary": "Editor-side foundation for governed Tainted Grail: The Fall of Avalon mod authoring and SDK workflows.",
     "canonical_tags": [

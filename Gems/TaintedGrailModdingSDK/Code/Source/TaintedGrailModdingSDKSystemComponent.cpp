@@ -26,8 +26,10 @@
 #include "AdapterVerifierEvidenceReconciliationContracts.h"
 #include "AdapterVerifierEvidenceReconciliationWidget.h"
 #include "AdapterWorkOrderPlanWidget.h"
+#include "ActorTroopEditorWidget.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
+#include "DevelopmentHubWidget.h"
 #include "EconomyCoverageDashboardWidget.h"
 #include "EconomyDuplicateReportWidget.h"
 #include "EconomyModels.h"
@@ -41,21 +43,25 @@
 #include <AzCore/Debug/Trace.h>
 #include <AzCore/Math/Crc.h>
 #include <AzCore/Serialization/SerializeContext.h>
+#include <AzToolsFramework/API/ToolsApplicationAPI.h>
 #include <AzToolsFramework/API/ViewPaneOptions.h>
 #include <QtCore/QRect>
 #include <QtCore/QString>
+#include <QtCore/QTimer>
 #include <QtCore/qnamespace.h>
 
 namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        constexpr const char* DevelopmentHubViewPaneName = "FOA Development Hub";
         constexpr const char* FoundationStatusViewPaneName = "Tainted Grail SDK Status";
         constexpr const char* PackManagerViewPaneName = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakeViewPaneName = "Tainted Grail Source Intake";
         constexpr const char* CatalogBrowserViewPaneName = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* ActorTroopEditorViewPaneName = "Tainted Grail Actor and Troop Editor";
         constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
         constexpr const char* EconomyDuplicateReportViewPaneName = "Tainted Grail Economy Cross-Pack Duplicates";
         constexpr const char* AdapterCapabilityMatrixViewPaneName = "Tainted Grail Adapter Capability Matrix";
@@ -137,12 +143,14 @@ namespace TaintedGrailModdingSDK
     {
         if (m_viewRegistered)
         {
+            AzToolsFramework::UnregisterViewPane(DevelopmentHubViewPaneName);
             AzToolsFramework::UnregisterViewPane(FoundationStatusViewPaneName);
             AzToolsFramework::UnregisterViewPane(PackManagerViewPaneName);
             AzToolsFramework::UnregisterViewPane(SourceIntakeViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogBrowserViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
+            AzToolsFramework::UnregisterViewPane(ActorTroopEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyDuplicateReportViewPaneName);
             AzToolsFramework::UnregisterViewPane(AdapterCapabilityMatrixViewPaneName);
@@ -178,6 +186,17 @@ namespace TaintedGrailModdingSDK
         {
             return;
         }
+
+        AzToolsFramework::ViewPaneOptions hubOptions;
+        hubOptions.paneRect = QRect(80, 80, 1180, 980);
+        hubOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
+        hubOptions.isDeletable = true;
+        hubOptions.isPreview = true;
+        hubOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.DevelopmentHub");
+        AzToolsFramework::RegisterViewPane<DevelopmentHubWidget>(
+            DevelopmentHubViewPaneName,
+            "Tainted Grail SDK",
+            hubOptions);
 
         AzToolsFramework::ViewPaneOptions statusOptions;
         statusOptions.paneRect = QRect(100, 100, 760, 900);
@@ -244,6 +263,17 @@ namespace TaintedGrailModdingSDK
             ItemRecipeEditorViewPaneName,
             "Tainted Grail SDK",
             itemRecipeOptions);
+
+        AzToolsFramework::ViewPaneOptions actorTroopOptions;
+        actorTroopOptions.paneRect = QRect(210, 210, 1280, 1000);
+        actorTroopOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        actorTroopOptions.isDeletable = true;
+        actorTroopOptions.isPreview = true;
+        actorTroopOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.ActorTroopEditor");
+        AzToolsFramework::RegisterViewPane<ActorTroopEditorWidget>(
+            ActorTroopEditorViewPaneName,
+            "Tainted Grail SDK",
+            actorTroopOptions);
 
         AzToolsFramework::ViewPaneOptions economyCoverageOptions;
         economyCoverageOptions.paneRect = QRect(220, 220, 1280, 900);
@@ -402,5 +432,18 @@ namespace TaintedGrailModdingSDK
             verifierReconciliationOptions);
 
         m_viewRegistered = true;
+    }
+
+    void TaintedGrailModdingSDKSystemComponent::NotifyEditorInitialized()
+    {
+        if (m_viewRegistered)
+        {
+            QTimer::singleShot(
+                0,
+                []()
+                {
+                    AzToolsFramework::OpenViewPane(DevelopmentHubViewPaneName);
+                });
+        }
     }
 } // namespace TaintedGrailModdingSDK

@@ -885,7 +885,9 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(error.find("exact troop"), AZStd::string::npos);
 
         PopulationTroopDefinition duplicate = two;
-        duplicate.m_members.push_back(duplicate.m_members.front());
+        const PopulationTroopMember duplicateMember =
+            duplicate.m_members.front();
+        duplicate.m_members.push_back(duplicateMember);
         EXPECT_FALSE(service.UpsertPopulationTroopDefinition(duplicate, &error));
         EXPECT_NE(error.find("duplicate member-link"), AZStd::string::npos);
         EXPECT_EQ(counter.m_count, 0);

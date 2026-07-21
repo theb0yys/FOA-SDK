@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/ActorTroopEditorWidget.cpp
+    Source/ActorTroopEditorWidget.h
     Source/AdapterBuildManifestWidget.cpp
     Source/AdapterBuildManifestWidget.h
     Source/AdapterCapabilityMatrixWidget.cpp
@@ -44,6 +46,8 @@ set(FILES
     Source/CatalogBrowserWidget.h
     Source/CatalogGovernanceWidget.cpp
     Source/CatalogGovernanceWidget.h
+    Source/DevelopmentHubWidget.cpp
+    Source/DevelopmentHubWidget.h
     Source/EconomyCoverageDashboardWidget.cpp
     Source/EconomyCoverageDashboardWidget.h
     Source/EconomyDuplicateReportWidget.cpp

@@ -13,6 +13,7 @@ Owns shared domain state and services that are free of Qt and host-tool dependen
 - workspace, pack, source, evidence, catalog, governance, economy, and population models;
 - catalog database, transactions, governance types, blockers, and validation;
 - immutable economy acquisition coverage and cross-pack duplicate analysis;
+- immutable population action-lane analysis with runtime-spawn and save-mutation lanes structurally unavailable;
 - typed transient adapter declarations, semantic-version compatibility, capability and proof evaluation;
 - deterministic execution-prohibited work-order planning;
 - runtime-result contract validation and candidate source/evidence return;
@@ -43,6 +44,7 @@ Framework depends publicly on Core and privately on host-tool facilities. Framew
 Owns only composition and presentation:
 
 - Qt widgets, including the read-only economy acquisition, duplicate-report, adapter-capability, and work-order-plan panes;
+- the Actor and Troop Editor pane with evidence-bound population authoring and read-only action lanes;
 - runtime-result, build-manifest, package-assembly-preview, staging/deployment-preview, deployment-confirmation/work-order, and deployment-execution-result-evidence panes;
 - the Editor system component;
 - the Gem Editor module.
@@ -52,9 +54,9 @@ Editor depends privately on Framework and does not recompile Core or Framework s
 ## Tests
 
 Tests link Framework and receive Core transitively. The positive and negative Core/Framework population-authoring
-test sources are wired into the existing compiled Catalog test target; that wiring does not claim that an
-exact-head configured build or compiled test run has completed. Test manifests contain tests and included test
-fragments only. Every production `.cpp` has exactly one production owner.
+and population action-lane test sources are wired into the existing compiled Catalog test target; that wiring
+does not claim that an exact-head configured build or compiled test run has completed. Test manifests contain
+tests and included test fragments only. Every production `.cpp` has exactly one production owner.
 
 ## Dependency direction
 
@@ -101,6 +103,8 @@ Deployment execution-result contracts validate metadata from a separately review
 Feature-specific validators additionally enforce:
 
 - exact case-sensitive economy signals, deterministic aggregation, non-mutation, and non-editable views;
+- fixed-order evidence-bound population action lanes, hard-unavailable runtime/save lanes, non-mutation, and
+  the registered thin Actor and Troop Editor lifecycle;
 - typed adapter identity/capability/version/proof gates and no runtime behavior;
 - all-capability work-order refusal, exact payload rebuilding, canonical JSON, and `ExecutionAllowed=false`;
 - exact runtime-result bindings, typed outcomes/recovery/logs, candidate evidence-only output, and no execution path;

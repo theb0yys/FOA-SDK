@@ -457,3 +457,7 @@ Developer Preview 0 is complete only when:
 Approval authorises implementation of this Developer Preview 0 usability milestone on `foa-development`.
 
 It does not authorise schema changes, runtime adapters, game launch, deployment, save mutation, telemetry, proprietary fixtures, automatic dependency installation, or redistribution of files without confirmed rights.
+
+The later approved [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md)
+adds a separate installed-artifact path. It does not retroactively turn this
+source-built milestone or its shortcut into release evidence.

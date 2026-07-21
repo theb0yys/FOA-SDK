@@ -78,7 +78,20 @@ def default_runner(command: Sequence[str], environment: Mapping[str, str]) -> tu
     return int(completed.returncode), completed.stdout.strip()
 
 
-def expected_argument_text(project: Path) -> str:
+def expected_argument_text(
+    expected: developer_preview_path_policy.PreviewEntryPaths,
+) -> str:
+    return (
+        f'--project-path "{expected.project}" '
+        f'--engine-path "{expected.engine}" '
+        f'--project-cache-path "{expected.project_cache}" '
+        f'--project-user-path "{expected.project_user}" '
+        f'--project-log-path "{expected.project_log}" '
+        f'"{expected.startup_level}"'
+    )
+
+
+def legacy_argument_text(project: Path) -> str:
     return f'--project-path "{project.resolve(strict=False)}"'
 
 
@@ -137,11 +150,24 @@ def inspect_shortcut(
 def _require_manifest_matches_policy(
     payload: dict[str, object],
     expected: developer_preview_path_policy.PreviewEntryPaths,
+    *,
+    allow_legacy_project_only: bool = False,
 ) -> None:
-    expected_arguments = ["--project-path", str(expected.project)]
+    expected_arguments = [
+        "--project-path",
+        str(expected.project),
+        "--engine-path",
+        str(expected.engine),
+        "--project-cache-path",
+        str(expected.project_cache),
+        "--project-user-path",
+        str(expected.project_user),
+        "--project-log-path",
+        str(expected.project_log),
+        str(expected.startup_level),
+    ]
     fields = {
         "target": str(expected.editor),
-        "arguments": expected_arguments,
         "working_directory": str(expected.working_directory),
         "icon": str(expected.icon),
     }
@@ -150,6 +176,22 @@ def _require_manifest_matches_policy(
             raise EntryVerificationError(
                 f"Shortcut manifest {key} does not match repository-owned path policy."
             )
+    actual_arguments = payload.get("arguments")
+    source_project = expected.repo_root / developer_preview_path_policy.PREVIEW_PROJECT
+    legacy_arguments = (
+        ["--project-path", str(source_project)],
+        [
+            "--project-path",
+            str(source_project),
+            str(expected.repo_root / developer_preview_path_policy.PREVIEW_STARTUP_LEVEL),
+        ],
+    )
+    if actual_arguments != expected_arguments and not (
+        allow_legacy_project_only and actual_arguments in legacy_arguments
+    ):
+        raise EntryVerificationError(
+            "Shortcut manifest arguments do not match repository-owned path policy."
+        )
 
 
 def verify_entry(
@@ -157,6 +199,7 @@ def verify_entry(
     *,
     repo_root: Path,
     allow_diagnostic_override: bool = False,
+    allow_legacy_project_only: bool = False,
     runner: PowerShellRunner = default_runner,
 ) -> dict[str, object]:
     shortcut = shortcut.resolve(strict=False)
@@ -188,14 +231,31 @@ def verify_entry(
     except developer_preview_path_policy.PathPolicyError as exc:
         raise EntryVerificationError(str(exc)) from exc
 
-    _require_manifest_matches_policy(payload, expected)
+    _require_manifest_matches_policy(
+        payload,
+        expected,
+        allow_legacy_project_only=allow_legacy_project_only,
+    )
     inspected = inspect_shortcut(shortcut, runner=runner)
     actual_target = Path(inspected["target"]).resolve(strict=False)
     actual_working = Path(inspected["working_directory"]).resolve(strict=False)
     actual_icon, actual_icon_index = parse_icon_location(inspected["icon"])
     if actual_target != expected.editor:
         raise EntryVerificationError(f"Shortcut target mismatch: {actual_target}")
-    if inspected["arguments"] != expected_argument_text(expected.project):
+    expected_arguments = expected_argument_text(expected)
+    actual_arguments = inspected["arguments"]
+    source_project = expected.repo_root / developer_preview_path_policy.PREVIEW_PROJECT
+    legacy_argument_texts = (
+        legacy_argument_text(source_project),
+        (
+            f'{legacy_argument_text(source_project)} '
+            f'"{expected.repo_root / developer_preview_path_policy.PREVIEW_STARTUP_LEVEL}"'
+        ),
+    )
+    if actual_arguments != expected_arguments and not (
+        allow_legacy_project_only
+        and actual_arguments in legacy_argument_texts
+    ):
         raise EntryVerificationError(f"Shortcut argument mismatch: {inspected['arguments']}")
     if actual_working != expected.working_directory:
         raise EntryVerificationError(f"Shortcut working-directory mismatch: {actual_working}")
@@ -236,6 +296,7 @@ def create_entry(
             output,
             repo_root=repo_root,
             allow_diagnostic_override=diagnostic_override,
+            allow_legacy_project_only=True,
             runner=runner,
         )
 

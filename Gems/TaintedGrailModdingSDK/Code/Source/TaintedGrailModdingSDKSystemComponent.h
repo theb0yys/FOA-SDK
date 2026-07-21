@@ -30,6 +30,7 @@ namespace TaintedGrailModdingSDK
 
     private:
         void NotifyRegisterViews() override;
+        void NotifyEditorInitialized() override;
 
         bool m_viewRegistered = false;
     };

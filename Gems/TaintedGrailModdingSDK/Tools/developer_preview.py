@@ -37,6 +37,7 @@ DEFAULT_CONFIGURE_PRESET = "windows-vs-unity"
 DEFAULT_CONFIGURATION = "profile"
 PREVIEW_PROJECT_DIRECTORY = "TaintedGrailModdingEditor"
 EDITOR_TARGET = "Editor"
+ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"
 CATALOG_TEST_TARGET = "TaintedGrailModdingSDK.Catalog.Tests"
 CATALOG_TEST_PATTERN = r"TaintedGrailModdingSDK\.Catalog\.Tests"
 MINIMUM_PYTHON = (3, 10, 0)
@@ -130,6 +131,19 @@ def validate_build_directory(repo_root: Path, build_dir: Path, *, require_config
             if configured_source != repo_root:
                 raise RuntimeError(
                     f"The build directory belongs to another source tree: {configured_source}"
+                )
+        if require_configured:
+            projects_match = re.search(r"^LY_PROJECTS:STRING=(.*)$", cache, re.MULTILINE)
+            configured_projects = {
+                resolve_path(Path(value.strip()), repo_root)
+                for value in (projects_match.group(1).split(";") if projects_match else ())
+                if value.strip()
+            }
+            required_project = (repo_root / PREVIEW_PROJECT_DIRECTORY).resolve(strict=False)
+            if required_project not in configured_projects:
+                raise RuntimeError(
+                    "The build directory is not configured for the dedicated "
+                    f"{PREVIEW_PROJECT_DIRECTORY} project. Run the configure command first."
                 )
     elif build_dir.exists() and any(build_dir.iterdir()):
         raise RuntimeError(
@@ -432,6 +446,7 @@ def build_command(build_dir: Path, cmake: str = "cmake") -> tuple[str, ...]:
         DEFAULT_CONFIGURATION,
         "--target",
         EDITOR_TARGET,
+        ASSET_PROCESSOR_BATCH_TARGET,
         CATALOG_TEST_TARGET,
     )
 
@@ -597,7 +612,10 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--cmake", default="cmake", help="CMake executable.")
     configure.add_argument("--dry-run", action="store_true", help="Print the command without executing it.")
 
-    build = subparsers.add_parser("build", help="Build the Editor and TG SDK catalog tests.")
+    build = subparsers.add_parser(
+        "build",
+        help="Build the Editor, asset preflight, and TG SDK catalog tests.",
+    )
     add_common_paths(build)
     build.add_argument("--cmake", default="cmake", help="CMake executable.")
     build.add_argument("--dry-run", action="store_true", help="Print the command without executing it.")

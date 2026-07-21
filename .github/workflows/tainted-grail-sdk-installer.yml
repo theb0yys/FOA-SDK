@@ -1,0 +1,260 @@
+name: Tainted Grail SDK Windows Installer
+
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. This workflow never publishes a public release.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Create an inventory for review, or package an already reviewed inventory
+        required: true
+        default: inventory
+        type: choice
+        options:
+          - inventory
+          - package
+      version:
+        description: Three-component installer version (MAJOR.MINOR.PATCH)
+        required: true
+        default: 0.1.0
+        type: string
+      channel:
+        description: Development channel recorded in the artifact manifest
+        required: true
+        default: development
+        type: choice
+        options:
+          - development
+          - alpha
+          - beta
+          - release-candidate
+          - stable
+      approved_inventory_sha256:
+        description: Exact fingerprint from a previous inventory review; required for package mode
+        required: false
+        type: string
+      redistribution_reviewer:
+        description: Named reviewer of the exact inventory and notices; required for package mode
+        required: false
+        type: string
+      redistribution_reviewed_at_utc:
+        description: Review time as YYYY-MM-DDTHH:MM:SSZ; required for package mode
+        required: false
+        type: string
+      redistribution_evidence:
+        description: Durable review reference; required for package mode
+        required: false
+        type: string
+
+concurrency:
+  group: tg-sdk-installer-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    name: Inventory or package prebuilt Windows SDK
+    runs-on: windows-latest
+    timeout-minutes: 360
+    env:
+      SDK_BUILD: ${{ github.workspace }}/build/tg-sdk-installer-engine
+      SDK_INSTALL: ${{ runner.temp }}/tg-sdk-install
+      SDK_INVENTORY: ${{ runner.temp }}/tg-sdk-installer-inventory.json
+      SDK_NOTICES: ${{ runner.temp }}/NOTICES.txt
+      SDK_PACKAGES: ${{ runner.temp }}/THIRD_PARTY_PACKAGES.json
+      SDK_STAGE: ${{ runner.temp }}/tg-sdk-stage
+      SDK_ARTIFACTS: ${{ runner.temp }}/tg-sdk-artifacts
+      SDK_PACKAGE_BUILD: ${{ runner.temp }}/tg-sdk-package-build
+      SDK_WIX: ${{ runner.temp }}/wix
+      WIX_EXTENSIONS: ${{ runner.temp }}/wix-extensions
+
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up .NET for pinned WiX tool
+        if: inputs.mode == 'package'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run authoritative repository validation
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py
+          --keep-going
+
+      - name: Configure prebuilt O3DE SDK layout
+        shell: pwsh
+        run: |
+          $project = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
+          $packages = Join-Path $env:RUNNER_TEMP "o3de-packages"
+          cmake -S . -B $env:SDK_BUILD -G "Visual Studio 17 2022" -A x64 `
+            -DLY_PROJECTS="$project" `
+            -DLY_3RDPARTY_PATH="$packages" `
+            -DLY_DISABLE_TEST_MODULES=ON `
+            -DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK `
+            -DCMAKE_INSTALL_PREFIX="$env:SDK_INSTALL"
+
+      - name: Build canonical O3DE INSTALL target
+        run: cmake --build $env:SDK_BUILD --config profile --target INSTALL -- /m
+
+      - name: Generate notices and third-party package inventory
+        run: >-
+          python scripts/license_scanner/license_scanner.py
+          --scan-path "$env:SDK_INSTALL"
+          --license-file-path "$env:SDK_NOTICES"
+          --package-file-path "$env:SDK_PACKAGES"
+
+      - name: Generate exact installer inventory
+        shell: pwsh
+        run: |
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py inventory `
+            --repo-root $env:GITHUB_WORKSPACE `
+            --sdk-root $env:SDK_INSTALL `
+            --notices $env:SDK_NOTICES `
+            --packages $env:SDK_PACKAGES `
+            --version "${{ inputs.version }}" `
+            --channel "${{ inputs.channel }}" `
+            --output $env:SDK_INVENTORY
+          $inventory = Get-Content -LiteralPath $env:SDK_INVENTORY -Raw | ConvertFrom-Json
+          "SDK_INVENTORY_SHA256=$($inventory.inventory_sha256)" >> $env:GITHUB_ENV
+
+      - name: Upload inventory for redistribution review
+        uses: actions/upload-artifact@v4
+        with:
+          name: tg-sdk-installer-inventory-${{ github.run_id }}
+          path: |
+            ${{ env.SDK_INVENTORY }}
+            ${{ env.SDK_NOTICES }}
+            ${{ env.SDK_PACKAGES }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind package mode to exact redistribution review
+        if: inputs.mode == 'package'
+        shell: pwsh
+        env:
+          APPROVED_INVENTORY: ${{ inputs.approved_inventory_sha256 }}
+          REVIEWER: ${{ inputs.redistribution_reviewer }}
+          REVIEWED_AT: ${{ inputs.redistribution_reviewed_at_utc }}
+          REVIEW_EVIDENCE: ${{ inputs.redistribution_evidence }}
+        run: |
+          foreach ($value in @($env:APPROVED_INVENTORY, $env:REVIEWER, $env:REVIEWED_AT, $env:REVIEW_EVIDENCE)) {
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "Package mode requires exact inventory fingerprint, reviewer, UTC review time, and evidence."
+            }
+          }
+          if ($env:APPROVED_INVENTORY -cne $env:SDK_INVENTORY_SHA256) {
+            throw "Approved inventory does not match this exact build: expected $env:SDK_INVENTORY_SHA256"
+          }
+
+      - name: Stage reviewed payload and create portable ZIP
+        if: inputs.mode == 'package'
+        shell: pwsh
+        env:
+          APPROVED_INVENTORY: ${{ inputs.approved_inventory_sha256 }}
+          REVIEWER: ${{ inputs.redistribution_reviewer }}
+          REVIEWED_AT: ${{ inputs.redistribution_reviewed_at_utc }}
+          REVIEW_EVIDENCE: ${{ inputs.redistribution_evidence }}
+        run: |
+          New-Item -ItemType Directory -Path $env:SDK_ARTIFACTS | Out-Null
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py stage `
+            --repo-root $env:GITHUB_WORKSPACE `
+            --sdk-root $env:SDK_INSTALL `
+            --notices $env:SDK_NOTICES `
+            --packages $env:SDK_PACKAGES `
+            --version "${{ inputs.version }}" `
+            --channel "${{ inputs.channel }}" `
+            --approved-inventory-sha256 $env:APPROVED_INVENTORY `
+            --reviewed-by $env:REVIEWER `
+            --reviewed-at-utc $env:REVIEWED_AT `
+            --review-evidence $env:REVIEW_EVIDENCE `
+            --output $env:SDK_STAGE
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-stage `
+            --stage-root $env:SDK_STAGE
+          $zip = Join-Path $env:SDK_ARTIFACTS `
+            "Tainted-Grail-FoA-SDK-${{ inputs.version }}-windows-x64.zip"
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py archive `
+            --stage-root $env:SDK_STAGE --output $zip
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-archive `
+            --archive $zip
+
+      - name: Install pinned build-only WiX toolchain
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          dotnet tool install wix --version 4.0.4 --tool-path $env:SDK_WIX
+          & "$env:SDK_WIX/wix.exe" extension add --global WixToolset.UI.wixext/4.0.4
+          "WIX=$env:SDK_WIX" >> $env:GITHUB_ENV
+
+      - name: Build standard MSI from the same staged payload
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          cmake -S Gems/TaintedGrailModdingSDK/Installer -B $env:SDK_PACKAGE_BUILD `
+            -DTG_INSTALLER_VERSION="${{ inputs.version }}" `
+            -DTG_INSTALLER_PAYLOAD_ROOT="$env:SDK_STAGE"
+          cpack --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `
+            -G WIX -B $env:SDK_ARTIFACTS
+
+      - name: Smoke install, launch contract, repair, and uninstall
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_ARTIFACTS -Filter *.msi -File -ErrorAction Stop)
+          if ($msiFiles.Count -ne 1) { throw "Expected exactly one MSI; found $($msiFiles.Count)." }
+          $msi = $msiFiles[0]
+          $installRoot = Join-Path $env:RUNNER_TEMP "installed-tg-sdk"
+          $externalWorkspace = Join-Path $env:RUNNER_TEMP "external-workspace"
+          New-Item -ItemType Directory -Path $externalWorkspace | Out-Null
+          Set-Content -LiteralPath (Join-Path $externalWorkspace "preserve.txt") -Value "preserve"
+
+          $install = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
+            "/i", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"",
+            "/l*v", "`"$env:RUNNER_TEMP/tg-sdk-install.log`"")
+          if ($install.ExitCode -ne 0) { throw "MSI install failed with exit $($install.ExitCode)." }
+
+          $launcher = Join-Path $installRoot `
+            "bin/Windows/profile/Default/TaintedGrailModdingEditorLauncher.exe"
+          $startMenuEntry = Join-Path $env:APPDATA `
+            "Microsoft/Windows/Start Menu/Programs/Tainted Grail FoA SDK/Tainted Grail Modding Editor.lnk"
+          if (-not (Test-Path -LiteralPath $startMenuEntry -PathType Leaf)) {
+            throw "MSI Start Menu entry was not created."
+          }
+          & $launcher --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Installed launcher self-test failed." }
+
+          $repair = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
+            "/fa", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"")
+          if ($repair.ExitCode -ne 0) { throw "MSI repair failed with exit $($repair.ExitCode)." }
+
+          $remove = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
+            "/x", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"")
+          if ($remove.ExitCode -ne 0) { throw "MSI uninstall failed with exit $($remove.ExitCode)." }
+          if (Test-Path -LiteralPath $launcher -PathType Leaf) {
+            throw "MSI uninstall left the product launcher installed."
+          }
+          if (Test-Path -LiteralPath $startMenuEntry -PathType Leaf) {
+            throw "MSI uninstall left the product Start Menu entry installed."
+          }
+          if (-not (Test-Path -LiteralPath (Join-Path $externalWorkspace "preserve.txt"))) {
+            throw "MSI uninstall removed external workspace data."
+          }
+
+      - name: Upload unsigned development installer artifacts
+        if: inputs.mode == 'package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tg-sdk-unsigned-installer-${{ inputs.version }}-${{ github.run_id }}
+          path: ${{ env.SDK_ARTIFACTS }}
+          if-no-files-found: error
+          retention-days: 14

@@ -27,9 +27,11 @@ TESTS_ROOT = TOOLS_ROOT / "tests"
 
 VALIDATORS = (
     "validate_ci_runner_policy.py",
+    "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",
     "validate_downstream_compiled_tests.py",
     "validate_research_contract_hardening.py",
+    "validate_population_actor_troop_editor.py",
     "validate_catalog_schema2.py",
     "validate_economy_coverage_dashboard.py",
     "validate_economy_duplicate_detection.py",

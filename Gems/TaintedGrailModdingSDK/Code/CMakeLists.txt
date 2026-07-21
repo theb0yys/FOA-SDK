@@ -60,6 +60,15 @@ ly_add_source_properties(
             O3DE_GEM_VERSION=${gem_version}
 )
 
+if(PAL_PLATFORM_NAME STREQUAL "Windows")
+    ly_add_target(
+        NAME TaintedGrailModdingEditorLauncher APPLICATION
+        NAMESPACE Gem
+        FILES_CMAKE
+            taintedgrailmoddingsdk_installed_launcher_files.cmake
+    )
+endif()
+
 if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
     ly_add_target(
         NAME ${gem_name}.Catalog.Tests ${PAL_TRAIT_TEST_TARGET_TYPE}

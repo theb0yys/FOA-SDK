@@ -134,6 +134,8 @@ set(FILES
     Source/FoundationModels.h
     Source/PackagePathValidation.cpp
     Source/PackagePathValidation.h
+    Source/PopulationActionLaneService.cpp
+    Source/PopulationActionLaneService.h
     Source/PopulationModels.cpp
     Source/PopulationModels.h
     Source/ResearchContractValidation.cpp

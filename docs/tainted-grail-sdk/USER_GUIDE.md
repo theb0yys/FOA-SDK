@@ -8,9 +8,22 @@ The project is pre-alpha. It does not provide production runtime deployment or c
 
 ## Before you begin
 
-You need a supported O3DE source-build environment, Git LFS, this repository, writable authoring directories, and legally distributable project-owned data. A legitimate FoA installation is needed only when configuring a real game profile.
+Contributors building the Editor need a supported O3DE source-build environment,
+Git LFS, this repository, writable authoring directories, and legally
+distributable project-owned data. Users of a reviewed prebuilt Windows artifact
+do not need Git, Python, CMake, Visual Studio, or an O3DE source build; follow
+[Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md). A legitimate
+FoA installation is needed only when configuring a real game profile.
 
 Keep the workspace, generated output, staging, and deployment directories separate from the game installation.
+
+Launch through the verified Developer Preview entry described in
+`OPEN_AND_TEST_EDITOR.md`. It materializes a bounded writable project beneath
+`LOCALAPPDATA`, prepares the local asset cache before startup, opens the
+standard default level, and starts the 3D viewport with a visible sky, ground
+grid, and shader ball rather than an empty grey view. The repository remains
+reviewed source; no Windows security exception or
+administrator launch is required.
 
 ## Build and validate
 
@@ -33,12 +46,14 @@ These checks do not replace an O3DE configure/build and compiled test run.
 
 After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes are:
 
+- **FOA Development Hub** (opens by default)
 - **Tainted Grail SDK Status**
 - **Tainted Grail Pack Manager**
 - **Tainted Grail Source Intake**
 - **Tainted Grail Catalog Browser**
 - **Tainted Grail Catalog Governance**
 - **Tainted Grail Item and Recipe Editor**
+- **Tainted Grail Actor and Troop Editor**
 - **Tainted Grail Economy Acquisition Coverage**
 - **Tainted Grail Economy Cross-Pack Duplicates**
 - **Tainted Grail Adapter Capability Matrix**
@@ -51,11 +66,15 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail Deployment Execution Result Evidence**
 - **Tainted Grail Post-Deployment Verification and Release Blockers**
 - **Tainted Grail Independent Post-Deployment Verifier Results**
+- **Tainted Grail Verifier Evidence Reconciliation and Release Decision**
+- **Tainted Grail Release Artifact Provenance and Signing Intent**
+- **Tainted Grail Release Assembly and Checksum Results**
+- **Tainted Grail Release Signing Results**
 
 ## Recommended workflow
 
-1. Configure and save a workspace.
-2. Configure an exact game profile.
+1. Start from **FOA Development Hub** and review the live workspace, game-profile, active-pack, validation, blocker, and persistence context. The Hub only orchestrates existing panes and never grants execution or release permission.
+2. Use **Setup and readiness** to configure and save a workspace, exact game profile, active pack, and adapter capability context.
 3. Create or load pack manifests.
 4. Import sources and evidence.
 5. Promote reviewed claims into canonical records.

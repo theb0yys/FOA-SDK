@@ -261,9 +261,10 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "4. **Complete** \u2014 Framework evidence-bound authoring, atomic troop-definition bootstrap\n"
             "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources "
             "and compiled-target wiring\n"
-            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration\n"
-            "population-specific action-lane contract\n"
-            "does not claim that an exact-head compiled test run exists\n"
+            "6. **Complete** \u2014 immutable population action-lane derivation, "
+            "Actor and Troop Editor pane, and lifecycle registration\n"
+            "7. **Next** \u2014 deterministic synthetic population fixture\n"
+            "do not claim that an exact-head compiled test run exists\n"
             "loaded candidate remains schema 1\n"
             "direct save is refused\n"
             "successful bound replacement and `BuildDocument`\n",
@@ -274,7 +275,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "Status: active development. Core contracts, CatalogDatabase integration\n"
             "evidence-bound Framework candidate publication and positive/negative Core and\n"
             "Framework population-authoring test sources with compiled-target wiring are implemented\n"
-            "The Actor and Troop Editor pane is next\n",
+            "The immutable seven-lane population action contract and registered Actor and Troop Editor pane are also implemented\n"
+            "The deterministic synthetic fixture and complete local-validation integration are next\n",
         )
         self._write(
             "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
@@ -298,8 +300,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/README.md",
             "Actor and Troop Editor Design ACTOR_TROOP_EDITOR_DESIGN.md "
-            "completed Core, schema-2 persistence, Framework candidate-publication, and "
-            "population-authoring test-source units\n",
+            "completed Core, schema-2 persistence, Framework candidate-publication, "
+            "population-authoring test-source, immutable action-lane, and registered Actor/Troop pane units\n",
         )
 
     def test_valid_contract_passes(self) -> None:
@@ -326,14 +328,14 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogSchema2ContractError, r"5\. \*\*Complete"):
             validate_catalog_schema2(self.repo_root)
 
-    def test_rejects_stale_editor_next_status(self) -> None:
+    def test_rejects_stale_editor_complete_status(self) -> None:
         path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
         text = path.read_text(encoding="utf-8").replace(
-            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration",
-            "6. **Pending** \u2014 Actor and Troop Editor pane and lifecycle registration",
+            "6. **Complete** \u2014 immutable population action-lane derivation",
+            "6. **Pending** \u2014 immutable population action-lane derivation",
         )
         path.write_text(text, encoding="utf-8")
-        with self.assertRaisesRegex(CatalogSchema2ContractError, r"6\. \*\*Next"):
+        with self.assertRaisesRegex(CatalogSchema2ContractError, r"6\. \*\*Complete"):
             validate_catalog_schema2(self.repo_root)
 
     def test_rejects_stale_replacement_semantics(self) -> None:

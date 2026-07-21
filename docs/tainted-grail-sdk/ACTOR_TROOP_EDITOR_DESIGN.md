@@ -1,9 +1,11 @@
 # Actor and Troop Editor Design
 
 Status: active implementation — Core contracts/database, schema-2 migration/persistence, Framework
-evidence-bound candidate publication, and the Core/Framework positive and negative population-authoring
-test sources with compiled-target wiring are implemented; the Actor and Troop Editor pane is next. Test-source
-wiring does not claim that an exact-head compiled test run or the complete vertical slice has passed.
+evidence-bound candidate publication, Core/Framework population-authoring test-source wiring, the immutable
+population action-lane contract, and the Actor and Troop Editor pane lifecycle are implemented. The
+deterministic synthetic fixture and complete local-validation integration are next. Source implementation and
+test wiring do not claim that an exact-head compiled test run, Windows UI review, or the complete vertical
+slice has passed.
 
 Target: first Phase 6 functional-expansion vertical slice
 
@@ -61,8 +63,9 @@ Core owns:
 
 Core does not read or write files and does not depend on Qt or FoA runtime libraries.
 
-Population-specific action-lane derivation remains assigned to Core but is not part of the implemented unit-5
-surface. Its production contract and Editor presentation are deferred together to unit 6.
+Core also owns the immutable population action-lane derivation introduced in unit 6. It derives the fixed
+seven-lane matrix from exact published catalog state, the path-policy-resolved authoring context, exact
+profile/pack/evidence binding, and applicable open blockers without mutating any input or granting authority.
 
 ### Framework
 
@@ -349,6 +352,9 @@ The **Tainted Grail Actor and Troop Editor** should provide:
 - read-only relevant relationship view;
 - read-only action-lane matrix;
 - save and revert controls;
+- independently tracked actor, troop, and unstaged-member drafts: selection and shared Foundation refreshes
+  cannot discard them, saving one tab preserves the other tab, and closing with unsaved work requires explicit
+  discard confirmation;
 - clear empty, invalid, blocked, and persistence-failure states.
 
 The pane does not create canonical records, grant permission, invoke an adapter, launch FoA, or expose spawn
@@ -439,10 +445,11 @@ Cover:
 
 - pane and module registration;
 - non-editable governance surfaces;
-- population-specific action-lane derivation and presentation once their production contract is introduced
-  in unit 6;
+- population-specific action-lane derivation and read-only presentation;
 - absence of runtime, process, deployment, and save-mutation APIs;
 - required controls and error text;
+- fail-closed dirty-draft guards for filters, record/member selection, Foundation notifications, cross-tab
+  saves, and pane close;
 - deterministic synthetic fixture coverage;
 - local-validation integration;
 - Windows manual checklist expansion from twenty-two to twenty-three TG SDK panes.
@@ -458,19 +465,20 @@ After design approval, implementation proceeds in focused reviewable units:
 4. **Complete** — Framework evidence-bound authoring, atomic troop-definition bootstrap, candidate validation,
    save-before-publish persistence, Foundation snapshot counts, and single-change notification;
 5. **Complete** — Core and Framework positive/negative population-authoring test sources and compiled-target wiring;
-6. **Next** — Actor and Troop Editor pane and lifecycle registration;
-7. deterministic synthetic population fixture and full vertical-slice local-validation integration;
+6. **Complete** — immutable population action-lane derivation, Actor and Troop Editor pane, and lifecycle
+   registration;
+7. **Next** — deterministic synthetic population fixture and full vertical-slice local-validation integration;
 8. remaining public user documentation, changelog, and twenty-three-pane checklist updates;
 9. exact-head configure/build, compiled tests, and Windows UI evidence.
 
-Completion of units 1–5 establishes durable population contracts, persistence, Framework authoring commands,
-and the positive/negative Core and Framework population-authoring test sources wired into the existing
-compiled test target. It does not claim that those tests have run in an exact-head configured build, or that
-the Actor and Troop Editor pane, population-specific action-lane production contract/presentation, or complete
-vertical slice exist yet.
+Completion of units 1–6 establishes durable population contracts, persistence, Framework authoring commands,
+positive/negative Core and Framework population-authoring test sources, the immutable action-lane contract,
+and the registered Actor and Troop Editor pane. It does not claim that the compiled tests have run in an
+exact-head configured build, that Windows UI evidence exists, or that the deterministic fixture and complete
+vertical-slice validation have passed.
 
-Unit 6 also owns introduction of the population-specific action-lane derivation and read-only presentation
-contract. Unit 5 cannot test that behavior because no production contract exists yet.
+Unit 7 owns the deterministic population fixture and full local-validation integration. Unit 8 owns the
+remaining public user guide, changelog, and twenty-three-pane checklist updates.
 
 Every commit receives complete staged-diff self-review, DCO sign-off, relevant focused validation, and
 `FOA-plug-in-development` synchronization before and after publication.

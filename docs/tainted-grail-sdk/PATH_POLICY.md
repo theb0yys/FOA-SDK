@@ -27,7 +27,7 @@ Both bindings must preserve the rules below. Neither UI widgets nor shortcut sid
 8. Workspace open and save paths must use the `*.tgworkspace.json` suffix and are canonicalized before persistence.
 9. UI code may suggest a path but must not create directories before the persistence boundary validates it. The boundary creates required parent directories only after canonical validation and revalidates the final path before writing.
 
-## Shortcut trust modes
+## Executable trust modes
 
 ### Source-built verified entry
 
@@ -55,6 +55,25 @@ An external `--editor` is allowed only with an explicit `--diagnostic-override` 
 - is rejected by normal verification;
 - may be inspected only with an explicit diagnostic-verification flag;
 - is never described as a verified source-built or release entry.
+
+### Installed prebuilt entry
+
+The standard installed entry is a separate trust mode from a source-built or
+diagnostic entry. It is accepted only when:
+
+- the launcher resides in the O3DE SDK `bin/Windows/profile/Default` install
+  layout;
+- the product root contains `INSTALL_MANIFEST.json`;
+- the adjacent `Editor.exe` and installed `TaintedGrailModdingEditor/project.json`
+  are regular files in that layout;
+- the staged payload was bound to an exact reviewed inventory fingerprint and
+  verified before MSI/ZIP assembly;
+- MSI or ZIP provenance and published checksums identify the exact artifact.
+
+The installed launcher never searches for another Editor, project, source tree,
+game installation, or workspace. `--self-test` validates the installed layout
+without launching the Editor. Installed-release trust does not make an unsigned
+development artifact a signed or publicly approved release.
 
 ## Failure behavior
 

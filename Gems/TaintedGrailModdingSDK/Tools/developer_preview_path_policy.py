@@ -22,10 +22,12 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import developer_preview
+import developer_preview_workspace
 
 APPROVED_BUILD_DIRECTORY = Path("build/tg-sdk-developer-preview-0-windows-profile")
 PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")
 PREVIEW_ICON = PREVIEW_PROJECT / "TaintedGrailModdingEditor.ico"
+PREVIEW_STARTUP_LEVEL = PREVIEW_PROJECT / "Levels/DefaultLevel/DefaultLevel.prefab"
 DEFAULT_SHORTCUT_OUTPUT = Path("build/Tainted Grail Modding Editor.lnk")
 DIAGNOSTIC_OUTPUT_DIRECTORY = Path("build/diagnostic-entries")
 EDITOR_CANDIDATES = (
@@ -50,7 +52,12 @@ class PreviewEntryPaths:
     repo_root: Path
     build_directory: Path | None
     editor: Path
+    engine: Path
     project: Path
+    startup_level: Path
+    project_cache: Path
+    project_user: Path
+    project_log: Path
     icon: Path
     working_directory: Path
 
@@ -152,7 +159,7 @@ def _repository_owned_path(
     return canonical
 
 
-def _repository_paths(repo_root: Path) -> tuple[Path, Path, Path]:
+def _repository_paths(repo_root: Path) -> tuple[Path, Path, Path, Path]:
     repo = canonical_path(repo_root, require_exists=True)
     project = _repository_owned_path(
         repo,
@@ -166,11 +173,39 @@ def _repository_paths(repo_root: Path) -> tuple[Path, Path, Path]:
         label="Dedicated editor icon",
         require_exists=True,
     )
+    startup_level = _repository_owned_path(
+        repo,
+        repo / PREVIEW_STARTUP_LEVEL,
+        label="Dedicated editor startup level",
+        require_exists=True,
+    )
     if not project.is_dir():
         raise PathPolicyError(f"Dedicated editor project is not a directory: {project}")
     if not icon.is_file():
         raise PathPolicyError(f"Dedicated editor icon is not a file: {icon}")
-    return repo, project, icon
+    if not startup_level.is_file() or startup_level.suffix.casefold() != ".prefab":
+        raise PathPolicyError(
+            f"Dedicated editor startup level is not a prefab file: {startup_level}"
+        )
+    levels_root = canonical_path(project / "Levels", require_exists=True)
+    if not is_contained(levels_root, startup_level):
+        raise PathPolicyError(
+            f"Dedicated editor startup level must remain inside {levels_root}: {startup_level}"
+        )
+    return repo, project, startup_level, icon
+
+
+def _workspace_paths(
+    repo: Path,
+    *,
+    require_materialized: bool,
+) -> developer_preview_workspace.PreviewWorkspacePaths:
+    try:
+        if require_materialized:
+            return developer_preview_workspace.verify_preview_workspace(repo)
+        return developer_preview_workspace.resolve_workspace_paths()
+    except developer_preview_workspace.WorkspaceError as exc:
+        raise PathPolicyError(str(exc)) from exc
 
 
 def approved_build_directory(repo_root: Path) -> Path:
@@ -209,7 +244,11 @@ def resolve_source_built_entry(
     require_editor: bool,
     require_configured: bool,
 ) -> PreviewEntryPaths:
-    repo, project, icon = _repository_paths(repo_root)
+    repo, _, _, icon = _repository_paths(repo_root)
+    workspace = _workspace_paths(
+        repo,
+        require_materialized=require_editor or require_configured,
+    )
     approved = approved_build_directory(repo)
     requested = canonical_path(build_dir or approved, repo)
     if not same_path(approved, requested):
@@ -250,14 +289,20 @@ def resolve_source_built_entry(
         repo_root=repo,
         build_directory=approved,
         editor=editor,
-        project=project,
+        engine=repo,
+        project=workspace.project,
+        startup_level=workspace.startup_level,
+        project_cache=workspace.cache,
+        project_user=workspace.user,
+        project_log=workspace.log,
         icon=icon,
         working_directory=editor.parent,
     )
 
 
 def resolve_diagnostic_entry(repo_root: Path, explicit_editor: Path) -> PreviewEntryPaths:
-    repo, project, icon = _repository_paths(repo_root)
+    repo, _, _, icon = _repository_paths(repo_root)
+    workspace = _workspace_paths(repo, require_materialized=True)
     editor = canonical_path(explicit_editor, repo, require_exists=True)
     if not editor.is_file() or editor.name.casefold() != "editor.exe":
         raise PathPolicyError(f"Diagnostic override must identify an existing Editor.exe: {editor}")
@@ -266,7 +311,12 @@ def resolve_diagnostic_entry(repo_root: Path, explicit_editor: Path) -> PreviewE
         repo_root=repo,
         build_directory=None,
         editor=editor,
-        project=project,
+        engine=repo,
+        project=workspace.project,
+        startup_level=workspace.startup_level,
+        project_cache=workspace.cache,
+        project_user=workspace.user,
+        project_log=workspace.log,
         icon=icon,
         working_directory=editor.parent,
     )

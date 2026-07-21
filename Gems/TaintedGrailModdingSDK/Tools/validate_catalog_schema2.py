@@ -529,9 +529,10 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "schema-1 migration, schema-2-only writing",
             "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources",
             "compiled-target wiring",
-            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration",
-            "population-specific action-lane",
-            "does not claim that",
+            "6. **Complete** \u2014 immutable population action-lane derivation",
+            "Actor and Troop Editor pane",
+            "7. **Next** \u2014 deterministic synthetic population fixture",
+            "do not claim that",
             "loaded candidate remains schema 1",
             "direct save is refused",
             "successful bound replacement and `BuildDocument`",
@@ -543,7 +544,8 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         (
             "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources",
             "compiled-target wiring",
-            "6. **Next** \u2014 Actor and Troop Editor pane and lifecycle registration",
+            "6. **Complete** \u2014 immutable population action-lane derivation",
+            "7. **Next** \u2014 deterministic synthetic population fixture",
         ),
         "Actor/troop implementation sequence",
     )
@@ -556,7 +558,8 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "evidence-bound Framework candidate publication",
             "positive/negative Core and",
             "Framework population-authoring test sources with compiled-target wiring are implemented",
-            "The Actor and Troop Editor pane is next",
+            "seven-lane population action contract and registered Actor and Troop Editor pane are also implemented",
+            "deterministic synthetic fixture and complete local-validation integration are next",
         ),
         "Roadmap population status",
     )
@@ -600,7 +603,8 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         (
             "Actor and Troop Editor Design",
             "ACTOR_TROOP_EDITOR_DESIGN.md",
-            "completed Core, schema-2 persistence, Framework candidate-publication, and population-authoring test-source",
+            "completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source",
+            "immutable action-lane, and registered Actor/Troop pane units",
         ),
         "Documentation hub",
     )

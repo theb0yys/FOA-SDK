@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import shutil
 import tempfile
 import unittest
@@ -35,9 +36,15 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
         self.root = Path(self.temp.name) / "repo"
         source_gem = REPO_ROOT / "Gems" / "TaintedGrailModdingSDK"
         target_gem = self.root / "Gems" / "TaintedGrailModdingSDK"
+        source_docs = REPO_ROOT / "docs" / "tainted-grail-sdk"
+        target_docs = self.root / "docs" / "tainted-grail-sdk"
         (target_gem / "Code" / "Source").mkdir(parents=True)
         (target_gem / "Code" / "Tests").mkdir(parents=True)
         (target_gem / "Tools").mkdir(parents=True)
+        (target_gem / "Knowledge" / "TaintedFramework" / "golden").mkdir(
+            parents=True
+        )
+        target_docs.mkdir(parents=True)
 
         for relative in (
             "Code/Source/TaintedFrameworkEditorServices.h",
@@ -48,11 +55,18 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
             "Code/taintedgrailmoddingsdk_framework_files.cmake",
             "Code/taintedgrailmoddingsdk_tainted_framework_tests_files.cmake",
             "Tools/run_local_validation.py",
+            "Knowledge/TaintedFramework/golden/fixtures.json",
         ):
             source = source_gem / relative
             target = target_gem / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
+
+        for name in (
+            "TAINTED_FRAMEWORK_EDITOR_SERVICES.md",
+            "TAINTED_FRAMEWORK_EDITOR_SERVICES_REVIEW.md",
+        ):
+            shutil.copy2(source_docs / name, target_docs / name)
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -92,11 +106,29 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
         )
         self.assert_fails("canonical runtime-target field")
 
+    def test_bepinex_version_check_removal_fails(self) -> None:
+        self.replace(
+            "Code/Source/TaintedFrameworkEditorServices.cpp",
+            "row.m_bepInExVersion != bepInExVersion",
+            "false",
+        )
+        self.assert_fails("exact evidence-backed BepInEx version")
+
+    def test_profile_binding_removal_fails(self) -> None:
+        path = self.path("Code/Source/TaintedFrameworkEditorServices.cpp")
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("profile.m_bepInExVersion", text)
+        path.write_text(
+            text.replace("profile.m_bepInExVersion", '"5.4.23.3"'),
+            encoding="utf-8",
+        )
+        self.assert_fails("Sanitized ProfileView binding missing")
+
     def test_version_check_removal_fails(self) -> None:
         self.replace(
             "Code/Source/TaintedFrameworkEditorServices.cpp",
-            "if (row.m_gameVersion == gameVersion)",
-            "if (true)",
+            "if (row.m_gameVersion != gameVersion)",
+            "if (false)",
         )
         self.assert_fails("Missing required service fragment")
 
@@ -125,6 +157,13 @@ class TaintedFrameworkEditorServicesValidatorTests(unittest.TestCase):
             "",
         )
         self.assert_fails("Foundation must own")
+
+    def test_golden_configuration_drift_fails(self) -> None:
+        path = self.path("Knowledge/TaintedFramework/golden/fixtures.json")
+        document = json.loads(path.read_text(encoding="utf-8"))
+        document["configuration"][0][1] = "false"
+        path.write_text(json.dumps(document), encoding="utf-8")
+        self.assert_fails("configuration projection drifted")
 
 
 if __name__ == "__main__":

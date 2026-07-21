@@ -3,9 +3,9 @@
     "version": "0.2.0",
     "display_name": "External Toolchain Host",
     "license": "Apache-2.0 OR MIT",
-    "license_url": "https://github.com/theb0yys/o3de/blob/main/LICENSE.txt",
+    "license_url": "https://github.com/theb0yys/FOA-SDK/blob/main/LICENSE.txt",
     "origin": "theb0yys",
-    "origin_url": "https://github.com/theb0yys/o3de",
+    "origin_url": "https://github.com/theb0yys/FOA-SDK",
     "type": "Tool",
     "summary": "Host-side provider registration, layered configuration, bounded local discovery, and diagnostics for external editor-tool integrations.",
     "canonical_tags": [
@@ -17,6 +17,6 @@
         "Toolchain"
     ],
     "requirements": "Host tools build required.",
-    "documentation_url": "https://github.com/theb0yys/o3de/tree/main/Gems/ExternalToolchain",
+    "documentation_url": "https://github.com/theb0yys/FOA-SDK/tree/main/Gems/ExternalToolchain",
     "dependencies": []
 }

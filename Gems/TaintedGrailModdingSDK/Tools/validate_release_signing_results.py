@@ -148,11 +148,30 @@ def validate(repo_root: Path) -> None:
     )
     reject_fragments(
         contract_source,
-        (
-            'if (value == "unknown")',
-            "m_envelopes.push_back(envelope);\n        if (error)",
-        ),
-        "Release-signing parser and unbounded registry pattern",
+        ('if (value == "unknown")',),
+        "Release-signing parser",
+    )
+    registry = function_slice(
+        contract_source,
+        "bool AdapterReleaseSigningResultRegistry::RegisterEnvelope(",
+        "void AdapterReleaseSigningResultRegistry::Clear()",
+    )
+    shape_position = registry.find("if (!HasRegistryShape(envelope))")
+    capacity_position = registry.find(
+        "if (m_envelopes.size() >= MaximumReleaseSigningRegistryEnvelopes)"
+    )
+    duplicate_position = registry.find(
+        "for (const AdapterReleaseSigningResultEnvelope& existing : m_envelopes)"
+    )
+    append_position = registry.find("m_envelopes.push_back(envelope);")
+    require(
+        0 <= shape_position < capacity_position < duplicate_position < append_position,
+        "Release-signing registry must validate shape and fixed capacity before "
+        "duplicate scanning and appending an envelope.",
+    )
+    require(
+        registry.count("m_envelopes.push_back(envelope);") == 1,
+        "Release-signing registry must append exactly once after all refusal checks.",
     )
 
     require_fragments(
@@ -380,6 +399,7 @@ def validate(repo_root: Path) -> None:
         validator_tests,
         (
             "test_repository_fixture_passes",
+            "test_registry_capacity_check_must_precede_append",
             "test_missing_hardening_test_fails_closed",
             "test_reconstructed_upstream_check_fails_closed",
             "test_unsafe_diagnostic_label_fails_closed",

@@ -21,15 +21,17 @@ The FOA-SDK working tree contains only product-owned material:
 .github/
 Gems/ExternalToolchain/
 Gems/TaintedGrailModdingSDK/
+Plugins/
+├── Authoring/
+├── Integrations/
+└── RuntimeAdapters/
 Research/
 TaintedGrailModdingEditor/
 docs/tainted-grail-sdk/
 product governance and dependency files
 ```
 
-Stock O3DE source roots, engine Gems, templates, assets, registries, scripts, CMake entry points, `engine.json`, and `CMakePresets.json` are forbidden by the extracted-product validator.
-
-Current FOA paths are intentionally preserved during this first extraction stage. Directory renaming or deeper reorganisation is a later, independent change.
+The two root Gems are required product foundations. `Plugins/` is the governed root for optional extension packages. Stock O3DE source roots, engine Gems, templates, assets, registries, scripts, CMake entry points, `engine.json`, and `CMakePresets.json` remain forbidden by the product-tree validator.
 
 ## Exact engine lock
 
@@ -69,6 +71,28 @@ The same project manifest enables both Gem names exactly once. This allows the p
 
 The standalone project `EngineFinder.cmake` resolves the external engine, reads the lock, and independently rejects a checkout at any other Git commit.
 
+## Product-owned plug-in packages
+
+Optional systems are stored beneath `Plugins/`, not added as further root Gems by default.
+
+```text
+Plugins/Authoring/<Package>/plugin.json
+Plugins/Integrations/<Package>/plugin.json
+Plugins/RuntimeAdapters/<Package>/plugin.json
+```
+
+Every real package requires a manifest conforming to `Plugins/plugin.schema.json`. Repository validation rejects unknown categories, loose category files, invalid package directory names, and package content without a root manifest.
+
+Examples of intended destinations are:
+
+- Avalon AI, UI Framework, and Road Atlas under `Plugins/Authoring/`;
+- Merlin's Workshop and acquisition providers under `Plugins/Integrations/`;
+- independent Mono and IL2CPP packages under `Plugins/RuntimeAdapters/`.
+
+Packages register through the public ExtensionAPI. Their manifests declare compatibility, dependencies, capabilities, provenance, licence state, and entry points but grant no mutable Foundation access or runtime authority.
+
+A package may contain an internal O3DE Gem when host loading requires one. Such a Gem remains package-owned and must be selected through the plug-in registry; it is not added to upstream `engine.json` or treated as a third mandatory root Gem.
+
 ## Configure boundary
 
 CMake configuration is engine-owned while the project is product-owned:
@@ -81,34 +105,34 @@ cmake --preset windows-vs-unity
   -DLY_PROJECTS=<product_root>/TaintedGrailModdingEditor
 ```
 
-FOA validators execute from `product_root`. The O3DE source-policy validator is resolved from `engine_root` and scans both product Gems. Compiled tests execute from `build_root`.
+FOA validators execute from `product_root`. The O3DE source-policy validator is resolved from `engine_root` and scans the required product Gems. Each selected plug-in is separately validated before its entry points are added to a build or Editor session. Compiled tests execute from `build_root`.
 
 Clickable-entry policy records all three roots separately. It rejects a CMake cache whose source is FOA-SDK, a build inside either source checkout, or a shortcut that reports the product as its engine.
 
 ## Working-tree acceptance gates
 
-Before the extraction pull request can leave draft state, all of the following must pass against the external sibling engine:
+Before a product-boundary change is accepted, all applicable checks must pass against the external sibling engine:
 
 1. prerequisite and exact-pin verification;
 2. configure from `engine_root`;
 3. Profile Editor and AssetProcessorBatch build;
 4. all focused Python tests and validators;
-5. O3DE source-policy validation of both custom Gems;
-6. compiled catalog and framework tests;
+5. O3DE source-policy validation of required Gems and selected plug-in entry points;
+6. compiled catalog, framework, and selected plug-in tests;
 7. Editor entry and pane acceptance;
-8. generated-output and tracked-path hygiene checks.
+8. generated-output, tracked-path, and plug-in-manifest hygiene checks.
 
-The clean-tree contract itself also fails when any forbidden engine root or stock Gem reappears.
+The tracked-tree contract fails when a forbidden engine root, stock Gem, ungoverned top-level path, or manifest-less plug-in package reappears.
 
 ## FOA-O3DE decision
 
-Do not create `FOA-O3DE` merely to hold inherited engine content. Create it only if the changed-path audit proves that FOA requires intentional modifications to stock O3DE files and those changes cannot be implemented through the FOA project or custom Gems.
+Do not create `FOA-O3DE` merely to hold inherited engine content. Create it only if the changed-path audit proves that FOA requires intentional modifications to stock O3DE files and those changes cannot be implemented through the FOA project, product Gems, or governed plug-in packages.
 
 Until such evidence exists, the maintained repositories are expected to be:
 
 ```text
 FOA-SDK    maintained product repository
-o3de       pinned upstream checkout
+O3DE       pinned upstream checkout
 FOA-O3DE   absent
 ```
 

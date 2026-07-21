@@ -24,10 +24,13 @@ PREVIEW_PNG = "preview.png"
 PREVIEW_ICO = "TaintedGrailModdingEditor.ico"
 PREVIEW_SCENE_SRG = "ShaderLib/scenesrg.srgi"
 PREVIEW_VIEW_SRG = "ShaderLib/viewsrg.srgi"
+PREVIEW_STARTUP_LEVEL = "Levels/DefaultLevel/DefaultLevel.prefab"
+ENGINE_DEFAULT_LEVEL_TEMPLATE = "Assets/Editor/Prefabs/Default_Level.prefab"
 AUTOMATED_TESTING_PATH = Path("AutomatedTesting")
 REQUIRED_PREVIEW_GEMS = (
     "Atom",
     "DiffuseProbeGrid",
+    "PhysX5",
     "ExternalToolchain",
     "TaintedGrailModdingSDK",
 )
@@ -157,6 +160,25 @@ def validate_preview_project(repo_root: Path) -> None:
         raise PreviewProjectContractError(
             f"Dedicated project level root is missing: {levels_path}"
         )
+    startup_level_path = project_root / PREVIEW_STARTUP_LEVEL
+    default_level_template_path = repo_root / ENGINE_DEFAULT_LEVEL_TEMPLATE
+    if not startup_level_path.is_file():
+        raise PreviewProjectContractError(
+            f"Dedicated project startup level is missing: {startup_level_path}"
+        )
+    if not default_level_template_path.is_file():
+        raise PreviewProjectContractError(
+            f"O3DE default level template is missing: {default_level_template_path}"
+        )
+    startup_level = load_json_object(startup_level_path, "dedicated project startup level")
+    default_level_template = load_json_object(
+        default_level_template_path,
+        "O3DE default level template",
+    )
+    if startup_level != default_level_template:
+        raise PreviewProjectContractError(
+            "Dedicated project startup level must remain the O3DE default level template."
+        )
     validate_png(project_root / PREVIEW_PNG)
     validate_ico(project_root / PREVIEW_ICO)
     require_fragments(
@@ -199,11 +221,12 @@ def validate_preview_project(repo_root: Path) -> None:
             "TaintedGrailModdingEditor",
             "developer_preview_entry.py create",
             "developer_preview_entry.py verify",
+            "DefaultLevel.prefab",
             "validate_path_policy.py",
-            "repository-owned path policy",
+            "bounded per-user storage",
             "Tainted Grail Modding Editor.lnk",
             "Tools \u2192 Tainted Grail SDK",
-            "TaintedGrailModdingEditor/user/log/Editor.log",
+            "LOCALAPPDATA",
         ),
         "dedicated-entry quickstart",
     )
@@ -215,8 +238,12 @@ def validate_preview_project(repo_root: Path) -> None:
     opener = require_fragments(
         repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py",
         (
-            'PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")',
             "validate_preview_project",
+            "materialize_preview_workspace",
+            '"--project-cache"',
+            '"--project-user"',
+            '"--project-log"',
+            "developer_preview_assets.prepare_assets",
             "developer_preview_launch.main",
         ),
         "project opener",
@@ -228,6 +255,8 @@ def validate_preview_project(repo_root: Path) -> None:
             "resolve_source_built_entry",
             "resolve_diagnostic_entry",
             "validate_source_editor_binary",
+            "PREVIEW_STARTUP_LEVEL",
+            "verify_preview_workspace",
             "developer_preview.validate_build_directory",
             "Diagnostic overrides must not replace",
         ),
@@ -238,6 +267,12 @@ def validate_preview_project(repo_root: Path) -> None:
         (
             "WScript.Shell",
             "TG_SHORTCUT_OUTPUT",
+            "TG_ENGINE_PATH",
+            "TG_PROJECT_CACHE_PATH",
+            "TG_PROJECT_USER_PATH",
+            "TG_PROJECT_LOG_PATH",
+            "TG_STARTUP_LEVEL",
+            "developer_preview_assets.prepare_assets",
             "developer_preview_path_policy",
             "resolve_source_built_entry",
             "resolve_diagnostic_entry",
@@ -257,6 +292,10 @@ def validate_preview_project(repo_root: Path) -> None:
             "Diagnostic override shortcuts are not verified source-built entries",
             "allow_diagnostic_override",
             "inspect_shortcut",
+            "expected.startup_level",
+            "expected.project_cache",
+            "expected.project_user",
+            "expected.project_log",
             "WScript.Shell",
         ),
         "trusted clickable entry",
@@ -277,8 +316,55 @@ def validate_preview_project(repo_root: Path) -> None:
             )
 
     require_fragments(
+        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_workspace.py",
+        (
+            "LOCALAPPDATA",
+            "MANAGED_PROJECT_FILES",
+            "PRESERVED_PROJECT_FILES",
+            "materialize_preview_workspace",
+            "verify_preview_workspace",
+            "refusing to overwrite",
+        ),
+        "bounded per-user project materializer",
+    )
+
+    require_fragments(
+        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_assets.py",
+        (
+            "AssetProcessorBatch.exe",
+            "--project-cache-path",
+            "--project-user-path",
+            "--project-log-path",
+            "--platforms=",
+            "verify_preview_workspace",
+            "Asset preparation failed",
+        ),
+        "clean-first-run asset preflight",
+    )
+
+    require_fragments(
+        repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview.py",
+        (
+            'ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"',
+            "ASSET_PROCESSOR_BATCH_TARGET,",
+        ),
+        "Developer Preview build target plan",
+    )
+
+    require_fragments(
         repo_root / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py",
-        ('"--project"', '"--project-path"', "validate_project_path"),
+        (
+            '"--project"',
+            '"--project-path"',
+            '"--level"',
+            '"--engine"',
+            '"--project-cache"',
+            '"--project-user"',
+            '"--project-log"',
+            "validate_project_path",
+            "validate_write_paths",
+            "validate_startup_level",
+        ),
         "project launcher",
     )
 
@@ -290,9 +376,9 @@ def main() -> int:
         print(f"Developer Preview project contract validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Developer Preview project contract passed: dedicated project, tracked level root, "
-        "repository-derived project SRGs, path policy, and trusted source-built clickable "
-        "entry are complete."
+        "Developer Preview project contract passed: dedicated source project, bounded writable "
+        "materialization, tracked default viewport level, path policy, and trusted source-built "
+        "clickable entry are complete."
     )
     return 0
 

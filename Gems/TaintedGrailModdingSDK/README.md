@@ -16,6 +16,12 @@ O3DE is the authoring host. Tainted Grail remains a separate Unity runtime targe
 8. **Foundation Status and Coverage window** — shared workspace state, coverage, counts, import issues, governance coverage, usage totals, and blockers.
 9. **FOA Development Hub** — the default read-only entry surface with live workspace/profile/pack context, blocker visibility, task-first navigation, and deep-links to the existing specialist panes.
 
+The verified Developer Preview entry materializes a bounded writable per-user
+project outside the checkout, prepares its local asset cache, and opens the
+standard default level with its Atom, DiffuseProbeGrid, and PhysX5 components,
+providing a lit sky, ground grid, camera, and shader ball without requiring
+Windows security exceptions or administrator execution.
+
 ## Editor tools
 
 Available under **Tools → Tainted Grail SDK**:

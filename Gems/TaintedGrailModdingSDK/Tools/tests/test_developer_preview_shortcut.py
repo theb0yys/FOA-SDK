@@ -29,6 +29,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
         project = repo / "TaintedGrailModdingEditor"
         project.mkdir(parents=True)
         (project / "TaintedGrailModdingEditor.ico").write_bytes(b"icon")
+        startup_level = project / "Levels/DefaultLevel/DefaultLevel.prefab"
+        startup_level.parent.mkdir(parents=True)
+        startup_level.write_text("{}\n", encoding="utf-8")
         build = repo / shortcut.DEFAULT_BUILD_DIRECTORY
         editor = build / "bin/profile/Editor.exe"
         editor.parent.mkdir(parents=True)
@@ -43,12 +46,19 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
         editor: Path,
         trust_mode: str,
     ):
+        workspace = repo.parent / "local-workspace"
+        project = workspace / "project"
         return shortcut.developer_preview_path_policy.PreviewEntryPaths(
             trust_mode=trust_mode,
             repo_root=repo.resolve(),
             build_directory=(build.resolve() if trust_mode == "source-built" else None),
             editor=editor.resolve(),
-            project=(repo / "TaintedGrailModdingEditor").resolve(),
+            engine=repo.resolve(),
+            project=project.resolve(),
+            startup_level=(project / "Levels/DefaultLevel/DefaultLevel.prefab").resolve(),
+            project_cache=(project / "Cache").resolve(),
+            project_user=(project / "user").resolve(),
+            project_log=(project / "user/log").resolve(),
             icon=(repo / "TaintedGrailModdingEditor/TaintedGrailModdingEditor.ico").resolve(),
             working_directory=editor.parent.resolve(),
         )
@@ -60,6 +70,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
             with mock.patch.object(
                 shortcut.validate_developer_preview_project,
                 "validate_preview_project",
+            ), mock.patch.object(
+                shortcut.developer_preview_workspace,
+                "materialize_preview_workspace",
             ), mock.patch.object(
                 shortcut.developer_preview_path_policy,
                 "resolve_source_built_entry",
@@ -91,6 +104,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
                 shortcut.validate_developer_preview_project,
                 "validate_preview_project",
             ), mock.patch.object(
+                shortcut.developer_preview_workspace,
+                "materialize_preview_workspace",
+            ), mock.patch.object(
                 shortcut.developer_preview_path_policy,
                 "resolve_source_built_entry",
                 return_value=self.expected_paths(repo, build, editor, "source-built"),
@@ -102,6 +118,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
                 shortcut,
                 "resolve_powershell",
                 return_value="powershell.exe",
+            ), mock.patch.object(
+                shortcut.developer_preview_assets,
+                "prepare_assets",
             ):
                 payload = shortcut.create_shortcut(
                     repo_root=repo,
@@ -115,6 +134,12 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
 
             self.assertEqual(payload["target"], str(editor.resolve()))
             self.assertEqual(payload["trust_mode"], "source-built")
+            self.assertEqual(payload["arguments"][-1], str(self.expected_paths(repo, build, editor, "source-built").startup_level))
+            self.assertIn("TG_ENGINE_PATH", calls[0][1])
+            self.assertIn("TG_PROJECT_CACHE_PATH", calls[0][1])
+            self.assertIn("TG_PROJECT_USER_PATH", calls[0][1])
+            self.assertIn("TG_PROJECT_LOG_PATH", calls[0][1])
+            self.assertIn("TG_STARTUP_LEVEL", calls[0][1])
             self.assertIn("WScript.Shell", calls[0][0][-1])
             manifest = shortcut.manifest_path_for(output)
             document = json.loads(manifest.read_text(encoding="utf-8"))
@@ -127,6 +152,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
             with mock.patch.object(
                 shortcut.validate_developer_preview_project,
                 "validate_preview_project",
+            ), mock.patch.object(
+                shortcut.developer_preview_workspace,
+                "materialize_preview_workspace",
             ):
                 with self.assertRaisesRegex(shortcut.ShortcutError, "diagnostic override"):
                     shortcut.create_shortcut(
@@ -146,6 +174,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
             with mock.patch.object(
                 shortcut.validate_developer_preview_project,
                 "validate_preview_project",
+            ), mock.patch.object(
+                shortcut.developer_preview_workspace,
+                "materialize_preview_workspace",
             ), mock.patch.object(
                 shortcut.developer_preview_path_policy,
                 "resolve_diagnostic_entry",
@@ -177,6 +208,9 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
                 shortcut.validate_developer_preview_project,
                 "validate_preview_project",
             ), mock.patch.object(
+                shortcut.developer_preview_workspace,
+                "materialize_preview_workspace",
+            ), mock.patch.object(
                 shortcut.developer_preview_path_policy,
                 "resolve_source_built_entry",
                 return_value=self.expected_paths(repo, build, editor, "source-built"),
@@ -184,7 +218,10 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
                 shortcut.developer_preview_path_policy,
                 "resolve_shortcut_output",
                 return_value=output.resolve(),
-            ), mock.patch.object(shortcut, "require_windows_x64"):
+            ), mock.patch.object(shortcut, "require_windows_x64"), mock.patch.object(
+                shortcut.developer_preview_assets,
+                "prepare_assets",
+            ):
                 with self.assertRaisesRegex(shortcut.ShortcutError, "--replace"):
                     shortcut.create_shortcut(
                         repo_root=repo,

@@ -35,6 +35,20 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
         (root / "project.json").write_text('{"project_name": "PreviewProject"}\n', encoding="utf-8")
         return root
 
+    def make_level(self, project: Path) -> Path:
+        level = project / "Levels/DefaultLevel/DefaultLevel.prefab"
+        level.parent.mkdir(parents=True)
+        level.write_text("{}\n", encoding="utf-8")
+        return level
+
+    def make_write_paths(self, root: Path) -> tuple[Path, Path, Path]:
+        cache = root / "cache"
+        user = root / "user"
+        log = user / "log"
+        for directory in (cache, user, log):
+            directory.mkdir(parents=True, exist_ok=True)
+        return cache, user, log
+
     def test_editor_candidates_cover_profile_case_variants(self) -> None:
         candidates = launch.editor_candidates(Path("C:/build"))
         self.assertEqual(candidates[0], Path("C:/build/bin/profile/Editor.exe"))
@@ -68,11 +82,57 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "not valid"):
                 launch.validate_project_path(root)
 
+    def test_startup_level_must_be_project_owned_prefab(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = self.make_project(root / "project")
+            level = self.make_level(project)
+            launch.validate_startup_level(project, level)
+
+            outside = root / "outside.prefab"
+            outside.write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "project Levels"):
+                launch.validate_startup_level(project, outside)
+
+            wrong_extension = project / "Levels/DefaultLevel/DefaultLevel.json"
+            wrong_extension.write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, r"\.prefab"):
+                launch.validate_startup_level(project, wrong_extension)
+
     def test_launch_command_has_no_arbitrary_or_runtime_arguments(self) -> None:
         editor = Path("C:/build/bin/profile/Editor.exe")
         project = Path("C:/projects/Preview")
-        command = launch.launch_command(editor, project)
-        self.assertEqual(command, (str(editor), "--project-path", str(project)))
+        engine = Path("C:/engine")
+        cache = Path("C:/local/preview/cache")
+        user = Path("C:/local/preview/user")
+        log = user / "log"
+        level = project / "Levels/DefaultLevel/DefaultLevel.prefab"
+        command = launch.launch_command(
+            editor,
+            project,
+            level,
+            engine=engine,
+            project_cache=cache,
+            project_user=user,
+            project_log=log,
+        )
+        self.assertEqual(
+            command,
+            (
+                str(editor),
+                "--project-path",
+                str(project),
+                "--engine-path",
+                str(engine),
+                "--project-cache-path",
+                str(cache),
+                "--project-user-path",
+                str(user),
+                "--project-log-path",
+                str(log),
+                str(level),
+            ),
+        )
         joined = " ".join(command).lower()
         for prohibited in ("foa", "bepinex", "harmony", "avalon", "inject", "deploy"):
             self.assertNotIn(prohibited, joined)
@@ -91,6 +151,7 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
             result, exit_code = launch.run_launch(
                 editor=editor,
                 project=None,
+                startup_level=None,
                 log_dir=log_dir,
                 result_path=None,
                 dry_run=True,
@@ -99,6 +160,25 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(result.status, "planned")
             self.assertEqual(called, [])
+            self.assertFalse(log_dir.exists())
+
+    def test_cli_dry_run_accepts_missing_log_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            editor = self.make_editor(root)
+            log_dir = root / "missing-logs"
+            code = launch.main(
+                [
+                    "--repo-root",
+                    str(root),
+                    "--editor",
+                    str(editor),
+                    "--log-dir",
+                    str(log_dir),
+                    "--dry-run",
+                ]
+            )
+            self.assertEqual(code, 0)
             self.assertFalse(log_dir.exists())
 
     def test_real_launch_requires_windows_x64(self) -> None:
@@ -111,6 +191,7 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
                     launch.run_launch(
                         editor=editor,
                         project=None,
+                        startup_level=None,
                         log_dir=None,
                         result_path=None,
                         dry_run=False,
@@ -122,10 +203,25 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
             root = Path(temporary)
             editor = self.make_editor(root)
             project = self.make_project(root / "project")
+            level = self.make_level(project)
+            engine = root / "engine"
+            engine.mkdir()
+            cache, user, project_log = self.make_write_paths(root / "storage")
             log_dir = root / "logs"
 
             def executor(command, cwd, stdout, stderr):
-                self.assertEqual(command, (str(editor), "--project-path", str(project)))
+                self.assertEqual(
+                    command,
+                    launch.launch_command(
+                        editor,
+                        project,
+                        level,
+                        engine=engine,
+                        project_cache=cache,
+                        project_user=user,
+                        project_log=project_log,
+                    ),
+                )
                 self.assertEqual(cwd, editor.parent)
                 assert stdout and stderr
                 stdout.write("stdout\n")
@@ -138,6 +234,11 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
                 result, exit_code = launch.run_launch(
                     editor=editor,
                     project=project,
+                    startup_level=level,
+                    engine=engine,
+                    project_cache=cache,
+                    project_user=user,
+                    project_log=project_log,
                     log_dir=log_dir,
                     result_path=None,
                     dry_run=False,
@@ -159,6 +260,7 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
                 _, code = launch.run_launch(
                     editor=editor,
                     project=None,
+                    startup_level=None,
                     log_dir=None,
                     result_path=None,
                     dry_run=False,
@@ -182,6 +284,16 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
                 return
             with self.assertRaisesRegex(RuntimeError, "symbolic link"):
                 launch.validate_log_directory(link)
+
+    def test_write_paths_require_log_beneath_user(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cache, user, log = self.make_write_paths(root / "storage")
+            launch.validate_write_paths(cache, user, log)
+            outside_log = root / "outside-log"
+            outside_log.mkdir()
+            with self.assertRaisesRegex(RuntimeError, "inside the user directory"):
+                launch.validate_write_paths(cache, user, outside_log)
 
     def test_pane_guidance_names_tools_menu_and_activation_log(self) -> None:
         guidance = launch.pane_guidance()

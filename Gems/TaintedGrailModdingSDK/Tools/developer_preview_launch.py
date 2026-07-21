@@ -154,6 +154,44 @@ def validate_project_path(project: Path) -> None:
         raise RuntimeError(f"The O3DE project manifest has no project_name: {manifest}")
 
 
+def validate_engine_path(engine: Path) -> None:
+    if not engine.is_dir() or not (engine / "engine.json").is_file():
+        raise RuntimeError(f"The O3DE engine directory is invalid: {engine}")
+
+
+def validate_write_paths(
+    project_cache: Path,
+    project_user: Path,
+    project_log: Path,
+) -> None:
+    for label, directory in (
+        ("cache", project_cache),
+        ("user", project_user),
+        ("log", project_log),
+    ):
+        if directory.is_symlink() or not directory.is_dir():
+            raise RuntimeError(f"The Developer Preview {label} directory is missing or unsafe: {directory}")
+    resolved_user = project_user.resolve(strict=True)
+    resolved_log = project_log.resolve(strict=True)
+    if not is_relative_to(resolved_log, resolved_user):
+        raise RuntimeError(
+            f"The Developer Preview log directory must remain inside the user directory: {resolved_log}"
+        )
+
+
+def validate_startup_level(project: Path, startup_level: Path) -> None:
+    if not startup_level.is_file():
+        raise RuntimeError(f"The Editor startup level does not exist: {startup_level}")
+    if startup_level.suffix.casefold() != ".prefab":
+        raise RuntimeError(f"The Editor startup level must use the .prefab extension: {startup_level}")
+    levels_root = (project / "Levels").resolve(strict=False)
+    resolved_level = startup_level.resolve(strict=True)
+    if not is_relative_to(resolved_level, levels_root):
+        raise RuntimeError(
+            f"The Editor startup level must remain inside the project Levels directory: {resolved_level}"
+        )
+
+
 def validate_log_directory(log_dir: Path) -> None:
     if log_dir.is_symlink():
         raise RuntimeError(f"The launch log directory must not be a symbolic link: {log_dir}")
@@ -161,10 +199,43 @@ def validate_log_directory(log_dir: Path) -> None:
         raise RuntimeError(f"The launch log path is not a directory: {log_dir}")
 
 
-def launch_command(editor: Path, project: Path | None) -> tuple[str, ...]:
+def launch_command(
+    editor: Path,
+    project: Path | None,
+    startup_level: Path | None,
+    *,
+    engine: Path | None = None,
+    project_cache: Path | None = None,
+    project_user: Path | None = None,
+    project_log: Path | None = None,
+) -> tuple[str, ...]:
     command = [str(editor)]
     if project is not None:
         command.extend(("--project-path", str(project)))
+    write_paths = (project_cache, project_user, project_log)
+    if engine is not None:
+        if project is None:
+            raise RuntimeError("An explicit O3DE engine path requires an explicit project.")
+        command.extend(("--engine-path", str(engine)))
+    if any(path is not None for path in write_paths):
+        if project is None or any(path is None for path in write_paths):
+            raise RuntimeError(
+                "Project cache, user, and log paths must be supplied together with an explicit project."
+            )
+        command.extend(
+            (
+                "--project-cache-path",
+                str(project_cache),
+                "--project-user-path",
+                str(project_user),
+                "--project-log-path",
+                str(project_log),
+            )
+        )
+    if startup_level is not None:
+        if project is None:
+            raise RuntimeError("An Editor startup level requires an explicit O3DE project.")
+        command.append(str(startup_level))
     return tuple(command)
 
 
@@ -223,12 +294,25 @@ def run_launch(
     *,
     editor: Path,
     project: Path | None,
+    startup_level: Path | None,
+    engine: Path | None = None,
+    project_cache: Path | None = None,
+    project_user: Path | None = None,
+    project_log: Path | None = None,
     log_dir: Path | None,
     result_path: Path | None,
     dry_run: bool,
     executor: ProcessExecutor = default_executor,
 ) -> tuple[LaunchResult, int]:
-    command = launch_command(editor, project)
+    command = launch_command(
+        editor,
+        project,
+        startup_level,
+        engine=engine,
+        project_cache=project_cache,
+        project_user=project_user,
+        project_log=project_log,
+    )
     print(f"+ {command_text(command)}")
     print(pane_guidance())
 
@@ -308,6 +392,15 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--editor", type=Path, help=f"Explicit {EDITOR_FILENAME} path.")
     source.add_argument("--build-dir", type=Path, help="Configured Developer Preview build directory.")
     parser.add_argument("--project", type=Path, help="Optional O3DE project directory containing project.json.")
+    parser.add_argument("--engine", type=Path, help="Optional O3DE engine directory containing engine.json.")
+    parser.add_argument("--project-cache", type=Path, help="Optional writable project cache directory.")
+    parser.add_argument("--project-user", type=Path, help="Optional writable project user directory.")
+    parser.add_argument("--project-log", type=Path, help="Optional writable project log directory.")
+    parser.add_argument(
+        "--level",
+        type=Path,
+        help="Optional project-owned .prefab level to open in the Editor viewport.",
+    )
     parser.add_argument(
         "--log-dir",
         type=Path,
@@ -328,15 +421,40 @@ def main(argv: Sequence[str] | None = None) -> int:
             build_dir=args.build_dir,
         )
         project = resolve_path(args.project, repo_root) if args.project else None
-        if project is not None:
+        if project is not None and not args.dry_run:
             validate_project_path(project)
+        engine = resolve_path(args.engine, repo_root) if args.engine else None
+        if engine is not None and not args.dry_run:
+            validate_engine_path(engine)
+        project_cache = resolve_path(args.project_cache, repo_root) if args.project_cache else None
+        project_user = resolve_path(args.project_user, repo_root) if args.project_user else None
+        project_log = resolve_path(args.project_log, repo_root) if args.project_log else None
+        if any(path is not None for path in (project_cache, project_user, project_log)):
+            if any(path is None for path in (project_cache, project_user, project_log)):
+                raise RuntimeError(
+                    "--project-cache, --project-user, and --project-log must be supplied together."
+                )
+            assert project_cache is not None and project_user is not None and project_log is not None
+            if not args.dry_run:
+                validate_write_paths(project_cache, project_user, project_log)
+        startup_level = resolve_path(args.level, repo_root) if args.level else None
+        if startup_level is not None:
+            if project is None:
+                raise RuntimeError("--level requires --project.")
+            if not args.dry_run:
+                validate_startup_level(project, startup_level)
         log_dir = resolve_path(args.log_dir, repo_root) if args.log_dir else None
-        if log_dir is not None:
+        if log_dir is not None and not args.dry_run:
             validate_log_directory(log_dir)
         result_path = resolve_path(args.result, repo_root) if args.result else None
         _, exit_code = run_launch(
             editor=editor,
             project=project,
+            startup_level=startup_level,
+            engine=engine,
+            project_cache=project_cache,
+            project_user=project_user,
+            project_log=project_log,
             log_dir=log_dir,
             result_path=result_path,
             dry_run=args.dry_run,

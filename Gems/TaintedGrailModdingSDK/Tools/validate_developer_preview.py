@@ -110,7 +110,7 @@ def main() -> int:
                 "test_build_directory_rejects_repository_root_and_unrelated_content",
                 "test_build_directory_rejects_cache_for_another_source_tree",
                 "test_configure_command_uses_approved_windows_x64_preset",
-                "test_build_command_has_fixed_profile_editor_and_catalog_targets",
+                "test_build_command_has_fixed_profile_editor_asset_and_catalog_targets",
                 "test_validation_plan_is_deterministic_and_ends_with_compiled_tests",
                 "test_dry_run_never_invokes_executor",
                 "test_execution_stops_and_propagates_original_exit_code",

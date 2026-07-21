@@ -18,7 +18,9 @@ The evidence tool does not capture the screen and does not inspect screenshot pi
 
 - Windows x64 Profile;
 - exact reviewed commit;
-- successful `Editor.exe` build and launch;
+- successful `Editor.exe` and `AssetProcessorBatch.exe` build and Editor launch;
+- bounded per-user project/cache/user/log materialization under `LOCALAPPDATA`;
+- the tracked standard default level visible in the 3D viewport;
 - verified synthetic fixture;
 - focused validators and compiled catalog tests green;
 - **100–200%** display scaling;
@@ -33,11 +35,13 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
   --output build/tg-sdk-developer-preview-0-fixture
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output build/tg-sdk-developer-preview-0-fixture
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile `
-  --project C:\O3DE\Projects\MyProject `
-  --log-dir build/tg-sdk-developer-preview-0-launch
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
+  --build-dir build/tg-sdk-developer-preview-0-windows-profile
 ```
+
+Confirm the supported opener reports per-user project, cache, user, and log
+paths, completes the clean-first-run asset preflight before Editor startup, and
+does not require a Controlled Folder Access exception.
 
 Prepare `preview.duplicate-companion`, then import `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion` exactly as documented in `Preview/DuplicateReview/README.md`.
 
@@ -102,14 +106,18 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Release Assembly and Checksum Results;
 - Tainted Grail Release Signing Results.
 
-Confirm every pane opens and remains interactive. **All twenty-four TG SDK panes** must be present. The Hub must open automatically after Editor initialization and every Hub route must open its named specialist pane.
+Confirm the standard default scene is loaded and the 3D viewport visibly shows
+its sky, ground grid, and shader ball. Then confirm every pane opens and remains
+interactive. **All twenty-four TG SDK panes** must be present. The Hub must open
+automatically after Editor initialization and every Hub route must open its
+named specialist pane.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
   --output build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "All twenty-four TG SDK panes opened; the Hub opened automatically and all twenty-three specialist routes resolved."
+  --notes "The standard default scene was visible; all twenty-four TG SDK panes opened; the Hub opened automatically and all twenty-three specialist routes resolved."
 ```
 
 Screenshot required.

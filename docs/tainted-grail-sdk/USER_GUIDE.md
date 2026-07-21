@@ -12,6 +12,14 @@ You need a supported O3DE source-build environment, Git LFS, this repository, wr
 
 Keep the workspace, generated output, staging, and deployment directories separate from the game installation.
 
+Launch through the verified Developer Preview entry described in
+`OPEN_AND_TEST_EDITOR.md`. It materializes a bounded writable project beneath
+`LOCALAPPDATA`, prepares the local asset cache before startup, opens the
+standard default level, and starts the 3D viewport with a visible sky, ground
+grid, and shader ball rather than an empty grey view. The repository remains
+reviewed source; no Windows security exception or
+administrator launch is required.
+
 ## Build and validate
 
 Run focused validators from the repository root:

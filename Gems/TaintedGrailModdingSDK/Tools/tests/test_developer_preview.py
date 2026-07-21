@@ -109,11 +109,14 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
             ),
         )
 
-    def test_build_command_has_fixed_profile_editor_and_catalog_targets(self) -> None:
+    def test_build_command_has_fixed_profile_editor_asset_and_catalog_targets(self) -> None:
         command = preview.build_command(Path("C:/build/tg"))
         self.assertEqual(command[0:2], ("cmake", "--build"))
         self.assertIn("profile", command)
-        self.assertEqual(command[-2:], ("Editor", "TaintedGrailModdingSDK.Catalog.Tests"))
+        self.assertEqual(
+            command[-3:],
+            ("Editor", "AssetProcessorBatch", "TaintedGrailModdingSDK.Catalog.Tests"),
+        )
 
     def test_validation_plan_is_deterministic_and_ends_with_compiled_tests(self) -> None:
         repo = Path("/repo")

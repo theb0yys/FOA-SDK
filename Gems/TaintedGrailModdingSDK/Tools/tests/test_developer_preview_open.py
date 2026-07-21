@@ -23,6 +23,20 @@ SPEC.loader.exec_module(open_preview)
 
 
 class DeveloperPreviewOpenTests(unittest.TestCase):
+    def workspace(self) -> open_preview.developer_preview_workspace.PreviewWorkspacePaths:
+        root = Path("C:/Users/test/AppData/Local/O3DE/TGEditor")
+        project = root / "project"
+        return open_preview.developer_preview_workspace.PreviewWorkspacePaths(
+            root=root,
+            project=project,
+            startup_level=project / "Levels/DefaultLevel/DefaultLevel.prefab",
+            cache=project / "Cache",
+            user=project / "user",
+            log=project / "user/log",
+            launcher_log=root / "launcher",
+            manifest=root / ".tg-preview-materialization.json",
+        )
+
     def test_launch_arguments_select_dedicated_project(self) -> None:
         args = argparse.Namespace(
             editor=None,
@@ -31,12 +45,19 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             result=None,
             dry_run=True,
         )
-        values = open_preview.launch_arguments(args, Path("C:/repo"))
+        workspace = self.workspace()
+        values = open_preview.launch_arguments(args, Path("C:/repo"), workspace)
         project_index = values.index("--project") + 1
+        self.assertEqual(Path(values[project_index]), workspace.project)
+        level_index = values.index("--level") + 1
         self.assertEqual(
-            Path(values[project_index]),
-            Path("C:/repo/TaintedGrailModdingEditor"),
+            Path(values[level_index]),
+            workspace.startup_level,
         )
+        self.assertEqual(Path(values[values.index("--project-cache") + 1]), workspace.cache)
+        self.assertEqual(Path(values[values.index("--project-user") + 1]), workspace.user)
+        self.assertEqual(Path(values[values.index("--project-log") + 1]), workspace.log)
+        self.assertEqual(Path(values[values.index("--engine") + 1]), Path("C:/repo"))
         self.assertIn("--build-dir", values)
         self.assertIn("--dry-run", values)
 
@@ -48,16 +69,37 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             result=Path("build/result.json"),
             dry_run=False,
         )
-        values = open_preview.launch_arguments(args, Path("C:/repo"))
+        values = open_preview.launch_arguments(args, Path("C:/repo"), self.workspace())
         self.assertIn("--editor", values)
         self.assertNotIn("--build-dir", values)
         self.assertIn("--result", values)
+
+    def test_launcher_outputs_must_remain_in_bounded_storage(self) -> None:
+        args = argparse.Namespace(
+            editor=None,
+            build_dir=Path("build/preview"),
+            log_dir=Path("D:/outside/logs"),
+            result=None,
+            dry_run=True,
+        )
+        with self.assertRaisesRegex(
+            open_preview.developer_preview_workspace.WorkspaceError,
+            "must remain inside",
+        ):
+            open_preview.launch_arguments(args, Path("C:/repo"), self.workspace())
 
     def test_main_validates_project_then_delegates(self) -> None:
         with mock.patch.object(
             open_preview.validate_developer_preview_project,
             "validate_preview_project",
         ) as validate, mock.patch.object(
+            open_preview.developer_preview_workspace,
+            "materialize_preview_workspace",
+            return_value=self.workspace(),
+        ) as materialize, mock.patch.object(
+            open_preview.developer_preview_assets,
+            "prepare_assets",
+        ) as prepare, mock.patch.object(
             open_preview.developer_preview_launch,
             "main",
             return_value=17,
@@ -65,6 +107,8 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             code = open_preview.main(["--dry-run"])
         self.assertEqual(code, 17)
         validate.assert_called_once()
+        materialize.assert_called_once()
+        prepare.assert_called_once()
         delegated = launch.call_args.args[0]
         self.assertIn("--project", delegated)
         self.assertIn("--dry-run", delegated)
@@ -76,9 +120,13 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             side_effect=open_preview.validate_developer_preview_project.PreviewProjectContractError(
                 "missing"
             ),
-        ), mock.patch.object(open_preview.developer_preview_launch, "main") as launch:
+        ), mock.patch.object(
+            open_preview.developer_preview_assets,
+            "prepare_assets",
+        ) as prepare, mock.patch.object(open_preview.developer_preview_launch, "main") as launch:
             code = open_preview.main(["--dry-run"])
         self.assertEqual(code, 2)
+        prepare.assert_not_called()
         launch.assert_not_called()
 
 

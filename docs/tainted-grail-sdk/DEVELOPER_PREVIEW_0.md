@@ -133,7 +133,7 @@ python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
 
 ## Synthetic fixture
 
-Generate the byte-for-byte deterministic synthetic fixture and verify
+Generate the deterministic synthetic fixture and verify byte-for-byte
 project-owned data outside the source tree:
 
 ```powershell
@@ -159,8 +159,9 @@ ctest --test-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
   -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-This service-level persistence smoke proves load, save, close-equivalent, and reopen
-behavior plus canonical equivalence. It does not prove FoA runtime compatibility.
+This service-level persistence smoke proves load, save, close-equivalent, and
+reopen behavior plus canonical state equivalence. It does not prove FoA runtime
+compatibility.
 
 ## Launch and diagnostics
 
@@ -189,7 +190,8 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify
 ```
 
 Diagnostics and screenshot evidence must remain under the external build root or
-another reviewed output directory. Nothing is uploaded automatically; review every generated file before sharing.
+another reviewed output directory. Nothing is uploaded automatically; review
+every generated file before sharing.
 
 ## Windows manual UI smoke
 
@@ -227,6 +229,6 @@ The visible working tree is extracted into the product-only structure. Earlier
 Git commits still contain the inherited O3DE fork until the separately reviewed
 filtered-history migration is completed and content-equivalence is proven.
 
-The preview still lacks completed Windows manual UI evidence and a CI-produced
-runnable Windows archive. Until those gates pass, it remains a source-built
-pre-alpha editor.
+The actual Windows pass remains pending, and the preview still lacks a
+CI-produced runnable Windows archive. Until those gates pass, it remains a
+source-built pre-alpha editor.

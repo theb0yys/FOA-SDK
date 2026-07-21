@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the prebuilt Windows SDK installer and artifact workflow contract."""
+"""Validate the external-engine Windows SDK installer and artifact workflow contract."""
 
 from __future__ import annotations
 
@@ -18,6 +18,8 @@ class InstallerWorkflowValidationError(RuntimeError):
     """Raised when installer packaging can bypass the approved contract."""
 
 
+PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+
 REQUIRED_FILE_FRAGMENTS = {
     ".github/workflows/tainted-grail-sdk-installer.yml": (
         "Automatic triggers are intentionally suspended",
@@ -27,10 +29,17 @@ REQUIRED_FILE_FRAGMENTS = {
         "redistribution_reviewer:",
         "redistribution_reviewed_at_utc:",
         "redistribution_evidence:",
+        PINNED_O3DE_COMMIT,
+        "O3DE_ROOT: ${{ runner.temp }}/o3de",
+        "FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build",
+        "git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT",
+        "run_local_validation.py",
+        "--engine-root",
+        "cmake -S $env:O3DE_ROOT",
+        '"$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"',
         "-DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK",
         "-DLY_DISABLE_TEST_MODULES=ON",
         "--target INSTALL",
-        "license_scanner.py",
         "developer_preview_installer.py inventory",
         "developer_preview_installer.py stage",
         "developer_preview_installer.py verify-stage",
@@ -134,17 +143,34 @@ def validate_installer_workflow(repo_root: Path) -> None:
                 )
 
     workflow = read_text(repo_root / ".github/workflows/tainted-grail-sdk-installer.yml")
-    for forbidden in ("pull_request:", "push:", "self-hosted", "gh release create", "softprops/action-gh-release"):
-        if forbidden in workflow:
+    forbidden = (
+        "pull_request:",
+        "push:",
+        "self-hosted",
+        "gh release create",
+        "softprops/action-gh-release",
+        "cmake -S .",
+        "python scripts/license_scanner",
+        "${{ github.workspace }}/build",
+    )
+    for fragment in forbidden:
+        if fragment in workflow:
             raise InstallerWorkflowValidationError(
-                f"Installer workflow contains forbidden automatic/public action {forbidden!r}."
+                f"Installer workflow contains forbidden automatic/product-root behavior {fragment!r}."
             )
 
     runner = read_text(repo_root / "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py")
-    if '"validate_installer_workflow.py"' not in runner:
-        raise InstallerWorkflowValidationError(
-            "Installer validator is not registered in the authoritative local gate."
-        )
+    for fragment in (
+        '"validate_installer_workflow.py"',
+        "resolve_engine_root",
+        "source_policy_engine_root",
+        "Gems/ExternalToolchain",
+        "Gems/TaintedGrailModdingSDK",
+    ):
+        if fragment not in runner:
+            raise InstallerWorkflowValidationError(
+                f"Authoritative local gate is missing installer/external-engine fragment {fragment!r}."
+            )
 
 
 def main() -> int:
@@ -154,7 +180,7 @@ def main() -> int:
     except InstallerWorkflowValidationError as exc:
         print(f"Installer workflow validation failed: {exc}", file=sys.stderr)
         return 1
-    print("Installer workflow validation passed.")
+    print("External-engine installer workflow validation passed.")
     return 0
 
 

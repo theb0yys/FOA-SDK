@@ -10,6 +10,8 @@
 #include "FoundationService.h"
 #include "TaintedFrameworkKnowledge.h"
 
+#include <AzCore/std/utility/move.h>
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -35,6 +37,50 @@ namespace TaintedGrailModdingSDK
             workspace.m_activeGameProfileId = profile.m_profileId;
             workspace.m_gameProfiles.push_back(AZStd::move(profile));
             return workspace;
+        }
+
+        SourceRecord MakeSource()
+        {
+            SourceRecord source;
+            source.m_sourceId = "source.tainted-framework.fixture";
+            source.m_title = "Pinned Tainted Framework fixture";
+            source.m_sourceKind = "upstream_knowledge";
+            source.m_locator = "github://theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods/d7e740e7";
+            source.m_fingerprint =
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            source.m_profileId = "profile.foa.tainted-framework";
+            source.m_gameVersion = "1.23.401";
+            source.m_branch = "Mono";
+            source.m_runtimeTarget = "Mono";
+            source.m_toolName = "Tainted Framework intake";
+            source.m_toolVersion = "0.1.33";
+            source.m_importerId = "importer.tainted-framework";
+            source.m_importerVersion = "1.0.0";
+            source.m_capturedAt = "2026-07-21T16:58:00Z";
+            source.m_importedAt = "2026-07-21T16:59:00Z";
+            source.m_mediaType = "application/json";
+            source.m_importStatus = "imported";
+            return source;
+        }
+
+        EvidenceRecord MakeEvidence()
+        {
+            EvidenceRecord evidence;
+            evidence.m_evidenceId = "evidence.tainted-framework.runtime-report";
+            evidence.m_sourceId = "source.tainted-framework.fixture";
+            evidence.m_sourceFingerprint =
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            evidence.m_profileId = "profile.foa.tainted-framework";
+            evidence.m_gameVersion = "1.23.401";
+            evidence.m_branch = "Mono";
+            evidence.m_subjectRef = "framework.tainted:surface:runtime-report";
+            evidence.m_claim = "The pinned runtime-report surface is diagnostics-only and consumer-ready for the named Mono consumer.";
+            evidence.m_evidenceKind = "upstream_contract";
+            evidence.m_confidence = "documented";
+            evidence.m_locator = "knowledge://tainted-framework/api-surfaces#runtime-report";
+            evidence.m_recordPath = "api_surfaces[0]";
+            evidence.m_extractedAt = "2026-07-21T16:58:30Z";
+            return evidence;
         }
     } // namespace
 
@@ -89,6 +135,22 @@ namespace TaintedGrailModdingSDK
 
         EXPECT_FALSE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
             foundation.GetExtensionAPI(), &error));
+    }
+
+    TEST(TaintedFrameworkKnowledgeTests, CandidateEvidenceUsesGovernedExtensionLane)
+    {
+        FoundationService foundation(FoundationWorkspaceLoadDependencies{});
+        foundation.SetWorkspace(MakeWorkspace());
+        AZStd::string error;
+        ASSERT_TRUE(foundation.RegisterSource(MakeSource(), &error)) << error.c_str();
+        ASSERT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
+            foundation.GetExtensionAPI(), &error)) << error.c_str();
+
+        const EvidenceRecord evidence = MakeEvidence();
+        ASSERT_TRUE(foundation.GetExtensionAPI().SubmitCandidateEvidence(
+            "extension.tainted-framework", evidence, &error)) << error.c_str();
+        EXPECT_NE(foundation.GetSourceRegistry().FindEvidence(evidence.m_evidenceId), nullptr);
+        EXPECT_TRUE(foundation.GetCatalog().GetRecords().empty());
     }
 
     TEST(TaintedFrameworkKnowledgeTests, BranchDriftFailsAtExtensionAuthorization)

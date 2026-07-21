@@ -34,6 +34,7 @@ PRODUCT_GEM_PATHS = (
 )
 
 VALIDATORS = (
+    "validate_repository_structure.py",
     "validate_ci_runner_policy.py",
     "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",

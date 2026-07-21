@@ -32,7 +32,8 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
         repo.mkdir()
         return {
             "repo": repo,
-            "build": repo / "build/o3de",
+            "engine": root / "o3de",
+            "build": root / "foa-build/o3de",
             "receipt": root / "receipt",
             "ui": repo / "build/ui",
             "state": repo / "build/verification",
@@ -45,6 +46,55 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
             output = Path(command[command.index("--json-output") + 1])
             self.assertEqual(output, values["state"] / "prerequisites.json")
             self.assertFalse(output.is_relative_to(values["build"]))
+            self.assertEqual(
+                Path(command[command.index("--product-root") + 1]),
+                values["repo"],
+            )
+            self.assertEqual(
+                Path(command[command.index("--engine-root") + 1]),
+                values["engine"],
+            )
+
+    def test_external_engine_build_and_evidence_roots_are_separate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo = root / "FOA-SDK"
+            repo.mkdir()
+            engine = root / "o3de"
+            build = root / "foa-build/preview"
+            args = Namespace(
+                engine_root=engine,
+                build_dir=None,
+                receipt_dir=None,
+                ui_evidence_dir=None,
+                verification_dir=None,
+            )
+            with (
+                patch.object(
+                    verification.developer_preview,
+                    "load_engine_lock",
+                    return_value=object(),
+                ),
+                patch.object(
+                    verification.developer_preview,
+                    "default_build_directory",
+                    return_value=build,
+                ),
+                patch.object(
+                    verification.developer_preview,
+                    "validate_engine_root",
+                ),
+                patch.object(
+                    verification.developer_preview,
+                    "validate_engine_pin",
+                ),
+            ):
+                values = verification.paths(args, repo, "a" * 40)
+            self.assertEqual(values["engine"], engine.resolve(strict=False))
+            self.assertEqual(values["build"], build.resolve(strict=False))
+            for key in ("receipt", "ui", "state"):
+                self.assertFalse(values[key].is_relative_to(repo))
+                self.assertFalse(values[key].is_relative_to(build))
 
     def test_whitespace_gate_records_explicit_reviewed_range(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -63,6 +113,8 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
             compiled = commands["compiled-tests"]
             self.assertIn("--keep-going", local)
             self.assertIn("--static-only", local)
+            self.assertIn("--engine-root", local)
+            self.assertNotIn("--skip-source-policy", local)
             self.assertIn("--no-tests=error", compiled)
             self.assertIn(verification.TEST_PATTERN, compiled)
 
@@ -176,7 +228,6 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
             )
-            (repo / "engine.json").write_text("{}\n", encoding="utf-8")
             tools = repo / "Gems/TaintedGrailModdingSDK/Tools"
             tools.mkdir(parents=True)
             for name in (
@@ -217,10 +268,14 @@ class DeveloperPreviewVerificationTests(unittest.TestCase):
                 text=True,
             ).strip()
             args = Namespace(repo_root=repo, review_base=base)
-            self.assertEqual(verification.repository(args), (repo, head, base))
-            args.review_base = head
-            with self.assertRaisesRegex(verification.VerificationError, "different"):
-                verification.repository(args)
+            with patch.object(
+                verification.developer_preview,
+                "validate_product_root",
+            ):
+                self.assertEqual(verification.repository(args), (repo, head, base))
+                args.review_base = head
+                with self.assertRaisesRegex(verification.VerificationError, "different"):
+                    verification.repository(args)
 
 
 if __name__ == "__main__":

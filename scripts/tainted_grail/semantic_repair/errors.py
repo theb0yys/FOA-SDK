@@ -29,5 +29,13 @@ class WorkflowPolicyError(RepairError):
     """The offline CI workflow exceeded its read-only authority boundary."""
 
 
+class CheckpointProofError(RepairError):
+    """A journal checkpoint or compaction proof failed verification."""
+
+
+class PublicationIntentError(RepairError):
+    """A multi-file publication intent cannot be proven or safely recovered."""
+
+
 class SimulatedCrash(RuntimeError):
     """Synthetic crash injected after a partial durable write."""

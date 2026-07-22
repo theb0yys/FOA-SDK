@@ -6,9 +6,11 @@ Original intake baseline: `92aa29960bab92d646c464ae48b8cf09d881a436`
 
 Porting-method reconciliation baseline: `8fb3f0a729e4be4e513ba896ba52708a73d03eae`
 
-Canonical-interchange reconciliation baseline: `504e10b27e46fceae4d68af200118edca27b4d1b`
+Canonical-interchange conclusion baseline: `504e10b27e46fceae4d68af200118edca27b4d1b`
 
-Observation dates: 20 July 2026 at intake; 22 July 2026 at both reconciliations
+Current canonical-interchange reconciliation baseline: `3d50df1ea3aaf97a5148ae4ebb5c5ade8336e6d2`
+
+Observation dates: 20 July 2026 at intake; 22 July 2026 at all reconciliations
 
 ## Authority boundary
 
@@ -57,7 +59,12 @@ Blender-first qualification, Unity Editor-only interchange, and separate Mono an
 [`areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`](areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md)
 answers the minimum schema and identity question.
 
-It accepts:
+The conclusion is reconciled to current `main` through
+[`areas/02-authoring-interchange-and-assets/CURRENT_MAIN_RECONCILIATION_2026-07-22.md`](areas/02-authoring-interchange-and-assets/CURRENT_MAIN_RECONCILIATION_2026-07-22.md).
+That addendum records the later ExtensionRequestBus, optional Road Atlas and Avalon AI Tool Gems, path-policy
+hardening, and plugin-validation work without treating those changes as Gate 5 authority.
+
+The accepted direction includes:
 
 - one authoritative `manifest.tginterchange.json`;
 - a directory-only Schema-1 package;
@@ -116,6 +123,9 @@ The next decision is not provider or host implementation. The process advances t
 
 That question defines the exact contract-only design needed before any Gate 5 code can be considered. Phase 9
 entry and explicit Gate 5 authority must be confirmed separately.
+
+Current governance finding: optional authoring Tool Gem work is active, but the controlling gate map still
+contains no explicit Phase 9 entry acceptance opening Gate 5.
 
 ## Controlling order
 

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "authority": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "binary": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "build_plan_sha256": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "confirmation_receipt_sha256": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "execution_authorized": {"const": false},
+    "expires_at_utc": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "gate_kind": {"const": "foa-il2cpp-external-execution-gate"},
+    "gate_sha256": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+    "identity_evidence_ids": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "install_parity_evidence_ids": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "interop_evidence_ids": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "interop_manifest": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "package_id": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "package_version": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "profile": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "ready_for_external_executor_review": {"const": true},
+    "reasons": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "requested_at_utc": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "requested_by": {"type": ["object", "array", "string", "integer", "boolean"]},
+    "schema_version": {"const": 1}
+  },
+  "required": [
+    "schema_version", "gate_kind", "adapter_id", "package_id", "package_version",
+    "build_plan_sha256", "interop_manifest", "binary", "profile",
+    "identity_evidence_ids", "install_parity_evidence_ids", "interop_evidence_ids",
+    "confirmation_receipt_sha256", "requested_by", "requested_at_utc", "expires_at_utc",
+    "ready_for_external_executor_review", "execution_authorized", "reasons", "authority", "gate_sha256"
+  ],
+  "title": "FOA IL2CPP external execution review gate",
+  "type": "object"
+}

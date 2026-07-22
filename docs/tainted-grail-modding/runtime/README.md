@@ -6,7 +6,7 @@ FOA-SDK treats Mono and IL2CPP as separate runtime routes with separate loaders,
 
 Read [Verified Runtime and Loader Profiles](VERIFIED_PROFILES.md) for the exact currently pinned game, Unity, runtime, loader, framework and evidence observations.
 
-The first optional route package is the [FOA Mono Runtime Adapter](../../tainted-grail-sdk/MONO_RUNTIME_ADAPTER.md). It contains project-owned BepInEx 5 source, deterministic non-executable planning, an external-executor review gate and typed runtime-result evidence. It does not include a process executor or deployment authority.
+The optional route packages are the [FOA Mono Runtime Adapter](../../tainted-grail-sdk/MONO_RUNTIME_ADAPTER.md) and the [FOA IL2CPP Runtime Adapter](../../tainted-grail-sdk/IL2CPP_RUNTIME_ADAPTER.md). Both contain project-owned source and non-executable planning/review contracts; neither includes a process executor or deployment authority.
 
 ## Route record requirements
 
@@ -35,23 +35,25 @@ Those observations qualify only their exact profiles. Current active installatio
 
 ## Implementation state
 
-Completed for Mono:
+Completed independently for both routes:
 
-- project-owned route-specific source package;
-- exact manifest, compatibility, dependencies and expected binary declarations;
-- deterministic build plan with execution disabled;
-- external-executor review gate with execution authorization disabled;
+- project-owned route-specific source packages;
+- exact manifests, compatibility, dependencies and expected binary declarations;
+- deterministic build plans with execution disabled;
+- external-executor review gates with execution authorization disabled;
 - typed external runtime-result evidence and adversarial validation.
 
-Still required for Mono:
+IL2CPP additionally requires exact generated-interop manifests for `Assembly-CSharp.dll` and `TG.Main.dll`; those inputs are never projected onto Mono.
+
+Within every Mono-specific plan, IL2CPP remains a separate later package: its independently implemented source, dependencies, generated interop, binaries, evidence, deployment and release decisions cannot satisfy the Mono route.
+
+Still required separately for each route:
 
 - external source build against an exact lawful local profile;
 - separately reviewed executor and controlled deployment/removal tooling;
-- exact live-load evidence for the project-owned adapter binary;
+- exact live-load evidence for each project-owned adapter binary;
 - live hook-target verification, collision and load-order reports;
 - profile migration and staleness tooling.
-
-IL2CPP remains a separate later package with its own source, interop inputs, BepInEx 6 dependencies, binaries, evidence schema, tests and execution gate.
 
 ## Safety rule
 

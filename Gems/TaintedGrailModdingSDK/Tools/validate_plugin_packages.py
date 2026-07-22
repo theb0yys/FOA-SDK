@@ -48,6 +48,11 @@ KNOWN_CAPABILITIES = {
     "acquisition.plan",
     "query-catalog",
     "read-active-profile",
+    "runtime.il2cpp.build-plan",
+    "runtime.il2cpp.execution-gate",
+    "runtime.il2cpp.interop-verify",
+    "runtime.il2cpp.package-verify",
+    "runtime.il2cpp.result-verify",
     "runtime.mono.build-plan",
     "runtime.mono.execution-gate",
     "runtime.mono.package-verify",
@@ -55,6 +60,11 @@ KNOWN_CAPABILITIES = {
     "submit-candidate-evidence",
 }
 CAPABILITY_OWNERS = {
+    "runtime.il2cpp.build-plan": "extension.foa-il2cpp-runtime-adapter",
+    "runtime.il2cpp.execution-gate": "extension.foa-il2cpp-runtime-adapter",
+    "runtime.il2cpp.interop-verify": "extension.foa-il2cpp-runtime-adapter",
+    "runtime.il2cpp.package-verify": "extension.foa-il2cpp-runtime-adapter",
+    "runtime.il2cpp.result-verify": "extension.foa-il2cpp-runtime-adapter",
     "runtime.mono.build-plan": "extension.foa-mono-runtime-adapter",
     "runtime.mono.execution-gate": "extension.foa-mono-runtime-adapter",
     "runtime.mono.package-verify": "extension.foa-mono-runtime-adapter",

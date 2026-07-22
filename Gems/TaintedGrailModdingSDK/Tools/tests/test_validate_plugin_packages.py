@@ -184,10 +184,31 @@ class PluginPackageContractTests(unittest.TestCase):
                 contract.validate_plugin_packages(root)
 
     def test_mono_capabilities_are_governed_for_the_exact_owner(self) -> None:
-        capabilities = sorted(contract.CAPABILITY_OWNERS)
+        capabilities = [
+            "runtime.mono.build-plan",
+            "runtime.mono.execution-gate",
+            "runtime.mono.package-verify",
+            "runtime.mono.result-verify",
+        ]
         self.assertEqual(
             contract.validate_capabilities(
                 "extension.foa-mono-runtime-adapter",
+                capabilities,
+            ),
+            capabilities,
+        )
+
+    def test_il2cpp_capabilities_are_governed_for_the_exact_owner(self) -> None:
+        capabilities = [
+            "runtime.il2cpp.build-plan",
+            "runtime.il2cpp.execution-gate",
+            "runtime.il2cpp.interop-verify",
+            "runtime.il2cpp.package-verify",
+            "runtime.il2cpp.result-verify",
+        ]
+        self.assertEqual(
+            contract.validate_capabilities(
+                "extension.foa-il2cpp-runtime-adapter",
                 capabilities,
             ),
             capabilities,
@@ -201,6 +222,16 @@ class PluginPackageContractTests(unittest.TestCase):
             contract.validate_capabilities(
                 "extension.road-atlas",
                 ["runtime.mono.build-plan"],
+            )
+
+    def test_il2cpp_capabilities_cannot_be_borrowed_by_another_extension(self) -> None:
+        with self.assertRaisesRegex(
+            contract.PluginPackageError,
+            "owned by another extension",
+        ):
+            contract.validate_capabilities(
+                "extension.road-atlas",
+                ["runtime.il2cpp.interop-verify"],
             )
 
     def test_missing_entry_point_fails(self) -> None:

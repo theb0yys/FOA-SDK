@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "authority": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "binary_sha256": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "candidate_evidence_eligible": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "candidate_evidence_promoted": {
+      "const": false
+    },
+    "captured_at_utc": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "completed_at_utc": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "failures": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "gate_sha256": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "interop_manifest_sha256": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "log_reference": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "observations": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "not_attempted",
+        "succeeded",
+        "failed"
+      ]
+    },
+    "package_id": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "package_version": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "profile": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    },
+    "result_kind": {
+      "const": "foa-il2cpp-runtime-result"
+    },
+    "result_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "started_at_utc": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null",
+        "boolean"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "result_kind",
+    "adapter_id",
+    "package_id",
+    "package_version",
+    "gate_sha256",
+    "binary_sha256",
+    "interop_manifest_sha256",
+    "profile",
+    "outcome",
+    "started_at_utc",
+    "completed_at_utc",
+    "captured_at_utc",
+    "observations",
+    "log_reference",
+    "failures",
+    "candidate_evidence_eligible",
+    "candidate_evidence_promoted",
+    "authority",
+    "result_sha256"
+  ],
+  "title": "FOA IL2CPP runtime result",
+  "type": "object"
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "type": "object"
+    },
+    "generator": {
+      "additionalProperties": false,
+      "properties": {
+        "generation_input_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "generation_input_sha256"
+      ],
+      "type": "object"
+    },
+    "interop_manifest_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "manifest_kind": {
+      "const": "foa-il2cpp-generated-interop"
+    },
+    "materials": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "redistributable": {
+            "const": false
+          },
+          "relative_path": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "assembly-csharp",
+              "tg-main"
+            ]
+          },
+          "sha256": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "relative_path",
+          "sha256",
+          "bytes",
+          "redistributable"
+        ],
+        "type": "object"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": "array"
+    },
+    "profile": {
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "manifest_kind",
+    "profile",
+    "generator",
+    "materials",
+    "authority",
+    "interop_manifest_sha256"
+  ],
+  "title": "FOA IL2CPP generated interop manifest",
+  "type": "object"
+}

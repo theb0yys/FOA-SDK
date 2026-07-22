@@ -40,6 +40,18 @@ compatibility:
   known_conflicts: unknown; any other patch on the same method is relevant
   load_order: unspecified
   version_stability: unknown until exact-profile target resolution
+evidence:
+  source_repository: theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods
+  source_commit: d7e740e7f167b73152b53409e483dab07d80d048
+  source_paths:
+    - mods/wyrd-hunt/src/Patches/NpcDeathPatch.cs
+    - mods/wyrd-hunt/src/Plugin.cs
+    - mods/wyrd-hunt/src/WyrdHunt.csproj
+  source_blobs:
+    NpcDeathPatch.cs: 7e4915918da28cdcb3b257ea46cf31ae2d427c0f
+    Plugin.cs: 1b302b6d7b6d014c1c4a7a991698cc09b1a83b1b
+    WyrdHunt.csproj: 390132066dddd79c7631f37c72616f74a68c0f88
+  evidence_ids: none registered; source-only candidate
 validation:
   static: source target and postfix shape extracted
   target_resolution: not performed against an exact current TG.Main assembly
@@ -54,16 +66,6 @@ limitations:
   - The downstream ThreatEventHooks.OnNpcDeath implementation must be reviewed before risk can be classified.
   - Historical source compilation or deployment does not prove this exact target on a current profile.
 ```
-
-## Evidence
-
-- source repository: `theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods`
-- source commit: `d7e740e7f167b73152b53409e483dab07d80d048`
-- source path: `mods/wyrd-hunt/src/Patches/NpcDeathPatch.cs`
-- source blob: `7e4915918da28cdcb3b257ea46cf31ae2d427c0f`
-- registration owner: `mods/wyrd-hunt/src/Plugin.cs`
-- project source: `mods/wyrd-hunt/src/WyrdHunt.csproj`
-- evidence IDs: none registered; source-only candidate
 
 ## Extracted source facts
 

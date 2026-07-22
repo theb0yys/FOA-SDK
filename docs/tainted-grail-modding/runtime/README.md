@@ -1,6 +1,10 @@
 # Runtime Routes
 
-FOA-SDK treats Mono and IL2CPP as separate runtime routes with separate loaders, frameworks, binaries, evidence, packaging, and compatibility. A result from one route is never inherited by the other.
+FOA-SDK treats Mono and IL2CPP as separate runtime routes with separate loaders, frameworks, binaries, evidence, packaging and compatibility. A result from one route is never inherited by the other.
+
+## Start here
+
+Read [Verified Runtime and Loader Profiles](VERIFIED_PROFILES.md) for the exact currently pinned game, Unity, runtime, loader, framework and evidence observations.
 
 ## Route record requirements
 
@@ -18,30 +22,35 @@ Every runtime profile must bind:
 - supported capabilities and explicit prohibitions;
 - staleness and supersession state.
 
-## Current known route state
+## Current pinned route state
 
-The existing system-port track records exact pinned observations for:
+The system-port track currently records:
 
-- a Mono route using Tainted Framework `0.1.33` with host live-load evidence on its recorded profile;
-- an IL2CPP route using Tainted Framework `0.1.36` with package install/load evidence on its recorded profile.
+- Mono: game `1.23.401`, Unity `6000.0.64f1`, BepInEx `5.4.23.3`, Tainted Framework `0.1.33`, evidence state `HostLiveLoadValidated`;
+- IL2CPP: game `1.23.401`, Unity `6000.0.64f1`, BepInEx `6.0.0-be.735`, Tainted Framework `0.1.36`, evidence state `PackageInstallValidated`.
 
-Those observations qualify only their exact profiles. Current active installation selection, executable SDK adapter packages, deployment, game launch, runtime mutation, and save access remain separately governed.
+Those observations qualify only their exact profiles. Current active installation selection, executable SDK adapter packages, deployment, game launch, runtime mutation and save access remain separately governed.
 
-## Planned documentation
+## Documentation state
 
-- runtime and loader concepts;
-- choosing a profile;
-- Mono environment and first-mod path;
-- IL2CPP environment and first-mod path after executable qualification;
-- local development references;
-- dependency and framework compatibility;
-- package layout and controlled deployment;
-- log locations and startup diagnosis;
-- adapter plan/build/staging/deployment lifecycle;
-- rollback and removal;
-- patch collision and load-order analysis;
-- profile migration and staleness.
+Completed:
+
+- exact pinned profile table;
+- evidence-state vocabulary;
+- Mono/IL2CPP separation rules;
+- active-install verification requirements;
+- local-reference and package-boundary rules;
+- profile-scoped first-mod process.
+
+Still required:
+
+- project-owned route-specific starter source;
+- executable adapter qualification;
+- controlled deployment/removal tooling;
+- live hook-target verification batches;
+- collision and load-order reports;
+- profile migration and staleness tooling.
 
 ## Safety rule
 
-No page may describe a contract-only or inert route as executable. Tutorials, commands, and package layouts are published only after exact-profile validation and must state the target and rollback boundary.
+No page may describe a contract-only or inert route as executable. Tutorials, commands and package layouts are published only after exact-profile validation and must state the target and rollback boundary.

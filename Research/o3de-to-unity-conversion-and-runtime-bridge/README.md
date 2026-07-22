@@ -42,9 +42,9 @@ b17850a12efe97dbd92a8bdf9cfcd155204105c49e230c51cf9b10aceba9c048
 The later canonical interchange Deep Research result is preserved as a normalized substantive intake at
 [`inputs/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_DEEP_RESEARCH.md`](inputs/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_DEEP_RESEARCH.md).
 
-Preserved inputs are not accepted decisions. Their opaque conversation-local citations do not grant durable
-evidence. Durable sources and scoped claims live in [`SOURCE_REGISTER.md`](SOURCE_REGISTER.md) and
-[`CLAIM_REGISTER.md`](CLAIM_REGISTER.md).
+Conversation-local citation tokens are not durable. Preserved inputs are not accepted decisions, and opaque
+conversation-local citations do not grant durable evidence. Durable sources and scoped claims live in
+[`SOURCE_REGISTER.md`](SOURCE_REGISTER.md) and [`CLAIM_REGISTER.md`](CLAIM_REGISTER.md).
 
 ## Accepted research conclusions
 

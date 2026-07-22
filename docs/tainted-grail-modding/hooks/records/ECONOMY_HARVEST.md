@@ -6,6 +6,7 @@ The three caller registrations are prefixes. Each may invoke a live quantity-adj
 
 ```yaml
 hook_id: tg.hook.economy.pick-item-action-on-start
+title: Location pickup action start
 status: candidate
 hook_class: method-patch
 domain: items-harvest-and-economy
@@ -26,6 +27,7 @@ limitations: [Exact overload and spawning-data type are unresolved, downstream h
 
 ```yaml
 hook_id: tg.hook.economy.pickable-start-interaction
+title: Pickable interaction start
 status: candidate
 hook_class: method-patch
 domain: items-harvest-and-economy
@@ -46,6 +48,7 @@ limitations: [Exact overload and item-data ownership are unresolved, repeated in
 
 ```yaml
 hook_id: tg.hook.economy.regrowable-start-interaction
+title: Regrowable interaction start
 status: candidate
 hook_class: method-patch
 domain: items-harvest-and-economy

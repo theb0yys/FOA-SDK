@@ -359,6 +359,6 @@ namespace TaintedGrailModdingSDK::ExtensionAPI
             return false;
         }
 
-        return m_sourceRegistry.RegisterEvidence(evidence, error);
+        return m_sourceRegistry.RegisterCandidateEvidence(evidence, error);
     }
 } // namespace TaintedGrailModdingSDK::ExtensionAPI

@@ -75,38 +75,69 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
             {
                 return false;
             }
-            for (char character : value)
+            return AZStd::all_of(
+                value.begin(), value.end(),
+                [](char character)
+                {
+                    return (character >= '0' && character <= '9')
+                        || (character >= 'a' && character <= 'f');
+                });
+        }
+
+        bool IsCanonicalRelativePosixPath(const AZStd::string& value)
+        {
+            if (!IsBoundedText(value, 1024)
+                || value.front() == '/'
+                || value.back() == '/'
+                || value.find('\\') != AZStd::string::npos)
             {
-                if (!((character >= '0' && character <= '9')
-                    || (character >= 'a' && character <= 'f')))
+                return false;
+            }
+
+            size_t componentStart = 0;
+            while (componentStart < value.size())
+            {
+                const size_t separator = value.find('/', componentStart);
+                const size_t componentEnd = separator == AZStd::string::npos
+                    ? value.size()
+                    : separator;
+                const AZStd::string component =
+                    value.substr(componentStart, componentEnd - componentStart);
+                if (component.empty() || component == "." || component == "..")
                 {
                     return false;
                 }
+                if (separator == AZStd::string::npos)
+                {
+                    break;
+                }
+                componentStart = separator + 1;
             }
             return true;
         }
 
         bool IsSafeSourceBinding(const SourceBinding& source)
         {
-            return IsBoundedText(source.m_path, 1024)
-                && source.m_path.front() != '/'
-                && source.m_path.find('\\') == AZStd::string::npos
-                && source.m_path.find("../") == AZStd::string::npos
-                && source.m_path.find("/..") == AZStd::string::npos
+            return IsCanonicalRelativePosixPath(source.m_path)
                 && IsGitCommit(source.m_gitBlobSha1);
+        }
+
+        bool IsValidEvidenceState(EvidenceState state)
+        {
+            switch (state)
+            {
+            case EvidenceState::ContractOnly:
+            case EvidenceState::HostLiveLoadValidated:
+            case EvidenceState::PackageInstallValidated:
+                return true;
+            default:
+                return false;
+            }
         }
 
         bool IsCapabilityId(const AZStd::string& capability)
         {
-            return IsBoundedText(capability, 128)
-                && AZStd::all_of(
-                    capability.begin(), capability.end(),
-                    [](char character)
-                    {
-                        return (character >= 'a' && character <= 'z')
-                            || (character >= '0' && character <= '9')
-                            || character == '.' || character == '-';
-                    });
+            return IsStableContractId(capability) && capability.size() <= 128;
         }
 
         AZStd::vector<RouteDescriptor> BuildRoutes()
@@ -287,6 +318,7 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
         if (!IsStableContractId(route.m_adapterId)
             || !IsBoundedText(route.m_displayName, 256)
             || !IsStrictSemanticVersion(route.m_contractVersion)
+            || !IsValidEvidenceState(route.m_evidenceState)
             || !IsStrictSemanticVersion(route.m_frameworkVersion)
             || !IsBoundedText(route.m_gameVersion, 128)
             || !kindMatches
@@ -307,6 +339,7 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
             SetError(error, "Runtime adapter route identity, target, evidence, or inert authority is invalid.");
             return false;
         }
+
         AZStd::vector<AZStd::string> sourcePaths;
         for (const SourceBinding& source : route.m_sources)
         {

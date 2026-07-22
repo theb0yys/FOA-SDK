@@ -38,27 +38,10 @@ jobs:
         run: |
           set +e
           {
-            python - <<'PY'
-          from pathlib import Path
-
-          path = Path("Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py")
-          lines = path.read_text(encoding="utf-8").splitlines()
-          prefix = "BUNDLE_B85 = '"
-          repaired = False
-          for index, line in enumerate(lines):
-              if line.startswith(prefix):
-                  if not line.endswith("'"):
-                      raise RuntimeError("The temporary Base85 carrier does not have the expected closing quote.")
-                  lines[index] = 'BUNDLE_B85 = """' + line[len(prefix):-1] + '"""'
-                  repaired = True
-                  break
-          if not repaired:
-              raise RuntimeError("Unable to locate the temporary Base85 carrier.")
-          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-          PY
             python -m py_compile Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+            git rm -r Gems/TaintedGrailModdingSDK/Tools/project_wide_security_repair_bundle
             git rm .github/workflows/apply-project-wide-security-repairs.yml
           } 2>&1 | tee project-wide-security-validation.log
           status=${PIPESTATUS[0]}

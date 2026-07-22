@@ -192,7 +192,10 @@ namespace TaintedGrailModdingSDK
 
         EvidenceRecord evidence = MakeEvidence();
         EXPECT_TRUE(api.SubmitCandidateEvidence("extension.evidence", evidence, &error));
-        EXPECT_NE(m_foundation.GetSourceRegistry().FindEvidence(evidence.m_evidenceId), nullptr);
+        EXPECT_EQ(m_foundation.GetSourceRegistry().FindEvidence(evidence.m_evidenceId), nullptr);
+        EXPECT_NE(
+            m_foundation.GetSourceRegistry().FindCandidateEvidence(evidence.m_evidenceId),
+            nullptr);
 
         evidence.m_evidenceId = "evidence.extension.wrong-branch";
         evidence.m_branch = "il2cpp";

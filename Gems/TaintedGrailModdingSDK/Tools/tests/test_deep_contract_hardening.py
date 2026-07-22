@@ -11,6 +11,7 @@ MANIFEST = (
     REPO_ROOT
     / "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_extension_api_tests_files.cmake"
 )
+WORKFLOW = REPO_ROOT / ".github/workflows/tainted-grail-sdk-pr-validation.yml"
 
 
 def read(path: Path) -> str:
@@ -21,6 +22,16 @@ class DeepContractHardeningTests(unittest.TestCase):
     def assert_fragments(self, text: str, *fragments: str) -> None:
         for fragment in fragments:
             self.assertIn(fragment, text)
+
+    def test_pr_governor_and_head_validation_use_distinct_concurrency_lanes(self) -> None:
+        workflow = read(WORKFLOW)
+        self.assertIn(
+            "${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}",
+            workflow,
+        )
+        self.assertIn("pull_request_target:", workflow)
+        self.assertIn("github.event.pull_request.base.sha", workflow)
+        self.assertIn("github.event_name != 'pull_request_target'", workflow)
 
     def test_serializer_is_byte_safe_locale_independent_and_compiled(self) -> None:
         source = read(SOURCE / "DeterministicContractJson.h")

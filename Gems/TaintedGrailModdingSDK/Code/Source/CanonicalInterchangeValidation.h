@@ -14,6 +14,24 @@
 
 namespace TaintedGrailModdingSDK::Interchange
 {
+    // Pinned AzCore supplies equality but not relational operators for vector.
+    // Validation needs an explicit lexicographic order for the final related-ID
+    // tie-breaker; keep that compatibility rule local to the interchange domain.
+    inline bool operator<(
+        const AZStd::vector<AZStd::string>& left,
+        const AZStd::vector<AZStd::string>& right)
+    {
+        const size_t sharedSize = left.size() < right.size() ? left.size() : right.size();
+        for (size_t index = 0; index < sharedSize; ++index)
+        {
+            if (left[index] != right[index])
+            {
+                return left[index] < right[index];
+            }
+        }
+        return left.size() < right.size();
+    }
+
     // Validation compares referenced provenance records by canonical identity.
     // Mutable evidence bodies remain outside this Core value contract.
     inline bool operator==(const ProvenanceRecordV1& left, const ProvenanceRecordV1& right)

@@ -22,6 +22,22 @@ ly_add_target(
             AZ::AzCore
 )
 
+# Preserve the reviewed Schema-1 field writer under explicit legacy names so a
+# small public boundary can enforce the accepted omit-when-empty display_name
+# rule and bind its dependent manifest/package digests without duplicating the
+# canonical implementation.
+ly_add_source_properties(
+    SOURCES
+        Source/CanonicalInterchangeCanonical.cpp
+    PROPERTY COMPILE_DEFINITIONS
+        VALUES
+            SerializeCanonicalManifestV1=SerializeCanonicalManifestIncludingEmptyDisplayNameV1
+            SerializeDeclaredPackageFingerprintInputV1=SerializeDeclaredPackageFingerprintInputIncludingEmptyDisplayNameV1
+            CalculateCanonicalManifestDigestV1=CalculateCanonicalManifestDigestIncludingEmptyDisplayNameV1
+            CalculateDeclaredPackageFingerprintV1=CalculateDeclaredPackageFingerprintIncludingEmptyDisplayNameV1
+            CanonicalManifestBytesMatchV1=CanonicalManifestBytesMatchIncludingEmptyDisplayNameV1
+)
+
 ly_add_target(
     NAME ${gem_name}.Framework.Static STATIC
     NAMESPACE Gem

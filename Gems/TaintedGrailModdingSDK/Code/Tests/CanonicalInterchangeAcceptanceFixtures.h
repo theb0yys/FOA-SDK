@@ -37,9 +37,9 @@ namespace TaintedGrailModdingSDK::Interchange::AcceptanceFixtures
         {
             return {};
         }
-        const std::string bytes(
+        const std::string bytes{
             std::istreambuf_iterator<char>(stream),
-            std::istreambuf_iterator<char>());
+            std::istreambuf_iterator<char>()};
         return AZStd::string(bytes.data(), bytes.size());
     }
 

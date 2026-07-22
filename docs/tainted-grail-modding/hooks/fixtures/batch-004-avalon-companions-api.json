@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "source_repository": "theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods",
+  "source_commit": "d7e740e7f167b73152b53409e483dab07d80d048",
+  "execution_state": "specification-only",
+  "authority": "offline-fixture-specification-no-runtime-authority",
+  "profile": {
+    "profile_id": "foa-1.23.401-mono-bepinex5-tf-0.1.33",
+    "game_version": "1.23.401",
+    "unity_version": "6000.0.64f1",
+    "runtime": "Mono",
+    "loader": "BepInEx 5.4.23.3",
+    "framework": "Tainted Framework 0.1.33",
+    "evidence_state": "HostLiveLoadValidated",
+    "required_runtime_fingerprints": {
+      "TG.Main.dll": "required-but-absent",
+      "BepInEx.dll": "required-but-absent",
+      "0Harmony.dll": "required-but-absent"
+    },
+    "optional_dependency": {
+      "assembly_name": "AvalonCompanions",
+      "source_version": "0.2.17",
+      "assembly_version": "0.2.17.0",
+      "api_version": 1,
+      "built_assembly_fingerprint": "required-but-absent"
+    }
+  },
+  "acceptance_rule": "fail-closed-unless-all-required-fingerprints-and-observations-are-present",
+  "fixture_set_id": "tg.fixture.batch004.avalon-companions-api-v1",
+  "sources": [
+    {
+      "path": "mods/avalon-companions/src/AvalonCompanionsInteropApi.cs",
+      "blob": "07c9aec4e2a32aca2e9922e07f1f13d0f7c17c7d"
+    },
+    {
+      "path": "mods/avalon-companions/src/AvalonCompanions.csproj",
+      "blob": "bb617d2df55f3e28d665696a06e75b7bee8dcd67"
+    },
+    {
+      "path": "mods/avalon-companions/src/Patches/PetCompanionController.cs",
+      "blob": "ede145c35db4dc7ed495c8055893dbe8693bfff6"
+    },
+    {
+      "path": "mods/avalon-mounts/src/WolfMount/AvalonCompanionsDialogueBridge.cs",
+      "blob": "cc1b0165303e3bf1de09d5ac249820e70566afe9"
+    }
+  ],
+  "expected_api": {
+    "type": "AvalonCompanions.AvalonCompanionsInteropApi",
+    "api_version_constant": 1,
+    "register": "public static bool RegisterDialogueCommand(string ownerId, string commandId, string targetTemplateGuid, string label, Func<bool> canExecute, Action execute)",
+    "unregister": "public static bool UnregisterDialogueCommands(string ownerId)"
+  },
+  "cases": [
+    {
+      "case_id": "api.exact-source-signature",
+      "setup": "pinned source blobs above",
+      "expected": "type, assembly source identity, API version and both method signatures match exactly",
+      "promotion_effect": "source-contract-verified-only"
+    },
+    {
+      "case_id": "api.compiled-assembly-fingerprint",
+      "setup": "candidate AvalonCompanions.dll",
+      "expected": "assembly name/version/API constant/signatures and SHA-256 match approved profile evidence",
+      "promotion_effect": "required-for-signature-promotion"
+    },
+    {
+      "case_id": "api.register-duplicate-owner-command",
+      "setup": "same owner and command registered twice with same and different delegates",
+      "expected": "documented deterministic result; no duplicate callback or silent replacement unless explicitly contracted",
+      "promotion_effect": "required-for-behavior-promotion"
+    },
+    {
+      "case_id": "api.owner-isolation",
+      "setup": "two mods register different commands and shared command IDs under different owners",
+      "expected": "one owner cannot remove or replace another owner's commands",
+      "promotion_effect": "required-for-compatibility-promotion"
+    },
+    {
+      "case_id": "api.unregister-failure-retry",
+      "setup": "external unregister throws or returns false",
+      "expected": "bridge retains cleanup state and retries; stale callbacks are not left reachable",
+      "current_source_observation": "bridge clears local state in finally",
+      "promotion_effect": "current-bridge-fails-cleanup-requirement"
+    },
+    {
+      "case_id": "api.gate-race",
+      "setup": "gate closes between canExecute, command selection and execute delegate",
+      "expected": "execute rechecks gate and performs no mount mutation when closed",
+      "promotion_effect": "required-for-behavior-promotion"
+    },
+    {
+      "case_id": "api.load-order-reload",
+      "setup": "AvalonCompanions loads late, reloads, or disappears after MethodInfo capture",
+      "expected": "bounded discovery, stale-handle invalidation, owner cleanup and re-registration without duplicates",
+      "promotion_effect": "required-for-compatibility-promotion"
+    }
+  ],
+  "decision": {
+    "source_api_fact": "verified-at-pinned-source",
+    "adapter_record_promotion": "none",
+    "runtime_registration": "prohibited-until-built-assembly-and-combined-mod-fixtures-pass",
+    "reason": "source API v1 and version 0.2.17 are exact, but runtime assembly identity, behavior, owner isolation and cleanup are unverified"
+  }
+}

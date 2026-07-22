@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "source_repository": "theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods",
+  "source_commit": "d7e740e7f167b73152b53409e483dab07d80d048",
+  "execution_state": "specification-only",
+  "authority": "offline-fixture-specification-no-runtime-authority",
+  "profile": {
+    "profile_id": "foa-1.23.401-mono-bepinex5-tf-0.1.33",
+    "game_version": "1.23.401",
+    "unity_version": "6000.0.64f1",
+    "runtime": "Mono",
+    "loader": "BepInEx 5.4.23.3",
+    "framework": "Tainted Framework 0.1.33",
+    "evidence_state": "HostLiveLoadValidated",
+    "required_runtime_fingerprints": {
+      "TG.Main.dll": "required-but-absent",
+      "BepInEx.dll": "required-but-absent",
+      "0Harmony.dll": "required-but-absent"
+    }
+  },
+  "acceptance_rule": "fail-closed-unless-all-required-fingerprints-and-observations-are-present",
+  "fixture_set_id": "tg.fixture.batch004.wolf-native-mount-rollback",
+  "sources": [
+    {
+      "path": "mods/avalon-mounts/src/WolfMount/WolfMountSeatBridgeController.cs",
+      "blob": "c226dead88329eb55f3444f36c6fceecc2ed7e66"
+    },
+    {
+      "path": "mods/avalon-mounts/src/WolfMount/WolfNativeMountContract.cs",
+      "blob": "65a52e309da76d5bfd9b5627ee92def688031070"
+    },
+    {
+      "path": "mods/avalon-mounts/src/Safety/DiagnosticsOnlyGuard.cs",
+      "blob": "5609bcff8082d362bdf6356a224d01e291e88f20"
+    },
+    {
+      "path": "mods/avalon-mounts/src/Plugin.cs",
+      "blob": "896e0f4e63c57b1800eb3ac09468cefe0ca8509d"
+    }
+  ],
+  "snapshot_requirements": [
+    "hero owned-mount value including explicit null state",
+    "wolf model elements and native actions",
+    "all created Unity objects/components and parentage",
+    "all reflected private-field values",
+    "movement Behaviour identities and enabled states",
+    "borrowed source MountData identity",
+    "mounted hero and mount-element lifecycle",
+    "scene and save/persistence markers"
+  ],
+  "cases": [
+    {
+      "case_id": "rollback.previous-owned-mount-null",
+      "fault_point": "after mount ownership changes",
+      "expected": "explicitly restore null owned-mount state",
+      "promotion_effect": "current-source-fails"
+    },
+    {
+      "case_id": "rollback.native-actions-discarded",
+      "fault_point": "after MountAction or MountPetAction discard",
+      "expected": "restore exact prior action instances/state or perform no discard before commit",
+      "promotion_effect": "current-source-fails"
+    },
+    {
+      "case_id": "rollback.private-field-write-n",
+      "fault_point": "after each private backing-field write",
+      "expected": "restore every prior field value and remove all created objects/elements",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "rollback.unity-destroy-deferred",
+      "fault_point": "after Object.Destroy requests before end-of-frame destruction",
+      "expected": "quiescent state is observed after destruction completes; no stale callback sees partially destroyed graph",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "rollback.movement-component-churn",
+      "fault_point": "movement component added, removed, destroyed or re-enabled while mounted",
+      "expected": "only exact captured components are controlled; unrelated and replacement components remain untouched",
+      "promotion_effect": "current-source-type-name-heuristic-prohibited"
+    },
+    {
+      "case_id": "rollback.borrowed-mount-data",
+      "fault_point": "source mount disappears or mutates after shared MountData reference is assigned",
+      "expected": "documented ownership or immutable copy; no dangling/shared mutable contract",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "rollback.scene-transition",
+      "fault_point": "scene unload, hero replacement, wolf discard and plug-in unload at every conversion/mount step",
+      "expected": "single idempotent rollback restores pre-state or records a hard blocker",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "performance.frame-and-attach",
+      "fault_point": "large World.All<NpcHeroPetAlly> and MountElement populations",
+      "expected": "bounded allocations and time budgets for Tick and attach discovery",
+      "promotion_effect": "required-for-any-future-promotion"
+    }
+  ],
+  "decision": {
+    "promotion": "none",
+    "runtime_mount_conversion": "prohibited-current-source",
+    "reason": "irreversible native-action discard, incomplete null ownership restoration and non-transactional object-graph mutation"
+  }
+}

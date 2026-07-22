@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "source_repository": "theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods",
+  "source_commit": "d7e740e7f167b73152b53409e483dab07d80d048",
+  "execution_state": "specification-only",
+  "authority": "offline-fixture-specification-no-runtime-authority",
+  "profile": {
+    "profile_id": "foa-1.23.401-mono-bepinex5-tf-0.1.33",
+    "game_version": "1.23.401",
+    "unity_version": "6000.0.64f1",
+    "runtime": "Mono",
+    "loader": "BepInEx 5.4.23.3",
+    "framework": "Tainted Framework 0.1.33",
+    "evidence_state": "HostLiveLoadValidated",
+    "required_runtime_fingerprints": {
+      "TG.Main.dll": "required-but-absent",
+      "BepInEx.dll": "required-but-absent",
+      "0Harmony.dll": "required-but-absent"
+    }
+  },
+  "acceptance_rule": "fail-closed-unless-all-required-fingerprints-and-observations-are-present",
+  "fixture_set_id": "tg.fixture.batch004.economy-diagnostic-writer",
+  "sources": [
+    {
+      "path": "mods/TaintedEconomy/src/Diagnostics/EconomyDiagnosticWriter.cs",
+      "blob": "020dd5c48f691690b5854446e56c0a5f4051bc3b"
+    },
+    {
+      "path": "mods/TaintedEconomy/src/Diagnostics/EconomyDiagnosticRow.cs",
+      "blob": "6e0711c180db1a7c0e464914b0854987d5f4a840"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "path.config-prefix-sibling",
+      "setup": "config root is /cfg and requested root is /cfg-other or Windows-equivalent sibling prefix",
+      "expected": "reject as outside root",
+      "current_source_observation": "prefix-only StartsWith comparison can accept the sibling",
+      "promotion_effect": "prohibit-current-source"
+    },
+    {
+      "case_id": "path.session-dotdot",
+      "setup": "session name is .., ., whitespace-normalized dot segment, rooted segment or overlong segment",
+      "expected": "reject unsafe segment; resolved session folder remains a strict descendant of canonical diagnostics root",
+      "current_source_observation": "invalid-filename-character replacement does not reject dot segments",
+      "promotion_effect": "prohibit-current-source"
+    },
+    {
+      "case_id": "path.symlink-junction",
+      "setup": "configured descendant traverses a symlink or junction outside config root",
+      "expected": "reject or prove final canonical target containment",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "rowcap.summary-fails-after-append",
+      "setup": "CSV append succeeds; summary rewrite fails; BepInEx row logging disabled",
+      "expected": "row count and durable row publish atomically or append is rolled back",
+      "current_source_observation": "appended row may be uncounted and repeated writes can exceed the intended cap",
+      "promotion_effect": "prohibit-current-source"
+    },
+    {
+      "case_id": "bytecap.single-row",
+      "setup": "one row contains very large context, tags, names or observedValue",
+      "expected": "per-field, per-row and per-session byte caps reject or truncate with explicit marker before write",
+      "current_source_observation": "only row count is bounded",
+      "promotion_effect": "prohibit-current-source"
+    },
+    {
+      "case_id": "redaction.field-classification",
+      "setup": "row contains scene, template GUID/name, display name, tags, context and arbitrary ToString output",
+      "expected": "field classification and redaction policy produce approved support-safe output",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "retention.cleanup",
+      "setup": "multiple sessions and plug-in unload/reload",
+      "expected": "documented retention limit, explicit delete/export action, cache reset and no automatic support publication",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "csv.formula-injection",
+      "setup": "text field begins with =,+,- or @",
+      "expected": "support-export path neutralizes spreadsheet formula execution or labels raw CSV unsafe for spreadsheet opening",
+      "promotion_effect": "required-for-support-safe-promotion"
+    }
+  ],
+  "decision": {
+    "promotion": "none",
+    "diagnostic_capture": "prohibited-current-source",
+    "support_sharing": "prohibited-current-source",
+    "reason": "path containment, traversal, atomicity, byte-bound, redaction and retention requirements are not met"
+  }
+}

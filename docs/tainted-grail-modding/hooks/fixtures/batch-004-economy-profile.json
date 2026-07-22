@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "source_repository": "theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods",
+  "source_commit": "d7e740e7f167b73152b53409e483dab07d80d048",
+  "execution_state": "specification-only",
+  "authority": "offline-fixture-specification-no-runtime-authority",
+  "profile": {
+    "profile_id": "foa-1.23.401-mono-bepinex5-tf-0.1.33",
+    "game_version": "1.23.401",
+    "unity_version": "6000.0.64f1",
+    "runtime": "Mono",
+    "loader": "BepInEx 5.4.23.3",
+    "framework": "Tainted Framework 0.1.33",
+    "evidence_state": "HostLiveLoadValidated",
+    "required_runtime_fingerprints": {
+      "TG.Main.dll": "required-but-absent",
+      "BepInEx.dll": "required-but-absent",
+      "0Harmony.dll": "required-but-absent"
+    }
+  },
+  "acceptance_rule": "fail-closed-unless-all-required-fingerprints-and-observations-are-present",
+  "fixture_set_id": "tg.fixture.batch004.economy-reflection-mutation",
+  "sources": [
+    {
+      "path": "mods/TaintedEconomy/src/Diagnostics/EconomyReflection.cs",
+      "blob": "4697cb7cd98297d96569626c6b0bb3f0c6d3cc69"
+    },
+    {
+      "path": "mods/TaintedEconomy/src/Patches/QuantityLive.cs",
+      "blob": "22c556f6c427c87ce5fd39b06730307b57c78ef8"
+    },
+    {
+      "path": "mods/TaintedEconomy/src/Patches/RewardWealthLive.cs",
+      "blob": "f646f9759e3e9942c4366b59a1ff4971655f211a"
+    },
+    {
+      "path": "mods/TaintedEconomy/src/Patches/VendorPriceLivePricing.cs",
+      "blob": "5e7409cf644e06e353d2b306b5920b19ef1e0d00"
+    },
+    {
+      "path": "mods/TaintedEconomy/src/Patches/RegionalVendorPricePricing.cs",
+      "blob": "c0d4ea116c7fbd74f1a7ed5c82a1a2ea0b09278e"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "reflection.property-throws-fallback-field-exists",
+      "surface": "EconomyReflection.ReadMember",
+      "setup": "first requested name resolves to a throwing property; later requested name and same-name field are readable",
+      "expected": "fixture must record the current early-null behavior as adverse; approved replacement must continue deterministically or reject the member map",
+      "promotion_effect": "prohibit-current-source"
+    },
+    {
+      "case_id": "reflection.nonpublic-member-not-allowlisted",
+      "surface": "EconomyReflection.ReadMember",
+      "setup": "candidate exists only as a non-public member absent from the exact-profile allowlist",
+      "expected": "reject without invoking getter or field read",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "quantity.reference-setter-throws",
+      "surface": "QuantityLive.TryAdjustRuntimeQuantity",
+      "setup": "reference item has writable-looking quantity property whose setter throws",
+      "expected": "original quantity and owner graph remain byte-for-byte equivalent",
+      "promotion_effect": "current-source-fails-transaction-requirement"
+    },
+    {
+      "case_id": "quantity.value-owner-writeback-throws",
+      "surface": "QuantityLive.TryAdjustRuntimeQuantity",
+      "setup": "value-type item member write succeeds locally; owner field write-back throws",
+      "expected": "owner and item state remain unchanged; no partial mutation",
+      "promotion_effect": "current-source-fails-transaction-requirement"
+    },
+    {
+      "case_id": "quantity.numeric-domain",
+      "surface": "QuantityLive.TryAdjustRuntimeQuantity",
+      "setup": "byte,sbyte,short,ushort,int,uint,long,ulong,float,double,decimal plus NaN, infinity and overflow inputs",
+      "expected": "only exact-profile allowlisted integral quantity types are accepted; fractional, NaN, infinity and unsupported types fail closed",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "reward.currency-identity",
+      "surface": "RewardWealthLive.TryAdjustCurrencyReward",
+      "setup": "currency text contains Wealth as a substring but exact currency identity is not Wealth",
+      "expected": "no mutation",
+      "promotion_effect": "current-source-substring-classification-prohibited"
+    },
+    {
+      "case_id": "reward.original-execute-fails",
+      "surface": "RewardWealthLive.TryAdjustCurrencyReward",
+      "setup": "prefix mutation succeeds and original story Execute throws or is skipped",
+      "expected": "step amount is restored before failure escapes or finalizer completes",
+      "promotion_effect": "current-source-fails-rollback-requirement"
+    },
+    {
+      "case_id": "vendor.trade-utils-overload",
+      "surface": "VendorPriceLivePricing.TryEvaluate",
+      "setup": "exact TG.Main metadata contains zero, one or multiple TradeUtils.Price overloads",
+      "expected": "accept exactly one fingerprint-bound overload with recorded seller,buyer,item,count positions; otherwise reject",
+      "promotion_effect": "required-for-any-future-promotion"
+    },
+    {
+      "case_id": "vendor.hero-proxy-direction",
+      "surface": "VendorPriceLivePricing.ResolveDirection",
+      "setup": "seller or buyer is an exact-profile Hero subtype/proxy rather than exact FullName equality",
+      "expected": "direction derives from an allowlisted type relationship or fails closed; no string-name inference",
+      "promotion_effect": "current-source-type-name-equality-prohibited"
+    },
+    {
+      "case_id": "regional.rule-precedence-and-cache",
+      "surface": "RegionalVendorPricePricing.TryResolve",
+      "setup": "overlapping patterns, wildcard, malformed Unicode and repeated hot-path evaluation",
+      "expected": "canonical identity, explicit precedence, one parse per config revision, bounded allocation and deterministic match",
+      "promotion_effect": "required-for-any-future-promotion"
+    }
+  ],
+  "decision": {
+    "promotion": "none",
+    "runtime_guidance": "prohibited-current-source",
+    "reason": "missing exact assembly fingerprints plus adverse atomicity, rollback, identity and hot-path behavior"
+  }
+}

@@ -53,6 +53,19 @@ The pinned Mono development model uses:
 - Reflection and Harmony target records must include exact signatures and failure behavior.
 - Unpatch, event unsubscription and object cleanup must be designed before release.
 
+## Batch 004 fixture binding
+
+Semantic Hook Batch 004 binds four fixture manifests to `foa-1.23.401-mono-bepinex5-tf-0.1.33`:
+
+- [economy reflection and mutation](../hooks/fixtures/batch-004-economy-profile.json);
+- [diagnostic writer](../hooks/fixtures/batch-004-diagnostic-writer.json);
+- [wolf native mount rollback](../hooks/fixtures/batch-004-wolf-mount-rollback.json);
+- [Avalon Companions API v1](../hooks/fixtures/batch-004-avalon-companions-api.json).
+
+The profile supplies exact game, Unity, runtime, loader and framework identity. It does **not** supply the missing `TG.Main.dll`, `BepInEx.dll`, `0Harmony.dll`, optional-mod assembly, target-resolution, behavior, rollback, diagnostics, or combined-mod fingerprints required by those manifests.
+
+All four fixture sets therefore remain `specification-only`. Binding a manifest to this profile does not upgrade a hook, helper, controller, or adapter. The current decisions are recorded in [Batch 004 promotion and prohibition decisions](../hooks/decisions/BATCH_004_PROMOTION_PROHIBITION.md).
+
 ## IL2CPP route
 
 The pinned IL2CPP route is a separate package and adapter concern. It may require generated interop material, IL2CPP-specific loader APIs, different reflection/type lookup, and different package layout.
@@ -64,6 +77,7 @@ The pinned IL2CPP route is a separate package and adapter concern. It may requir
 - Do not infer method/type availability from managed Mono assemblies.
 - Interop generation, adapter compilation, package assembly, deployment and live execution remain separately reviewed capabilities.
 - Current pinned evidence supports package-install planning, not a general live-behavior guarantee.
+- Batch 004's Mono fixture manifests must not be projected onto this route.
 
 ## Profile status vocabulary
 
@@ -97,4 +111,6 @@ The following are invalid:
 - "Unity 6 compatible" as a substitute for exact game target evidence;
 - projecting a target signature between Mono and IL2CPP;
 - treating package installation as behavior verification;
-- treating a historical mod release manifest as current compatibility proof.
+- treating a historical mod release manifest as current compatibility proof;
+- treating a fixture specification as an executed fixture result;
+- treating host live-load validation as a game-target, mutation, cleanup, or combined-mod result.

@@ -16,6 +16,7 @@
 #include <charconv>
 #include <cmath>
 #include <limits>
+#include <system_error>
 
 namespace TaintedGrailModdingSDK::DeterministicContractJson
 {

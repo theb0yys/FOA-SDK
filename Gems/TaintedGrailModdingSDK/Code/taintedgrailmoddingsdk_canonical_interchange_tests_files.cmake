@@ -6,5 +6,11 @@
 #
 
 set(FILES
+    Tests/Main.cpp
     Tests/CanonicalInterchangeContractTests.cpp
+    Tests/CanonicalInterchangeAcceptanceFixtures.h
+    Tests/CanonicalInterchangeTypesAcceptanceTests.cpp
+    Tests/CanonicalInterchangeCanonicalAcceptanceTests.cpp
+    Tests/CanonicalInterchangeValidationAcceptanceTests.cpp
+    Tests/CanonicalInterchangeMigrationAcceptanceTests.cpp
 )

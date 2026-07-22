@@ -212,6 +212,142 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  canonical-interchange-compiled:
+    name: Exact-head O3DE canonical interchange build and tests
+    if: github.event_name == 'pull_request'
+    runs-on: windows-2022
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+      TEST_TARGET: TaintedGrailModdingSDK.CanonicalInterchange.Tests
+      TEST_PATTERN: TaintedGrailModdingSDK\.CanonicalInterchange\.Tests
+      CONFIGURATION: profile
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+
+      - name: Check out pinned O3DE source
+        uses: actions/checkout@v4
+        with:
+          repository: o3de/o3de
+          ref: ${{ env.O3DE_COMMIT }}
+          path: o3de
+          persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact repository and engine inputs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
+          New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
+          $actualHead = (git rev-parse HEAD).Trim()
+          $actualEngine = (git -C "$env:GITHUB_WORKSPACE\o3de" rev-parse HEAD).Trim()
+          $expectedHead = "${{ github.event.pull_request.head.sha }}"
+          if ($actualHead -cne $expectedHead) {
+            throw "FOA-SDK head mismatch: expected $expectedHead, found $actualHead"
+          }
+          if ($actualEngine -cne $env:O3DE_COMMIT) {
+            throw "O3DE head mismatch: expected $env:O3DE_COMMIT, found $actualEngine"
+          }
+          [ordered]@{
+            schema_version = 1
+            status = "inputs-verified"
+            repository_head = $actualHead
+            engine_commit = $actualEngine
+            target = $env:TEST_TARGET
+            configuration = $env:CONFIGURATION
+          } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $evidenceRoot "inputs.json")
+
+      - name: Configure pinned O3DE project
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-gate5-canonical-interchange"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
+          cmake --preset windows-vs-unity `
+            -S "$env:GITHUB_WORKSPACE\o3de" `
+            -B $buildDir `
+            -A x64 `
+            "-DLY_PROJECTS=$env:GITHUB_WORKSPACE\TaintedGrailModdingEditor" `
+            "-DO3DE_FETCHCONTENT_FORCE_GIT=ON" 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "configure.log")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build Core-only canonical interchange test target
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-gate5-canonical-interchange"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
+          cmake --build $buildDir `
+            --config "$env:CONFIGURATION" `
+            --target "$env:TEST_TARGET" `
+            --parallel 2 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "build.log")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run canonical interchange compiled tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-gate5-canonical-interchange"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
+          ctest --test-dir $buildDir `
+            -C "$env:CONFIGURATION" `
+            --output-on-failure `
+            --no-tests=error `
+            -R "$env:TEST_PATTERN" 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "ctest.log")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Write exact-head compiled success receipt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
+          $actualHead = (git rev-parse HEAD).Trim()
+          $actualEngine = (git -C "$env:GITHUB_WORKSPACE\o3de" rev-parse HEAD).Trim()
+          [ordered]@{
+            schema_version = 1
+            status = "passed"
+            repository_head = $actualHead
+            engine_commit = $actualEngine
+            target = $env:TEST_TARGET
+            test_pattern = $env:TEST_PATTERN
+            configuration = $env:CONFIGURATION
+            configure_preset = "windows-vs-unity"
+            fetchcontent_force_git = $true
+            operational_authority = $false
+          } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $evidenceRoot "receipt.json")
+
+      - name: Preserve exact-head compiled evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate5-canonical-interchange-compiled-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}\gate5-canonical-interchange-evidence\*
+            ${{ runner.temp }}\foa-gate5-canonical-interchange\CMakeCache.txt
+            ${{ runner.temp }}\foa-gate5-canonical-interchange\CMakeFiles\CMakeConfigureLog.yaml
+            ${{ runner.temp }}\foa-gate5-canonical-interchange\Testing\Temporary\LastTest.log
+            ${{ runner.temp }}\foa-gate5-canonical-interchange\Testing\Temporary\LastTestsFailed.log
+          if-no-files-found: error
+          retention-days: 7
+
   windows-prerequisites:
     name: Windows O3DE prerequisites
     if: github.event_name != 'pull_request_target'

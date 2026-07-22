@@ -50,6 +50,7 @@ namespace TaintedGrailModdingSDK
             observation.m_branch = "mono";
             observation.m_runtimeTarget = "Mono";
             observation.m_subjectRef = "framework:tainted";
+            observation.m_claimId = "claim.framework.version";
             observation.m_claim = "Tainted Framework exact runtime observation";
             observation.m_valueFingerprint =
                 "sha256:" + AZStd::string(64, valueDigit);
@@ -100,6 +101,9 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(evidence.m_evidenceId, observation.m_observationId);
         EXPECT_EQ(evidence.m_sourceFingerprint, observation.m_sourceFingerprint);
         EXPECT_EQ(evidence.m_subjectRef, observation.m_subjectRef);
+        EXPECT_EQ(
+            evidence.m_claim,
+            observation.m_claimId + ": " + observation.m_claim);
     }
 
     TEST(GameInformationAcquisitionTests, ReconciliationSurfacesConflictsWithoutOverriding)
@@ -111,8 +115,36 @@ namespace TaintedGrailModdingSDK
         ASSERT_EQ(result.m_candidates.size(), 2);
         ASSERT_EQ(result.m_conflicts.size(), 1);
         EXPECT_EQ(result.m_conflicts[0].m_subjectRef, "framework:tainted");
+        EXPECT_EQ(result.m_conflicts[0].m_claimId, "claim.framework.version");
         EXPECT_FALSE(result.m_canPromoteAutomatically);
         EXPECT_FALSE(result.m_grantsRuntimePermission);
+    }
+
+    TEST(GameInformationAcquisitionTests, DifferentTypedClaimsForOneSubjectDoNotConflict)
+    {
+        auto version = MakeObservation("evidence.provider.github.version", '2');
+        auto branch = MakeObservation("evidence.provider.github.branch", '3');
+        branch.m_claimId = "claim.framework.branch";
+        branch.m_claim = "Tainted Framework exact branch observation";
+        const auto result = GameInformationAcquisition::Reconcile(
+            { branch, version }, MakeAcquisitionProfile());
+        EXPECT_EQ(result.m_candidates.size(), 2);
+        EXPECT_TRUE(result.m_conflicts.empty());
+        EXPECT_TRUE(result.m_rejectedObservationIds.empty());
+    }
+
+    TEST(GameInformationAcquisitionTests, DuplicateObservationIdentityHasOneRejectedDisposition)
+    {
+        auto valid = MakeObservation("evidence.provider.github.duplicate", '2');
+        auto invalid = valid;
+        invalid.m_claimId = "invalid claim id";
+        const auto result = GameInformationAcquisition::Reconcile(
+            { valid, invalid }, MakeAcquisitionProfile());
+        EXPECT_TRUE(result.m_candidates.empty());
+        ASSERT_EQ(result.m_rejectedObservationIds.size(), 1);
+        EXPECT_EQ(
+            result.m_rejectedObservationIds[0],
+            "evidence.provider.github.duplicate");
     }
 
     TEST(GameInformationAcquisitionTests, ObservationAuthorityEscalationFailsClosed)

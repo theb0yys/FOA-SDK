@@ -31,6 +31,10 @@ from security_test_support import InstallerSecurityFixture  # noqa: E402
 
 
 class InstallationStatePublisherTests(unittest.TestCase):
+    def accepted_receipt(self) -> dict[str, object]:
+        with InstallerSecurityFixture() as fixture:
+            return dict(fixture.handoff["receipt"])
+
     def _lifecycle(self, fixture: InstallerSecurityFixture) -> dict[str, object]:
         copy_grant = build_copy_grant(
             fixture.session,
@@ -108,7 +112,6 @@ class InstallationStatePublisherTests(unittest.TestCase):
             self.assertEqual(
                 validate_publication_grant(grant, authority_key_path=fixture.authority_key), grant
             )
-            # State roots are caller-created and must already exist.
             state_root = fixture.root / "state"; state_root.mkdir()
             receipt = publish_state_record(
                 grant,

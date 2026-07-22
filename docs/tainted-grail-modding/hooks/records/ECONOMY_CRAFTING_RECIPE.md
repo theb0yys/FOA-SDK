@@ -4,6 +4,7 @@
 
 ```yaml
 hook_id: tg.hook.economy.ingredient-count-getter
+title: Crafting ingredient count getter
 status: candidate
 hook_class: method-patch
 domain: items-crafting-and-economy
@@ -24,6 +25,7 @@ limitations: [Exact getter identity and all call sites are unresolved, downstrea
 
 ```yaml
 hook_id: tg.hook.economy.recipe-grid-refresh
+title: Recipe grid refresh observer
 status: candidate
 hook_class: method-patch
 domain: items-crafting-and-economy
@@ -44,6 +46,7 @@ limitations: [Exact overload is unresolved, reflection member names and output p
 
 ```yaml
 hook_id: tg.hook.economy.recipe-grid-click-slot
+title: Recipe grid slot click observer
 status: candidate
 hook_class: method-patch
 domain: items-crafting-and-economy

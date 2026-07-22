@@ -94,11 +94,15 @@ jobs:
       - name: Validate Core-only canonical interchange test contract
         shell: bash
         run: |
-          set -euo pipefail
-          python Gems/TaintedGrailModdingSDK/Tools/validate_canonical_interchange_compiled_tests.py
-          python -m unittest \
-            Gems.TaintedGrailModdingSDK.Tools.tests.test_validate_canonical_interchange_compiled_tests \
-            -v
+          set +e
+          {
+            python Gems/TaintedGrailModdingSDK/Tools/validate_canonical_interchange_compiled_tests.py
+            python -m unittest \
+              Gems.TaintedGrailModdingSDK.Tools.tests.test_validate_canonical_interchange_compiled_tests \
+              -v
+          } 2>&1 | tee -a project-wide-security-validation.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Run complete hosted static validation
         shell: bash

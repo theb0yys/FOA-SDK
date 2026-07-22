@@ -93,6 +93,7 @@ limitations:
 12. Journal proofs, abandonment reviews, publication intents and reproducible CI receipts remain synthetic project facts and grant no runtime or promotion authority.
 13. Compaction chains, reviewer quorums, backup limits, replay-window receipts and cross-version fixtures remain offline governance artifacts and cannot promote runtime compatibility.
 14. Archive manifests, cumulative quotas, dependency graphs, decision lifecycle records, replay sequences and receipt migrations remain offline provenance artifacts and cannot authorize runtime execution or promotion.
+15. Retention tombstones, quota releases, rollback plans, appeals, replay compactions and migration histories remain metadata-only offline proofs and cannot delete, execute, replay, unlock or promote anything.
 
 ## Evidence boundary
 
@@ -224,6 +225,12 @@ Batch 010 preserves the complete no-runtime and no-promotion boundary and leaves
 [Semantic Hook Batch 011](BATCH_011.md) adds checkpoint-chain archive manifests, cumulative repeated-compaction quotas, publication-intent dependency graphs, quorum decision revocation and supersession records, replay-window sequence proofs and workflow-receipt migration fixtures.
 
 Batch 011 preserves the complete no-runtime and no-promotion boundary and leaves every existing prohibition unchanged.
+
+### Batch 012
+
+[Semantic Hook Batch 012](BATCH_012.md) adds archive retention and metadata-only tombstones, quota release and ledger-compaction records, dependency-aware partial-rollback plans, quorum appeals, replay-sequence compaction proofs and chained workflow-receipt migration histories.
+
+Batch 012 preserves the complete no-runtime and no-promotion boundary and leaves every existing prohibition unchanged.
 
 ## Initial domain indexes
 

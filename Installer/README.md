@@ -15,6 +15,7 @@ Installer/
 │   ├── Resolver/       deterministic package decision and dry-run plan layer
 │   └── ViewModel/      deterministic presentation and review-confirmation layer
 ├── Bootstrapper/       prerequisites, acquisition and verified handoff
+│   └── Acquisition/    capability-gated approved-acquisition request/result layer
 ├── Suites/             reviewed suite definitions
 ├── Packages/           reviewed installable-package definitions
 ├── Launcher/           installed product launcher source
@@ -51,6 +52,12 @@ The bootstrapper owns bounded prerequisite checks and the verified transition in
 
 It must fail closed for unavailable prerequisites, hash drift, unsupported operating systems, unknown packages, dependency cycles, unsafe paths, unreviewed redistribution, unexpected elevation, and partial acquisition. Network access and elevation are explicit capabilities, never defaults.
 
+`Installer/Bootstrapper/Acquisition/` is the first capability-gated operational handoff. It reverifies the exact resolver plan, view-model, review confirmation, and approved-provider plan; requires explicit package capability bindings; and emits an acquisition-only request before invoking the existing approved provider.
+
+The local route receives acquisition and external filesystem-write capability only. The pinned-GitHub route additionally requires the reviewed suite network policy and receives network capability only for that exact route. Both routes publish to a new external bundle through the provider's existing exclusive-write, hash-verification, and atomic-rename boundary.
+
+The resulting record proves only that the approved bundle was acquired and reverified. It serializes a logical output reference rather than a private filesystem path, creates no candidate evidence, performs no installation or elevation, and retains no operational authority.
+
 ## Suites and packages
 
 Each suite lives at `Installer/Suites/<Suite>/suite.json` and conforms to `suite.schema.json`.
@@ -75,6 +82,14 @@ The engine-neutral view-model contract lives at `Installer/SuiteWizard/ViewModel
 
 `confirmation.schema.json` defines a review-only record bound to the exact plan and view-model hashes, the complete acknowledgement set, caller-supplied identity and caller-supplied UTC time. Confirmation generation reads no clock or environment state and grants no execution authority.
 
+## Approved-acquisition request and result
+
+The bootstrapper acquisition request is bound to the exact `plan_sha256`, `view_model_sha256`, `confirmation_sha256`, approved provider `plan_id`, route, explicit installer/provider package bindings, named authorizer, UTC authorization time, logical output reference, and `request_sha256`.
+
+Provider bindings use `acquisition.approved.<provider-package-id>` capabilities. The provider package set must match those declarations exactly; display names and path guesses are never used as mappings.
+
+Execution delegates only to `Plugins/Integrations/ApprovedAcquisition`, then verifies the completed bundle again. The canonical result binds the provider receipt, enforces authorization/capture/completion chronology, records acquisition as the only performed effect, and leaves every authority false.
+
 ## Existing Windows packaging
 
 The current reviewed Windows MSI/portable workflow is owned beneath `Installer/Packaging/Windows/`. It converts an already verified staging payload into an unsigned development MSI or portable ZIP. It does not select unreviewed files, publish releases, sign artifacts, modify FoA, or remove external workspaces.
@@ -88,10 +103,12 @@ Installer changes require, as applicable:
 1. canonical schema validation;
 2. deterministic suite and package resolution;
 3. deterministic view-model and exact-hash confirmation;
-4. dependency/conflict and compatibility tests;
-5. path, symlink, case-collision, and traversal rejection;
-6. exact inventory, hash, provenance, licence, and redistribution review;
-7. clean install, repair, upgrade, rollback, and uninstall smoke tests;
-8. preservation of external workspaces and user-authored content;
-9. generated-output hygiene;
-10. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation or elevation authority was introduced by review-only contracts.
+4. exact confirmation/provider-plan acquisition authorization;
+5. dependency/conflict and compatibility tests;
+6. path, symlink, case-collision, and traversal rejection;
+7. exact inventory, hash, provenance, licence, and redistribution review;
+8. verified acquisition bundle and receipt binding;
+9. clean install, repair, upgrade, rollback, and uninstall smoke tests;
+10. preservation of external workspaces and user-authored content;
+11. generated-output hygiene;
+12. explicit proof that no release, signing, runtime, deployment, save, installation or elevation authority was introduced by the acquisition slice.

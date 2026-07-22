@@ -9,9 +9,11 @@
 
 #include <AzCore/base.h>
 #include <AzCore/std/algorithm.h>
-#include <AzCore/std/sort.h>
 #include <AzCore/std/containers/vector.h>
+#include <AzCore/std/sort.h>
 #include <AzCore/std/string/string.h>
+
+#include <cstdio>
 
 namespace TaintedGrailModdingSDK::DeterministicContractJson
 {
@@ -25,6 +27,23 @@ namespace TaintedGrailModdingSDK::DeterministicContractJson
             value /= 10;
         } while (value != 0);
         return AZStd::string(buffer + position, sizeof(buffer) - position);
+    }
+
+    inline AZStd::string SignedString(AZ::s64 value)
+    {
+        if (value >= 0)
+        {
+            return UnsignedString(static_cast<AZ::u64>(value));
+        }
+        const AZ::u64 magnitude = static_cast<AZ::u64>(-(value + 1)) + 1;
+        return "-" + UnsignedString(magnitude);
+    }
+
+    inline AZStd::string DoubleString(double value)
+    {
+        char buffer[64] = {};
+        const int count = std::snprintf(buffer, sizeof(buffer), "%.17g", value);
+        return count > 0 ? AZStd::string(buffer, static_cast<size_t>(count)) : AZStd::string{};
     }
 
     inline void AppendEscaped(AZStd::string& output, const AZStd::string& value)
@@ -108,6 +127,34 @@ namespace TaintedGrailModdingSDK::DeterministicContractJson
         }
     }
 
+    inline void AppendSigned(
+        AZStd::string& output,
+        const char* name,
+        AZ::s64 value,
+        bool comma = true)
+    {
+        AppendName(output, name);
+        output += SignedString(value);
+        if (comma)
+        {
+            output.push_back(',');
+        }
+    }
+
+    inline void AppendDouble(
+        AZStd::string& output,
+        const char* name,
+        double value,
+        bool comma = true)
+    {
+        AppendName(output, name);
+        output += DoubleString(value);
+        if (comma)
+        {
+            output.push_back(',');
+        }
+    }
+
     inline void AppendBool(
         AZStd::string& output,
         const char* name,
@@ -122,13 +169,12 @@ namespace TaintedGrailModdingSDK::DeterministicContractJson
         }
     }
 
-    inline void AppendSortedStringArray(
+    inline void AppendStringArray(
         AZStd::string& output,
         const char* name,
-        AZStd::vector<AZStd::string> values,
+        const AZStd::vector<AZStd::string>& values,
         bool comma = true)
     {
-        AZStd::sort(values.begin(), values.end());
         AppendName(output, name);
         output.push_back('[');
         for (size_t index = 0; index < values.size(); ++index)
@@ -143,6 +189,24 @@ namespace TaintedGrailModdingSDK::DeterministicContractJson
         if (comma)
         {
             output.push_back(',');
+        }
+    }
+
+    inline void AppendSortedStringArray(
+        AZStd::string& output,
+        const char* name,
+        AZStd::vector<AZStd::string> values,
+        bool comma = true)
+    {
+        AZStd::sort(values.begin(), values.end());
+        AppendStringArray(output, name, values, comma);
+    }
+
+    inline void TrimTrailingComma(AZStd::string& output)
+    {
+        if (!output.empty() && output.back() == ',')
+        {
+            output.pop_back();
         }
     }
 } // namespace TaintedGrailModdingSDK::DeterministicContractJson

@@ -20,7 +20,10 @@ from pathlib import Path
 ID = re.compile(r"^extension\.[a-z0-9]+(?:[.-][a-z0-9]+)*$")
 TOKEN = re.compile(r"^[a-z0-9]+(?:[.-][a-z0-9]+)*$")
 BRANCH_TOKEN = re.compile(r"^[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*$")
-SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
+SEMVER = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"(?:-[0-9A-Za-z.-]+)?$"
+)
 PACKAGE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9._-]{0,127}$")
 RELATIVE_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
 GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
@@ -30,6 +33,10 @@ CATEGORY_BY_DIRECTORY = {
     "Integrations": "integration",
     "RuntimeAdapters": "runtime-adapter",
 }
+
+# Capabilities listed here are accepted only after syntax, uniqueness, and size
+# validation. Capability ownership is separately enforced below so adding a
+# project-specific contract never turns it into a repository-wide wildcard.
 KNOWN_CAPABILITIES = {
     "acquisition.bundle.verify",
     "acquisition.github.pinned.read",
@@ -41,7 +48,17 @@ KNOWN_CAPABILITIES = {
     "acquisition.plan",
     "query-catalog",
     "read-active-profile",
+    "runtime.mono.build-plan",
+    "runtime.mono.execution-gate",
+    "runtime.mono.package-verify",
+    "runtime.mono.result-verify",
     "submit-candidate-evidence",
+}
+CAPABILITY_OWNERS = {
+    "runtime.mono.build-plan": "extension.foa-mono-runtime-adapter",
+    "runtime.mono.execution-gate": "extension.foa-mono-runtime-adapter",
+    "runtime.mono.package-verify": "extension.foa-mono-runtime-adapter",
+    "runtime.mono.result-verify": "extension.foa-mono-runtime-adapter",
 }
 KNOWN_RUNTIME_TARGETS = {"editor-only", "mono", "il2cpp"}
 KNOWN_STATUSES = {"experimental", "available", "deprecated"}
@@ -99,11 +116,46 @@ def require_string_list(
 ) -> list[str]:
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         fail(f"{label} must be a string array")
-    if (not allow_empty and not value) or len(value) > maximum or len(set(value)) != len(value):
+    if (
+        (not allow_empty and not value)
+        or len(value) > maximum
+        or len(set(value)) != len(value)
+    ):
         fail(f"{label} must be non-empty, unique, and bounded")
-    if any(not item or len(item) > 256 or (pattern and pattern.fullmatch(item) is None) for item in value):
+    if any(
+        not item
+        or len(item) > 256
+        or (pattern is not None and pattern.fullmatch(item) is None)
+        for item in value
+    ):
         fail(f"{label} contains an invalid value")
     return value
+
+
+def validate_capabilities(extension_id: str, value: object) -> list[str]:
+    capabilities = require_string_list(
+        value,
+        f"{extension_id} capabilities",
+        pattern=TOKEN,
+    )
+    unknown = set(capabilities) - KNOWN_CAPABILITIES
+    if unknown:
+        fail(
+            f"{extension_id} declares unknown governed capabilities: "
+            f"{sorted(unknown)}"
+        )
+    wrong_owner = {
+        capability: owner
+        for capability in capabilities
+        if (owner := CAPABILITY_OWNERS.get(capability)) is not None
+        and owner != extension_id
+    }
+    if wrong_owner:
+        fail(
+            f"{extension_id} declares capabilities owned by another extension: "
+            f"{sorted(wrong_owner.items())}"
+        )
+    return capabilities
 
 
 def validate_entry_points(
@@ -132,7 +184,10 @@ def validate_entry_points(
                 descriptor = path / "gem.json"
                 cmake = path / "CMakeLists.txt"
                 if not descriptor.is_file() or not cmake.is_file():
-                    fail(f"O3DE Gem entry point requires gem.json and CMakeLists.txt: {path}")
+                    fail(
+                        "O3DE Gem entry point requires gem.json and CMakeLists.txt: "
+                        f"{path}"
+                    )
                 gem = load_object(descriptor, "plug-in Gem descriptor")
                 gem_name = gem.get("gem_name")
                 if not isinstance(gem_name, str) or not PACKAGE_NAME.fullmatch(gem_name):
@@ -140,8 +195,14 @@ def validate_entry_points(
                 if gem.get("type") != "Tool":
                     fail(f"Plug-in O3DE entry point must be a Tool Gem: {descriptor}")
                 dependencies = gem.get("dependencies")
-                if not isinstance(dependencies, list) or "TaintedGrailModdingSDK" not in dependencies:
-                    fail(f"Plug-in Tool Gem must depend on TaintedGrailModdingSDK: {descriptor}")
+                if (
+                    not isinstance(dependencies, list)
+                    or "TaintedGrailModdingSDK" not in dependencies
+                ):
+                    fail(
+                        "Plug-in Tool Gem must depend on TaintedGrailModdingSDK: "
+                        f"{descriptor}"
+                    )
                 gem_names.append(gem_name)
             elif not path.is_file():
                 fail(f"{label}.{kind} entry point must be a file: {path}")
@@ -154,9 +215,15 @@ def validate_manifest(package_root: Path, plugins_root: Path) -> Package:
     unknown = set(manifest) - EXPECTED_KEYS
     missing = EXPECTED_KEYS - set(manifest)
     if unknown or missing:
-        fail(f"Plug-in manifest keys mismatch at {manifest_path}; missing={sorted(missing)}, unknown={sorted(unknown)}")
+        fail(
+            f"Plug-in manifest keys mismatch at {manifest_path}; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
     if manifest.get("schema_version") != 1 or manifest.get("optional") is not True:
-        fail(f"Plug-in manifest must be schema 1 and explicitly optional: {manifest_path}")
+        fail(
+            "Plug-in manifest must be schema 1 and explicitly optional: "
+            f"{manifest_path}"
+        )
 
     extension_id = manifest.get("id")
     name = manifest.get("name")
@@ -176,14 +243,7 @@ def validate_manifest(package_root: Path, plugins_root: Path) -> Package:
     if expected_category is None or manifest.get("category") != expected_category:
         fail(f"Plug-in category does not match its governed directory: {manifest_path}")
 
-    capabilities = require_string_list(
-        manifest.get("capabilities"),
-        f"{extension_id} capabilities",
-        pattern=TOKEN,
-    )
-    unknown_capabilities = set(capabilities) - KNOWN_CAPABILITIES
-    if unknown_capabilities:
-        fail(f"{extension_id} declares unknown governed capabilities: {sorted(unknown_capabilities)}")
+    validate_capabilities(extension_id, manifest.get("capabilities"))
     dependencies = require_string_list(
         manifest.get("dependencies"),
         f"{extension_id} dependencies",
@@ -225,7 +285,10 @@ def validate_manifest(package_root: Path, plugins_root: Path) -> Package:
     if expected_category == "runtime-adapter" and (
         "editor-only" in targets or len(targets) != 1
     ):
-        fail(f"Runtime adapter {extension_id} must declare exactly one Mono or IL2CPP target")
+        fail(
+            f"Runtime adapter {extension_id} must declare exactly one Mono or "
+            "IL2CPP target"
+        )
 
     provenance = manifest.get("provenance")
     if not isinstance(provenance, dict) or set(provenance) != {
@@ -240,15 +303,22 @@ def validate_manifest(package_root: Path, plugins_root: Path) -> Package:
         if not isinstance(value, str) or not value or len(value) > 512:
             fail(f"{extension_id} provenance field {key} is invalid")
     revision = str(provenance.get("revision"))
+    origin = str(provenance.get("origin", ""))
     if revision != "project-owned" and (
-        "github" in str(provenance.get("origin", "")).lower() or "/" in str(provenance.get("origin", ""))
+        "github" in origin.lower() or "/" in origin
     ):
-        if GIT_COMMIT.fullmatch(str(provenance.get("revision"))) is None:
+        if GIT_COMMIT.fullmatch(revision) is None:
             fail(f"{extension_id} Git provenance requires one exact lowercase commit")
     if not isinstance(provenance.get("redistribution_reviewed"), bool):
         fail(f"{extension_id} redistribution review state must be boolean")
-    if provenance.get("license") == "NOASSERTION" and provenance.get("redistribution_reviewed") is not False:
-        fail(f"{extension_id} cannot mark unlicensed upstream payloads redistribution-reviewed")
+    if (
+        provenance.get("license") == "NOASSERTION"
+        and provenance.get("redistribution_reviewed") is not False
+    ):
+        fail(
+            f"{extension_id} cannot mark unlicensed upstream payloads "
+            "redistribution-reviewed"
+        )
 
     gem_names = validate_entry_points(
         package_root,
@@ -298,9 +368,13 @@ def validate_project_registration(repo_root: Path, packages: list[Package]) -> N
     project = load_object(project_path, "Editor project manifest")
     external = project.get("external_subdirectories")
     gem_names = project.get("gem_names")
-    if not isinstance(external, list) or any(not isinstance(item, str) for item in external):
+    if not isinstance(external, list) or any(
+        not isinstance(item, str) for item in external
+    ):
         fail("Editor project external_subdirectories must be a string array")
-    if not isinstance(gem_names, list) or any(not isinstance(item, str) for item in gem_names):
+    if not isinstance(gem_names, list) or any(
+        not isinstance(item, str) for item in gem_names
+    ):
         fail("Editor project gem_names must be a string array")
 
     expected_external: list[str] = []
@@ -316,25 +390,36 @@ def validate_project_registration(repo_root: Path, packages: list[Package]) -> N
             )
             expected_gems.append(gem_name)
 
-    missing_external = [item for item in expected_external if external.count(item) != 1]
+    missing_external = [
+        item for item in expected_external if external.count(item) != 1
+    ]
     missing_gems = [item for item in expected_gems if gem_names.count(item) != 1]
     if missing_external or missing_gems:
         fail(
-            "Editor project does not deterministically select every available plug-in Tool Gem; "
+            "Editor project does not deterministically select every available "
+            "plug-in Tool Gem; "
             f"external={missing_external}, gems={missing_gems}"
         )
     selected_plugin_directories = [
-        item for item in external if isinstance(item, str) and item.startswith("../Plugins/")
+        item
+        for item in external
+        if isinstance(item, str) and item.startswith("../Plugins/")
     ]
     selected_plugin_gems = [item for item in gem_names if item in set(expected_gems)]
-    if selected_plugin_directories != expected_external or selected_plugin_gems != expected_gems:
-        fail("Editor project plug-in Tool Gems must be selected once in deterministic package order")
+    if (
+        selected_plugin_directories != expected_external
+        or selected_plugin_gems != expected_gems
+    ):
+        fail(
+            "Editor project plug-in Tool Gems must be selected once in "
+            "deterministic package order"
+        )
 
 
 def discover_packages(repo_root: Path) -> list[Package]:
     plugins_root = repo_root / "Plugins"
     packages: list[Package] = []
-    for directory, expected_category in CATEGORY_BY_DIRECTORY.items():
+    for directory in CATEGORY_BY_DIRECTORY:
         category_root = plugins_root / directory
         if not category_root.is_dir():
             fail(f"Missing governed plug-in category: {category_root}")

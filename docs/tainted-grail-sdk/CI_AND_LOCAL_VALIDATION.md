@@ -211,6 +211,17 @@ python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py init \
   --configuration profile
 ```
 
+Record each automated gate through the receipt tool. The
+`validation_receipt.py record` subcommand runs that command from the clean exact
+head and derives its observed exit code, timestamps, bounded logs, and hashes:
+
+```shell
+python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py record \
+  --output ../tg-sdk-receipt \
+  --name <gate-id> \
+  -- <executable> <arguments...>
+```
+
 The recommended coordinator is:
 
 ```shell
@@ -236,8 +247,20 @@ times, and before/after head and cleanliness checks.
 `git-diff-check`, `local-validation`, `o3de-configure`, `o3de-build`, and
 `compiled-tests` must all have an executed, zero-exit result. They cannot be
 waived. A Windows UI pass may be recorded with `skip` only when it genuinely was
-not run, followed by a local maintainer declaration with `accept-risk` and a
-concrete rationale.
+not run. The permitted local declaration must then use
+`validation_receipt.py accept-risk` with a concrete maintainer rationale:
+
+```shell
+python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py skip \
+  --output ../tg-sdk-receipt \
+  --name windows-ui \
+  --reason "Windows UI validation was not run"
+python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py accept-risk \
+  --output ../tg-sdk-receipt \
+  --gate windows-ui \
+  --maintainer-alias maintainer \
+  --rationale "Concrete, reviewable reason for accepting this exact-head UI risk"
+```
 
 Finalize, verify, and summarize against the same clean exact head:
 

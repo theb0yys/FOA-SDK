@@ -76,7 +76,7 @@ Rollback/revert plan:
 - [ ] Hosted Windows O3DE prerequisites passed and their artifact identity is recorded.
 - [ ] Full O3DE configure passed for the exact pinned engine and external build directory.
 - [ ] O3DE build completed for required targets.
-- [ ] Compiled `TaintedGrailModdingSDK.Catalog.Tests` executed and passed; zero matching tests is an error.
+- [ ] compiled `TaintedGrailModdingSDK.Catalog.Tests` executed and passed; zero matching tests is an error.
 - [ ] Manual editor/UI workflow verification passed, or the permitted risk acceptance is explicit.
 
 Results:

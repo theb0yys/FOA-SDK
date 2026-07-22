@@ -85,10 +85,51 @@ def validate(root: Path = REPO_ROOT) -> None:
     reject(
         workflow,
         (
-            "github.event.pull_request.head.sha }}\n          persist-credentials",
             "pull_request_target' && github.event.pull_request.draft == true",
         ),
         "PR validation workflow",
+    )
+
+    target_job_start = workflow.find("  enforce-obligations:")
+    static_job_start = workflow.find("  static-validation:")
+    if target_job_start < 0 or static_job_start <= target_job_start:
+        raise PullRequestObligationPolicyError(
+            "PR validation workflow must keep the privileged governor before the static job."
+        )
+
+    privileged_job = workflow[target_job_start:static_job_start]
+    require(
+        privileged_job,
+        (
+            "github.event.pull_request.base.sha",
+            "validate_pr_obligations.py",
+            "convertPullRequestToDraft",
+        ),
+        "Privileged PR-target job",
+    )
+    reject(
+        privileged_job,
+        (
+            "github.event.pull_request.head.sha",
+            "run_local_validation.py",
+            "developer_preview.py",
+            "ctest",
+            "cmake --build",
+            "lfs: true",
+        ),
+        "Privileged PR-target job",
+    )
+
+    read_only_jobs = workflow[static_job_start:]
+    require(
+        read_only_jobs,
+        (
+            "github.event.pull_request.head.sha",
+            "github.event.pull_request.base.sha",
+            "git diff --check",
+            "Windows O3DE prerequisites",
+        ),
+        "Read-only exact-head jobs",
     )
 
     if "## Mandatory merge obligations" not in template:
@@ -140,8 +181,8 @@ def main() -> int:
         print(f"Pull request obligation policy validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Pull request obligation policy validation passed: ready PRs are bound "
-        "to the exact head and incomplete or stale PRs are returned to draft."
+        "Pull request obligation policy validation passed: the trusted governor stays "
+        "base-bound while read-only checks are bound to the exact PR head."
     )
     return 0
 

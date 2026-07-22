@@ -8,43 +8,74 @@ or user-owned Unity Editor test project. It does not cover a proprietary FoA pro
 ## Contract topics
 
 - one versioned `manifest.tginterchange.json` package boundary;
-- stable `PackageId`, `AssetId`, `RevisionFingerprint`, and `BindingId` identities;
+- stable `PackageId`, `AssetId`, `RevisionFingerprint`, `BindingId`, and `MappingId` identities;
 - exact native bindings without treating display names or paths as identity;
 - contained relative payload paths, byte sizes, media types, and SHA-256 observations;
 - explicit coordinate basis, units, transform order, pivot, timebase, and conversion matrices;
 - bounded mesh, texture, material, skeleton, animation, collider, and metadata declarations;
 - provenance, authorship, licence, attribution, modification, and redistribution state;
-- ordered transformations, typed losses, validation evidence, and exact toolchain locks;
+- ordered transformations, typed losses, external qualification evidence, and exact toolchain locks;
 - reverse and round-trip behavior with declared numeric tolerances.
 
 Gate 0 owns inert Core-only outer handoff/result envelopes. No service consumes them and every authority and
 performed flag remains false. A later process operation may bind the interchange package through those
 envelopes, but the envelopes do not replace its identity, transformation, provenance, and loss contracts.
 
-## Open reconciliation points
+## Accepted research conclusion
 
-- The canonical basis needs an explicit forward axis, vector convention, and matrix multiplication convention.
-- FBX byte determinism versus normalized semantic determinism must be defined and tested.
-- External source-native references must be non-material provenance references or become contained,
-  fingerprinted package dependencies.
-- Asset Processor rejection must not leave published source assets changed; qualification needs an isolated
-  scratch project/scan root or an explicit reversible publication model.
+[`CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`](CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md)
+answers the focused Schema-1 structure and identity question.
 
-## Active focused research question
+The accepted research direction is:
 
-The current research process advances through
-[`CANONICAL_INTERCHANGE_SCHEMA_RESEARCH_QUESTION.md`](CANONICAL_INTERCHANGE_SCHEMA_RESEARCH_QUESTION.md).
+```text
+one authoritative manifest
++ typed engine-neutral domain documents
++ contained ordered payload inventory
++ exact native bindings
++ first-class identity mapping events
++ bounded extension namespaces
++ external Framework-owned qualification evidence
+```
 
-That question requires the minimum schema 1 field inventory, canonical serialization rules, identity and native-
-binding state machine, spatial and temporal basis, payload model, transformation and loss taxonomy, provenance
-and legal state, determinism classes, validation/error inventory, schema evolution, and positive/negative
-fixtures.
+Schema 1 is directory-only. It uses a dedicated `foa-interchange-canonical-json-v1` profile, ASCII semantic
+tokens, engine-neutral identities, explicit migration, deterministic blocker codes, and the fixed canonical basis
+`+X` right, `+Y` forward, `+Z` up, right-handed, metres, radians, and seconds. Matrices use column vectors,
+matrix-on-left multiplication, and column-major storage.
 
-The question is research-only and does not authorize schema implementation, provider execution, native-host
-mutation, or runtime work.
+The accepted conclusion remains research-only and grants no implementation or operational authority.
+
+## Resolved reconciliation points
+
+- The canonical forward axis, vector convention, matrix storage, multiplication, and mapping direction are now
+  explicit.
+- FBX remains one payload candidate rather than the schema or a presumed deterministic container.
+- External source-native references remain non-material provenance or become contained fingerprinted payloads.
+- Schema evolution and canonical errors fail closed.
+- Merge and split use first-class mapping records rather than parent references alone.
+- Qualification evidence remains Framework-owned and external to semantic package content.
+- Schema 1 uses a contained directory; deterministic archive assembly remains later packaging work.
+
+## Remaining qualification points
+
+- Gate 5 implementation API and file ownership are not authorized or designed yet.
+- Exact maximum sizes, counts, and public JSON Schema packaging remain open for Gate 5 design.
+- Exact Blender and Unity versions remain unqualified.
+- Asset Processor candidate publication remains a later Gate 7 design and fixture concern.
+- No cross-host compatibility claim exists without exact fixtures and accepted evidence.
+
+## Next focused question
+
+The research process advances to
+[`GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md`](GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md).
+
+That question asks for the exact Core API, canonical serializer boundary, validator limits, migration interface,
+public schema package, synthetic fixture matrix, source ownership, and no-authority acceptance boundary for the
+first Gate 5 contract-only implementation slice.
 
 ## Authority boundary
 
-Format documentation and a successful import do not establish cross-engine compatibility. No format or
-round-trip claim becomes supported until the exact adapters, hosts, profiles, and fixtures pass the applicable
+Format documentation, accepted research, and a successful import do not establish cross-engine compatibility or
+implementation authority. Phase 9 entry and a separately accepted Gate 5 design remain prerequisites. No format
+or round-trip claim becomes supported until the exact adapters, hosts, profiles, and fixtures pass the applicable
 implementation gates.

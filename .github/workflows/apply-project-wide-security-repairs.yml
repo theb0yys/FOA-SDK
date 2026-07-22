@@ -2,10 +2,7 @@ name: Apply project-wide security repairs
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -44,38 +41,58 @@ jobs:
             python - <<'PY'
           from pathlib import Path
 
+          def replace_exact(path: Path, old: str, new: str, *, count: int = 1) -> None:
+              text = path.read_text(encoding="utf-8")
+              if text.count(old) != count:
+                  raise RuntimeError(
+                      f"Unable to apply exact post-extraction patch to {path}: "
+                      f"expected {count}, found {text.count(old)}"
+                  )
+              path.write_text(text.replace(old, new), encoding="utf-8")
+
           validator = Path("Gems/TaintedGrailModdingSDK/Tools/validate_canonical_interchange_compiled_tests.py")
-          text = validator.read_text(encoding="utf-8")
-          old = 'r"ly_add_target\\(\\s*NAME \\$\\{gem_name\\}\\.CanonicalInterchange\\.Tests.*?\\n\\)",'
-          new = 'r"ly_add_target\\(\\s*NAME \\$\\{gem_name\\}\\.CanonicalInterchange\\.Tests.*?\\n\\s*\\)",'
-          if text.count(old) != 1:
-              raise RuntimeError("Unable to repair the canonical target indentation matcher.")
-          validator.write_text(text.replace(old, new), encoding="utf-8")
+          replace_exact(
+              validator,
+              'r"ly_add_target\\(\\s*NAME \\$\\{gem_name\\}\\.CanonicalInterchange\\.Tests.*?\\n\\)",',
+              'r"ly_add_target\\(\\s*NAME \\$\\{gem_name\\}\\.CanonicalInterchange\\.Tests.*?\\n\\s*\\)",',
+          )
 
           test = Path("Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_canonical_interchange_compiled_tests.py")
-          text = test.read_text(encoding="utf-8")
-          text = text.replace("import sys\n", "import sys\nimport unittest\n", 1)
-          old_test = "def test_current_tree_has_core_only_canonical_target() -> None:\n    MODULE.validate(Path(__file__).resolve().parents[4])\n"
-          new_test = "class CanonicalInterchangeCompiledTestValidatorTests(unittest.TestCase):\n    def test_current_tree_has_core_only_canonical_target(self) -> None:\n        MODULE.validate(Path(__file__).resolve().parents[4])\n"
-          if text.count(old_test) != 1:
-              raise RuntimeError("Unable to repair the canonical validator unit-test shape.")
-          test.write_text(text.replace(old_test, new_test), encoding="utf-8")
+          replace_exact(test, "import sys\n", "import sys\nimport unittest\n")
+          replace_exact(
+              test,
+              "def test_current_tree_has_core_only_canonical_target() -> None:\n    MODULE.validate(Path(__file__).resolve().parents[4])\n",
+              "class CanonicalInterchangeCompiledTestValidatorTests(unittest.TestCase):\n    def test_current_tree_has_core_only_canonical_target(self) -> None:\n        MODULE.validate(Path(__file__).resolve().parents[4])\n",
+          )
 
           support = Path("Installer/Tests/Security/security_test_support.py")
-          text = support.read_text(encoding="utf-8")
-          old_expiry = '            expires_at_utc="2026-07-22T12:20:00Z",\n'
-          new_expiry = '            expires_at_utc="2026-07-22T12:15:00Z",\n'
-          if text.count(old_expiry) != 1:
-              raise RuntimeError("Unable to repair the authority-proof fixture expiry.")
-          support.write_text(text.replace(old_expiry, new_expiry), encoding="utf-8")
+          replace_exact(
+              support,
+              '            expires_at_utc="2026-07-22T12:20:00Z",\n',
+              '            expires_at_utc="2026-07-22T12:15:00Z",\n',
+          )
 
           publisher = Path("Installer/Bootstrapper/InstallationStatePublisher/Source/installation_state_publisher.py")
-          text = publisher.read_text(encoding="utf-8")
-          old_publish = '''    target = root / f"{checked['state_reference']}.json"\n    previous = _file_sha256(target)\n'''
-          new_publish = '''    target = root / f"{checked['state_reference']}.json"\n    # This read-only preflight gives deterministic replay diagnostics without\n    # replacing the atomic O_EXCL claim that remains the enforcement point.\n    claim_target = (\n        Path(claim_root)\n        / "claim.installation-state-publication-grant"\n        / f"{checked['grant_sha256']}.claim.json"\n    )\n    if claim_target.exists() or claim_target.is_symlink():\n        raise InstallationStatePublisherError(\n            "Publication grant consumption failed: Artifact has already been consumed: "\n            + str(checked["grant_sha256"])\n        )\n    previous = _file_sha256(target)\n'''
-          if text.count(old_publish) != 1:
-              raise RuntimeError("Unable to add the publication replay preflight.")
-          publisher.write_text(text.replace(old_publish, new_publish), encoding="utf-8")
+          replace_exact(
+              publisher,
+              '''    target = root / f"{checked['state_reference']}.json"\n    previous = _file_sha256(target)\n''',
+              '''    target = root / f"{checked['state_reference']}.json"\n    # This read-only preflight gives deterministic replay diagnostics without\n    # replacing the atomic O_EXCL claim that remains the enforcement point.\n    claim_target = (\n        Path(claim_root)\n        / "claim.installation-state-publication-grant"\n        / f"{checked['grant_sha256']}.claim.json"\n    )\n    if claim_target.exists() or claim_target.is_symlink():\n        raise InstallationStatePublisherError(\n            "Publication grant consumption failed: Artifact has already been consumed: "\n            + str(checked["grant_sha256"])\n        )\n    previous = _file_sha256(target)\n''',
+          )
+
+          runner_policy_test = Path("Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_ci_runner_policy.py")
+          replace_exact(
+              runner_policy_test,
+              '        self.assertIn("TaintedGrailModdingSDK.Catalog.Tests", command.argv)\n',
+              '        self.assertIn(\n            r"TaintedGrailModdingSDK\\.(Catalog|CanonicalInterchange)\\.Tests",\n            command.argv,\n        )\n',
+          )
+
+          receipt_contract = Path("Gems/TaintedGrailModdingSDK/Tools/validate_validation_receipt_contract.py")
+          replace_exact(
+              receipt_contract,
+              '"compiled-catalog-tests"',
+              '"compiled-catalog-and-canonical-interchange-tests"',
+              count=2,
+          )
           PY
             git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             git rm -r Gems/TaintedGrailModdingSDK/Tools/project_wide_security_repair_bundle

@@ -89,6 +89,7 @@ limitations:
 8. A fixture specification is not an executed fixture result. Profile binding without the required assembly fingerprints and observations creates no promotion evidence.
 9. A deterministic adverse implementation finding may produce `prohibited-current-source` without claiming that the underlying modding goal is permanently impossible.
 10. An offline specification receipt has no runtime or promotion authority.
+11. Synthetic locking, recovery, concurrency, cancellation, serialization and CI policy tests do not establish game-runtime behavior.
 
 ## Evidence boundary
 
@@ -196,6 +197,12 @@ Batch 006 adds eleven synthetic tests and promotes nothing.
 [Semantic Hook Batch 007](BATCH_007.md) hardens the synthetic primitives into a reusable package with explicit state machines, hash-chained recovery journals, failure matrices, API v2 serialization fixtures and read-only offline CI.
 
 Batch 007 adds no runtime adapter or evidence authority and leaves every existing prohibition unchanged.
+
+### Batch 008
+
+[Semantic Hook Batch 008](BATCH_008.md) adds owner/generation locks, deterministic recovery plans, two-writer publication fixtures, cancellation checkpoints, stale-generation API v2 snapshots and negative CI policy tests.
+
+Batch 008 preserves the complete no-runtime and no-promotion boundary and leaves every existing prohibition unchanged.
 
 ## Initial domain indexes
 

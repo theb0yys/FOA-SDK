@@ -62,6 +62,12 @@ jobs:
       - name: Validate Developer Preview 0 launch and diagnostics contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_launch_diagnostics.py
 
+      - name: Test Developer Preview 0 manual UI evidence tooling
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_ui_evidence.py" -v
+
+      - name: Validate Developer Preview 0 manual UI evidence contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_ui_evidence.py
+
       - name: Run focused validator regression matrix
         shell: bash
         run: |

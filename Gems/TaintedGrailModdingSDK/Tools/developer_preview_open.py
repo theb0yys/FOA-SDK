@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from pathlib import PureWindowsPath
 from typing import Sequence
 
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -120,7 +121,20 @@ def bounded_launcher_path(
     if value is None:
         return default
     candidate = value.expanduser()
-    if not candidate.is_absolute():
+    windows_candidate = PureWindowsPath(str(candidate))
+    windows_root = PureWindowsPath(str(launcher_root))
+    foreign_windows_absolute = (
+        windows_candidate.is_absolute() and not candidate.is_absolute()
+    )
+    if foreign_windows_absolute:
+        try:
+            windows_candidate.relative_to(windows_root)
+        except ValueError as exc:
+            raise developer_preview_workspace.WorkspaceError(
+                f"The Developer Preview {label} must remain inside "
+                f"{launcher_root}: {candidate}"
+            ) from exc
+    if not candidate.is_absolute() and not foreign_windows_absolute:
         candidate = launcher_root / candidate
     candidate = candidate.resolve(strict=False)
     root = launcher_root.resolve(strict=False)

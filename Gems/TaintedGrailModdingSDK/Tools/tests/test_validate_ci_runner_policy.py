@@ -179,6 +179,7 @@ class LocalValidationEntrypointTests(unittest.TestCase):
         self.assertEqual(len(VALIDATORS), len(set(VALIDATORS)))
         self.assertIn("validate_population_actor_troop_editor.py", VALIDATORS)
         self.assertIn("validate_tainted_framework_editor_services.py", VALIDATORS)
+        self.assertIn("validate_tainted_system_ports.py", VALIDATORS)
         for validator in VALIDATORS:
             self.assertTrue((REAL_TOOLS_ROOT / validator).is_file(), validator)
 

@@ -40,6 +40,7 @@ VALIDATORS = (
     "validate_core_framework_build_graph.py",
     "validate_downstream_compiled_tests.py",
     "validate_research_contract_hardening.py",
+    "validate_tainted_system_ports.py",
     "validate_population_actor_troop_editor.py",
     "validate_population_contract_hardening.py",
     "validate_tainted_framework_knowledge.py",

@@ -19,6 +19,8 @@ source controls until a separately reviewed change is accepted.
 - [`o3de-to-unity-conversion-and-runtime-bridge/`](o3de-to-unity-conversion-and-runtime-bridge/README.md) —
   O3DE-hosted authoring providers, Blender, controlled Unity Editor interchange, and separately gated FoA
   runtime-adapter research.
+- [`tainted-grail-system-ports/`](tainted-grail-system-ports/README.md) — exact-commit selective ports from the
+  user's proven Tainted Grail frameworks, UI, diagnostics, Road Atlas, AI, and acquisition systems.
 
 ## Research record rules
 

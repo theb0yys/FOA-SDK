@@ -134,7 +134,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             "validate_path_policy.py\n"
             "bounded per-user storage\n"
             "Tainted Grail Modding Editor.lnk\n"
-            "Tools → Tainted Grail SDK\n"
+            "Tools \u2192 Tainted Grail SDK\n"
             "LOCALAPPDATA\n",
             encoding="utf-8",
         )

@@ -116,7 +116,7 @@ namespace TaintedGrailModdingSDK
         m_toolNameEdit = new QLineEdit(intakeGroup);
         m_toolVersionEdit = new QLineEdit(intakeGroup);
         m_capturedAtEdit = new QLineEdit(intakeGroup);
-        m_capturedAtEdit->setText(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+        m_capturedAtEdit->setText(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
         m_limitationsEdit = new QPlainTextEdit(intakeGroup);
         m_limitationsEdit->setMaximumHeight(72);
         m_limitationsEdit->setPlaceholderText(tr("Known omissions, capture limitations, or interpretation boundaries"));
@@ -323,7 +323,7 @@ namespace TaintedGrailModdingSDK
         SetStatus(
             tr("Source and evidence documents saved:\n%1\n%2")
                 .arg(ToQString(paths.m_sourceDocumentPath), ToQString(paths.m_evidenceDocumentPath)));
-        m_capturedAtEdit->setText(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+        m_capturedAtEdit->setText(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
     }
 
     void SourceEvidenceIntakeWidget::ReloadWorkspaceSources()

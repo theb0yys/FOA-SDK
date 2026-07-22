@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/AvalonAiExtension.cpp
+    Source/AvalonAiExtension.h
     Source/AdapterBuildManifestService.cpp
     Source/AdapterBuildManifestService.h
     Source/AdapterBuildManifestServicePart1.inl
@@ -133,6 +135,10 @@ set(FILES
     Source/EconomyModels.h
     Source/FoundationModels.cpp
     Source/FoundationModels.h
+    Source/FoARuntimeAdapterRoutes.cpp
+    Source/FoARuntimeAdapterRoutes.h
+    Source/GameInformationAcquisition.cpp
+    Source/GameInformationAcquisition.h
     Source/PackagePathValidation.cpp
     Source/PackagePathValidation.h
     Source/PopulationActionLaneService.cpp
@@ -142,6 +148,8 @@ set(FILES
     Source/PopulationModels.h
     Source/ResearchContractValidation.cpp
     Source/ResearchContractValidation.h
+    Source/RoadAtlasExtension.cpp
+    Source/RoadAtlasExtension.h
     Source/SourceEvidenceRegistry.cpp
     Source/SourceEvidenceRegistry.h
 )

@@ -194,9 +194,11 @@ class PopulationActorTroopEditorValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md",
             "6. **Complete** \u2014 immutable population action-lane derivation\n"
-            "7. **Next** \u2014 deterministic synthetic population fixture\n"
+            "7. **Complete** \u2014 deterministic synthetic population fixture\n"
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build\n"
             "independently tracked actor, troop, and unstaged-member drafts\n"
-            "exact-head compiled test run\nWindows UI review\n",
+            "does not claim that compiled tests have run in an exact-head configured build\n"
+            "Windows UI evidence exists\n",
         )
 
     def test_valid_contract_passes(self) -> None:
@@ -398,6 +400,15 @@ class PopulationActorTroopEditorValidatorTests(unittest.TestCase):
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(PopulationEditorContractError, r"6\. \*\*Complete"):
+            validate_population_actor_troop_editor(self.repo_root)
+
+    def test_rejects_stale_fixture_status(self) -> None:
+        path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
+        text = path.read_text(encoding="utf-8").replace(
+            "7. **Complete**", "7. **Next**"
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(PopulationEditorContractError, r"7\. \*\*Complete"):
             validate_population_actor_troop_editor(self.repo_root)
 
 

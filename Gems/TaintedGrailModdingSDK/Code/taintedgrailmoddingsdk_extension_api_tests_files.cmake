@@ -6,5 +6,10 @@
 #
 
 set(FILES
+    Tests/AvalonAiExtensionTests.cpp
     Tests/ExtensionAPITests.cpp
+    Tests/FoARuntimeAdapterRoutesTests.cpp
+    Tests/GameInformationAcquisitionTests.cpp
+    Tests/RoadAtlasExtensionTests.cpp
+    Tests/TaintedInterfaceUiUtilitiesTests.cpp
 )

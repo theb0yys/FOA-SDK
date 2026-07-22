@@ -225,7 +225,7 @@ def validate_preview_project(product_root: Path) -> None:
             "validate_path_policy.py",
             "bounded per-user storage",
             "Tainted Grail Modding Editor.lnk",
-            "Tools → Tainted Grail SDK",
+            "Tools \u2192 Tainted Grail SDK",
             "LOCALAPPDATA",
         ),
         "dedicated-entry quickstart",

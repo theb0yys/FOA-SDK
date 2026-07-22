@@ -478,6 +478,31 @@ Remaining Phase 8 work includes controlled package assembly, trusted filesystem 
 - Public schema packages, CI fixtures, compatibility matrices, and migration tooling.
 - Documentation and examples for third-party adapters.
 
+### Proven Tainted Grail system extensions
+
+Status: exact-source contract import layer implemented; provider execution and full domain vertical slices remain gated.
+
+- The public `ExtensionAPI` remains the only editor extension boundary: read-only profile/catalog copies and
+  governed candidate-evidence submission, with no mutable catalog or runtime authority.
+- Tainted Framework `0.1.33` knowledge is pinned to an exact upstream commit, distinguishes the validated Mono
+  route from the later separately versioned IL2CPP host evidence, and keeps both runtime hosts out of the Editor
+  build graph.
+- Tainted Interface `0.2.6` contributes semantic UI/icon identities, fail-closed asset resolution,
+  editor fallback theme tokens, and project-owned fallback SVGs. The unlicensed 1.85 GB upstream asset payload
+  is not imported.
+- The common local, pinned-GitHub, and optional Merlin acquisition contract preserves exact fingerprints,
+  provider precedence, visible conflicts, and candidate-only authority. Local and Merlin retrieval remain
+  unqualified; pinned GitHub observations are exact-commit bound.
+- Avalon Core Road Atlas schemas and Avalon AI API 2.0 authoring contracts are compiled, deterministic, and
+  inert. Their durable catalog/persistence/Editor vertical slices remain later first-party domain work.
+- Separate Mono `0.1.33` and IL2CPP `0.1.36` runtime adapter routes preserve exact upstream host evidence and
+  profile requirements while build, deployment, execution, game APIs, mutation, and save access remain disabled.
+- FoA Mod Manager, Template Diagnostics, and Avalon Awakened/Kandra remain separately reviewed imports.
+- Exact source, version, branch, compatibility, licence, fixture, and known-limitation records are mandatory;
+  no Waning or Bannerlord repository is part of this track.
+
+See [Tainted Grail System Ports](Research/tainted-grail-system-ports/README.md).
+
 ### External authoring tools and engine interchange
 
 Status: Gate 0 contract-only precursor in development; Phase 9 provider and execution work remains proposed.

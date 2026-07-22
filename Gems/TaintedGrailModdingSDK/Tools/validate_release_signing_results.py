@@ -278,15 +278,15 @@ def validate(repo_root: Path) -> None:
         (
             "Tainted Grail Release Signing Results",
             "QAbstractItemView::NoEditTriggers",
-            "contract status=not ",
-            "evaluated | artifact=",
-            "Supplied diagnostics — not evaluated",
+            '"not available in registry-only view | contract status=not "',
+            '"evaluated | artifact=%3 (%4) | assembly=%5 (%6)"',
+            "Supplied diagnostics \\u2014 not evaluated",
             "MaximumReleaseSigningEditorRows",
             "MaximumSigningCellCharacters",
             "display truncated",
             "reported fingerprint=",
-            "does not infer, authenticate, ",
-            "declare diagnostics safe, or verify acceptance.",
+            '"release-signing evidence service; this pane does not infer, authenticate, "',
+            '"declare diagnostics safe, or verify acceptance."',
             "SDK read=no",
             "archive-open=no",
             "key=no",
@@ -425,7 +425,7 @@ def validate(repo_root: Path) -> None:
         "reported result fingerprint",
         "sdk-derived authority fingerprint",
         "application/octet-stream",
-        "supplied diagnostics — not evaluated",
+        "supplied diagnostics \u2014 not evaluated",
         "does not load keys",
         "does not sign or verify",
         "no upload or publication occurs",
@@ -458,7 +458,7 @@ def validate(repo_root: Path) -> None:
         "The roadmap does not record the implemented release-signing slice and UI coverage.",
     )
     require(
-        "next ordered slice — release-signing result envelope" not in roadmap_lower,
+        "next ordered slice \u2014 release-signing result envelope" not in roadmap_lower,
         "The roadmap still describes the implemented release-signing slice as future work.",
     )
 

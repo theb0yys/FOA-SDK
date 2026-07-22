@@ -73,7 +73,10 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
                 workflow.read_text(encoding="utf-8") + "gh release create v0.1.0\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(InstallerWorkflowValidationError, "forbidden"):
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "forbidden automatic/product-root behavior",
+            ):
                 validate_installer_workflow(repo)
 
     def test_legacy_installer_root_is_rejected(self) -> None:

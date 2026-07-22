@@ -87,7 +87,7 @@ class PopulationContractHardeningValidatorTests(unittest.TestCase):
             "if (!covered[index])",
             "if (covered[index])",
         )
-        self.assert_validation_fails(r"if \(!covered\[index\]\)")
+        self.assert_validation_fails("reject every uncovered binding")
 
     def test_workspace_path_policy_call_fails_closed(self) -> None:
         self.mutate(
@@ -142,7 +142,7 @@ class PopulationContractHardeningValidatorTests(unittest.TestCase):
             "&& (!member.m_required || member.m_minimumCount > 0);",
             ";",
         )
-        self.assert_validation_fails("positive minimum")
+        self.assert_validation_fails(r"!member\.m_required")
 
     def test_missing_focused_compiled_test_fails_closed(self) -> None:
         path = (

@@ -843,9 +843,9 @@ def summarize(args: argparse.Namespace) -> int:
     for gate_name in GATE_NAMES:
         gate = find_gate(receipt, gate_name)
         if gate is None:
-            print(f"| `{gate_name}` | missing | — | — |")
+            print(f"| `{gate_name}` | missing | \u2014 | \u2014 |")
             continue
-        exit_value = "—" if gate["exit_code"] is None else str(gate["exit_code"])
+        exit_value = "\u2014" if gate["exit_code"] is None else str(gate["exit_code"])
         notes = gate["notes"].replace("|", "\\|").replace("\n", " ")
         print(f"| `{gate_name}` | {gate['status']} | {exit_value} | {notes} |")
     if receipt.get("risk_acceptances"):
@@ -853,7 +853,7 @@ def summarize(args: argparse.Namespace) -> int:
         print("Maintainer risk acceptances:")
         for acceptance in receipt["risk_acceptances"]:
             print(
-                f"- `{acceptance['gate']}` — `{acceptance['maintainer_alias']}` at "
+                f"- `{acceptance['gate']}` \u2014 `{acceptance['maintainer_alias']}` at "
                 f"`{acceptance['accepted_at_utc']}`: {acceptance['rationale']}"
             )
     return 0

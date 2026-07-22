@@ -8,6 +8,22 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Exact-commit Tainted Grail system-port research archive covering Tainted Framework, Tainted Interface,
+  Avalon Core/Road Atlas, FoA Mod Manager, Template Diagnostics, Avalon AI, Avalon Awakened/Kandra, and the
+  later local/GitHub/optional-Merlin acquisition routes, with every Waning/Bannerlord repository excluded.
+- Build-linked Tainted Framework `0.1.33` canonical knowledge tests and production linkage for the accepted
+  Tainted Interface `0.2.6` Foundation utility service, with semantic asset IDs, project-owned fallback SVGs,
+  fail-closed upstream-payload resolution, and no imported upstream asset payload.
+- Focused Tainted Grail system-port validator and negative regression tests for source binding, build/test
+  linkage, whole-second Source Intake timestamps, licence/payload boundaries, and runtime-host separation.
+- Provider-neutral local/pinned-GitHub/optional-Merlin acquisition observations with exact-profile validation,
+  explicit conflict retention, candidate evidence projection, and no automatic promotion or runtime permission.
+- Exact-source Avalon Core Road Atlas schema, evidence, geometry, connectivity, deterministic fingerprint, and
+  planning-only validation contracts without importing reviewed upstream road payloads.
+- Exact-source Avalon AI API 2.0 package, blackboard, goal, action, planning-input, validation, and inert
+  authoring-plan contracts with runtime hosts and execution backends excluded.
+- Separate exact-profile Mono `0.1.33` and IL2CPP `0.1.36` runtime adapter evidence routes with building,
+  deployment, execution, game access, mutation, and save access disabled.
 - Public **Actor and Troop Editor Guide** covering typed actor/troop/member authoring, exact template and leader bindings, governed action lanes, dirty-draft protection, deterministic fixture use, persistence, and runtime limits.
 - Public **Actor and Troop Architecture and Data Formats** contract covering Core/Framework/Editor ownership, catalog schema 2, exact evidence and identity, deterministic serialization, fixture format, and deferred spawn/runtime contracts.
 - Public **Actor and Troop Release Readiness** gate covering local validation, exact-head O3DE configure/build, compiled catalog tests, Windows evidence, release claims, and rollback.

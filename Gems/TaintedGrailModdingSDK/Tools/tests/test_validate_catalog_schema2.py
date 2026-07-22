@@ -258,14 +258,14 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "actor/troop contracts, reflection\n"
             "CatalogDatabase validation, queries\n"
             "schema-1 migration, schema-2-only writing\n"
-            "4. **Complete** — Framework evidence-bound authoring, atomic troop-definition bootstrap\n"
-            "5. **Complete** — Core and Framework positive/negative population-authoring test sources "
+            "4. **Complete** \u2014 Framework evidence-bound authoring, atomic troop-definition bootstrap\n"
+            "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources "
             "and compiled-target wiring\n"
-            "6. **Complete** — immutable population action-lane derivation, "
+            "6. **Complete** \u2014 immutable population action-lane derivation, "
             "Actor and Troop Editor pane, and lifecycle registration\n"
-            "7. **Complete** — deterministic synthetic population fixture and local validation\n"
-            "8. **Complete** — public user, architecture/data-format, release-readiness documentation and twenty-four-pane checklist\n"
-            "9. **Active acceptance gate** — exact-head O3DE configure/build and compiled tests\n"
+            "7. **Complete** \u2014 deterministic synthetic population fixture and local validation\n"
+            "8. **Complete** \u2014 public user, architecture/data-format, release-readiness documentation and twenty-four-pane checklist\n"
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build and compiled tests\n"
             "does not claim that compiled tests have run\n"
             "loaded candidate remains schema 1\n"
             "direct save is refused\n"
@@ -327,8 +327,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
     def test_rejects_stale_population_test_implementation_status(self) -> None:
         path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
         text = path.read_text(encoding="utf-8").replace(
-            "5. **Complete** — Core and Framework positive/negative population-authoring test sources",
-            "5. **Pending** — Core and Framework positive/negative population-authoring test sources",
+            "5. **Complete** \u2014 Core and Framework positive/negative population-authoring test sources",
+            "5. **Pending** \u2014 Core and Framework positive/negative population-authoring test sources",
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(CatalogSchema2ContractError, r"5\. \*\*Complete"):
@@ -337,8 +337,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
     def test_rejects_stale_editor_complete_status(self) -> None:
         path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
         text = path.read_text(encoding="utf-8").replace(
-            "6. **Complete** — immutable population action-lane derivation",
-            "6. **Pending** — immutable population action-lane derivation",
+            "6. **Complete** \u2014 immutable population action-lane derivation",
+            "6. **Pending** \u2014 immutable population action-lane derivation",
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(CatalogSchema2ContractError, r"6\. \*\*Complete"):
@@ -347,8 +347,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
     def test_rejects_fixture_regressed_to_next_work(self) -> None:
         path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
         text = path.read_text(encoding="utf-8").replace(
-            "7. **Complete** — deterministic synthetic population fixture",
-            "7. **Next** — deterministic synthetic population fixture",
+            "7. **Complete** \u2014 deterministic synthetic population fixture",
+            "7. **Next** \u2014 deterministic synthetic population fixture",
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(

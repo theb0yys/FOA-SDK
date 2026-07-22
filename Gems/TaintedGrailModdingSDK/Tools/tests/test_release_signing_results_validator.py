@@ -135,7 +135,7 @@ class ReleaseSigningValidatorTests(unittest.TestCase):
                 "AdapterReleaseSigningResultWidget.cpp"
             ),
             lambda text: text.replace(
-                "Supplied diagnostics — not evaluated",
+                "Supplied diagnostics \\u2014 not evaluated",
                 "Safe diagnostics",
             ),
         )
@@ -175,7 +175,7 @@ class ReleaseSigningValidatorTests(unittest.TestCase):
                 "",
             ),
         )
-        self.assert_validation_fails("hardening")
+        self.assert_validation_fails("HardeningTests")
 
     def test_missing_local_gate_registration_fails_closed(self) -> None:
         self.mutate(
@@ -209,7 +209,7 @@ class ReleaseSigningValidatorTests(unittest.TestCase):
             "ROADMAP.md",
             lambda text: text.replace(
                 "### Release-signing result envelope",
-                "### Next ordered slice — release-signing result envelope",
+                "### Next ordered slice \u2014 release-signing result envelope",
             ),
         )
         self.assert_validation_fails("roadmap")

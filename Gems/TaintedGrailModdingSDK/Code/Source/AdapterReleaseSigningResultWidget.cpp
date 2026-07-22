@@ -216,7 +216,7 @@ namespace TaintedGrailModdingSDK
             tr("Reported signing outcome"),
             tr("Signature artifact"),
             tr("Failures"),
-            tr("Supplied diagnostics — not evaluated"),
+            tr("Supplied diagnostics \u2014 not evaluated"),
             tr("Context"),
             tr("Safety"),
         });

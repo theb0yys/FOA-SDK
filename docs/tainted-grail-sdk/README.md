@@ -62,6 +62,8 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Editor Toolchain and Unity Interchange Design](EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md) — located O3DE, Blender, and Unity components; provider qualification; deterministic interchange; loss reporting; and staged delivery gates.
 - [External Tool Interchange Gate 0](EXTERNAL_TOOL_INTERCHANGE_GATE_0.md) — Core-only disabled handoff and result envelopes, canonical binding, fail-closed validation, and the boundary before any process work.
 - [O3DE-to-Unity Bridge Research Archive](../../Research/o3de-to-unity-conversion-and-runtime-bridge/README.md) — supplied report, durable source and claim registers, research areas, and gate reconciliation.
+- [Tainted Grail System Ports](../../Research/tainted-grail-system-ports/README.md) — exact-commit inventory and
+  gated selective ports for the user's Tainted Grail frameworks, UI, diagnostics, roads, AI, and providers.
 - [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, and separation from engine testing projects.
 - [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, and diagnostic overrides.
 - [Atomic Workspace Transition and Schema Contract](WORKSPACE_ATOMICITY_AND_SCHEMA.md) — schema-0 migration, durable schema 1, candidate construction, cross-binding validation, atomic publication, rollback, and failure-stage tests.
@@ -122,6 +124,7 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - pinned Tainted Framework `0.1.33` knowledge, complete selected-component classification, canonical golden fixtures, exact Mono/IL2CPP evidence separation, the first named governed ExtensionAPI consumer, and persistent engine-neutral Editor services for exact compatibility, API readiness, safe configuration defaults, diagnostics vocabulary, and non-executable activation plans;
 - pinned Tainted Interface `0.2.6` semantic UI metadata, deterministic style/metric/layout utilities, an exact nineteen-ID curated catalog, blocked `NOASSERTION` upstream payloads, and verified project-owned SVG fallbacks without renderer or runtime authority;
 - typed transient adapter declarations, capability compatibility, deterministic work-order plans, runtime-result evidence, build manifests, package/deployment previews, deployment work orders/results, verification/reconciliation, typed transient release-signing result envelopes, and release metadata contracts with operational permissions disabled;
+- public read-only ExtensionAPI contracts plus provider-neutral game-information observations, Road Atlas schema/geometry validation, Avalon AI API 2.0 authoring plans, and distinct inert Mono/IL2CPP adapter routes, all pinned to exact upstream evidence;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub-hosted static validation now runs for relevant pull requests and pushes to `main`; exact-head O3DE configure, build, compiled tests, and Windows evidence remain separate mandatory gates.

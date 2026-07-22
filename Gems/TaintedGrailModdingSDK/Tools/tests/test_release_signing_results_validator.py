@@ -73,7 +73,7 @@ class ReleaseSigningValidatorTests(unittest.TestCase):
     def assert_validation_fails(self, expected_fragment: str) -> None:
         with self.assertRaisesRegex(
             validator.ReleaseSigningValidationError,
-            expected_fragment,
+            f"(?i){expected_fragment}",
         ):
             validator.validate(self.root)
 

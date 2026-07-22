@@ -1,10 +1,10 @@
 # Actor and Troop Editor Design
 
-Status: active hardening — Core contracts/database, schema-2 migration/persistence, Framework evidence-bound
-candidate publication, Core/Framework population-authoring test-source wiring, the immutable population
-action-lane contract, the Actor and Troop Editor pane lifecycle, deterministic fixture, public documentation,
-and local-validation integration are implemented. These results do not claim an exact-head compiled test run
-or Windows UI review.
+Status: implemented vertical slice — Core contracts/database, schema-2 migration/persistence, Framework
+evidence-bound candidate publication, production-linked population tests, the immutable population action-lane
+contract, Actor and Troop Editor lifecycle, deterministic synthetic fixture, full local-validation integration,
+and public release-readiness documentation are implemented. Exact-head O3DE configure/build, compiled Catalog
+test execution, and the real Windows twenty-four-pane evidence pass remain the active acceptance gate.
 
 Target: first Phase 6 functional-expansion vertical slice
 
@@ -467,15 +467,16 @@ After design approval, implementation proceeds in focused reviewable units:
 6. **Complete** — immutable population action-lane derivation, Actor and Troop Editor pane, and lifecycle
    registration;
 7. **Complete** — deterministic synthetic population fixture and full vertical-slice local-validation integration;
-8. **Complete** — public user documentation, changelog, focused Actor/Troop evidence, and integration with the
-   current twenty-four-pane checklist;
-9. **Active acceptance gate** — exact-head configure/build, compiled tests, and Windows UI evidence.
+8. **Complete** — public user, architecture/data-format, release-readiness, changelog, and twenty-four-pane
+   evidence-checklist updates;
+9. **Active acceptance gate** — exact-head O3DE configure/build, compiled Catalog tests, and Windows UI evidence.
 
-Completion of units 1–8 establishes durable population contracts, persistence, Framework authoring commands,
-positive/negative Core and Framework population-authoring test sources, the immutable action-lane contract,
-the registered Actor and Troop Editor pane, deterministic fixture, local-validation integration, and public
-documentation. It does not claim that the compiled tests have run in an exact-head configured build or that
-Windows UI evidence exists.
+Completion of units 1–8 establishes the implemented Actor/Troop vertical slice: durable population contracts,
+persistence, Framework authoring commands, positive/negative production-linked tests, immutable action lanes,
+the registered Editor pane, deterministic project-owned fixture, validator integration, and public documentation.
+It does not claim that compiled tests have run in an exact-head configured build or that Windows UI evidence exists.
+
+Unit 9 owns the remaining exact-head host and real Windows twenty-four-pane acceptance evidence.
 
 Every commit receives complete staged-diff self-review, DCO sign-off, relevant focused validation, and
 `FOA-plug-in-development` synchronization before and after publication.

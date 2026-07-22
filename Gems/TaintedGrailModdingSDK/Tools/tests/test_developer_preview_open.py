@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -75,10 +76,11 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
         self.assertIn("--result", values)
 
     def test_launcher_outputs_must_remain_in_bounded_storage(self) -> None:
+        outside = Path("D:/outside/logs") if os.name == "nt" else Path("/outside/logs")
         args = argparse.Namespace(
             editor=None,
             build_dir=Path("build/preview"),
-            log_dir=Path("D:/outside/logs"),
+            log_dir=outside,
             result=None,
             dry_run=True,
         )

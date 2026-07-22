@@ -708,6 +708,7 @@ def validation_plan(
                 "-C",
                 DEFAULT_CONFIGURATION,
                 "--output-on-failure",
+                "--no-tests=error",
                 "-R",
                 CATALOG_TEST_PATTERN,
             ),

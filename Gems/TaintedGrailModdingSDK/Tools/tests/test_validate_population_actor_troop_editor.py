@@ -195,9 +195,10 @@ class PopulationActorTroopEditorValidatorTests(unittest.TestCase):
             "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md",
             "6. **Complete** \u2014 immutable population action-lane derivation\n"
             "7. **Complete** \u2014 deterministic synthetic population fixture\n"
-            "9. **Active acceptance gate** \u2014 exact-head configure/build\n"
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build\n"
             "independently tracked actor, troop, and unstaged-member drafts\n"
-            "exact-head compiled test run\nWindows UI review\n",
+            "does not claim that compiled tests have run in an exact-head configured build\n"
+            "Windows UI evidence exists\n",
         )
 
     def test_valid_contract_passes(self) -> None:

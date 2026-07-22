@@ -523,7 +523,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
     require_fragments(
         actor_design,
         (
-            "Status: active hardening",
+            "Status: implemented vertical slice",
             "actor/troop contracts, reflection",
             "CatalogDatabase validation, queries",
             "schema-1 migration, schema-2-only writing",
@@ -532,12 +532,22 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "6. **Complete** \u2014 immutable population action-lane derivation",
             "Actor and Troop Editor pane",
             "7. **Complete** \u2014 deterministic synthetic population fixture",
-            "8. **Complete** \u2014 public user documentation",
-            "9. **Active acceptance gate** \u2014 exact-head configure/build",
-            "do not claim an exact-head compiled test run",
+            "8. **Complete** \u2014 public user, architecture/data-format, release-readiness",
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build",
+            "twenty-four-pane",
+            "does not claim that compiled tests have run",
             "loaded candidate remains schema 1",
             "direct save is refused",
             "successful bound replacement and `BuildDocument`",
+        ),
+        "Actor/troop implementation status",
+    )
+    reject_fragments(
+        actor_design,
+        (
+            "Status: active implementation",
+            "7. **Next** \u2014 deterministic synthetic population fixture",
+            "twenty-three-pane checklist",
         ),
         "Actor/troop implementation status",
     )
@@ -548,23 +558,39 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "compiled-target wiring",
             "6. **Complete** \u2014 immutable population action-lane derivation",
             "7. **Complete** \u2014 deterministic synthetic population fixture",
-            "8. **Complete** \u2014 public user documentation",
-            "9. **Active acceptance gate** \u2014 exact-head configure/build",
+            "8. **Complete** \u2014 public user, architecture/data-format, release-readiness",
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build",
         ),
         "Actor/troop implementation sequence",
     )
     roadmap = read_text(repo_root / "ROADMAP.md")
-    require_fragments(
+    roadmap_population = section_from_marker(
         roadmap,
+        "### Actors and population",
+        "\n### ",
+        "Roadmap population status",
+    )
+    require_fragments(
+        roadmap_population,
         (
-            "### Actors and population",
             "Status: implemented vertical slice, continuing hardening and exact-head host/UI verification.",
-            "Core contracts, CatalogDatabase integration, durable catalog schema-2 migration/persistence",
+            "durable catalog schema-2 migration/persistence",
             "evidence-bound Framework candidate publication",
             "positive/negative production-linked population tests are implemented",
             "immutable seven-lane population action contract",
+            "registered **Tainted Grail Actor and Troop Editor** pane",
             "project-owned deterministic schema-2 population fixture",
-            "Exact-head O3DE configure/build, compiled Catalog test execution",
+            "real Windows twenty-four-pane evidence pass remain the active acceptance gate",
+            "Spawn and Encounter Editor is the next population authoring capability.",
+        ),
+        "Roadmap population status",
+    )
+    reject_fragments(
+        roadmap_population,
+        (
+            "Status: active development. Core contracts, CatalogDatabase integration",
+            "Framework population-authoring test sources with compiled-target wiring are implemented",
+            "deterministic synthetic fixture and complete local-validation integration are next",
         ),
         "Roadmap population status",
     )
@@ -608,14 +634,13 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         (
             "Actor and Troop Editor Design",
             "ACTOR_TROOP_EDITOR_DESIGN.md",
-            "deterministic fixture, validation, and deferred runtime scope",
-            "typed actor profiles, troop profiles, exact troop-member rows",
-            "deterministic project-owned fixture",
+            "approved population design and implementation history",
+            "deterministic fixture",
+            "registered Actor/Troop pane",
+            "exact-head O3DE configure, build, compiled tests",
         ),
         "Documentation hub",
     )
-
-
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
     try:

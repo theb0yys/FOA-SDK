@@ -51,6 +51,22 @@ class RepositoryStructureContractTests(unittest.TestCase):
     def test_reviewed_product_tree_passes(self) -> None:
         contract.validate_paths(valid_tree())
 
+    def test_automatic_static_workflow_is_required(self) -> None:
+        self.assertIn(
+            contract.AUTOMATIC_STATIC_WORKFLOW,
+            contract.ALLOWED_GITHUB_FILES,
+        )
+        self.assertIn(
+            contract.AUTOMATIC_STATIC_WORKFLOW,
+            contract.REQUIRED_PATHS,
+        )
+        paths = valid_tree() - {contract.AUTOMATIC_STATIC_WORKFLOW}
+        with self.assertRaisesRegex(
+            contract.RepositoryStructureError,
+            "missing required",
+        ):
+            contract.validate_paths(paths)
+
     def test_manifest_backed_installer_suite_passes(self) -> None:
         paths = valid_tree() | {
             "Installer/Suites/Developer/suite.json",

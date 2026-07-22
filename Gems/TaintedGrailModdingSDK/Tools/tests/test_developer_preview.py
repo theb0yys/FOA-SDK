@@ -240,6 +240,9 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
         source_policy = next(step for step in plan if step.name == "o3de-source-policy")
         self.assertIn(str(engine / "scripts/commit_validation/validate_file_or_folder.py"), source_policy.command)
         self.assertIn(str(product / "Gems/TaintedGrailModdingSDK"), source_policy.command)
+        compiled = next(step for step in plan if step.name == "compiled-catalog-tests")
+        self.assertIn("--no-tests=error", compiled.command)
+        self.assertIn(preview.CATALOG_TEST_PATTERN, compiled.command)
         self.assertTrue(all(step.cwd == str(product) for step in plan))
 
     def test_dry_run_never_invokes_executor(self) -> None:

@@ -1,7 +1,8 @@
 name: FOA-SDK Foundation
 
-# Automatic triggers are intentionally suspended while repository Actions cannot
-# obtain hosted runners. Run this workflow manually only after Actions is restored.
+# Automatic triggers are intentionally suspended for this host-oriented workflow.
+# Pull requests use tainted-grail-sdk-pr-validation.yml; this workflow remains a
+# manually dispatched, pinned-O3DE diagnostic and review surface.
 on:
   workflow_dispatch:
 
@@ -21,13 +22,15 @@ jobs:
   validate-foundation:
     name: Validate standalone FOA-SDK product contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,105 +48,6 @@ jobs:
           git -C "$O3DE_ROOT" checkout --detach "$O3DE_COMMIT"
           test "$(git -C "$O3DE_ROOT" rev-parse HEAD)" = "$O3DE_COMMIT"
 
-      - name: Test catalog schema-2 validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_catalog_schema2.py" -v
-
-      - name: Validate catalog schema-1 migration and schema-2 persistence
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_schema2.py
-
-      - name: Test economy coverage dashboard validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_economy_coverage_dashboard.py" -v
-
-      - name: Validate economy coverage dashboard contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_economy_coverage_dashboard.py
-
-      - name: Test economy duplicate detection validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_economy_duplicate_detection.py" -v
-
-      - name: Validate economy duplicate detection contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_economy_duplicate_detection.py
-
-      - name: Test adapter contract validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_contracts.py" -v
-
-      - name: Validate adapter contract foundation
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_contracts.py
-
-      - name: Test adapter work-order plan validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_work_order_plans.py" -v
-
-      - name: Validate adapter work-order plan contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_work_order_plans.py
-
-      - name: Test adapter runtime-result validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_runtime_results.py" -v
-
-      - name: Validate adapter runtime-result evidence contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_runtime_results.py
-
-      - name: Test adapter build-manifest validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_build_manifests.py" -v
-
-      - name: Validate adapter build-manifest contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_build_manifests.py
-
-      - name: Test package-assembly preview validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_package_assembly_preview.py" -v
-
-      - name: Validate package-assembly preview contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_package_assembly_preview.py
-
-      - name: Test staging/deployment preview validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_staging_deployment_preview.py" -v
-
-      - name: Validate staging/deployment preview contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_staging_deployment_preview.py
-
-      - name: Test deployment confirmation/work-order validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_deployment_work_orders.py" -v
-
-      - name: Validate deployment confirmation/work-order contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_work_orders.py
-
-      - name: Test deployment execution-result validator
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_validate_adapter_deployment_execution_results.py" -v
-
-      - name: Validate deployment execution-result evidence contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_adapter_deployment_execution_results.py
-
       - name: Test Developer Preview 0 command layer
         run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview.py" -v
 
@@ -151,10 +55,7 @@ jobs:
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview.py
 
       - name: Test Developer Preview 0 fixture
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_fixture.py" -v
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_fixture.py" -v
 
       - name: Validate Developer Preview 0 fixture contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_fixture.py
@@ -173,28 +74,81 @@ jobs:
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_smoke.py
 
       - name: Test Developer Preview 0 launch wrapper
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_launch.py" -v
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_launch.py" -v
 
       - name: Test Developer Preview 0 diagnostics
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_diagnostics.py" -v
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_diagnostics.py" -v
 
       - name: Validate Developer Preview 0 launch and diagnostics contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_launch_diagnostics.py
 
       - name: Test Developer Preview 0 manual UI evidence tooling
-        run: >-
-          python -m unittest discover
-          -s Gems/TaintedGrailModdingSDK/Tools/tests
-          -p "test_developer_preview_ui_evidence.py" -v
+        run: python -m unittest discover -s Gems/TaintedGrailModdingSDK/Tools/tests -p "test_developer_preview_ui_evidence.py" -v
 
       - name: Validate Developer Preview 0 manual UI evidence contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_ui_evidence.py
+
+      - name: Run focused validator regression matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=Gems/TaintedGrailModdingSDK/Tools/tests
+          tools=Gems/TaintedGrailModdingSDK/Tools
+
+          echo "Test catalog schema-2 validator"
+          python -m unittest discover -s "$tests" -p "test_validate_catalog_schema2.py" -v
+          echo "Validate catalog schema-1 migration and schema-2 persistence"
+          python "$tools/validate_catalog_schema2.py"
+
+          echo "Test economy coverage dashboard validator"
+          python -m unittest discover -s "$tests" -p "test_validate_economy_coverage_dashboard.py" -v
+          echo "Validate economy coverage dashboard contract"
+          python "$tools/validate_economy_coverage_dashboard.py"
+
+          echo "Test economy duplicate detection validator"
+          python -m unittest discover -s "$tests" -p "test_validate_economy_duplicate_detection.py" -v
+          echo "Validate economy duplicate detection contract"
+          python "$tools/validate_economy_duplicate_detection.py"
+
+          echo "Test adapter contract validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_contracts.py" -v
+          echo "Validate adapter contract foundation"
+          python "$tools/validate_adapter_contracts.py"
+
+          echo "Test adapter work-order plan validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_work_order_plans.py" -v
+          echo "Validate adapter work-order plan contract"
+          python "$tools/validate_adapter_work_order_plans.py"
+
+          echo "Test adapter runtime-result validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_runtime_results.py" -v
+          echo "Validate adapter runtime-result evidence contract"
+          python "$tools/validate_adapter_runtime_results.py"
+
+          echo "Test adapter build-manifest validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_build_manifests.py" -v
+          echo "Validate adapter build-manifest contract"
+          python "$tools/validate_adapter_build_manifests.py"
+
+          echo "Test package-assembly preview validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_package_assembly_preview.py" -v
+          echo "Validate package-assembly preview contract"
+          python "$tools/validate_adapter_package_assembly_preview.py"
+
+          echo "Test staging/deployment preview validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_staging_deployment_preview.py" -v
+          echo "Validate staging/deployment preview contract"
+          python "$tools/validate_adapter_staging_deployment_preview.py"
+
+          echo "Test deployment confirmation/work-order validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_deployment_work_orders.py" -v
+          echo "Validate deployment confirmation/work-order contract"
+          python "$tools/validate_adapter_deployment_work_orders.py"
+
+          echo "Test deployment execution-result validator"
+          python -m unittest discover -s "$tests" -p "test_validate_adapter_deployment_execution_results.py" -v
+          echo "Validate deployment execution-result evidence contract"
+          python "$tools/validate_adapter_deployment_execution_results.py"
 
       - name: Run authoritative FOA-SDK product validation
         env:
@@ -203,3 +157,4 @@ jobs:
           python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py
           --engine-root "${{ env.O3DE_ROOT }}"
           --keep-going
+          --static-only

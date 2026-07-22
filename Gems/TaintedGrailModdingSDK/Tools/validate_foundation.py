@@ -20,6 +20,15 @@ from validate_core_framework_build_graph import validate_build_graph
 
 GEM_NAME = "TaintedGrailModdingSDK"
 GEM_PATH = f"Gems/{GEM_NAME}"
+PROJECT_MANIFEST_PATH = Path("TaintedGrailModdingEditor/project.json")
+PRODUCT_GEM_DIRECTORIES = (
+    "../Gems/ExternalToolchain",
+    "../Gems/TaintedGrailModdingSDK",
+)
+PRODUCT_GEM_NAMES = (
+    "ExternalToolchain",
+    "TaintedGrailModdingSDK",
+)
 
 
 def fail(message: str) -> None:
@@ -50,22 +59,30 @@ def require_fragments(path: Path, fragments: tuple[str, ...]) -> str:
     return text
 
 
-def validate_product_registration(repo_root: Path) -> None:
-    project_path = repo_root / "TaintedGrailModdingEditor/project.json"
+def validate_project_registration(repo_root: Path) -> None:
+    if (repo_root / "engine.json").exists():
+        fail("FOA-SDK must not restore an inherited root engine.json.")
+
+    project_path = repo_root / PROJECT_MANIFEST_PATH
     project = load_json(project_path)
-    product_gem_path = f"../{GEM_PATH}"
+    if project.get("project_name") != "TaintedGrailModdingEditor":
+        fail(f"{project_path} must retain the dedicated product project identity.")
+    if project.get("engine") != "o3de":
+        fail(f"{project_path} must target the external o3de engine identity.")
+
     external = project.get("external_subdirectories")
-    if not isinstance(external, list) or external.count(product_gem_path) != 1:
+    if external != list(PRODUCT_GEM_DIRECTORIES):
         fail(
-            f"{product_gem_path} must appear exactly once in "
-            "TaintedGrailModdingEditor/project.json external_subdirectories"
+            f"{project_path} must register exactly the two product Gem directories "
+            "in deterministic order."
         )
+
     gem_names = project.get("gem_names")
-    if not isinstance(gem_names, list) or gem_names.count(GEM_NAME) != 1:
-        fail(
-            f"{GEM_NAME} must appear exactly once in "
-            "TaintedGrailModdingEditor/project.json gem_names"
-        )
+    if not isinstance(gem_names, list) or any(not isinstance(name, str) for name in gem_names):
+        fail(f"{project_path} must contain a string array named 'gem_names'.")
+    for gem_name in PRODUCT_GEM_NAMES:
+        if gem_names.count(gem_name) != 1:
+            fail(f"{project_path} must enable product Gem {gem_name!r} exactly once.")
 
 
 def validate_gem_metadata(gem_root: Path) -> None:
@@ -513,7 +530,7 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
     gem_root = repo_root / GEM_PATH
     try:
-        validate_product_registration(repo_root)
+        validate_project_registration(repo_root)
         validate_gem_metadata(gem_root)
         validate_cmake(gem_root)
         validate_build_graph(repo_root)

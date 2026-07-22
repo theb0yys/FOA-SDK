@@ -3,269 +3,190 @@
 ## Purpose
 
 Review is a safety, quality, and governance control—not a ceremonial step. This
-policy defines the required reviews before implementation, before commit, and
-before merge.
+policy defines what must be proven before implementation, commit, review, and
+merge.
 
-The current CI and runner state is governed by
-[CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md). Automatic
-GitHub Actions triggers are suspended until hosted jobs can actually start and
-complete. No queued or absent workflow is treated as test evidence.
+The validation boundary is defined by
+[CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md): GitHub
+provides an automatic PR static-validation check, while exact-head Windows/O3DE
+configure, build, compiled tests, and UI evidence remain separately recorded host
+gates.
 
-## Three review gates
+## Gate 1 — Design review before implementation
 
-### Gate 1 — Design review before implementation
+Significant changes require an approved design before code is written, including:
 
-Required for significant changes, including:
-
-- new editor tools, services, or domain systems;
-- schema, identifier, or persistence changes;
+- new editor tools, services, public APIs, or domain systems;
+- schema, identifier, migration, or persistence changes;
 - adapter contracts or runtime-facing work;
-- build, package, deployment, save, or rollback behavior;
-- new dependencies;
-- security-sensitive changes;
-- breaking public APIs or data formats.
+- build, packaging, deployment, save, or rollback behavior;
+- security-sensitive changes or new dependencies;
+- imported upstream systems or licensed assets.
 
-The proposal must define:
+The design must define the user problem, owning layer, identity and evidence
+rules, persisted data, failure behavior, rollback, security/legal impact, and the
+test plan. Approval authorizes the direction, not the final implementation.
 
-- user problem and acceptance criteria;
-- owning architecture layer;
-- identity and ownership effects;
-- evidence and validation requirements;
-- persisted data and schema version;
-- failure and rollback behavior;
-- security, privacy, legal, and compatibility impact;
-- test plan.
+## Gate 2 — Pre-commit self-review
 
-A maintainer records approval to proceed. Approval means the direction is
-acceptable; it does not pre-approve the code.
+Before every commit, review the complete staged diff and confirm:
 
-### Gate 2 — Pre-commit self-review
+- the change is scoped and understandable;
+- no secrets, private paths, tokens, proprietary data, or accidental generated
+  output are present;
+- includes and build ownership are explicit;
+- failure paths are fail-closed;
+- stable IDs, exact references, schema versions, and ownership remain correct;
+- documentation and regression tests are included;
+- the applicable validation layer has been run;
+- DCO sign-off is present.
 
-Before every commit, the author reviews the complete staged diff.
-
-Required checks:
-
-- change is scoped and understandable;
-- no secrets, private paths, runner tokens, or restricted content;
-- no debug code or accidental generated files;
-- explicit includes and dependencies;
-- error paths and fail-closed behavior;
-- stable IDs, exact refs, schema versions, and ownership;
-- documentation and tests included where required;
-- repository-owned local validation run for TG SDK changes;
-- DCO sign-off used.
-
-Recommended commands:
+For a fast pre-commit/static pass:
 
 ```shell
 git diff --cached --check
-git diff --cached
-python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py --keep-going
+python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
+  --keep-going --static-only
 git commit -s -m "Describe the change"
 ```
 
-When an O3DE build is available, add compiled tests with `--ctest-build-dir` and
-record the exact build directory and configuration.
+A full validation claim requires:
 
-### Gate 3 — Pull-request review before merge
+```shell
+python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
+  --keep-going \
+  --ctest-build-dir ../foa-build/tg-sdk-developer-preview-0-windows-profile
+```
 
-Every change to `main` uses a pull request from `foa-development`.
+The static-only command must never be described as a compiled or exact-head pass.
+
+## Gate 3 — Pull-request review before merge
+
+Every normal change to `main` uses a pull request from
+`FOA-plug-in-development` or another focused development branch based on the
+current `main` head.
 
 The pull request must include:
 
-- linked issue or design review where required;
-- summary and user-visible behavior;
-- architecture and boundary impact;
-- security and privacy impact;
-- compatibility, schema, and migration impact;
-- save and deployment impact;
-- exact test and build evidence;
-- documentation changes;
-- rollback or revert plan.
+- linked issue or approved design where required;
+- summary, scope, and explicit out-of-scope behavior;
+- architecture and runtime-boundary impact;
+- identity, evidence, schema, persistence, security, privacy, and legal impact;
+- exact commands and results for every relevant test layer;
+- rollback or revert plan;
+- updated documentation.
 
 ## Required merge conditions
 
-A pull request may merge only when:
+A pull request may merge only when all of the following are true:
 
 - it is marked ready for review;
 - all commits satisfy DCO requirements;
-- the exact reviewed head was tested with the local validation command;
-- the command, exit result, skipped checks, and compiled-test status are recorded;
-- applicable host configure, host build, and compiled tests pass;
+- the automatic PR static-validation check completed successfully for the exact
+  reviewed head;
+- the reviewed-range whitespace gate passed;
+- applicable host prerequisites, O3DE configure, and O3DE build passed;
+- the compiled `TaintedGrailModdingSDK.Catalog.Tests` target executed and passed
+  with zero-test matching treated as failure;
 - a merge-ready exact-head validation receipt is verified with
-  `validation_receipt.py verify --require-merge-ready` and its receipt source
-  commit matches the reviewed head;
-- automatic CI checks, when enabled and expected for that head, complete
-  successfully;
-- requested changes are addressed;
-- all review threads are resolved;
-- documentation and changelog are current;
-- migrations or unsupported-version behavior are defined;
+  `validation_receipt.py verify --require-merge-ready`, its receipt source commit matches the reviewed head,
+  and the verified summary is included in the pull request;
+- the Windows UI gate passed, or the one permitted explicit local maintainer risk
+  acceptance is recorded with a concrete rationale;
+- requested changes and blocking review threads are resolved;
+- documentation, migration behavior, and rollback are current;
 - at least one maintainer approval is recorded;
 - no unresolved security, legal, data-loss, or architectural concern remains.
 
-Pending is not passing. Queued, waiting, skipped, approval-blocked, missing, and
-cancelled runs are not successful test evidence.
+The automatic static check complements the receipt; it does not replace host
+proof. Host configure, host build, and compiled-test gates remain mandatory.
 
-While automatic Actions remain suspended:
-
-- unavailable workflow names must not be configured as required branch checks;
-- pull requests must not claim exact-head CI success;
-- local evidence is mandatory but is identified as tester-supplied evidence;
-- host configure, host build, and compiled-test gates remain mandatory;
-- only a missing Windows UI pass may carry an explicit local maintainer risk
-  declaration, which is not independently authenticated by GitHub.
+Pending is not passing. Queued, waiting, skipped, approval-blocked, cancelled,
+missing, stale-head, and zero-test runs are not successful evidence.
 
 ## Review depth by risk
 
 ### Low risk
 
-Examples:
-
-- typo correction;
-- documentation clarification;
-- test-only improvement;
-- internal refactor with no behavior or schema change.
-
-Expected review:
-
-- correctness;
-- scope;
-- documentation consistency;
-- focused checks.
+Examples include documentation corrections, test-only hardening, and internal
+refactors without behavior or schema changes. Review correctness, scope,
+validation, and documentation consistency.
 
 ### Medium risk
 
-Examples:
-
-- user-interface workflow;
-- new query or validation rule;
-- importer support without schema break;
-- new persistence field with backward-compatible defaults.
-
-Expected review additionally covers:
-
-- failure states;
-- accessibility;
-- serialization round trip;
-- malformed input;
-- compatibility and migration.
+Examples include UI workflows, new validation rules, importers, and
+backward-compatible persistence fields. Also review malformed input, failure
+states, accessibility, serialization round trips, and compatibility.
 
 ### High risk
 
-Examples:
-
-- security boundary;
-- deployment, process launch, save, or rollback;
-- permission changes;
-- breaking schema or identity change;
-- new dependency;
-- runtime adapter behavior.
-
-Expected review additionally requires:
-
-- reviewed design proposal;
-- threat/failure analysis;
-- negative tests;
-- migration and rollback proof;
-- independent reviewer when available;
-- explicit maintainer merge decision.
+Examples include permissions, deployment, process launch, save mutation, runtime
+adapters, breaking schemas, security boundaries, and new dependencies. These
+require an approved design, threat/failure analysis, negative tests, migration
+and rollback proof, and an explicit maintainer merge decision.
 
 ## Reviewer responsibilities
 
 Reviewers must:
 
-- read the issue/design context;
-- inspect the complete diff, not only highlighted lines;
-- test or reason through failure paths;
-- distinguish blocking findings from preferences;
-- explain why a change is required;
-- check code, tests, schemas, and documentation together;
-- verify that claimed test evidence belongs to the exact head;
-- avoid approving code they do not understand;
-- disclose conflicts of interest;
-- revisit approval if the pull request changes materially.
+- inspect the complete diff and its design context;
+- check code, tests, schemas, build ownership, and documentation together;
+- reason through failure paths and adversarial input;
+- distinguish blockers from optional preferences;
+- verify that every claimed result belongs to the exact reviewed head;
+- confirm the automatic static check and exact-head receipt prove different,
+  complementary layers;
+- revisit approval after material changes;
+- avoid approving code they do not understand.
 
 ## Author responsibilities
 
 Authors must:
 
-- keep the change reviewable;
+- keep changes reviewable and focused;
 - respond to every blocking comment;
-- push fixes as clear commits;
-- avoid hiding unresolved problems with suppression or broad exceptions;
+- add regression tests for repaired defects;
+- avoid suppressions or broad exceptions used only to obtain a green result;
 - request re-review after material changes;
-- update the PR description as scope or validation evidence changes;
-- never resolve a review thread without addressing or documenting the decision;
-- never present a queued workflow, syntax-only check, or isolated fixture as a
-  successful full repository build.
-
-## Review outcomes
-
-### Approve
-
-The change meets requirements and may merge after all other gates pass.
-
-### Comment
-
-Non-blocking questions or suggestions remain. The reviewer must state when a
-comment is optional.
-
-### Request changes
-
-The pull request must not merge until the finding is addressed and the reviewer
-or maintainer accepts the resolution.
+- update the PR description when scope or evidence changes;
+- never present a syntax-only, static-only, queued, absent, or zero-test result as
+  a successful full repository build.
 
 ## Self-authored maintainer changes
 
 Maintainers follow the same gates. Independent review is preferred. When no
-second qualified reviewer is available, the maintainer must:
-
-- document the limitation;
-- provide stronger local and manual validation;
-- avoid merging high-risk work without external review unless an urgent security
-  or data-loss issue requires action;
-- schedule post-merge review when an emergency exception is used.
+second qualified reviewer is available, document that limitation and provide
+stronger exact-head evidence. High-risk changes must not be merged without
+external review unless an active security or data-loss emergency requires a
+scoped mitigation.
 
 ## Emergency exceptions
 
-A maintainer may bypass normal public timing only to address an active security
-vulnerability, data-loss defect, or unsafe release.
-
-Even then:
-
-- the change must be scoped to mitigation;
-- review and tests must occur privately or immediately after disclosure as
-  appropriate;
-- the exception and follow-up actions must be recorded;
-- normal governance resumes after the emergency.
+An emergency exception is limited to an active vulnerability, data-loss defect,
+or unsafe release. The mitigation must be minimal, the exception recorded, and
+normal review and validation completed immediately afterward.
 
 ## Merge method
 
-Use a normal merge commit unless a maintainer chooses squash or rebase for a
-clearly justified history reason. The selected method must preserve DCO and
-useful attribution.
-
-The merge commit or PR title should describe the capability or fix, not merely a
-ticket number.
+Use a normal merge commit unless squash or rebase has a documented reason. The
+selected method must preserve DCO and useful attribution.
 
 ## After merge
 
 1. Confirm `main` points to the accepted merge commit.
-2. Synchronize `foa-development` to that commit.
-3. Record post-merge local validation or automatic workflows when they are
-   actually available.
-4. Update roadmap or release tracking when applicable.
-5. Revert promptly if the merged change introduces unacceptable risk.
+2. Synchronize `FOA-plug-in-development` to that commit.
+3. Confirm the push-to-main static workflow ran for the merge commit.
+4. Record post-merge exact-head validation only when it actually ran.
+5. Revert promptly if the merged result violates an accepted gate.
 
 ## Prohibited merge behavior
 
 - direct push to `main` for normal development;
 - merge while an enabled required check is pending or failing;
-- configure unavailable workflows as required checks;
-- describe queued, absent, skipped, or manual-only workflows as passing;
-- merge with unresolved requested changes;
-- merge by deleting tests or weakening validation solely to obtain a green state;
-- merge undocumented breaking schema changes;
-- merge runtime permission based only on imported or decompiled information;
-- merge proprietary or legally restricted material.
+- merge without an executed compiled test target;
+- merge with a missing or stale exact-head receipt;
+- describe static-only, queued, skipped, absent, or zero-test runs as full passes;
+- merge by deleting tests or weakening validation solely to obtain green status;
+- merge unresolved requested changes, undocumented schema breaks, or legally
+  restricted material;
+- grant runtime permission based only on imported or decompiled information.

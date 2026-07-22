@@ -483,10 +483,10 @@ def validate_population_actor_troop_editor(repo_root: Path) -> None:
         (
             "6. **Complete** \u2014 immutable population action-lane derivation",
             "7. **Complete** \u2014 deterministic synthetic population fixture",
-            "9. **Active acceptance gate** \u2014 exact-head configure/build",
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build",
             "independently tracked actor, troop, and unstaged-member drafts",
-            "exact-head compiled test run",
-            "Windows UI review",
+            "does not claim that compiled tests have run in an exact-head configured build",
+            "Windows UI evidence exists",
         ),
         "Actor/Troop implementation status",
     )

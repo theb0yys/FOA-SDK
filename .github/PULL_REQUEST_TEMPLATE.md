@@ -69,13 +69,14 @@ Rollback/revert plan:
 
 <!-- Include exact commands, configurations, fixtures, and manual steps. -->
 
-- [ ] `python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py`
-- [ ] `git diff --check`
-- [ ] Relevant unit tests
-- [ ] Persistence round-trip/migration tests
-- [ ] Malformed-input and negative tests
-- [ ] O3DE configure/build for applicable host platform(s)
-- [ ] Manual editor workflow verification
+- [ ] The automatic PR static-validation workflow passed for this exact head.
+- [ ] Reviewed-range `git diff --check <base> HEAD` passed.
+- [ ] Relevant Python, mutation, malformed-input, and negative tests passed.
+- [ ] Persistence round-trip/migration tests passed when applicable.
+- [ ] O3DE prerequisites and configure passed for the applicable host.
+- [ ] O3DE build completed for required targets.
+- [ ] compiled `TaintedGrailModdingSDK.Catalog.Tests` executed and passed; zero matching tests is an error.
+- [ ] Manual editor/UI workflow verification passed, or the permitted risk acceptance is explicit.
 
 Results:
 
@@ -127,5 +128,6 @@ Not applicable / Evidence:
 - [ ] Identity, evidence, validation, and permission rules are correct.
 - [ ] Schemas, migrations, compatibility, and rollback are adequate.
 - [ ] Security and failure paths are tested.
+- [ ] Static CI and exact-head host evidence belong to this head.
 - [ ] Documentation matches implementation.
 - [ ] All blocking threads are resolved before merge.

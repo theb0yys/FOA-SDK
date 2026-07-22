@@ -254,7 +254,7 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         )
         self._write(
             "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md",
-            "Status: active hardening\n"
+            "Status: implemented vertical slice\n"
             "actor/troop contracts, reflection\n"
             "CatalogDatabase validation, queries\n"
             "schema-1 migration, schema-2-only writing\n"
@@ -263,10 +263,10 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "and compiled-target wiring\n"
             "6. **Complete** \u2014 immutable population action-lane derivation, "
             "Actor and Troop Editor pane, and lifecycle registration\n"
-            "7. **Complete** \u2014 deterministic synthetic population fixture\n"
-            "8. **Complete** \u2014 public user documentation\n"
-            "9. **Active acceptance gate** \u2014 exact-head configure/build\n"
-            "do not claim an exact-head compiled test run\n"
+            "7. **Complete** \u2014 deterministic synthetic population fixture and local validation\n"
+            "8. **Complete** \u2014 public user, architecture/data-format, release-readiness documentation and twenty-four-pane checklist\n"
+            "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build and compiled tests\n"
+            "does not claim that compiled tests have run\n"
             "loaded candidate remains schema 1\n"
             "direct save is refused\n"
             "successful bound replacement and `BuildDocument`\n",
@@ -275,11 +275,13 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "ROADMAP.md",
             "### Actors and population\n"
             "Status: implemented vertical slice, continuing hardening and exact-head host/UI verification.\n"
-            "Core contracts, CatalogDatabase integration, durable catalog schema-2 migration/persistence, "
-            "evidence-bound Framework candidate publication, and positive/negative production-linked population tests are implemented\n"
-            "The immutable seven-lane population action contract is implemented\n"
-            "The project-owned deterministic schema-2 population fixture is implemented\n"
-            "Exact-head O3DE configure/build, compiled Catalog test execution remains active\n",
+            "- Core contracts, CatalogDatabase integration, durable catalog schema-2 migration/persistence, "
+            "evidence-bound Framework candidate publication, and positive/negative production-linked population tests are implemented.\n"
+            "- The immutable seven-lane population action contract and registered **Tainted Grail Actor and Troop Editor** pane are implemented.\n"
+            "- The project-owned deterministic schema-2 population fixture, focused negative tests, and local-validation integration are implemented.\n"
+            "- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-four-pane evidence pass remain the active acceptance gate.\n"
+            "- Spawn and Encounter Editor is the next population authoring capability.\n"
+            "### World and societies\n",
         )
         self._write(
             "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
@@ -303,9 +305,9 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/README.md",
             "Actor and Troop Editor Design ACTOR_TROOP_EDITOR_DESIGN.md "
-            "deterministic fixture, validation, and deferred runtime scope\n"
-            "typed actor profiles, troop profiles, exact troop-member rows\n"
-            "deterministic project-owned fixture\n",
+            "approved population design and implementation history with schema-2 persistence, "
+            "deterministic fixture, and registered Actor/Troop pane; exact-head O3DE configure, "
+            "build, compiled tests, and Windows evidence remain mandatory\n",
         )
 
     def test_valid_contract_passes(self) -> None:
@@ -342,14 +344,37 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogSchema2ContractError, r"6\. \*\*Complete"):
             validate_catalog_schema2(self.repo_root)
 
-    def test_rejects_stale_fixture_complete_status(self) -> None:
+    def test_rejects_fixture_regressed_to_next_work(self) -> None:
         path = self.repo_root / "docs/tainted-grail-sdk/ACTOR_TROOP_EDITOR_DESIGN.md"
         text = path.read_text(encoding="utf-8").replace(
             "7. **Complete** \u2014 deterministic synthetic population fixture",
             "7. **Next** \u2014 deterministic synthetic population fixture",
         )
         path.write_text(text, encoding="utf-8")
-        with self.assertRaisesRegex(CatalogSchema2ContractError, r"7\. \*\*Complete"):
+        with self.assertRaisesRegex(
+            CatalogSchema2ContractError,
+            r"7\. \*\*Complete|7\. \*\*Next",
+        ):
+            validate_catalog_schema2(self.repo_root)
+
+    def test_rejects_docs_hub_without_current_population_status(self) -> None:
+        path = self.repo_root / "docs/tainted-grail-sdk/README.md"
+        text = path.read_text(encoding="utf-8").replace(
+            "registered Actor/Troop pane",
+            "Actor/Troop pane planned",
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(CatalogSchema2ContractError, "Documentation hub"):
+            validate_catalog_schema2(self.repo_root)
+
+    def test_rejects_stale_roadmap_future_status(self) -> None:
+        path = self.repo_root / "ROADMAP.md"
+        text = path.read_text(encoding="utf-8").replace(
+            "Status: implemented vertical slice, continuing hardening and exact-head host/UI verification.",
+            "Status: active development. Core contracts, CatalogDatabase integration",
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(CatalogSchema2ContractError, "Roadmap population status"):
             validate_catalog_schema2(self.repo_root)
 
     def test_rejects_stale_replacement_semantics(self) -> None:

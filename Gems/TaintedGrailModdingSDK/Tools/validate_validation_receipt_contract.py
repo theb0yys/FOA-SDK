@@ -82,7 +82,7 @@ def validate(repo_root: Path) -> None:
             "os.O_EXCL",
             'if hasattr(os, "O_NOFOLLOW")',
             "reject_storage_indirection(",
-            'nargs=argparse.REMAINDER',
+            "nargs=argparse.REMAINDER",
             "def skip_gate(",
             '"created_at_utc": utc_now()',
             '"accepted_at_utc": utc_now()',
@@ -160,11 +160,143 @@ def validate(repo_root: Path) -> None:
         "Validation receipt streaming tests",
     )
 
+    local_gate = read(
+        repo_root,
+        "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py",
+    )
+    require_all(
+        local_gate,
+        (
+            '"validate_validation_receipt_contract.py"',
+            "class ValidationConfigurationError",
+            "def run_validation_pipeline(",
+            "def should_run_stage(",
+            "def validation_mode(",
+            '"--static-only"',
+            '"--ctest-build-dir"',
+            '"--no-tests=error"',
+            "Pinned O3DE source policy, ",
+            "compiled tests, and Windows acceptance remain mandatory exact-head ",
+        ),
+        "Authoritative local validation gate",
+    )
+
+    preview_command = read(
+        repo_root,
+        "Gems/TaintedGrailModdingSDK/Tools/developer_preview.py",
+    )
+    require_all(
+        preview_command,
+        (
+            '"compiled-catalog-tests"',
+            '"--no-tests=error"',
+            "CATALOG_TEST_PATTERN",
+        ),
+        "Developer Preview compiled validation path",
+    )
+
+    preview_command_tests = read(
+        repo_root,
+        "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview.py",
+    )
+    require_all(
+        preview_command_tests,
+        (
+            'compiled = next(step for step in plan if step.name == "compiled-catalog-tests")',
+            'self.assertIn("--no-tests=error", compiled.command)',
+            "self.assertIn(preview.CATALOG_TEST_PATTERN, compiled.command)",
+        ),
+        "Developer Preview compiled validation tests",
+    )
+
+    coordinator = read(
+        repo_root,
+        "Gems/TaintedGrailModdingSDK/Tools/developer_preview_verification.py",
+    )
+    require_all(
+        coordinator,
+        (
+            "import developer_preview",
+            "developer_preview.validate_product_root(repo)",
+            "developer_preview.default_build_directory(repo)",
+            '"--product-root"',
+            '"--engine-root"',
+            '"local-validation": tool(',
+            '"--static-only"',
+            '"compiled-tests": (',
+            '"--no-tests=error"',
+            "def status_exit_code(",
+            "return status_exit_code(report)",
+        ),
+        "Exact-head verification coordinator",
+    )
+    forbid(
+        coordinator,
+        'repo / "engine.json"',
+        "Exact-head verification coordinator",
+    )
+
+    coordinator_tests = read(
+        repo_root,
+        "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_verification.py",
+    )
+    require_all(
+        coordinator_tests,
+        (
+            "test_external_engine_build_and_evidence_roots_are_separate",
+            "test_local_and_compiled_gates_cannot_silently_skip_essential_layers",
+            "test_incomplete_status_is_a_gating_failure",
+            'self.assertIn("--static-only", local)',
+            'self.assertIn("--no-tests=error", compiled)',
+            "status_exit_code",
+        ),
+        "Exact-head verification coordinator tests",
+    )
+
+    runner_tests = read(
+        repo_root,
+        "Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_ci_runner_policy.py",
+    )
+    require_all(
+        runner_tests,
+        (
+            "test_full_validation_requires_ctest_or_explicit_static_only",
+            "test_compiled_ctest_fails_when_regex_matches_no_tests",
+            "test_keep_going_runs_static_fixtures_and_compiled_stages",
+            "test_non_keep_going_stops_after_first_failed_stage",
+            "test_automatic_static_workflow_must_use_explicit_static_only_mode",
+        ),
+        "Validation pipeline regression tests",
+    )
+
+    automatic_workflow = read(
+        repo_root,
+        ".github/workflows/tainted-grail-sdk-pr-validation.yml",
+    )
+    require_all(
+        automatic_workflow,
+        (
+            "pull_request:",
+            "push:",
+            "workflow_dispatch:",
+            "runs-on: ubuntu-latest",
+            "run_local_validation.py --keep-going --static-only --skip-source-policy",
+        ),
+        "Automatic static validation workflow",
+    )
+    forbid(
+        automatic_workflow,
+        "self-hosted",
+        "Automatic static validation workflow",
+    )
+
     template = read(repo_root, ".github/PULL_REQUEST_TEMPLATE.md")
     require_all(
         template,
         (
             "## Exact-head validation receipt",
+            "automatic PR static-validation workflow",
+            "compiled `TaintedGrailModdingSDK.Catalog.Tests`",
             "validation_receipt.py verify",
             "--require-merge-ready",
             "validation_receipt.py summarize",
@@ -181,6 +313,12 @@ def validate(repo_root: Path) -> None:
     require_all(
         ci_policy,
         (
+            "automatic pull-request static validation",
+            "--static-only",
+            "--ctest-build-dir",
+            "compiled Catalog CTest",
+            "does not claim an O3DE build",
+            "Pending is not passing",
             "## Exact-head validation receipt",
             "validation_receipt.py init",
             "validation_receipt.py record",
@@ -205,24 +343,16 @@ def validate(repo_root: Path) -> None:
     require_all(
         review_policy,
         (
+            "automatic PR static-validation check",
             "merge-ready exact-head validation receipt",
             "validation_receipt.py verify",
             "--require-merge-ready",
             "its receipt source",
             "commit matches the reviewed head",
             "compiled-test gates remain mandatory",
+            "FOA-plug-in-development",
         ),
         "Review and merge policy",
-    )
-
-    gate = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py",
-    )
-    require(
-        gate,
-        '"validate_validation_receipt_contract.py"',
-        "Authoritative local gate",
     )
 
 
@@ -234,8 +364,8 @@ def main() -> int:
         print(f"Validation-receipt contract failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Validation-receipt contract passed: tooling streams bounded gate logs, "
-        "hashes them incrementally, and retains exact-head policy wiring."
+        "Validation-receipt contract passed: automatic static checks, mandatory "
+        "compiled gates, bounded logs, and exact-head status all fail closed."
     )
     return 0
 

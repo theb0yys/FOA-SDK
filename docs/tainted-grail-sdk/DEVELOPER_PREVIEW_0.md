@@ -113,7 +113,8 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
 
 FOA validators run from the product checkout. The O3DE source-policy validator
 is loaded from the pinned engine checkout and scans both product Gems. Compiled
-tests run from the build root. Validation stops on the first failure and writes:
+tests run from the build root with `--no-tests=error`, so a missing or misnamed
+Catalog target is a failure. Validation stops on the first failure and writes:
 
 ```text
 <build-root>/tg-sdk-developer-preview-validation.json
@@ -132,8 +133,7 @@ python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
 
 ## Synthetic fixture
 
-Generate the deterministic synthetic fixture outside the source tree, then
-verify it before use:
+Generate the deterministic synthetic fixture and verify byte-for-byte deterministic project-owned data outside the source tree:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
@@ -143,14 +143,12 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output ..\foa-build\tg-sdk-developer-preview-0-fixture
 ```
 
-The fixture uses reserved `preview.*` identities and does not contain proprietary game data,
-native FoA identifiers, private paths, credentials, saves, or extracted assets.
+The generated `preview-fixture.manifest.json` binds every fixture file by exact
+byte count and SHA-256 fingerprint. The fixture uses reserved `preview.*`
+identities and contains no proprietary game data, native FoA identifiers,
+private paths, credentials, saves, or extracted assets.
 
-Generation writes `preview-fixture.manifest.json` with SHA-256 bindings for
-the project-owned synthetic data. Repeated generation is byte-for-byte deterministic.
-The command refuses to overwrite an existing fixture unless
-that fixture first passes verification and `--replace` is explicit. Fixture
-verification proves the files and manifest are intact; it does not prove Editor load/save/reopen behavior.
+The fixture is project-owned synthetic data. It does not prove Editor load/save/reopen behavior.
 
 ## Compiled persistence smoke
 
@@ -158,62 +156,52 @@ verification proves the files and manifest are intact; it does not prove Editor 
 ctest --test-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
   -C profile `
   --output-on-failure `
+  --no-tests=error `
   -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-The service-level persistence smoke proves load, save, close-equivalent, and reopen
-behavior plus canonical equivalence. It does not prove FoA runtime
-compatibility.
-
-The `TaintedGrailModdingSDK.Catalog.Tests` case compares canonical state before
-and after reopen, preserves proof-backed allowed usages, and verifies that
-legacy unproven allowances still fail closed.
+This service-level persistence smoke proves load, save, close-equivalent, and reopen behavior plus canonical state equivalence. It preserves proof-backed allowed usages, while legacy unproven allowances remain fail-closed. It does not prove FoA runtime compatibility.
 
 ## Launch and diagnostics
 
-The existing launch wrapper continues to accept an explicit build root:
+The existing launch wrapper continues to accept an explicit build root and a
+bounded `--log-dir`:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
   --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
-  --project .\TaintedGrailModdingEditor `
-  --log-dir ..\foa-build\tg-sdk-developer-preview-0-launch `
+  --log-dir ..\foa-build\tg-sdk-developer-preview-0-launch-logs `
   --dry-run
 ```
 
 It uses O3DE’s `--project-path` switch, exposes no arbitrary Editor passthrough
 arguments, waits for the Editor process, and returns its exit code.
 
-Diagnostics and screenshot evidence must also remain under the external build
-root or another reviewed output directory. Nothing is uploaded automatically.
-You must review every generated file before sharing.
-
-Collect and verify a redacted diagnostics bundle with:
+Collect and verify a redacted diagnostic bundle with:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py collect `
-  --output ..\foa-build\tg-sdk-developer-preview-0-diagnostics `
-  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
-  --project .\TaintedGrailModdingEditor
+  --repo-root . `
+  --output ..\foa-build\tg-sdk-developer-preview-0-diagnostics
 
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify `
   --output ..\foa-build\tg-sdk-developer-preview-0-diagnostics
 ```
 
+Diagnostics and screenshot evidence must remain under the external build root or
+another reviewed output directory. Nothing is uploaded automatically; review every generated file before sharing.
+
 ## Windows manual UI smoke
 
 The [Windows Manual UI Smoke and Screenshot Evidence](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md)
-defines the accepted real-session pass. The evidence tool binds results to an
-exact source commit, hashes reviewed PNG files, checks required coverage, and
-enforces privacy and runtime-boundary attestations.
+defines the accepted real-session pass. Initialize and verify that evidence with
+`developer_preview_ui_evidence.py`; the tool binds results to an exact source
+commit, hashes reviewed PNG files, checks required coverage, and enforces privacy
+and runtime-boundary attestations.
 
-Initialize the manual screenshot capture record with
-`developer_preview_ui_evidence.py init`, then follow the linked checklist for
-recording checks, attaching reviewed screenshots, attesting, and verifying the
-result. The actual Windows pass remains pending.
-
-The tooling does not take screenshots automatically, inspect pixels, use OCR,
-or fabricate release evidence.
+manual screenshot capture remains an operator action. The tooling does not take
+screenshots automatically, inspect pixels, use OCR, or fabricate release
+evidence.
 
 ## Failure behavior
 
@@ -239,6 +227,6 @@ The visible working tree is extracted into the product-only structure. Earlier
 Git commits still contain the inherited O3DE fork until the separately reviewed
 filtered-history migration is completed and content-equivalence is proven.
 
-The preview still lacks completed Windows manual UI evidence and a CI-produced
-runnable Windows archive. Until those gates pass, it remains a source-built
-pre-alpha editor.
+The actual Windows pass remains pending, and the preview still lacks a
+CI-produced runnable Windows archive. Until those gates pass, it remains a
+source-built pre-alpha editor.

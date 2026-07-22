@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Run the FOA-SDK validation gate against a separate pinned O3DE checkout."""
+"""Run the FOA-SDK validation pipeline against a separate pinned O3DE checkout."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 TOOLS_ROOT = Path(__file__).resolve().parent
 if str(TOOLS_ROOT) not in sys.path:
@@ -75,6 +75,10 @@ VALIDATORS = (
     "validate_validation_receipt_contract.py",
     "validate_tracked_path_collisions.py",
 )
+
+
+class ValidationConfigurationError(RuntimeError):
+    """Raised when a caller attempts to claim an incomplete validation mode."""
 
 
 @dataclass(frozen=True)
@@ -219,12 +223,15 @@ def find_ctest(build_directory: Path) -> str:
     cache = build_directory / "CMakeCache.txt"
     if cache.is_file():
         prefix = "CMAKE_COMMAND:INTERNAL="
-        for line in cache.read_text(encoding="utf-8", errors="strict").splitlines():
+        for line in cache.read_text(
+            encoding="utf-8",
+            errors="strict",
+        ).splitlines():
             if not line.startswith(prefix):
                 continue
             cmake = Path(line[len(prefix) :])
             candidate = cmake.with_name(
-                "ctest.exe" if cmake.suffix.lower() == ".exe" else "ctest"
+                "ctest.exe" if os.name == "nt" else "ctest"
             )
             if candidate.is_file():
                 return str(candidate)
@@ -234,7 +241,25 @@ def find_ctest(build_directory: Path) -> str:
     )
 
 
+def validate_ctest_build_directory(build_directory: Path) -> Path:
+    build_directory = build_directory.expanduser().resolve(strict=False)
+    if not build_directory.is_dir():
+        raise ValidationConfigurationError(
+            f"Compiled validation requires an existing build directory: {build_directory}"
+        )
+    if not (build_directory / "CMakeCache.txt").is_file():
+        raise ValidationConfigurationError(
+            "Compiled validation requires a configured O3DE build containing CMakeCache.txt."
+        )
+    if not (build_directory / "CTestTestfile.cmake").is_file():
+        raise ValidationConfigurationError(
+            "Compiled validation requires CTestTestfile.cmake at the configured build root."
+        )
+    return build_directory
+
+
 def build_ctest_command(build_directory: Path) -> ValidationCommand:
+    build_directory = validate_ctest_build_directory(build_directory)
     return ValidationCommand(
         "Compiled TG SDK catalog tests",
         (
@@ -246,6 +271,7 @@ def build_ctest_command(build_directory: Path) -> ValidationCommand:
             "-R",
             "TaintedGrailModdingSDK.Catalog.Tests",
             "--output-on-failure",
+            "--no-tests=error",
         ),
     )
 
@@ -265,29 +291,102 @@ def run_commands(
     for command in commands:
         print(f"\n=== {command.label} ===", flush=True)
         print(display_command(command), flush=True)
-        completed = subprocess.run(
-            command.argv,
-            cwd=command.cwd,
-            env=environment,
-            check=False,
-        )
-        if completed.returncode == 0:
+        try:
+            completed = subprocess.run(
+                command.argv,
+                cwd=command.cwd,
+                env=environment,
+                check=False,
+            )
+            return_code = int(completed.returncode)
+            failure = f"{command.label} (exit {return_code})"
+        except OSError as exc:
+            return_code = 127
+            failure = f"{command.label} (unable to execute: {exc})"
+        if return_code == 0:
             continue
-        failures.append(f"{command.label} (exit {completed.returncode})")
+        failures.append(failure)
         if not keep_going:
             break
     return failures
 
 
-def parse_arguments() -> argparse.Namespace:
+def should_run_stage(failures: Sequence[str], *, keep_going: bool) -> bool:
+    return keep_going or not failures
+
+
+def validation_mode(arguments: argparse.Namespace) -> str:
+    if arguments.static_only:
+        return "static-only"
+    if arguments.ctest_build_dir is None:
+        raise ValidationConfigurationError(
+            "A successful validation claim must include compiled CTest via "
+            "--ctest-build-dir. Use --static-only only for the explicitly "
+            "non-compiled GitHub-hosted validation layer."
+        )
+    if arguments.skip_source_policy:
+        raise ValidationConfigurationError(
+            "Full validation cannot skip the pinned O3DE source-policy checks."
+        )
+    return "full"
+
+
+def run_validation_pipeline(
+    arguments: argparse.Namespace,
+    source_policy_engine_root: Path | None,
+) -> list[str]:
+    mode = validation_mode(arguments)
+    failures = run_commands(
+        build_static_commands(
+            include_unit_tests=not arguments.skip_unit_tests,
+            source_policy_engine_root=source_policy_engine_root,
+        ),
+        keep_going=arguments.keep_going,
+    )
+
+    if (
+        not arguments.skip_fixtures
+        and should_run_stage(failures, keep_going=arguments.keep_going)
+    ):
+        with tempfile.TemporaryDirectory(
+            prefix="foa-sdk-validation-"
+        ) as temporary:
+            failures.extend(
+                run_commands(
+                    build_fixture_commands(Path(temporary)),
+                    keep_going=arguments.keep_going,
+                )
+            )
+
+    if (
+        mode == "full"
+        and should_run_stage(failures, keep_going=arguments.keep_going)
+    ):
+        failures.extend(
+            run_commands(
+                [build_ctest_command(arguments.ctest_build_dir)],
+                keep_going=arguments.keep_going,
+            )
+        )
+    return failures
+
+
+def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run FOA-SDK unit tests, contract validators, fixture checks, path "
-            "hygiene, and source policy locally."
+            "Run FOA-SDK Python tests, validators, fixtures, pinned O3DE source "
+            "policy, and mandatory compiled Catalog CTest coverage."
         )
     )
     parser.add_argument("--list", action="store_true")
-    parser.add_argument("--keep-going", action="store_true")
+    parser.add_argument(
+        "--keep-going",
+        action="store_true",
+        help=(
+            "Continue through static checks, fixtures, and compiled CTest after "
+            "failures so one run reports the complete failure inventory."
+        ),
+    )
     parser.add_argument("--skip-unit-tests", action="store_true")
     parser.add_argument("--skip-fixtures", action="store_true")
     parser.add_argument("--skip-source-policy", action="store_true")
@@ -296,63 +395,98 @@ def parse_arguments() -> argparse.Namespace:
         type=Path,
         help="Pinned external O3DE checkout. Defaults to FOA_O3DE_ROOT or sibling o3de/.",
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--ctest-build-dir",
         type=Path,
-        help="Also run compiled TaintedGrailModdingSDK.Catalog.Tests from this build root.",
+        help=(
+            "Run the mandatory compiled TaintedGrailModdingSDK.Catalog.Tests from "
+            "this configured O3DE build root."
+        ),
     )
-    return parser.parse_args()
+    mode.add_argument(
+        "--static-only",
+        action="store_true",
+        help=(
+            "Run the non-compiled GitHub-hosted layer only. This mode cannot be "
+            "reported as full or exact-head validation."
+        ),
+    )
+    return parser.parse_args(argv)
 
 
-def main() -> int:
-    arguments = parse_arguments()
+def main(argv: Sequence[str] | None = None) -> int:
+    arguments = parse_arguments(argv)
+    if arguments.list:
+        engine_root = None
+        if not arguments.skip_source_policy:
+            try:
+                engine_root = resolve_engine_root(arguments.engine_root)
+            except (OSError, RuntimeError) as exc:
+                print(f"Pinned O3DE source policy: unavailable ({exc})")
+        for command in build_static_commands(
+            include_unit_tests=not arguments.skip_unit_tests,
+            source_policy_engine_root=engine_root,
+        ):
+            print(f"{command.label}: {display_command(command)}")
+        if arguments.ctest_build_dir:
+            try:
+                command = build_ctest_command(arguments.ctest_build_dir)
+            except (OSError, RuntimeError, ValidationConfigurationError) as exc:
+                print(f"Compiled CTest: unavailable ({exc})")
+            else:
+                print(f"{command.label}: {display_command(command)}")
+        else:
+            print(
+                "Compiled CTest: required for full validation; pass --ctest-build-dir "
+                "or explicitly select --static-only."
+            )
+        return 0
+
     try:
-        engine_root = (
+        mode = validation_mode(arguments)
+        source_policy_engine_root = (
             None
             if arguments.skip_source_policy
             else resolve_engine_root(arguments.engine_root)
         )
-        static_commands = build_static_commands(
-            include_unit_tests=not arguments.skip_unit_tests,
-            source_policy_engine_root=engine_root,
-        )
-        if arguments.list:
-            for command in static_commands:
-                print(f"{command.label}: {display_command(command)}")
-            return 0
-        print(
-            "FOA-SDK local validation is authoritative while GitHub Actions remains "
-            "manual-only. No automated per-commit test result is claimed.",
-            flush=True,
-        )
-        failures = run_commands(static_commands, keep_going=arguments.keep_going)
-        if not failures and not arguments.skip_fixtures:
-            with tempfile.TemporaryDirectory(prefix="foa-sdk-validation-") as temporary:
-                failures.extend(
-                    run_commands(
-                        build_fixture_commands(Path(temporary)),
-                        keep_going=arguments.keep_going,
-                    )
-                )
-        if not failures and arguments.ctest_build_dir:
-            failures.extend(
-                run_commands(
-                    [build_ctest_command(arguments.ctest_build_dir.resolve())],
-                    keep_going=arguments.keep_going,
-                )
+        if mode == "static-only":
+            suffix = (
+                "Pinned O3DE source policy is intentionally not included."
+                if source_policy_engine_root is None
+                else "Pinned O3DE source policy is included."
             )
-        if failures:
-            print("\nFOA-SDK local validation failed:", file=sys.stderr)
-            for failure in failures:
-                print(f"- {failure}", file=sys.stderr)
-            return 1
-        print("\nFOA-SDK local validation passed.")
-        if not arguments.ctest_build_dir:
-            print("Compiled O3DE tests were not run; pass --ctest-build-dir to add them.")
-        return 0
-    except (OSError, RuntimeError) as exc:
-        print(f"FOA-SDK local validation setup failed: {exc}", file=sys.stderr)
+            print(
+                "FOA-SDK static validation: Python tests, validators, and fixtures. "
+                f"{suffix} No compiled or Windows result is claimed.",
+                flush=True,
+            )
+        else:
+            print(
+                "FOA-SDK full validation: static checks, fixtures, pinned O3DE "
+                "source policy, and mandatory compiled Catalog CTest coverage.",
+                flush=True,
+            )
+        failures = run_validation_pipeline(arguments, source_policy_engine_root)
+    except (OSError, RuntimeError, ValidationConfigurationError) as exc:
+        print(f"FOA-SDK validation configuration failed: {exc}", file=sys.stderr)
+        return 2
+
+    if failures:
+        print("\nFOA-SDK validation failed:", file=sys.stderr)
+        for failure in failures:
+            print(f"- {failure}", file=sys.stderr)
         return 1
+
+    if mode == "static-only":
+        print(
+            "\nFOA-SDK static validation passed. Pinned O3DE source policy, "
+            "compiled tests, and Windows acceptance remain mandatory exact-head "
+            "gates unless explicitly included above."
+        )
+    else:
+        print("\nFOA-SDK full validation passed, including compiled Catalog CTest.")
+    return 0
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ internal static class Program
             string python = ResolvePython(options, paths);
             ProcessStartInfo startInfo = BuildStartInfo(options, paths, python);
             using Process process = Process.Start(startInfo)
-                ?? throw new InvalidOperationException("The Suite Wizard process did not start.");
+                ?? throw new InvalidOperationException("The FOA-SDK installer process did not start.");
             if (options.Detach)
             {
                 return 0;
@@ -52,14 +52,19 @@ internal static class Program
 
     private static ProcessStartInfo BuildStartInfo(LaunchOptions options, PathBundle paths, string python)
     {
-        string host = paths.SuiteWizardHost.FullName;
+        FileInfo host = options.AdvancedReview ? paths.AdvancedReviewHost : paths.QuickInstallerHost;
         string installerRoot = paths.InstallerRoot.FullName;
         List<string> arguments = new()
         {
-            Quote(host),
+            Quote(host.FullName),
             "--installer-root",
             Quote(installerRoot)
         };
+        if (options.ReceiptRoot is not null && !options.AdvancedReview)
+        {
+            arguments.Add("--receipt-root");
+            arguments.Add(Quote(options.ReceiptRoot.FullName));
+        }
         if (options.SmokeTest)
         {
             arguments.Add("--smoke-test");
@@ -146,19 +151,23 @@ internal static class Program
 
     private sealed record LaunchOptions(
         DirectoryInfo? InstallerRoot,
+        DirectoryInfo? ReceiptRoot,
         string? PythonPath,
         bool SmokeTest,
         bool Detach,
-        bool NoDialog
+        bool NoDialog,
+        bool AdvancedReview
     )
     {
         public static LaunchOptions Parse(string[] args)
         {
             DirectoryInfo? installerRoot = null;
+            DirectoryInfo? receiptRoot = null;
             string? pythonPath = null;
             bool smokeTest = false;
             bool detach = false;
             bool noDialog = false;
+            bool advancedReview = false;
             for (int index = 0; index < args.Length; index++)
             {
                 string current = args[index];
@@ -166,6 +175,9 @@ internal static class Program
                 {
                     case "--installer-root":
                         installerRoot = new DirectoryInfo(RequireValue(args, ref index, current));
+                        break;
+                    case "--receipt-root":
+                        receiptRoot = new DirectoryInfo(RequireValue(args, ref index, current));
                         break;
                     case "--python":
                         pythonPath = RequireValue(args, ref index, current);
@@ -180,6 +192,9 @@ internal static class Program
                     case "--no-dialog":
                         noDialog = true;
                         break;
+                    case "--advanced-review":
+                        advancedReview = true;
+                        break;
                     case "--help":
                     case "-h":
                         throw new ArgumentException(HelpText());
@@ -187,7 +202,7 @@ internal static class Program
                         throw new ArgumentException($"Unknown option: {current}\n\n{HelpText()}");
                 }
             }
-            return new LaunchOptions(installerRoot, pythonPath, smokeTest, detach, noDialog);
+            return new LaunchOptions(installerRoot, receiptRoot, pythonPath, smokeTest, detach, noDialog, advancedReview);
         }
 
         public static bool WantsConsoleError(string[] args)
@@ -207,24 +222,29 @@ internal static class Program
 
         private static string HelpText()
         {
-            return "Usage: FOA-SDK-Installer.exe [--installer-root <Installer>] [--python <pythonw.exe>] [--smoke-test] [--detach] [--no-dialog]";
+            return "Usage: FOA-SDK-Installer.exe [--installer-root <Installer>] [--receipt-root <Receipts>] [--python <pythonw.exe>] [--smoke-test] [--detach] [--no-dialog] [--advanced-review]";
         }
     }
 
-    private sealed record PathBundle(DirectoryInfo ProductRoot, DirectoryInfo InstallerRoot, FileInfo SuiteWizardHost)
+    private sealed record PathBundle(DirectoryInfo ProductRoot, DirectoryInfo InstallerRoot, FileInfo QuickInstallerHost, FileInfo AdvancedReviewHost)
     {
         public static PathBundle Resolve(LaunchOptions options)
         {
             DirectoryInfo installer = options.InstallerRoot is not null
                 ? ExistingDirectory(options.InstallerRoot.FullName, "Installer root")
                 : DiscoverInstallerRoot();
-            FileInfo host = new(Path.Combine(installer.FullName, "SuiteWizard", "Host", "Source", "suite_wizard_receipt_host.py"));
-            if (!host.Exists)
+            FileInfo quickHost = new(Path.Combine(installer.FullName, "SuiteWizard", "QuickHost", "Source", "quick_installer_host.py"));
+            if (!quickHost.Exists)
             {
-                throw new InvalidOperationException($"Suite Wizard host was not found: {host.FullName}");
+                throw new InvalidOperationException($"Quick installer host was not found: {quickHost.FullName}");
+            }
+            FileInfo advancedHost = new(Path.Combine(installer.FullName, "SuiteWizard", "Host", "Source", "suite_wizard_receipt_host.py"));
+            if (!advancedHost.Exists)
+            {
+                throw new InvalidOperationException($"Advanced Suite Wizard host was not found: {advancedHost.FullName}");
             }
             DirectoryInfo productRoot = installer.Parent ?? throw new InvalidOperationException("Installer root has no product root.");
-            return new PathBundle(productRoot, installer, host);
+            return new PathBundle(productRoot, installer, quickHost, advancedHost);
         }
 
         public IEnumerable<FileInfo> BundledPythonCandidates()
@@ -247,8 +267,8 @@ internal static class Program
                 while (current is not null)
                 {
                     DirectoryInfo candidate = new(Path.Combine(current.FullName, "Installer"));
-                    FileInfo host = new(Path.Combine(candidate.FullName, "SuiteWizard", "Host", "Source", "suite_wizard_receipt_host.py"));
-                    if (candidate.Exists && host.Exists)
+                    FileInfo quickHost = new(Path.Combine(candidate.FullName, "SuiteWizard", "QuickHost", "Source", "quick_installer_host.py"));
+                    if (candidate.Exists && quickHost.Exists)
                     {
                         return candidate;
                     }

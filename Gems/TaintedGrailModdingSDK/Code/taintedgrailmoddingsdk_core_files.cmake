@@ -107,6 +107,8 @@ set(FILES
     Source/CanonicalFingerprint.h
     Source/CanonicalInterchangeCanonical.cpp
     Source/CanonicalInterchangeCanonical.h
+    Source/CanonicalInterchangeMigration.cpp
+    Source/CanonicalInterchangeMigration.h
     Source/CanonicalInterchangeTypes.cpp
     Source/CanonicalInterchangeTypes.h
     Source/CanonicalInterchangeValidation.cpp

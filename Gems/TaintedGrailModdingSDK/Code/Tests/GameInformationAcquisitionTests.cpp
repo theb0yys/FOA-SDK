@@ -15,6 +15,9 @@ namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        constexpr const char* MerlinCommit =
+            "073bdab3e09d6adad5003339fc49b021738d71e6";
+
         GameProfile MakeAcquisitionProfile()
         {
             GameProfile profile;
@@ -60,6 +63,22 @@ namespace TaintedGrailModdingSDK
             observation.m_capturedAtUtc = "2026-07-21T20:00:00Z";
             return observation;
         }
+
+        GameInformationAcquisition::CandidateObservation MakeMerlinObservation(
+            AZStd::string observationId)
+        {
+            auto observation = MakeObservation(AZStd::move(observationId), '4');
+            observation.m_providerId = "provider.merlin-workshop";
+            observation.m_sourceId = "source.merlin.workshop.073bdab3";
+            observation.m_sourceRevision = MerlinCommit;
+            observation.m_subjectRef = "tool:merlins-workshop";
+            observation.m_claim =
+                "Verified official Merlin's Workshop exact checkout and accepted licence";
+            observation.m_evidenceKind = "exact-install-observation";
+            observation.m_locator = "github:AR-Questline/merlin-workshop";
+            observation.m_recordPath = "MERLIN_QUALIFICATION_RECEIPT.json";
+            return observation;
+        }
     } // namespace
 
     TEST(GameInformationAcquisitionTests, CanonicalProvidersPreserveOrderAndAuthorityBoundary)
@@ -70,6 +89,15 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(providers[1].m_kind, GameInformationAcquisition::ProviderKind::PinnedGitHub);
         EXPECT_EQ(providers[2].m_kind, GameInformationAcquisition::ProviderKind::MerlinWorkshop);
         EXPECT_TRUE(providers[2].m_optional);
+        EXPECT_EQ(
+            providers[2].m_qualification,
+            GameInformationAcquisition::QualificationState::ExactInstallBound);
+        EXPECT_EQ(providers[2].m_sourceRevision, MerlinCommit);
+        EXPECT_TRUE(providers[2].m_requiresLocalFileRead);
+        EXPECT_TRUE(providers[2].m_requiresNetwork);
+        EXPECT_EQ(
+            providers[2].m_licenseExpression,
+            "LicenseRef-Merlins-Workshop-1.1.0");
         for (const auto& provider : providers)
         {
             EXPECT_FALSE(provider.m_autoPromotionAllowed);
@@ -77,15 +105,32 @@ namespace TaintedGrailModdingSDK
         }
     }
 
-    TEST(GameInformationAcquisitionTests, ContractOnlyLocalAndMerlinProvidersCannotPublishObservations)
+    TEST(GameInformationAcquisitionTests, ContractOnlyLocalProviderCannotPublishObservations)
     {
         auto observation = MakeObservation("evidence.provider.contract-only");
         observation.m_providerId = "provider.foa-local-capture";
         observation.m_sourceRevision.clear();
         EXPECT_FALSE(GameInformationAcquisition::ValidateObservation(
             observation, MakeAcquisitionProfile()));
+    }
 
-        observation.m_providerId = "provider.merlin-workshop";
+    TEST(GameInformationAcquisitionTests, ExactMerlinObservationBuildsCandidateEvidence)
+    {
+        const auto observation = MakeMerlinObservation("evidence.provider.merlin");
+        EvidenceRecord evidence;
+        AZStd::string error;
+        ASSERT_TRUE(GameInformationAcquisition::BuildEvidenceCandidate(
+            observation, MakeAcquisitionProfile(), evidence, &error)) << error.c_str();
+        EXPECT_EQ(evidence.m_sourceId, observation.m_sourceId);
+        EXPECT_EQ(evidence.m_subjectRef, "tool:merlins-workshop");
+        EXPECT_EQ(evidence.m_recordPath, "MERLIN_QUALIFICATION_RECEIPT.json");
+    }
+
+    TEST(GameInformationAcquisitionTests, MerlinRevisionDriftFailsClosed)
+    {
+        auto observation = MakeMerlinObservation("evidence.provider.merlin.drift");
+        observation.m_sourceRevision =
+            "173bdab3e09d6adad5003339fc49b021738d71e6";
         EXPECT_FALSE(GameInformationAcquisition::ValidateObservation(
             observation, MakeAcquisitionProfile()));
     }

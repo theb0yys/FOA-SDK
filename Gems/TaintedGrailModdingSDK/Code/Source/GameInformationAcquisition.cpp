@@ -19,6 +19,8 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
     {
         constexpr const char* PinnedTaintedGrailCommit =
             "d7e740e7f167b73152b53409e483dab07d80d048";
+        constexpr const char* PinnedMerlinWorkshopCommit =
+            "073bdab3e09d6adad5003339fc49b021738d71e6";
 
         void SetError(AZStd::string* error, AZStd::string message)
         {
@@ -95,11 +97,14 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
             merlin.m_displayName = "Optional Merlin Workshop";
             merlin.m_contractVersion = "1.0.0";
             merlin.m_kind = ProviderKind::MerlinWorkshop;
-            merlin.m_qualification = QualificationState::ContractOnly;
+            merlin.m_qualification = QualificationState::ExactInstallBound;
             merlin.m_sourceRepository = "AR-Questline/merlin-workshop";
-            merlin.m_licenseExpression = "NOASSERTION";
+            merlin.m_sourceRevision = PinnedMerlinWorkshopCommit;
+            merlin.m_licenseExpression =
+                "LicenseRef-Merlins-Workshop-1.1.0";
             merlin.m_precedence = 2;
             merlin.m_optional = true;
+            merlin.m_requiresLocalFileRead = true;
             merlin.m_requiresNetwork = true;
 
             return { AZStd::move(local), AZStd::move(github), AZStd::move(merlin) };
@@ -144,7 +149,8 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
             SetError(error, "Acquisition provider identity, version, precedence, or authority is invalid.");
             return false;
         }
-        if (provider.m_qualification == QualificationState::SourcePinned
+        if ((provider.m_qualification == QualificationState::SourcePinned
+                || provider.m_qualification == QualificationState::ExactInstallBound)
             && (!IsBoundedText(provider.m_sourceRepository, 512)
                 || !IsGitCommit(provider.m_sourceRevision)))
         {
@@ -157,9 +163,16 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
             SetError(error, "Local capture must remain a local-file provider without network authority.");
             return false;
         }
-        if (provider.m_kind == ProviderKind::MerlinWorkshop && !provider.m_optional)
+        if (provider.m_kind == ProviderKind::MerlinWorkshop
+            && (!provider.m_optional
+                || !provider.m_requiresNetwork
+                || !provider.m_requiresLocalFileRead
+                || provider.m_qualification != QualificationState::ExactInstallBound))
         {
-            SetError(error, "Merlin Workshop must remain optional.");
+            SetError(
+                error,
+                "Merlin Workshop must remain optional, exact-install-bound, "
+                "and require reviewed network acquisition plus local verification.");
             return false;
         }
         if (error)
@@ -214,7 +227,8 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
             SetError(error, "Candidate observation is incomplete, unbounded, or attempts to escalate authority.");
             return false;
         }
-        if (provider->m_qualification == QualificationState::SourcePinned
+        if ((provider->m_qualification == QualificationState::SourcePinned
+                || provider->m_qualification == QualificationState::ExactInstallBound)
             && observation.m_sourceRevision != provider->m_sourceRevision)
         {
             SetError(error, "Candidate observation does not match the provider's exact pinned source revision.");

@@ -1,0 +1,20 @@
+{
+  "authority": "offline-structure-validation-only",
+  "case_count": 1,
+  "invalid_manifest_count": 0,
+  "manifest_count": 1,
+  "manifests": [
+    {
+      "case_count": 1,
+      "errors": [],
+      "fixture_set_id": "tg.fixture.synthetic.valid",
+      "path": "synthetic-valid.json",
+      "sha256": "d964ff59842d847f327778bf9ef097c884401e360d5af506b877a41de8229173",
+      "status": "valid-specification"
+    }
+  ],
+  "promotion": "none",
+  "runtime_authority": "none",
+  "schema_version": 1,
+  "status": "valid-specifications"
+}

@@ -185,6 +185,18 @@ Batch 004 adds four specification-only manifests containing 33 deterministic cas
 
 Batch 005 adds a standard-library runner and eight tests. It leaves every Batch 004 prohibition unchanged and promotes nothing.
 
+### Batch 006
+
+[Semantic Hook Batch 006](BATCH_006.md) implements inert typed transactions, diagnostic utilities, synthetic mount rollback, API v2 registry state and deterministic runner goldens.
+
+Batch 006 adds eleven synthetic tests and promotes nothing.
+
+### Batch 007
+
+[Semantic Hook Batch 007](BATCH_007.md) hardens the synthetic primitives into a reusable package with explicit state machines, hash-chained recovery journals, failure matrices, API v2 serialization fixtures and read-only offline CI.
+
+Batch 007 adds no runtime adapter or evidence authority and leaves every existing prohibition unchanged.
+
 ## Initial domain indexes
 
 Planned hook indexes:

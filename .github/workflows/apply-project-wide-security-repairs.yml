@@ -1,27 +1,30 @@
 name: Apply project-wide security repairs
 
 on:
-  push:
-    branches:
-      - agent/project-wide-security-repairs
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: project-wide-security-repairs
+  group: project-wide-security-repairs-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   apply-and-validate:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref == 'agent/project-wide-security-repairs'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - name: Check out repair branch
+      - name: Check out exact repair head
         uses: actions/checkout@v4
         with:
-          ref: agent/project-wide-security-repairs
+          ref: ${{ github.event.pull_request.head.sha || 'agent/project-wide-security-repairs' }}
           fetch-depth: 0
           lfs: true
 

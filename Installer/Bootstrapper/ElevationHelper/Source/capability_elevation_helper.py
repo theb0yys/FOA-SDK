@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0 OR MIT
-"""Authenticated Windows elevation request for one controlled bootstrapper."""
+"""Authenticated Windows elevation request for one controlled private bootstrapper bundle."""
 from __future__ import annotations
 
 import ctypes
@@ -27,7 +27,10 @@ from execution_security import (  # noqa: E402
     ExecutionSecurityError,
     canonical_json,
     claim_once,
+    copy_reviewed_bundle,
     file_sha256,
+    publish_bytes_create_once,
+    remove_tree,
     resolve_reviewed_path,
     select_helper,
     sha256,
@@ -51,7 +54,7 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 CONSENT_STATEMENT = "The trusted installer authority explicitly approved one exact reviewed elevated helper launch."
 GRANT_STATEMENT = "This grant authorizes one one-shot OS elevation prompt for the exact controlled bootstrap request and no arbitrary executable."
 REQUEST_STATEMENT = "This request is the complete authenticated input for the controlled elevation bootstrapper, including exact environment and reviewed helper policy."
-RESULT_STATEMENT = "This result records OS acceptance of one controlled-bootstrapper elevation request; completion is proven only by a separate bootstrapper receipt."
+RESULT_STATEMENT = "This result records OS acceptance of one verified private-bootstrapper elevation request; completion is proven only by a separate bootstrapper receipt."
 
 
 class ElevationError(RuntimeError):
@@ -101,12 +104,16 @@ def build_consent(
     helper_reference: str, launch_grant_sha256: str, rationale: str,
 ) -> dict[str, object]:
     base = {
-        "schema_version": 2, "consent_scope": CONSENT_SCOPE,
-        "consent_reference": _reference(consent_reference, "consent_reference"), "approved": True,
-        "approved_by": _text(approved_by, "approved_by", 160), "approved_at_utc": _utc(approved_at_utc, "approved_at_utc"),
+        "schema_version": 2,
+        "consent_scope": CONSENT_SCOPE,
+        "consent_reference": _reference(consent_reference, "consent_reference"),
+        "approved": True,
+        "approved_by": _text(approved_by, "approved_by", 160),
+        "approved_at_utc": _utc(approved_at_utc, "approved_at_utc"),
         "helper_reference": _reference(helper_reference, "helper_reference"),
         "launch_grant_sha256": _hash(launch_grant_sha256, "launch_grant_sha256"),
-        "rationale": _text(rationale, "rationale", 512), "statement": CONSENT_STATEMENT,
+        "rationale": _text(rationale, "rationale", 512),
+        "statement": CONSENT_STATEMENT,
     }
     try:
         signed = sign_authenticated_record(base, authority_key_path=authority_key_path, signature_field="consent_signature")
@@ -168,20 +175,31 @@ def build_elevation_grant(
     if issued < approved or expires <= issued or expires - issued > dt.timedelta(seconds=MAX_GRANT_SECONDS):
         raise ElevationError("Elevation grant must follow authenticated consent and expire within five minutes.")
     base = {
-        "schema_version": 2, "grant_scope": GRANT_SCOPE, "capability": ELEVATION_CAPABILITY,
-        "session_sha256": checked_session["session_sha256"], "launch_grant_sha256": checked_launch["grant_sha256"],
-        "consent_sha256": checked_consent["consent_sha256"], "helper_reference": checked_launch["helper_reference"],
-        "bootstrapper_reference": bootstrapper["helper_reference"], "bootstrapper": bootstrapper,
-        "executable_sha256": checked_launch["executable_sha256"], "argv_sha256": checked_launch["argv_sha256"],
-        "environment_sha256": checked_launch["environment_sha256"], "issuer": _text(issuer, "issuer", 160),
-        "issued_at_utc": _utc(issued_at_utc, "issued_at_utc"), "expires_at_utc": _utc(expires_at_utc, "expires_at_utc"),
-        "nonce": _reference(nonce, "nonce"), "session": checked_session, "launch_grant": checked_launch,
-        "consent": checked_consent, "statement": GRANT_STATEMENT, "authority": _authority(),
+        "schema_version": 2,
+        "grant_scope": GRANT_SCOPE,
+        "capability": ELEVATION_CAPABILITY,
+        "session_sha256": checked_session["session_sha256"],
+        "launch_grant_sha256": checked_launch["grant_sha256"],
+        "consent_sha256": checked_consent["consent_sha256"],
+        "helper_reference": checked_launch["helper_reference"],
+        "bootstrapper_reference": bootstrapper["helper_reference"],
+        "bootstrapper": bootstrapper,
+        "bootstrapper_support_files_sha256": sha256(bootstrapper.get("support_files", [])),
+        "executable_sha256": checked_launch["executable_sha256"],
+        "argv_sha256": checked_launch["argv_sha256"],
+        "environment_sha256": checked_launch["environment_sha256"],
+        "issuer": _text(issuer, "issuer", 160),
+        "issued_at_utc": _utc(issued_at_utc, "issued_at_utc"),
+        "expires_at_utc": _utc(expires_at_utc, "expires_at_utc"),
+        "nonce": _reference(nonce, "nonce"),
+        "session": checked_session,
+        "launch_grant": checked_launch,
+        "consent": checked_consent,
+        "statement": GRANT_STATEMENT,
+        "authority": _authority(),
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="grant_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="grant_sha256")
     except ExecutionSecurityError as exc:
         raise ElevationError(f"Elevation grant authentication failed: {exc}") from exc
 
@@ -193,40 +211,47 @@ def validate_elevation_grant(grant: Mapping[str, object], *, authority_key_path:
     if document.get("authority") != _authority():
         raise ElevationError("Elevation grant must grant elevation only.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="grant_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="grant_sha256")
     except ExecutionSecurityError as exc:
         raise ElevationError(f"Elevation grant authentication failed: {exc}") from exc
     expected = build_elevation_grant(
-        _object(document.get("session"), "grant.session"), _object(document.get("launch_grant"), "grant.launch_grant"),
-        _object(document.get("consent"), "grant.consent"), authority_key_path=authority_key_path,
-        issuer=_text(document.get("issuer"), "issuer", 160), issued_at_utc=_utc(document.get("issued_at_utc"), "issued_at_utc"),
-        expires_at_utc=_utc(document.get("expires_at_utc"), "expires_at_utc"), nonce=_reference(document.get("nonce"), "nonce"),
+        _object(document.get("session"), "grant.session"),
+        _object(document.get("launch_grant"), "grant.launch_grant"),
+        _object(document.get("consent"), "grant.consent"),
+        authority_key_path=authority_key_path,
+        issuer=_text(document.get("issuer"), "issuer", 160),
+        issued_at_utc=_utc(document.get("issued_at_utc"), "issued_at_utc"),
+        expires_at_utc=_utc(document.get("expires_at_utc"), "expires_at_utc"),
+        nonce=_reference(document.get("nonce"), "nonce"),
     )
     if document != expected:
         raise ElevationError("Elevation grant is stale, altered, or not canonically derived.")
     return document
 
 
-def build_bootstrap_request(grant: Mapping[str, object], *, authority_key_path: Path, request_reference: str, requested_at_utc: str) -> dict[str, object]:
+def build_bootstrap_request(
+    grant: Mapping[str, object], *, authority_key_path: Path, request_reference: str, requested_at_utc: str
+) -> dict[str, object]:
     checked = validate_elevation_grant(grant, authority_key_path=authority_key_path)
     requested = utc_datetime(requested_at_utc, "requested_at_utc")
     if requested < utc_datetime(checked["issued_at_utc"], "issued_at_utc") or requested > utc_datetime(checked["expires_at_utc"], "expires_at_utc"):
         raise ElevationError("Elevation grant is not valid at request creation.")
     launch = _object(checked["launch_grant"], "grant.launch_grant")
     base = {
-        "schema_version": 2, "request_scope": REQUEST_SCOPE,
+        "schema_version": 2,
+        "request_scope": REQUEST_SCOPE,
         "request_reference": _reference(request_reference, "request_reference"),
-        "session_sha256": checked["session_sha256"], "elevation_grant_sha256": checked["grant_sha256"],
-        "launch_grant_sha256": checked["launch_grant_sha256"], "helper": dict(launch["helper"]),
-        "bootstrapper": dict(checked["bootstrapper"]), "requested_at_utc": _utc(requested_at_utc, "requested_at_utc"),
-        "elevation_grant": checked, "statement": REQUEST_STATEMENT,
+        "session_sha256": checked["session_sha256"],
+        "elevation_grant_sha256": checked["grant_sha256"],
+        "launch_grant_sha256": checked["launch_grant_sha256"],
+        "helper": dict(launch["helper"]),
+        "bootstrapper": dict(checked["bootstrapper"]),
+        "requested_at_utc": _utc(requested_at_utc, "requested_at_utc"),
+        "elevation_grant": checked,
+        "statement": REQUEST_STATEMENT,
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="request_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="request_sha256")
     except ExecutionSecurityError as exc:
         raise ElevationError(f"Bootstrap request authentication failed: {exc}") from exc
 
@@ -236,9 +261,7 @@ def validate_bootstrap_request(request: Mapping[str, object], *, authority_key_p
     if document.get("schema_version") != 2 or document.get("request_scope") != REQUEST_SCOPE or document.get("statement") != REQUEST_STATEMENT:
         raise ElevationError("Bootstrap request contract is invalid.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="request_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="request_sha256")
     except ExecutionSecurityError as exc:
         raise ElevationError(f"Bootstrap request authentication failed: {exc}") from exc
     expected = build_bootstrap_request(
@@ -256,20 +279,10 @@ def _publish_request(request: Mapping[str, object], root: Path) -> Path:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ElevationError("Bootstrap request root must be an absolute existing non-symlink directory.")
     target = directory / f"{request['request_sha256']}.foa-elevation-request.json"
-    payload = canonical_json(request)
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0)
-    descriptor = os.open(target, flags, 0o600)
     try:
-        view = memoryview(payload)
-        while view:
-            written = os.write(descriptor, view)
-            if written <= 0:
-                raise ElevationError("Bootstrap request write made no forward progress.")
-            view = view[written:]
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
-    return target
+        return publish_bytes_create_once(target, canonical_json(request), label="Bootstrap request")
+    except ExecutionSecurityError as exc:
+        raise ElevationError(str(exc)) from exc
 
 
 def _windows_runas(bootstrapper: Path, parameters: Sequence[str], working_directory: Path) -> int:
@@ -289,44 +302,78 @@ def request_elevation(
     backend: Callable[[Path, Sequence[str], Path], int] | None = None,
 ) -> dict[str, object]:
     checked = validate_elevation_grant(grant, authority_key_path=authority_key_path)
+    requested = utc_datetime(requested_at_utc, "requested_at_utc")
+    if requested < utc_datetime(checked["issued_at_utc"], "issued_at_utc") or requested > utc_datetime(checked["expires_at_utc"], "expires_at_utc"):
+        raise ElevationError("Elevation grant is not valid at request time.")
+    bootstrapper = _object(checked["bootstrapper"], "grant.bootstrapper")
+    private_directory: Path | None = None
+    request_path: Path | None = None
     try:
-        claim = claim_once(
-            claim_root, authority_key_path=authority_key_path, claim_kind="claim.package-elevation-grant", artifact_sha256=str(checked["grant_sha256"]),
-            nonce=str(checked["nonce"]), claimed_at_utc=requested_at_utc,
+        cwd = resolve_reviewed_path(
+            execution_root, str(bootstrapper["working_directory"]), file_required=False,
+            label="Elevation bootstrapper working directory",
         )
-        bootstrapper = _object(checked["bootstrapper"], "grant.bootstrapper")
-        executable = resolve_reviewed_path(execution_root, str(bootstrapper["executable_path"]), file_required=True, label="Elevation bootstrapper")
-        cwd = resolve_reviewed_path(execution_root, str(bootstrapper["working_directory"]), file_required=False, label="Elevation bootstrapper working directory")
-    except ExecutionSecurityError as exc:
-        raise ElevationError(f"Elevation request preparation failed: {exc}") from exc
-    actual_hash, executable_size = file_sha256(executable)
-    if actual_hash != bootstrapper["executable_sha256"]:
-        raise ElevationError("Controlled elevation bootstrapper hash does not match the signed operation plan.")
-    request = build_bootstrap_request(
-        checked, authority_key_path=authority_key_path, request_reference=request_reference, requested_at_utc=requested_at_utc
-    )
-    request_path = _publish_request(request, request_root)
-    parameters = [*list(bootstrapper["argv"]), "--request", str(request_path)]
-    selected_backend = backend or _windows_runas
-    backend_code = selected_backend(executable, parameters, cwd)
+        private_bootstrapper, private_directory = copy_reviewed_bundle(
+            Path(execution_root), bootstrapper, Path(claim_root), str(checked["grant_sha256"])
+        )
+        actual_hash, executable_size = file_sha256(private_bootstrapper)
+        if actual_hash != bootstrapper["executable_sha256"]:
+            raise ElevationError("Private elevation bootstrapper hash does not match the signed operation plan.")
+        request = build_bootstrap_request(
+            checked, authority_key_path=authority_key_path,
+            request_reference=request_reference, requested_at_utc=requested_at_utc,
+        )
+        request_path = _publish_request(request, request_root)
+        try:
+            claim = claim_once(
+                claim_root, authority_key_path=authority_key_path,
+                claim_kind="claim.package-elevation-grant", artifact_sha256=str(checked["grant_sha256"]),
+                nonce=str(checked["nonce"]), claimed_at_utc=requested_at_utc,
+            )
+        except ExecutionSecurityError as exc:
+            raise ElevationError(f"Elevation grant consumption failed: {exc}") from exc
+        parameters = [*list(bootstrapper["argv"]), "--request", str(request_path)]
+        backend_code = (backend or _windows_runas)(private_bootstrapper, parameters, cwd)
+    except (OSError, ExecutionSecurityError, ElevationError):
+        if request_path is not None and request_path.exists() and not request_path.is_symlink():
+            try:
+                request_path.unlink()
+            except OSError:
+                pass
+        if private_directory is not None:
+            remove_tree(private_directory)
+        raise
     base = {
-        "schema_version": 2, "result_scope": RESULT_SCOPE, "session_sha256": checked["session_sha256"],
-        "launch_grant_sha256": checked["launch_grant_sha256"], "elevation_grant_sha256": checked["grant_sha256"],
-        "consent_sha256": checked["consent_sha256"], "claim_sha256": claim["claim_sha256"],
-        "request_sha256": request["request_sha256"], "bootstrapper_reference": checked["bootstrapper_reference"],
-        "bootstrapper_sha256": actual_hash, "bootstrapper_size_bytes": executable_size,
+        "schema_version": 2,
+        "result_scope": RESULT_SCOPE,
+        "session_sha256": checked["session_sha256"],
+        "launch_grant_sha256": checked["launch_grant_sha256"],
+        "elevation_grant_sha256": checked["grant_sha256"],
+        "consent_sha256": checked["consent_sha256"],
+        "claim_sha256": claim["claim_sha256"],
+        "request_sha256": request["request_sha256"],
+        "bootstrapper_reference": checked["bootstrapper_reference"],
+        "bootstrapper_sha256": actual_hash,
+        "bootstrapper_size_bytes": executable_size,
+        "bootstrapper_support_files_sha256": checked["bootstrapper_support_files_sha256"],
         "bootstrapper_argv_sha256": sha256(bootstrapper["argv"]),
         "bootstrapper_environment_sha256": sha256(bootstrapper["environment"]),
         "request_parameters_sha256": sha256(parameters),
-        "requested_at_utc": _utc(requested_at_utc, "requested_at_utc"), "backend_code": backend_code,
-        "elevation_requested": True, "controlled_bootstrapper_only": True, "consent_ui_suppressed": False,
-        "credentials_collected": False, "process_completion_observed": False, "statement": RESULT_STATEMENT,
-        "authority": _authority(), "elevation_grant": checked, "bootstrap_request": request,
+        "requested_at_utc": _utc(requested_at_utc, "requested_at_utc"),
+        "backend_code": backend_code,
+        "elevation_requested": True,
+        "controlled_bootstrapper_only": True,
+        "private_bootstrapper_bundle_used": True,
+        "consent_ui_suppressed": False,
+        "credentials_collected": False,
+        "process_completion_observed": False,
+        "statement": RESULT_STATEMENT,
+        "authority": _authority(),
+        "elevation_grant": checked,
+        "bootstrap_request": request,
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="result_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="result_sha256")
     except ExecutionSecurityError as exc:
         raise ElevationError(f"Elevation result authentication failed: {exc}") from exc
 
@@ -339,15 +386,19 @@ def validate_elevation_result(result: Mapping[str, object], *, authority_key_pat
     checked_request = validate_bootstrap_request(_object(document.get("bootstrap_request"), "result.bootstrap_request"), authority_key_path=authority_key_path)
     if document.get("elevation_grant_sha256") != checked_grant["grant_sha256"] or document.get("request_sha256") != checked_request["request_sha256"]:
         raise ElevationError("Elevation result is not bound to the authenticated grant and bootstrap request.")
-    for field, expected in (("elevation_requested", True), ("controlled_bootstrapper_only", True), ("consent_ui_suppressed", False), ("credentials_collected", False), ("process_completion_observed", False)):
+    for field, expected in (
+        ("elevation_requested", True), ("controlled_bootstrapper_only", True),
+        ("private_bootstrapper_bundle_used", True), ("consent_ui_suppressed", False),
+        ("credentials_collected", False), ("process_completion_observed", False),
+    ):
         if document.get(field) is not expected:
             raise ElevationError(f"Elevation result flag {field} is invalid.")
+    if document.get("bootstrapper_support_files_sha256") != checked_grant["bootstrapper_support_files_sha256"]:
+        raise ElevationError("Elevation result support-file binding is invalid.")
     if document.get("authority") != _authority():
         raise ElevationError("Elevation result must grant elevation only.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="result_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="result_sha256")
     except ExecutionSecurityError as exc:
         raise ElevationError(f"Elevation result authentication failed: {exc}") from exc
     return document

@@ -85,6 +85,7 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
             "persist-credentials: false",
             "convertPullRequestToDraft",
             "github.event_name != 'pull_request_target'",
+            "${{ github.event_name }}",
         ),
         "Automatic TG SDK workflow",
     )
@@ -176,7 +177,7 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
         "automatic pull-request static validation",
         "pull_request_target",
         "trusted base commit",
-        "returns the pull request to draft",
+        "pull request to draft",
         "required status checks",
         "--static-only",
         "--ctest-build-dir",

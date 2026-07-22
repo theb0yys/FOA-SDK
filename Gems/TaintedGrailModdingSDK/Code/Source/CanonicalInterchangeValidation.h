@@ -66,6 +66,9 @@ namespace TaintedGrailModdingSDK::Interchange
         inline constexpr AZStd::string_view ExtensionUnapproved = "interchange.extension.unapproved";
         inline constexpr AZStd::string_view ExtensionDigestMismatch = "interchange.extension.digest-mismatch";
         inline constexpr AZStd::string_view PackageDeclarationMismatch = "interchange.fingerprint.package-declaration-mismatch";
+        inline constexpr AZStd::string_view MigrationSourceInvalid = "interchange.migration.source-invalid";
+        inline constexpr AZStd::string_view MigrationUnavailable = "interchange.migration.unavailable";
+        inline constexpr AZStd::string_view MigrationSemanticDrift = "interchange.migration.semantic-drift";
     }
 
     struct CanonicalInterchangeIssueV1

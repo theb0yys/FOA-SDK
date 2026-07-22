@@ -8,11 +8,12 @@
 #include "FoARuntimeAdapterRoutes.h"
 
 #include "CanonicalFingerprint.h"
+#include "DeterministicContractJson.h"
 #include "ResearchContractValidation.h"
+#include "SourceEvidenceRegistry.h"
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/sort.h>
-#include <AzCore/std/string/conversions.h>
 #include <AzCore/std/utility/move.h>
 
 namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
@@ -21,12 +22,26 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
     {
         constexpr const char* UpstreamCommit =
             "d7e740e7f167b73152b53409e483dab07d80d048";
+        constexpr const char* IdentityEvidenceKind = "adapter-identity";
+        constexpr const char* ParityEvidenceKind = "adapter-install-parity";
 
         void SetError(AZStd::string* error, AZStd::string message)
         {
             if (error)
             {
                 *error = AZStd::move(message);
+            }
+        }
+
+        void AddReason(
+            QualificationResult& result,
+            const AZStd::string& reason)
+        {
+            if (AZStd::find(
+                    result.m_reasons.begin(), result.m_reasons.end(), reason)
+                == result.m_reasons.end())
+            {
+                result.m_reasons.push_back(reason);
             }
         }
 
@@ -181,12 +196,66 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
             return { AZStd::move(mono), AZStd::move(il2Cpp) };
         }
 
-        void AppendString(AZStd::string& output, const AZStd::string& value)
+        bool EvidenceMatchesRoute(
+            const EvidenceRecord& evidence,
+            const SourceRecord& source,
+            const RouteDescriptor& route,
+            const GameProfile& profile,
+            const char* requiredKind)
         {
-            output += AZStd::to_string(value.size());
-            output.push_back(':');
-            output += value;
-            output.push_back('|');
+            return evidence.m_evidenceKind == requiredKind
+                && evidence.m_subjectRef == route.m_adapterId
+                && evidence.m_profileId == profile.m_profileId
+                && evidence.m_gameVersion == profile.m_gameVersion
+                && evidence.m_branch == profile.m_branch
+                && source.m_sourceId == evidence.m_sourceId
+                && source.m_fingerprint == evidence.m_sourceFingerprint
+                && source.m_profileId == profile.m_profileId
+                && source.m_gameVersion == profile.m_gameVersion
+                && source.m_branch == profile.m_branch
+                && source.m_runtimeTarget == profile.m_runtimeTarget;
+        }
+
+        void ValidateEvidenceSet(
+            const AZStd::vector<AZStd::string>& evidenceIds,
+            const char* requiredKind,
+            const char* missingReason,
+            const char* invalidReason,
+            const RouteDescriptor& route,
+            const GameProfile& profile,
+            const SourceEvidenceRegistry& registry,
+            QualificationResult& result)
+        {
+            if (evidenceIds.empty())
+            {
+                AddReason(result, missingReason);
+                return;
+            }
+            if (HasDuplicates(evidenceIds))
+            {
+                AddReason(result, "duplicate-evidence-id");
+            }
+            for (const AZStd::string& evidenceId : evidenceIds)
+            {
+                if (!IsStableContractId(evidenceId))
+                {
+                    AddReason(result, "invalid-evidence-id");
+                    continue;
+                }
+                const EvidenceRecord* evidence = registry.FindEvidence(evidenceId);
+                if (!evidence)
+                {
+                    AddReason(result, invalidReason);
+                    continue;
+                }
+                const SourceRecord* source = registry.FindSource(evidence->m_sourceId);
+                if (!source
+                    || !EvidenceMatchesRoute(
+                        *evidence, *source, route, profile, requiredKind))
+                {
+                    AddReason(result, invalidReason);
+                }
+            }
         }
     } // namespace
 
@@ -285,6 +354,21 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
         QualificationResult result;
         result.m_adapterId = request.m_adapterId;
         const RouteDescriptor* route = FindRoute(request.m_adapterId);
+        if (route && ValidateRoute(*route))
+        {
+            result.m_routeFingerprint = CalculateRouteFingerprint(*route);
+        }
+        result.m_reasons.push_back("active-evidence-registry-required");
+        return result;
+    }
+
+    QualificationResult Qualify(
+        const QualificationRequest& request,
+        const SourceEvidenceRegistry& evidenceRegistry)
+    {
+        QualificationResult result;
+        result.m_adapterId = request.m_adapterId;
+        const RouteDescriptor* route = FindRoute(request.m_adapterId);
         if (!route || !ValidateRoute(*route))
         {
             result.m_reasons.push_back("unknown-or-invalid-adapter-route");
@@ -304,67 +388,73 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
             && request.m_profile.m_bepInExVersion == route->m_bepInExVersion;
         if (!result.m_exactProfileMatch)
         {
-            result.m_reasons.push_back("exact-profile-mismatch");
+            AddReason(result, "exact-profile-mismatch");
         }
-        if (request.m_identityEvidenceIds.empty())
+
+        ValidateEvidenceSet(
+            request.m_identityEvidenceIds,
+            IdentityEvidenceKind,
+            "identity-evidence-required",
+            "identity-evidence-not-active-or-mismatched",
+            *route,
+            request.m_profile,
+            evidenceRegistry,
+            result);
+        ValidateEvidenceSet(
+            request.m_parityEvidenceIds,
+            ParityEvidenceKind,
+            "exact-install-parity-evidence-required",
+            "parity-evidence-not-active-or-mismatched",
+            *route,
+            request.m_profile,
+            evidenceRegistry,
+            result);
+
+        for (const AZStd::string& evidenceId : request.m_identityEvidenceIds)
         {
-            result.m_reasons.push_back("identity-evidence-required");
-        }
-        if (request.m_parityEvidenceIds.empty())
-        {
-            result.m_reasons.push_back("exact-install-parity-evidence-required");
-        }
-        if (HasDuplicates(request.m_identityEvidenceIds)
-            || HasDuplicates(request.m_parityEvidenceIds))
-        {
-            result.m_reasons.push_back("duplicate-evidence-id");
-        }
-        if (AZStd::any_of(
-                request.m_identityEvidenceIds.begin(),
-                request.m_identityEvidenceIds.end(),
-                [](const AZStd::string& evidenceId)
-                {
-                    return !IsStableContractId(evidenceId);
-                })
-            || AZStd::any_of(
-                request.m_parityEvidenceIds.begin(),
-                request.m_parityEvidenceIds.end(),
-                [](const AZStd::string& evidenceId)
-                {
-                    return !IsStableContractId(evidenceId);
-                }))
-        {
-            result.m_reasons.push_back("invalid-evidence-id");
+            if (AZStd::find(
+                    request.m_parityEvidenceIds.begin(),
+                    request.m_parityEvidenceIds.end(), evidenceId)
+                != request.m_parityEvidenceIds.end())
+            {
+                AddReason(result, "evidence-id-cannot-satisfy-multiple-classes");
+            }
         }
         if (request.m_requestBuild || request.m_requestDeployment
             || request.m_requestExecution || request.m_requestRuntimeMutation
             || request.m_requestSaveAccess)
         {
-            result.m_reasons.push_back("requested-authority-not-granted-by-route-import");
+            AddReason(result, "requested-authority-not-granted-by-route-import");
         }
+        AZStd::sort(result.m_reasons.begin(), result.m_reasons.end());
         result.m_planningCompatible = result.m_reasons.empty();
         return result;
     }
 
     AZStd::string BuildCanonicalRoute(const RouteDescriptor& route)
     {
-        AZStd::string output = "foa-runtime-adapter-route-v1|";
-        AppendString(output, route.m_adapterId);
-        AppendString(output, route.m_displayName);
-        AppendString(output, route.m_contractVersion);
-        output += AZStd::to_string(static_cast<int>(route.m_kind));
-        output.push_back('|');
-        output += AZStd::to_string(static_cast<int>(route.m_evidenceState));
-        output.push_back('|');
-        AppendString(output, route.m_frameworkVersion);
-        AppendString(output, route.m_gameVersion);
-        AppendString(output, route.m_branch);
-        AppendString(output, route.m_runtimeTarget);
-        AppendString(output, route.m_unityVersion);
-        AppendString(output, route.m_bepInExVersion);
-        AppendString(output, route.m_upstreamRepository);
-        AppendString(output, route.m_upstreamCommit);
-        AppendString(output, route.m_licenseExpression);
+        using namespace DeterministicContractJson;
+
+        AZStd::string output = "{";
+        AppendString(output, "schema", "foa-runtime-adapter-route-v1");
+        AppendString(output, "adapter_id", route.m_adapterId);
+        AppendString(output, "display_name", route.m_displayName);
+        AppendString(output, "contract_version", route.m_contractVersion);
+        AppendSigned(output, "kind", static_cast<AZ::s64>(route.m_kind));
+        AppendSigned(
+            output,
+            "evidence_state",
+            static_cast<AZ::s64>(route.m_evidenceState));
+        AppendString(output, "framework_version", route.m_frameworkVersion);
+        AppendString(output, "game_version", route.m_gameVersion);
+        AppendString(output, "branch", route.m_branch);
+        AppendString(output, "runtime_target", route.m_runtimeTarget);
+        AppendString(output, "unity_version", route.m_unityVersion);
+        AppendString(output, "bepinex_version", route.m_bepInExVersion);
+        AppendString(output, "upstream_repository", route.m_upstreamRepository);
+        AppendString(output, "upstream_commit", route.m_upstreamCommit);
+        AppendString(output, "license_expression", route.m_licenseExpression);
+
         AZStd::vector<SourceBinding> sources = route.m_sources;
         AZStd::sort(
             sources.begin(), sources.end(),
@@ -372,24 +462,37 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
             {
                 return left.m_path < right.m_path;
             });
-        for (const SourceBinding& source : sources)
+        AppendName(output, "sources");
+        output.push_back('[');
+        for (size_t index = 0; index < sources.size(); ++index)
         {
-            AppendString(output, source.m_path);
-            AppendString(output, source.m_gitBlobSha1);
+            if (index != 0)
+            {
+                output.push_back(',');
+            }
+            output.push_back('{');
+            AppendString(output, "path", sources[index].m_path);
+            AppendString(
+                output,
+                "git_blob_sha1",
+                sources[index].m_gitBlobSha1,
+                false);
+            output.push_back('}');
         }
-        AZStd::vector<AZStd::string> proven = route.m_provenCapabilities;
-        AZStd::vector<AZStd::string> blocked = route.m_blockedCapabilities;
-        AZStd::sort(proven.begin(), proven.end());
-        AZStd::sort(blocked.begin(), blocked.end());
-        for (const AZStd::string& capability : proven)
-        {
-            AppendString(output, "proven:" + capability);
-        }
-        for (const AZStd::string& capability : blocked)
-        {
-            AppendString(output, "blocked:" + capability);
-        }
-        output += "build=false|deploy=false|execute=false|mutation=false|save=false|";
+        output += "],";
+        AppendSortedStringArray(
+            output, "proven_capabilities", route.m_provenCapabilities);
+        AppendSortedStringArray(
+            output, "blocked_capabilities", route.m_blockedCapabilities);
+        AppendName(output, "authority");
+        output.push_back('{');
+        AppendBool(output, "build", route.m_buildAllowed);
+        AppendBool(output, "deployment", route.m_deploymentAllowed);
+        AppendBool(output, "execution", route.m_executionAllowed);
+        AppendBool(output, "runtime_mutation", route.m_runtimeMutationAllowed);
+        AppendBool(output, "save_access", route.m_saveAccessAllowed, false);
+        output.push_back('}');
+        output.push_back('}');
         return output;
     }
 

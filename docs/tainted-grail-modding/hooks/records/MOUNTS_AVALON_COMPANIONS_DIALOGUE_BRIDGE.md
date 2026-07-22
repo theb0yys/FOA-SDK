@@ -36,10 +36,10 @@ context:
   side_effects: installs an external dialogue command and retains the reflected unregister MethodInfo
 safety:
   nullability: absent type or methods skips registration; reflection invocation exceptions are caught
-  failure_mode: fail-open for plug-in load; registration remains false and retries later
-  save_risk: unknown through the external command target; registration itself none known
-  performance_risk: medium until assembly-scan allocation is measured
-  story_risk: bounded; dialogue UI/command availability may change
+  failure_mode: fail-open
+  save_risk: unknown
+  performance_risk: medium
+  story_risk: bounded
 compatibility:
   known_conflicts: command ID or owner collisions, incompatible Avalon Companions API versions, duplicate registrations, assembly reload/unload, other wolf dialogue providers
   load_order: optional API may load before or after Avalon Mounts; retry loop is intended to accommodate late availability
@@ -69,6 +69,7 @@ limitations:
   - The external assembly name, version, owner contract, duplicate-registration behavior, and bool return semantics are not independently documented here.
   - AppDomain assembly enumeration and LINQ allocation occur on each retry until success.
   - A successful registration is trusted from a bool result; no query verifies ownership afterward.
+  - Registration itself has no known save write, but the supplied execution delegate reaches the separately blocked wolf-seat controller.
 ```
 
 ## Unregister dialogue commands
@@ -105,15 +106,15 @@ context:
   side_effects: mutates external dialogue-command registration state
 safety:
   nullability: null MethodInfo results in no invocation; local state is still cleared
-  failure_mode: fail-open for teardown; exception logs and local state is discarded
-  save_risk: none known
+  failure_mode: fail-open
+  save_risk: none
   performance_risk: low
-  story_risk: bounded; failed cleanup may leave stale dialogue UI or callbacks
+  story_risk: bounded
 compatibility:
   known_conflicts: owner-ID reuse, external API unload/reload, stale MethodInfo, unregister semantics broader or narrower than expected
   load_order: cleanup depends on the target assembly and API remaining invokable
   version_stability: low
- evidence:
+evidence:
   source_repository: theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods
   source_commit: d7e740e7f167b73152b53409e483dab07d80d048
   source_paths:

@@ -105,6 +105,8 @@ set(FILES
     Source/AdapterWorkOrderPlanningService.h
     Source/CanonicalFingerprint.cpp
     Source/CanonicalFingerprint.h
+    Source/CanonicalInterchangeCanonical.cpp
+    Source/CanonicalInterchangeCanonical.h
     Source/CanonicalInterchangeTypes.cpp
     Source/CanonicalInterchangeTypes.h
     Source/DeterministicContractJson.h

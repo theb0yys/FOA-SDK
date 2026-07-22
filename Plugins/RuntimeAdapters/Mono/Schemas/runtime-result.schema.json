@@ -1,0 +1,231 @@
+{
+  "$defs": {
+    "sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "utc": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/theb0yys/FOA-SDK/blob/main/Plugins/RuntimeAdapters/Mono/Schemas/runtime-result.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {
+      "const": "adapter.foa.mono"
+    },
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "build": {
+          "const": false
+        },
+        "catalog_mutation": {
+          "const": false
+        },
+        "deployment": {
+          "const": false
+        },
+        "evidence_promotion": {
+          "const": false
+        },
+        "game_launch": {
+          "const": false
+        },
+        "process_execution": {
+          "const": false
+        },
+        "publication": {
+          "const": false
+        },
+        "runtime_execution": {
+          "const": false
+        },
+        "runtime_mutation": {
+          "const": false
+        },
+        "save_access": {
+          "const": false
+        },
+        "signing": {
+          "const": false
+        }
+      },
+      "required": [
+        "build",
+        "deployment",
+        "game_launch",
+        "process_execution",
+        "runtime_execution",
+        "runtime_mutation",
+        "save_access",
+        "signing",
+        "publication",
+        "catalog_mutation",
+        "evidence_promotion"
+      ],
+      "type": "object"
+    },
+    "binary_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_evidence_eligible": {
+      "type": "boolean"
+    },
+    "candidate_evidence_promoted": {
+      "const": false
+    },
+    "captured_at_utc": {
+      "$ref": "#/$defs/utc"
+    },
+    "completed_at_utc": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/utc"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "failures": {
+      "items": {
+        "maxLength": 512,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 32,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "gate_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "log_reference": {
+      "maxLength": 512,
+      "pattern": "^(?:|[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)$",
+      "type": "string"
+    },
+    "observations": {
+      "additionalProperties": false,
+      "properties": {
+        "framework_seen": {
+          "type": "boolean"
+        },
+        "loader_seen": {
+          "type": "boolean"
+        },
+        "startup_marker": {
+          "const": "foa-sdk.mono-adapter.ready"
+        },
+        "startup_marker_seen": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "loader_seen",
+        "framework_seen",
+        "startup_marker_seen",
+        "startup_marker"
+      ],
+      "type": "object"
+    },
+    "outcome": {
+      "enum": [
+        "not_attempted",
+        "succeeded",
+        "failed"
+      ]
+    },
+    "package_id": {
+      "const": "extension.foa-mono-runtime-adapter"
+    },
+    "package_version": {
+      "const": "0.1.0"
+    },
+    "profile": {
+      "additionalProperties": false,
+      "properties": {
+        "bepinex_version": {
+          "const": "5.4.23.3"
+        },
+        "branch": {
+          "const": "mono"
+        },
+        "evidence_state": {
+          "const": "HostLiveLoadValidated"
+        },
+        "framework_version": {
+          "const": "0.1.33"
+        },
+        "game_version": {
+          "const": "1.23.401"
+        },
+        "profile_id": {
+          "const": "foa-1.23.401-mono-bepinex5-tf-0.1.33"
+        },
+        "runtime_target": {
+          "const": "Mono"
+        },
+        "unity_version": {
+          "const": "6000.0.64f1"
+        }
+      },
+      "required": [
+        "profile_id",
+        "game_version",
+        "branch",
+        "runtime_target",
+        "unity_version",
+        "bepinex_version",
+        "framework_version",
+        "evidence_state"
+      ],
+      "type": "object"
+    },
+    "result_kind": {
+      "const": "foa-mono-runtime-result"
+    },
+    "result_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "started_at_utc": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/utc"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "result_kind",
+    "adapter_id",
+    "package_id",
+    "package_version",
+    "gate_sha256",
+    "binary_sha256",
+    "profile",
+    "outcome",
+    "started_at_utc",
+    "completed_at_utc",
+    "captured_at_utc",
+    "observations",
+    "log_reference",
+    "failures",
+    "candidate_evidence_eligible",
+    "candidate_evidence_promoted",
+    "authority",
+    "result_sha256"
+  ],
+  "title": "FOA SDK Mono externally supplied runtime result",
+  "type": "object"
+}

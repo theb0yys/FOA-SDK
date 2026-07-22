@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>FOA.SDK.RuntimeAdapter.Mono</AssemblyName>
+    <RootNamespace>FoaSdk.RuntimeAdapters.Mono</RootNamespace>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <PathMap>$(MSBuildProjectDirectory)=/_/foa-sdk/mono-adapter</PathMap>
+    <FoAGameRoot Condition="'$(FoAGameRoot)' == ''"></FoAGameRoot>
+    <FoAManagedDir>$(FoAGameRoot)\Fall of Avalon_Data\Managed</FoAManagedDir>
+    <BepInExCoreDir>$(FoAGameRoot)\BepInEx\core</BepInExCoreDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCoreDir)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(FoAManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ValidateMonoAdapterInputs" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(FoAGameRoot)' == ''"
+           Text="FoAGameRoot is required for the Mono adapter source build." />
+    <Error Condition="!Exists('$(BepInExCoreDir)\BepInEx.dll')"
+           Text="BepInEx 5 BepInEx.dll is required from the exact local Mono profile." />
+    <Error Condition="!Exists('$(FoAManagedDir)\UnityEngine.CoreModule.dll')"
+           Text="UnityEngine.CoreModule.dll is required from the exact local Mono profile." />
+  </Target>
+</Project>

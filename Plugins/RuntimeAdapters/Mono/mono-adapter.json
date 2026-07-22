@@ -1,0 +1,106 @@
+{
+  "adapter_id": "adapter.foa.mono",
+  "authority": {
+    "build": false,
+    "catalog_mutation": false,
+    "deployment": false,
+    "evidence_promotion": false,
+    "game_launch": false,
+    "process_execution": false,
+    "publication": false,
+    "runtime_execution": false,
+    "runtime_mutation": false,
+    "save_access": false,
+    "signing": false
+  },
+  "dependencies": [
+    {
+      "id": "bepinex5",
+      "kind": "local-reference",
+      "redistributable": false,
+      "required": true,
+      "version": "5.4.23.3"
+    },
+    {
+      "id": "tainted-framework",
+      "kind": "runtime-plugin",
+      "redistributable": false,
+      "required": true,
+      "version": "0.1.33"
+    },
+    {
+      "id": "unityengine-coremodule",
+      "kind": "local-reference",
+      "redistributable": false,
+      "required": true,
+      "version": "6000.0.64f1"
+    }
+  ],
+  "evidence": {
+    "execution_gate_schema": "Schemas/execution-gate.schema.json",
+    "runtime_result_schema": "Schemas/runtime-result.schema.json"
+  },
+  "expected_binaries": [
+    {
+      "committed": false,
+      "media_type": "application/vnd.microsoft.portable-executable",
+      "path": "bin/Release/netstandard2.1/FOA.SDK.RuntimeAdapter.Mono.dll",
+      "required": true
+    },
+    {
+      "committed": false,
+      "media_type": "application/octet-stream",
+      "path": "bin/Release/netstandard2.1/FOA.SDK.RuntimeAdapter.Mono.pdb",
+      "required": false
+    }
+  ],
+  "package_id": "extension.foa-mono-runtime-adapter",
+  "package_version": "0.1.0",
+  "profile": {
+    "bepinex_version": "5.4.23.3",
+    "branch": "mono",
+    "evidence_state": "HostLiveLoadValidated",
+    "framework_version": "0.1.33",
+    "game_version": "1.23.401",
+    "profile_id": "foa-1.23.401-mono-bepinex5-tf-0.1.33",
+    "runtime_target": "Mono",
+    "unity_version": "6000.0.64f1"
+  },
+  "route_contract_version": "1.0.0",
+  "schema_version": 1,
+  "source_project": {
+    "assembly_name": "FOA.SDK.RuntimeAdapter.Mono",
+    "plugin_guid": "foa.sdk.runtime-adapter.mono",
+    "plugin_name": "FOA SDK Mono Runtime Adapter",
+    "plugin_source": "Source/MonoRuntimeAdapterPlugin.cs",
+    "plugin_version": "0.1.0",
+    "project": "Source/FOA.SDK.RuntimeAdapter.Mono.csproj",
+    "source_files": [
+      {
+        "path": "Source/FOA.SDK.RuntimeAdapter.Mono.csproj",
+        "sha256": "sha256:d367b2f6787e4e2f5e68e370df3fdf9a38b1ea6735a43f857f030c5ddead1be9"
+      },
+      {
+        "path": "Source/MonoRuntimeAdapterPlugin.cs",
+        "sha256": "sha256:0e11dd49fe5ea9012daae3b0084442993fb3367e4d749faee415a6285f150223"
+      }
+    ],
+    "startup_marker": "foa-sdk.mono-adapter.ready",
+    "target_framework": "netstandard2.1"
+  },
+  "upstream_evidence": {
+    "commit": "d7e740e7f167b73152b53409e483dab07d80d048",
+    "license_expression": "NOASSERTION",
+    "repository": "theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods",
+    "sources": [
+      {
+        "git_blob_sha1": "38776cbde96f0d6737b666914486caa0484fb046",
+        "path": "mods/tainted-framework/docs/gates/TF-Mono-0.1.33-live-load.md"
+      },
+      {
+        "git_blob_sha1": "f73491e1f6766ff5d328f686ea339c24f1548151",
+        "path": "mods/tainted-framework/src/Tainted.Host.Mono/Plugin.cs"
+      }
+    ]
+  }
+}

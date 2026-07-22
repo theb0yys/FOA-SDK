@@ -1,0 +1,41 @@
+{
+  "capabilities": [
+    "runtime.mono.build-plan",
+    "runtime.mono.execution-gate",
+    "runtime.mono.package-verify",
+    "runtime.mono.result-verify"
+  ],
+  "category": "runtime-adapter",
+  "compatibility": {
+    "branches": [
+      "mono"
+    ],
+    "game_versions": [
+      "1.23.401"
+    ],
+    "runtime_targets": [
+      "mono"
+    ]
+  },
+  "dependencies": [],
+  "entry_points": {
+    "python_modules": [
+      "Tools/mono_runtime_adapter.py"
+    ],
+    "tools": [
+      "Tools/mono_runtime_adapter.py"
+    ]
+  },
+  "id": "extension.foa-mono-runtime-adapter",
+  "name": "FOA Mono Runtime Adapter",
+  "optional": true,
+  "provenance": {
+    "license": "Apache-2.0 OR MIT",
+    "origin": "theb0yys/FOA-SDK",
+    "redistribution_reviewed": true,
+    "revision": "project-owned"
+  },
+  "schema_version": 1,
+  "status": "experimental",
+  "version": "0.1.0"
+}

@@ -7,6 +7,7 @@
 
 set(FILES
     Tests/AvalonAiExtensionTests.cpp
+    Tests/DeterministicContractJsonTests.cpp
     Tests/ExtensionAPITests.cpp
     Tests/FoARuntimeAdapterRoutesTests.cpp
     Tests/GameInformationAcquisitionTests.cpp

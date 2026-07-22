@@ -134,7 +134,9 @@ Not applicable / Evidence:
 
 ## Mandatory merge obligations
 
-<!-- Draft pull requests may leave these unchecked. A ready pull request fails CI until every marker is present exactly once and checked. -->
+<!-- Draft pull requests may leave these unchecked. Before marking ready, replace the placeholder below with the current 40-character PR head. Every new commit makes the marker stale and returns the PR to draft. -->
+
+<!-- merge-head:REPLACE_WITH_CURRENT_40_CHARACTER_HEAD_SHA -->
 
 - [ ] Exact-head GitHub static validation passed and its run/artifact identity is recorded. <!-- merge-obligation:static -->
 - [ ] Reviewed-range `git diff --check <base> HEAD` passed for the final reviewed base and head. <!-- merge-obligation:reviewed-range -->

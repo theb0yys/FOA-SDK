@@ -53,11 +53,15 @@ The system reference summarizes and connects those owners. It does not copy thei
 
 - [Economy patch registrar](items-economy/PATCH_REGISTRATION_FACT.md) — establishes the pinned upstream registrar's caller-supplied, fail-open registration pattern and links the twenty processed Batch 002 target candidates.
 - [Economy helper semantics](items-economy/HELPER_SEMANTICS_FACTS.md) — separates seven dry-run/delegation source facts from the six blocked reflection, pricing, quantity, protection, and story-mutation helpers reviewed in Batch 003.
-- [Avalon Mounts runtime structure](mounts/AVALON_MOUNTS_RUNTIME_FACTS.md) — separates plug-in lifecycle/cleanup, exact frame-controller behavior, filename-token compatibility detection, the blocked wolf-seat controller, and the optional Avalon Companions adapter candidates.
+- [Tainted Economy diagnostic writer](items-economy/DIAGNOSTIC_WRITER_FACT.md) — records the exact 26-field writer, row-count cap, path/write sequence, deterministic containment and publication defects, and the Batch 004 current-source prohibition.
+- [Avalon Mounts runtime structure](mounts/AVALON_MOUNTS_RUNTIME_FACTS.md) — separates plug-in lifecycle/cleanup, exact frame-controller behavior, filename-token compatibility detection, the prohibited wolf-seat controller, and the optional Avalon Companions adapter candidates.
+- [Avalon Companions API v1](mounts/AVALON_COMPANIONS_API_V1_FACT.md) — verifies the pinned `AvalonCompanions` 0.2.17/API v1 source signatures while keeping built-assembly resolution, behavior, owner isolation, and cleanup unverified.
 
 A source-system fact describes a verified property of the selected source architecture. It is not automatically a fact about the current game runtime. Native type/member facts still require exact-profile evidence and hook promotion.
 
 A fact that a helper is diagnostics-only or delegates through a configuration gate does not prove reflected-member identity, bounded output, mutation safety, rollback, persistence semantics, or combined-mod compatibility.
+
+Batch 004's [`promotion and prohibition register`](../hooks/decisions/BATCH_004_PROMOTION_PROHIBITION.md) is authoritative for the current-source decisions attached to these facts and their related candidate records.
 
 ## Coverage rule
 

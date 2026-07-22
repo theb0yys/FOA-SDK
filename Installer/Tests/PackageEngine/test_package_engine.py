@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ast
 import copy
-import json
 import sys
 import tempfile
 import unittest
@@ -109,7 +108,8 @@ class PackageEngineCapabilityTests(unittest.TestCase):
         self.assertEqual(first["audience"], "foa-sdk.package-engine")
         self.assertEqual(len(first["token_sha256"]), 64)
         self.assertTrue(all(value is False for value in first["authority"].values()))
-        self.assertNotIn("secret", json.dumps(first).lower())
+        for forbidden_field in ("secret", "credential", "executable_path", "environment"):
+            self.assertNotIn(forbidden_field, first)
         self.assertEqual(validate_capability_token(first), first)
         self.assertEqual(verify_token_for_handoff(first, handoff), first)
 

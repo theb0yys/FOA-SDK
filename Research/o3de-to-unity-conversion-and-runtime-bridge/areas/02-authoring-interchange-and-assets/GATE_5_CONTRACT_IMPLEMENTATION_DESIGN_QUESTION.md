@@ -1,10 +1,16 @@
 # Gate 5 Canonical Interchange Contract Implementation Design Question
 
-Status: focused design question; no implementation authority
+Status: answered by proposed focused design; pending explicit maintainer acceptance; no implementation authority
 
-Repository baseline: `504e10b27e46fceae4d68af200118edca27b4d1b` (`main`), observed 22 July 2026
+Repository baseline: `eb840862c9d3e239dec91770495c7669c00d10df` (`main`), observed 22 July 2026
 
 Parent research conclusion: `CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`
+
+Proposed design:
+`../../../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN.md`
+
+Normative design addendum:
+`../../../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN_DECISIONS.md`
 
 ## Design question
 
@@ -13,130 +19,100 @@ public schema package, migration interface, and synthetic fixture acceptance mat
 the first contract-only implementation slice while preserving zero filesystem, provider, process, native-host,
 runtime, deployment, save, signing, publication, or evidence-promotion authority?
 
+## Answer summary
+
+The proposed first implementation unit is one Core-only contract package containing:
+
+```text
+CanonicalInterchangeTypes
+→ CanonicalInterchangeCanonical
+→ CanonicalInterchangeValidation
+→ CanonicalInterchangeMigration
+→ public Schema-1 structural documents
+→ dedicated Core-only compiled tests
+→ source-tree consistency validation
+```
+
+The design fixes:
+
+- namespace and exact C++ type inventory;
+- four Core source/header pairs and a separate Core-only test target;
+- exact bounded counts, byte limits, token grammar, path grammar, and digest representation;
+- public `PackageIdV1`, `AssetIdV1`, `RevisionFingerprintV1`, `BindingIdV1`, and `MappingIdV1` wrappers;
+- manifest, document, asset, mapping, binding, payload, transformation, loss, provenance, licensing, lock,
+  extension, and evidence-reference records;
+- no reflection, EBus, interface, registry, service, Framework, Editor, Qt, provider, host, or runtime dependency;
+- dedicated canonical parsing/writing over supplied bytes and values only;
+- exact property order, stable-key sorting, hyphenated JSON enum tokens, UTF-8 presentation behavior, finite-number
+  rules, negative-zero normalization, and fingerprint projections;
+- complete intrinsic and reserved cross-layer issue-code inventories with deterministic precedence;
+- a pure migration API whose Schema-1 implementation supports exact `1 -> 1` identity and fails closed for every
+  unavailable, future, or downgrade route;
+- the public schema package and synthetic fixture layout;
+- the exact proposed changed-file list and rollback consequences;
+- an explicit all-false operational authority matrix.
+
 ## Entry prerequisite
 
-This question may be reviewed now. Implementation may begin only after:
+The research conclusion is merged. Repository drift is reconciled to the proposed design base.
 
-1. the canonical interchange research conclusion is accepted and merged;
-2. repository drift is reconciled to the proposed implementation base;
-3. the Phase 9 entry prerequisite is explicitly accepted under the controlling roadmap and gate map;
-4. this focused design receives explicit maintainer acceptance.
+Implementation may begin only after:
 
-Research acceptance alone does not satisfy those prerequisites.
+1. the Phase 9 entry prerequisite is explicitly accepted under the controlling roadmap and gate map;
+2. this proposed focused design and its addendum receive explicit maintainer acceptance;
+3. an authority record names the exact implementation base and contract-only scope.
 
-## Required design decisions
+Research or design acceptance alone does not open Gate 6 or any later gate.
 
-### Core model surface
+## Deliverable disposition
 
-- exact C++ type names and namespaces;
-- source/header ownership and build-target placement;
-- `PackageId`, `AssetId`, `RevisionFingerprint`, `BindingId`, and `MappingId` value types;
-- document, asset, mapping, binding, payload, transformation, loss, provenance, licensing, lock, extension, and
-  evidence-reference records;
-- enum and ID grammar ownership;
-- bounded maximum counts and sizes;
-- reflection and public API exposure;
-- caller-input non-mutation guarantees.
+| Required deliverable | Disposition |
+| --- | --- |
+| implementation design with ownership/dependency graph | complete in parent design |
+| complete C++ contract inventory | complete in parent design |
+| canonical serialization and golden-byte decision | complete in parent design and addendum |
+| validator/blocker precedence | complete in parent design and addendum |
+| migration API and state transitions | complete in parent design |
+| public schema package layout | complete in parent design |
+| compiled-test and validator plan | complete in parent design |
+| exact changed-file list | complete in parent design |
+| all-false authority matrix | complete in parent design |
+| rollback/compatibility consequences | complete in parent design |
+| implementation-PR acceptance checklist | complete in parent design |
+| following focused unit | complete in parent design |
 
-### Canonical serializer
+## Design acceptance criteria
 
-- dedicated `foa-interchange-canonical-json-v1` implementation boundary;
-- relationship to the existing `DeterministicContractJson` helper;
-- exact object property order and stable array ordering;
-- ASCII semantic-token validation;
-- UTF-8 presentation-string behavior;
-- finite number and negative-zero handling;
-- semantic, package, payload, and qualification fingerprint interfaces;
-- byte-level golden fixtures.
+The design is ready for maintainer decision because:
 
-### Pure validation
-
-- canonical validation result shape;
-- stable error and blocker code representation;
-- deterministic issue precedence and ordering;
-- cross-reference and cycle validation;
-- spatial/matrix validation;
-- provenance, legal, extension, and migration validation;
-- no filesystem, environment, clock, network, process, or host queries.
-
-### Migration interface
-
-- exact pure adjacent migration API;
-- source and target schema dispatch;
-- preservation of source documents;
-- semantic-drift detection;
-- identity and mapping consequences;
-- migration evidence returned by value;
-- unsupported-future-version and missing-migrator behavior.
-
-### Public schema package
-
-- repository path and owner for JSON Schema or equivalent public schema artifacts;
-- generated versus hand-authored source of truth;
-- schema/profile version publication rules;
-- canonical examples and negative examples;
-- third-party consumption boundary;
-- compatibility and migration documentation.
-
-### Fixture programme
-
-- minimal documents-only and asset packages;
-- canonical byte identity;
-- rename, revision, duplicate, fork, merge, split, replacement, and tombstone cases;
-- binding unresolved, stale, conflict, supersession, and host-ID changes;
-- exact spatial identity and conversion matrices;
-- unusual UTF-8 presentation text and invalid semantic tokens;
-- future schema, unknown field, extension, path, payload, digest, dependency, loss, provenance, legal, and
-  migration negatives;
-- deterministic issue ordering;
-- caller-input non-mutation;
-- no filesystem or process authority.
-
-## Required deliverables
-
-1. implementation design document with exact ownership and dependency graph;
-2. complete C++ contract inventory;
-3. canonical serialization decision record and golden-byte examples;
-4. validator and blocker precedence table;
-5. migration API and state-transition design;
-6. public schema package layout;
-7. focused compiled-test and validator plan;
-8. exact proposed changed-file list;
-9. explicit authority matrix with every operational capability false;
-10. rollback and compatibility consequences;
-11. acceptance checklist for the first implementation PR;
-12. following focused unit after Gate 5 contracts.
-
-## Acceptance criteria
-
-The design is ready for implementation review only when:
-
-- every type and source file has one owner;
+- every proposed type and file has one owner;
 - Core remains independent from Framework, Editor, Qt, filesystem, providers, Blender, Unity, runtime adapters,
   and the target game;
-- no second identity, evidence, permission, or catalog system is introduced;
-- canonical bytes and fingerprints are specified exactly;
-- every invalid class maps to a stable deterministic code;
+- no second identity, evidence, permission, or catalogue system is introduced;
+- canonical bytes, optional-property behavior, tokens, sorting, and fingerprints are explicit;
+- every intrinsic invalid class maps to one stable deterministic code;
+- Framework-owned codes are reserved but not emitted by Core;
 - migration fails closed and never mutates source input;
-- fixtures cover every accepted research invariant and negative path;
+- fixtures cover accepted research invariants and negative paths;
 - the changed-file scope is narrow and contract-only;
 - no service consumes the contracts;
-- every operational or performed flag is absent or permanently false;
-- Phase 9/Gate 5 authority is recorded separately rather than inferred from this design.
+- operational and performed capabilities are absent or permanently false;
+- Phase 9/Gate 5 authority remains a separate explicit decision.
 
 ## Out of scope
 
+- implementation before maintainer acceptance;
 - filesystem package loading or publication;
 - Asset Processor integration;
 - provider discovery or execution;
 - Blender add-on or command work;
 - Unity package, project, importer, or command work;
-- native host compatibility claims;
+- native-host compatibility claims;
 - runtime payload mapping;
 - deployment, game launch, mutation, save access, signing, or publication.
 
 ## Permanent non-authority statement
 
-This design question does not authorize implementation. It creates no schema, service, serializer, validator,
-migration, filesystem, process, provider, native-host, runtime, deployment, save, signing, publication, or
-evidence-promotion authority.
+This answered design question and its proposed design documents do not authorize implementation. They create no
+schema service, persistence, filesystem access, process, provider, native-host operation, runtime capability,
+deployment, save access, signing, publication, or evidence-promotion authority.

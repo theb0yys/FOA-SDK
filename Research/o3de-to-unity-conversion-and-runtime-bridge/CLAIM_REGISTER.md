@@ -2,9 +2,11 @@
 
 Original intake baseline: `92aa29960bab92d646c464ae48b8cf09d881a436`, observed 20 July 2026.
 
-Current reconciliation baseline: `8fb3f0a729e4be4e513ba896ba52708a73d03eae`, observed 22 July 2026. Earlier rows retain their original evidence scope; later reconciliation rows supersede only the claims they name.
+Porting-method reconciliation baseline: `8fb3f0a729e4be4e513ba896ba52708a73d03eae`, observed 22 July 2026. Earlier rows retain their original evidence scope; later reconciliation rows supersede only the claims they name.
 
-Canonical interchange reconciliation baseline: `504e10b27e46fceae4d68af200118edca27b4d1b`, observed 22 July 2026. The final section supersedes only the schema and current-head claims it names.
+Canonical interchange conclusion baseline: `504e10b27e46fceae4d68af200118edca27b4d1b`, observed 22 July 2026.
+
+Current canonical interchange reconciliation baseline: `3d50df1ea3aaf97a5148ae4ebb5c5ade8336e6d2`, observed 22 July 2026. The final section supersedes only the current-head and gate-status claims it names.
 
 No claim state in this register grants implementation, compatibility, execution, deployment, runtime, save, licensing, or publication authority.
 
@@ -49,26 +51,26 @@ No claim state in this register grants implementation, compatibility, execution,
 | `CLM-QUAL-002` | Live IPC or hot loading may precede the file-backed qualification path | Ordering assertion | `contradicted` | `SRC-REPO-003`, `SRC-REPO-008` | IPC remains later research and cannot replace durable file authority |
 | `CLM-QUAL-003` | Unity AssetBundle constraints establish that FoA accepts an SDK-produced bundle | Target-specific inference | `contradicted` | `SRC-UNITY-009` | The official format constraints do not establish FoA's loading model; bundle work remains deferred |
 
-## Current reconciliation claims
+## Porting-method reconciliation claims
 
 | ID | Claim | Classification | State | Sources | Gate consequence |
 | --- | --- | --- | --- | --- | --- |
-| `CLM-REPO-004` | Current `main` at the 22 July 2026 reconciliation is `8fb3f0a729e4be4e513ba896ba52708a73d03eae` | Repository observation | `repository-observed` | `SRC-REPO-019`, `SRC-REPO-020` | Reconcile later drift before implementation or new exact-head claims |
-| `CLM-REPO-005` | The eight commits from `195f5c15f0c59d47bd54e661b37d7457af9d1d95` to `8fb3f0a729e4be4e513ba896ba52708a73d03eae` change Suite Wizard catalogue discovery, installer documentation, and tests but do not change porting or runtime-route contracts | Repository observation | `repository-observed` | `SRC-REPO-020` | Correct the baseline without discarding the porting-method conclusion |
+| `CLM-REPO-004` | `main` at the porting-method reconciliation was `8fb3f0a729e4be4e513ba896ba52708a73d03eae` | Repository observation | `repository-observed` | `SRC-REPO-019`, `SRC-REPO-020` | Reconcile later drift before implementation or new exact-head claims |
+| `CLM-REPO-005` | The eight commits from `195f5c15f0c59d47bd54e661b37d7457af9d1d95` to `8fb3f0a729e4be4e513ba896ba52708a73d03eae` changed Suite Wizard catalogue discovery, installer documentation, and tests but not porting or runtime-route contracts | Repository observation | `repository-observed` | `SRC-REPO-020` | Correct the baseline without discarding the porting-method conclusion |
 | `CLM-ARCH-004` | A canonical interchange package combined with separate shared domain documents and format-specific payloads is the research-selected primary porting method | Comparative research conclusion | `repository-observed` | `SRC-REPO-003`, `SRC-REPO-019`, `SRC-REPO-021`, `SRC-REPO-025` | Advance to Gate 5 schema and identity research; no implementation authority follows |
 | `CLM-INT-006` | Direct O3DE-native to Unity-native conversion must not become the primary identity or schema authority | Boundary conclusion | `repository-observed` | `SRC-REPO-003`, `SRC-REPO-021`, `CLM-INT-004`, `CLM-INT-005` | Native IDs remain bindings; schema and identity stay engine-neutral |
 | `CLM-RUNTIME-007` | The repository records an exact Mono route observation for FoA `1.23.401`, branch `mono`, Unity `6000.0.64f1`, BepInEx `5.4.23.3`, and framework `0.1.33` | Repository fact | `repository-observed` | `SRC-REPO-022` | May inform later exact-target review but grants no build, deployment, or execution authority |
 | `CLM-RUNTIME-008` | The repository records an exact IL2CPP route observation for FoA `1.23.401`, branch `il2cpp`, Unity `6000.0.64f1`, BepInEx `6.0.0-be.735`, and framework `0.1.36` | Repository fact | `repository-observed` | `SRC-REPO-022` | May inform later exact-target review but grants no build, deployment, or execution authority |
 | `CLM-RUNTIME-009` | Exact pinned route observations are distinct from selecting or verifying an active operator installation and requested runtime capability | Evidence-scope rule | `repository-observed` | `SRC-REPO-022`, `SRC-REPO-023`, `SRC-REPO-024` | A later bounded active-profile capture and explicit target decision remain required |
 | `CLM-RUNTIME-010` | Both current routes block adapter build, deployment, execution, game API access, runtime mutation, and save access; the IL2CPP route also blocks feature-tested gameplay | Repository fact | `repository-observed` | `SRC-REPO-022` | Route evidence cannot be promoted into executable authority |
-| `CLM-RUNTIME-011` | The broad statement that all runtime facts are unknown is superseded: exact route observations exist, while active target selection, content-loading evidence, dependency licensing, and executable authority remain unresolved | Reconciliation conclusion | `repository-observed` | `SRC-REPO-022`–`SRC-REPO-024` | Use the route-versus-active-profile distinction in all later research and design |
-| `CLM-NEXT-001` | The next focused research question is the minimum canonical interchange schema and identity model | Research sequencing conclusion | `repository-observed` | `CLM-ARCH-004`, `CLM-INT-006`, `SRC-REPO-025` | Produce schema field inventory, identity state machine, loss taxonomy, validation rules, migration consequences, and fixtures before provider execution research advances |
+| `CLM-RUNTIME-011` | Exact route observations exist, while active target selection, content-loading evidence, dependency licensing, and executable authority remain unresolved | Reconciliation conclusion | `repository-observed` | `SRC-REPO-022`–`SRC-REPO-024` | Use the route-versus-active-profile distinction in all later research and design |
+| `CLM-NEXT-001` | The next focused research question was the minimum canonical interchange schema and identity model | Research sequencing conclusion | `superseded` | `CLM-ARCH-004`, `CLM-INT-006`, `SRC-REPO-025` | Superseded by the accepted Schema-1 conclusion and `CLM-NEXT-002` |
 
-## Canonical interchange reconciliation claims
+## Canonical interchange conclusion claims
 
 | ID | Claim | Classification | State | Sources | Gate consequence |
 | --- | --- | --- | --- | --- | --- |
-| `CLM-REPO-006` | Current `main` for the canonical interchange reconciliation is `504e10b27e46fceae4d68af200118edca27b4d1b`, 179 commits after the Deep Research baseline | Repository observation | `repository-observed` | `SRC-REPO-026`, `SRC-REPO-027` | All schema research and later design must use this or a reconciled later head |
+| `CLM-REPO-006` | `main` for the canonical interchange conclusion was `504e10b27e46fceae4d68af200118edca27b4d1b`, 179 commits after the Deep Research baseline | Repository observation | `repository-observed` | `SRC-REPO-026`, `SRC-REPO-027` | Read with the later current-main addendum before implementation or new exact-head claims |
 | `CLM-SCHEMA-001` | Schema 1 uses one authoritative manifest, typed engine-neutral domain documents, ordered contained payload inventory, exact native bindings, identity mapping events, and bounded extensions | Comparative research conclusion | `repository-observed` | `SRC-INPUT-002`, `SRC-REPO-028`, `SRC-REPO-029` | Accepted research shape for later Gate 5 design |
 | `CLM-SCHEMA-002` | Schema 1 is directory-only; deterministic archives are a later packaging concern | Minimum-contract research decision | `repository-observed` | `SRC-REPO-029`, `CLM-SCHEMA-001` | Gate 5 need not introduce archive semantics or archive libraries |
 | `CLM-SCHEMA-003` | `PackageId`, `AssetId`, `RevisionFingerprint`, `BindingId`, and first-class mapping events preserve canonical identity independently from native IDs and paths | Identity research decision | `repository-observed` | `SRC-REPO-028`, `SRC-REPO-029`, `SRC-REPO-033` | Gate 5 must not create a parallel display-name or host-native identity system |
@@ -83,3 +85,12 @@ No claim state in this register grants implementation, compatibility, execution,
 | `CLM-LEGAL-003` | `NOASSERTION` never grants redistribution and prohibited content blocks containment, import, export, publication, and redistribution | Legal/governance conclusion | `repository-observed` | `SRC-REPO-015`, `SRC-REPO-029` | Legal state must fail closed independently from technical validity |
 | `CLM-GATE-004` | Accepting the Schema-1 research conclusion does not authorize Gate 5 implementation | Authority rule | `repository-observed` | `SRC-REPO-030`, `CLM-GATE-001`, `CLM-GATE-002` | Phase 9 entry and focused Gate 5 design acceptance remain required |
 | `CLM-NEXT-002` | The next focused question is the exact Gate 5 Core API, serializer boundary, validator limits, public schema package, migration interface, and fixture acceptance matrix | Research sequencing conclusion | `repository-observed` | `CLM-SCHEMA-001`–`CLM-SCHEMA-011`, `SRC-REPO-030` | Complete focused implementation design before writing Gate 5 code |
+
+## Current-main addendum claims
+
+| ID | Claim | Classification | State | Sources | Gate consequence |
+| --- | --- | --- | --- | --- | --- |
+| `CLM-REPO-007` | Current `main` for the accepted Schema-1 research package is `3d50df1ea3aaf97a5148ae4ebb5c5ade8336e6d2`, 26 commits after the conclusion baseline | Repository observation | `repository-observed` | `SRC-REPO-035`, `SRC-REPO-039` | The conclusion is current only when read with the exact addendum |
+| `CLM-ARCH-005` | The ExtensionRequestBus and Road Atlas/Avalon AI Tool Gems confirm optional authoring ownership through the governed ExtensionAPI without mutable workspace, catalog, runtime, deployment, save, signing, publication, or evidence-promotion authority | Repository observation | `repository-observed` | `SRC-REPO-036`, `SRC-REPO-037` | Supports typed domain-document ownership; does not open Gate 5 |
+| `CLM-SCHEMA-012` | The 26 commits after `504e10b...` do not contradict the accepted manifest, identity, canonicalization, spatial, migration, error, fixture, or ordering decisions | Reconciliation conclusion | `repository-observed` | `SRC-REPO-035`–`SRC-REPO-039` | Preserve the accepted research conclusion for focused Gate 5 design |
+| `CLM-GATE-005` | Active Phase 9 extension work and implemented authoring Tool Gems do not constitute an explicit Phase 9 entry acceptance for Gate 5 | Authority reconciliation | `repository-observed` | `SRC-REPO-037`, `SRC-REPO-038`, `SRC-REPO-039` | Gate 5 implementation remains blocked pending explicit entry and focused design acceptance |

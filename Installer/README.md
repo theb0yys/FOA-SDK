@@ -2,7 +2,7 @@
 
 `Installer/` is the product-owned source root for installing, repairing, upgrading, and removing the FOA-SDK suite.
 
-It owns installer source and declarative package recipes. It does **not** contain generated MSI files, portable ZIP archives, staged payloads, build caches, receipts, handoffs, screenshots, signing material, or release uploads. Generated output belongs beneath the external `foa-build/` root or another reviewed output directory.
+It owns installer source and declarative package recipes. It does **not** contain generated MSI files, portable ZIP archives, staged payloads, build caches, receipts, handoffs, package-engine tokens, package-engine sessions, screenshots, signing material, or release uploads. Generated output belongs beneath the external `foa-build/` root or another reviewed output directory.
 
 ## Layout
 
@@ -17,7 +17,7 @@ Installer/
 │   ├── Receipt/        deterministic local confirmation-receipt persistence
 │   ├── Resolver/       deterministic package decision and dry-run plan layer
 │   └── ViewModel/      deterministic presentation and review-confirmation layer
-├── Bootstrapper/       prerequisites and verified non-executing package-engine handoff
+├── Bootstrapper/       prerequisites, handoff, and package-engine capability intake
 ├── Suites/             reviewed suite definitions
 ├── Packages/           reviewed installable-package definitions
 ├── Launcher/           installed product launcher source
@@ -52,17 +52,21 @@ The wizard does not resolve packages itself. It submits explicit selections, exc
 
 `Installer/Bootstrapper/ExecutionHandoff/` re-verifies the complete receipt before deriving one canonical lifecycle request. It binds the requested operation, logical target and prior-installation reference to the exact receipt and records only the capability names a future package engine would require. `granted_capabilities` remains empty and every authority remains false.
 
-A valid resolution plan, confirmation, receipt, and execution handoff are still non-executable. Receipt and handoff publication are local evidence persistence, not acquisition, installation, deployment, or elevation. A separately reviewed package engine must later reverify the exact accepted chain and receive explicit capability through a separate trusted channel.
+`Installer/Bootstrapper/PackageEngine/` consumes a verified handoff plus a deterministic capability token and creates a canonical package-engine session. The token is bound to the exact `handoff_sha256`, grants exactly the handoff's required package-engine capabilities, has caller-supplied issuer/subject/nonce and a bounded UTC validity window, and records no secret or executable material. The session records capability intake only: all effects and operational authorities remain false.
 
-A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority. A confirmation, receipt, or execution handoff also grants no acquisition, installation, elevation, or any of those operational authorities.
+A valid resolution plan, confirmation, receipt, execution handoff, token, and package-engine session still do not copy packages, launch processes, request elevation, mutate an installation, deploy runtime adapters, sign, publish, or promote evidence. Copier, process launcher, elevation helper, lifecycle executors, and installation-result receipts are separate reviewed units.
+
+A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority. A confirmation, receipt, execution handoff, token, or package-engine session also grants no acquisition, installation, elevation, or any of those operational authorities.
 
 ## Bootstrapper
 
 The bootstrapper owns bounded prerequisite checks and the verified transition into the suite wizard or package engine. It may resolve reviewed package sources only after exact identity, version, hash, signature policy, licence, and compatibility checks pass.
 
-The receipt-to-execution handoff accepts only canonical receipt bytes, re-verifies the entire embedded chain, derives lifecycle support from every selected package, and emits a logical request for install, repair, upgrade, rollback, or uninstall. Non-install operations require a stable prior-installation reference. Filesystem paths, capability tokens, environment state, and implicit clock values are forbidden.
+The receipt-to-execution handoff accepts only canonical receipt bytes, re-verifies the entire embedded chain, derives lifecycle support from every selected package, and emits a logical request for install, repair, upgrade, rollback, or uninstall. Non-install operations require a stable prior-installation reference. Filesystem paths, environment state, and implicit clock values are forbidden.
 
-It must fail closed for unavailable prerequisites, hash drift, unsupported operating systems, unknown packages, dependency cycles, unsafe paths, unreviewed redistribution, unexpected elevation, partial acquisition, stale receipts, unsupported lifecycle operations, logical-target drift, and capability escalation. Network access, process execution, package mutation, and elevation are explicit capabilities, never defaults.
+The package-engine intake accepts only canonical handoff bytes plus a handoff-bound capability token. Token issue time must not precede the handoff request time, token expiry must follow issue time, token lifetime is capped at one hour, session intake must occur before expiry, and granted capabilities must match the handoff's required capabilities exactly.
+
+It must fail closed for unavailable prerequisites, hash drift, unsupported operating systems, unknown packages, dependency cycles, unsafe paths, unreviewed redistribution, unexpected elevation, partial acquisition, stale receipts, unsupported lifecycle operations, logical-target drift, stale handoffs, token mismatch, expired tokens, and capability escalation. Network access, process execution, package mutation, and elevation are explicit capabilities, never defaults.
 
 ## Suites and packages
 
@@ -82,7 +86,7 @@ For identical suite bytes, package-manifest bytes, explicit selections and compa
 
 The resolver performs no acquisition, file copying, installation, repair, upgrade, rollback, uninstall, elevation, game launch, runtime execution, deployment, save mutation, signing or publication.
 
-## Wizard view-model, confirmation, receipt, and execution handoff
+## Wizard view-model, confirmation, receipt, execution handoff, and package-engine intake
 
 The engine-neutral view-model contract lives at `Installer/SuiteWizard/ViewModel/`. It emits canonical JSON conforming to `view-model.schema.json`, including exact package rows, flattened payload rows, warnings, policies, totals, acknowledgement requirements and `view_model_sha256`.
 
@@ -91,6 +95,8 @@ The engine-neutral view-model contract lives at `Installer/SuiteWizard/ViewModel
 `Installer/SuiteWizard/Receipt/receipt.schema.json` defines the self-contained canonical persistence bundle. Receipt verification reconstructs and verifies the complete embedded plan/view-model/confirmation chain before accepting `receipt_sha256`.
 
 `Installer/Bootstrapper/ExecutionHandoff/request.schema.json` defines the inert package-engine request. The handoff embeds the exact receipt, records required capability names and an empty grant set, and binds the complete chain through `handoff_sha256`.
+
+`Installer/Bootstrapper/PackageEngine/token.schema.json` and `session.schema.json` define the capability-token and intake-session records. They bind token/session hashes to the exact handoff and retain all-false effect and authority records.
 
 ## Existing Windows packaging
 
@@ -111,10 +117,11 @@ Installer changes require, as applicable:
 7. deterministic canonical receipt derivation, atomic create-once persistence, idempotency and exact-chain re-verification;
 8. graphical receipt export/verification coverage, exact displayed hash binding, cancellation safety and receipt invalidation;
 9. deterministic receipt-to-package-engine handoff derivation, lifecycle support checks, logical-reference validation, empty capability grants, atomic publication and exact-current receipt verification;
-10. dependency/conflict and compatibility tests;
-11. path, symlink, case-collision, and traversal rejection;
-12. exact inventory, hash, provenance, licence, and redistribution review;
-13. clean install, repair, upgrade, rollback, and uninstall smoke tests;
-14. preservation of external workspaces and user-authored content;
-15. generated-output hygiene;
-16. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation, elevation or network-publication authority was introduced by review-only or handoff contracts.
+10. deterministic package-engine capability-token and intake-session derivation, exact capability matching, bounded token chronology, atomic publication, and all-false effect records;
+11. dependency/conflict and compatibility tests;
+12. path, symlink, case-collision, and traversal rejection;
+13. exact inventory, hash, provenance, licence, and redistribution review;
+14. clean install, repair, upgrade, rollback, and uninstall smoke tests;
+15. preservation of external workspaces and user-authored content;
+16. generated-output hygiene;
+17. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation, elevation or network-publication authority was introduced by review-only, handoff, or intake contracts.

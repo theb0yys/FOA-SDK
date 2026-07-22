@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foa-sdk.local/installer/bootstrapper/package-engine/token.schema.json",
+  "title": "FOA-SDK Package Engine Capability Token",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "token_scope",
+    "audience",
+    "handoff_sha256",
+    "operation",
+    "target_reference",
+    "required_capabilities",
+    "granted_capabilities",
+    "issuer",
+    "subject",
+    "issued_at_utc",
+    "expires_at_utc",
+    "nonce",
+    "handoff",
+    "statement",
+    "authority",
+    "token_sha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "token_scope": { "const": "package-engine-capability-token" },
+    "audience": { "const": "foa-sdk.package-engine" },
+    "handoff_sha256": { "$ref": "#/$defs/sha256" },
+    "operation": { "enum": ["install", "repair", "upgrade", "rollback", "uninstall"] },
+    "target_reference": { "$ref": "#/$defs/logical_reference" },
+    "required_capabilities": { "$ref": "#/$defs/capabilities" },
+    "granted_capabilities": { "$ref": "#/$defs/capabilities" },
+    "issuer": { "$ref": "#/$defs/actor" },
+    "subject": { "$ref": "#/$defs/actor" },
+    "issued_at_utc": { "$ref": "#/$defs/utc" },
+    "expires_at_utc": { "$ref": "#/$defs/utc" },
+    "nonce": { "$ref": "#/$defs/logical_reference" },
+    "handoff": { "$ref": "../ExecutionHandoff/request.schema.json" },
+    "statement": {
+      "const": "This token grants only the listed FOA-SDK package-engine intake capabilities for one exact handoff. It is not a credential or secret, serializes no private path or executable, and grants no copy, process-launch, elevation, runtime, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority."
+    },
+    "authority": { "$ref": "#/$defs/all_false_authority" },
+    "token_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T.+Z$", "maxLength": 64 },
+    "actor": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "logical_reference": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$", "maxLength": 128 },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^package-engine\\.[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$" }
+    },
+    "all_false_authority": {
+      "type": "object",
+      "required": ["acquisition", "installation", "elevation", "game_launch", "runtime_execution", "deployment", "save_mutation", "signing", "publication", "catalog_mutation", "evidence_promotion"],
+      "additionalProperties": false,
+      "properties": {
+        "acquisition": { "const": false },
+        "installation": { "const": false },
+        "elevation": { "const": false },
+        "game_launch": { "const": false },
+        "runtime_execution": { "const": false },
+        "deployment": { "const": false },
+        "save_mutation": { "const": false },
+        "signing": { "const": false },
+        "publication": { "const": false },
+        "catalog_mutation": { "const": false },
+        "evidence_promotion": { "const": false }
+      }
+    }
+  }
+}

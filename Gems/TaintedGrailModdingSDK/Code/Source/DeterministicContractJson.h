@@ -13,7 +13,9 @@
 #include <AzCore/std/sort.h>
 #include <AzCore/std/string/string.h>
 
-#include <cstdio>
+#include <charconv>
+#include <cmath>
+#include <limits>
 
 namespace TaintedGrailModdingSDK::DeterministicContractJson
 {
@@ -41,9 +43,25 @@ namespace TaintedGrailModdingSDK::DeterministicContractJson
 
     inline AZStd::string DoubleString(double value)
     {
-        char buffer[64] = {};
-        const int count = std::snprintf(buffer, sizeof(buffer), "%.17g", value);
-        return count > 0 ? AZStd::string(buffer, static_cast<size_t>(count)) : AZStd::string{};
+        if (!std::isfinite(value))
+        {
+            // Canonical serializers must always emit syntactically valid JSON. Domain
+            // validators still reject non-finite coordinates before fingerprints are used.
+            return "null";
+        }
+
+        char buffer[128] = {};
+        const auto converted = std::to_chars(
+            buffer,
+            buffer + sizeof(buffer),
+            value,
+            std::chars_format::general,
+            std::numeric_limits<double>::max_digits10);
+        if (converted.ec != std::errc{})
+        {
+            return "null";
+        }
+        return AZStd::string(buffer, static_cast<size_t>(converted.ptr - buffer));
     }
 
     inline void AppendEscaped(AZStd::string& output, const AZStd::string& value)
@@ -77,7 +95,9 @@ namespace TaintedGrailModdingSDK::DeterministicContractJson
                 output += "\\t";
                 break;
             default:
-                if (byte < 0x20)
+                // This serializer is byte-oriented. Escaping non-ASCII bytes keeps the
+                // canonical output valid UTF-8 JSON while preserving a one-to-one byte map.
+                if (byte < 0x20 || byte >= 0x7f)
                 {
                     output += "\\u00";
                     output.push_back(HexDigits[(byte >> 4) & 0x0f]);

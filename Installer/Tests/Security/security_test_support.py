@@ -39,30 +39,51 @@ class InstallerSecurityFixture:
     def __init__(self, *, elevated: bool = False, output_limit_bytes: int = 4096, argv: list[str] | None = None) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name).resolve()
-        self.claim_root = self.root / "claims"; self.claim_root.mkdir()
-        self.execution_root = self.root / "execution"; self.execution_root.mkdir()
-        (self.execution_root / "bin").mkdir(); (self.execution_root / "work").mkdir()
-        self.request_root = self.root / "requests"; self.request_root.mkdir()
-        self.bootstrap_claim_root = self.root / "bootstrap-claims"; self.bootstrap_claim_root.mkdir()
+        self.claim_root = self.root / "claims"
+        self.claim_root.mkdir()
+        self.execution_root = self.root / "execution"
+        self.execution_root.mkdir()
+        (self.execution_root / "bin").mkdir()
+        (self.execution_root / "work").mkdir()
+        self.request_root = self.root / "requests"
+        self.request_root.mkdir()
+        self.bootstrap_claim_root = self.root / "bootstrap-claims"
+        self.bootstrap_claim_root.mkdir()
         self.bootstrap_output = self.root / "bootstrap-completion.json"
         self.authority_key = self.root / "authority.key"
         self.authority_key.write_bytes(AUTHORITY_KEY)
         os.chmod(self.authority_key, 0o600)
+
         shell = Path("/bin/sh")
         if not shell.is_file():
             shell = Path(sys.executable)
         self.helper_path = self.execution_root / "bin" / "operation-helper"
-        shutil.copyfile(shell, self.helper_path); os.chmod(self.helper_path, 0o700)
+        shutil.copyfile(shell, self.helper_path)
+        os.chmod(self.helper_path, 0o700)
+        self.helper_support_path = self.execution_root / "bin" / "operation-helper.data"
+        self.helper_support_path.write_bytes(b"reviewed operation helper sidecar\n")
+
         self.bootstrapper_path = self.execution_root / "bin" / "elevation-bootstrapper"
-        shutil.copyfile(shell, self.bootstrapper_path); os.chmod(self.bootstrapper_path, 0o700)
+        shutil.copyfile(shell, self.bootstrapper_path)
+        os.chmod(self.bootstrapper_path, 0o700)
+        self.bootstrapper_support_path = self.execution_root / "bin" / "elevation-bootstrapper.data"
+        self.bootstrapper_support_path.write_bytes(b"reviewed elevation bootstrapper sidecar\n")
+
         helper_hash = hashlib.sha256(self.helper_path.read_bytes()).hexdigest()
+        helper_support_hash = hashlib.sha256(self.helper_support_path.read_bytes()).hexdigest()
         bootstrapper_hash = hashlib.sha256(self.bootstrapper_path.read_bytes()).hexdigest()
+        bootstrapper_support_hash = hashlib.sha256(self.bootstrapper_support_path.read_bytes()).hexdigest()
         command = argv or ["-c", "printf \"$FOA_TEST\"; printf err >&2"]
         helpers: list[dict[str, object]] = [{
             "helper_reference": "helper.foa-sdk.install",
             "role": "operation-helper",
             "executable_path": "bin/operation-helper",
             "executable_sha256": helper_hash,
+            "support_files": [{
+                "path": "bin/operation-helper.data",
+                "sha256": helper_support_hash,
+                "size_bytes": self.helper_support_path.stat().st_size,
+            }],
             "argv": command,
             "working_directory": "work",
             "environment": {"FOA_TEST": "exact-environment"},
@@ -79,6 +100,11 @@ class InstallerSecurityFixture:
                 "role": "elevation-bootstrapper",
                 "executable_path": "bin/elevation-bootstrapper",
                 "executable_sha256": bootstrapper_hash,
+                "support_files": [{
+                    "path": "bin/elevation-bootstrapper.data",
+                    "sha256": bootstrapper_support_hash,
+                    "size_bytes": self.bootstrapper_support_path.stat().st_size,
+                }],
                 "argv": [
                     "--execution-root", str(self.execution_root),
                     "--authority-key", str(self.authority_key),
@@ -93,6 +119,7 @@ class InstallerSecurityFixture:
                 "timeout_seconds": 5,
                 "output_limit_bytes": 4096,
             })
+
         controller = WizardConfirmationController(REPO_ROOT / "Installer")
         review = controller.resolve_review()
         for row in controller.acknowledgement_choices():
@@ -103,7 +130,8 @@ class InstallerSecurityFixture:
             confirmed_by="FOA-SDK security tests",
             confirmed_at_utc="2026-07-22T11:00:00Z",
         )
-        result = controller.review_result; confirmation = controller.confirmation_result
+        result = controller.review_result
+        confirmation = controller.confirmation_result
         assert isinstance(result, dict) and isinstance(confirmation, dict)
         receipt = build_receipt(dict(result["plan"]), dict(result["view_model"]), dict(confirmation))
         self.handoff = build_handoff(
@@ -115,33 +143,23 @@ class InstallerSecurityFixture:
             requested_at_utc="2026-07-22T12:00:00Z",
         )
         self.registry_snapshot = build_registry_snapshot(
-            [],
-            state_root_reference="state-root.foa-sdk.security",
-            observed_at_utc="2026-07-22T11:55:00Z",
+            [], state_root_reference="state-root.foa-sdk.security", observed_at_utc="2026-07-22T11:55:00Z",
         )
         self.lifecycle_eligibility = build_lifecycle_eligibility(
-            self.registry_snapshot,
-            operation="install",
-            target_reference="installation.foa-sdk.default",
+            self.registry_snapshot, operation="install", target_reference="installation.foa-sdk.default",
             decided_at_utc="2026-07-22T11:56:00Z",
         )
         self.admission_grant = build_admission_grant(
-            self.lifecycle_eligibility,
-            issuer="FOA-SDK security admission reviewer",
-            issued_at_utc="2026-07-22T11:57:00Z",
-            expires_at_utc="2026-07-22T12:12:00Z",
+            self.lifecycle_eligibility, issuer="FOA-SDK security admission reviewer",
+            issued_at_utc="2026-07-22T11:57:00Z", expires_at_utc="2026-07-22T12:12:00Z",
             nonce="grant.foa-sdk.security-admission",
         )
         self.admission_receipt = admit_lifecycle_operation(
-            self.admission_grant,
-            admitted_at_utc="2026-07-22T11:58:00Z",
+            self.admission_grant, admitted_at_utc="2026-07-22T11:58:00Z",
         )
         self.admission_bound_handoff = build_admission_bound_handoff(
-            self.handoff,
-            self.admission_receipt,
-            bound_by="FOA-SDK security admission binder",
-            bound_at_utc="2026-07-22T12:00:00Z",
-            nonce="binding.foa-sdk.security-install",
+            self.handoff, self.admission_receipt, bound_by="FOA-SDK security admission binder",
+            bound_at_utc="2026-07-22T12:00:00Z", nonce="binding.foa-sdk.security-install",
         )
         owner_package_id = str(self.handoff["package_order"][0])
         for helper in helpers:
@@ -155,32 +173,20 @@ class InstallerSecurityFixture:
             bootstrapper_reference=bootstrapper_reference,
         )
         self.authority_proof = issue_authority_proof(
-            self.handoff,
-            self.operation_plan,
-            authority_key_path=self.authority_key,
-            issuer="FOA-SDK trusted review broker",
-            issued_at_utc="2026-07-22T12:01:00Z",
-            expires_at_utc="2026-07-22T12:15:00Z",
-            nonce="authority.foa-sdk.install-0001",
+            self.handoff, self.operation_plan, authority_key_path=self.authority_key,
+            issuer="FOA-SDK trusted review broker", issued_at_utc="2026-07-22T12:01:00Z",
+            expires_at_utc="2026-07-22T12:15:00Z", nonce="authority.foa-sdk.install-0001",
         )
         self.token = build_capability_token(
-            self.admission_bound_handoff,
-            self.operation_plan,
-            self.authority_proof,
-            authority_key_path=self.authority_key,
-            subject="FOA-SDK package engine",
-            issued_at_utc="2026-07-22T12:02:00Z",
-            expires_at_utc="2026-07-22T12:15:00Z",
+            self.admission_bound_handoff, self.operation_plan, self.authority_proof,
+            authority_key_path=self.authority_key, subject="FOA-SDK package engine",
+            issued_at_utc="2026-07-22T12:02:00Z", expires_at_utc="2026-07-22T12:15:00Z",
             nonce="token.foa-sdk.install-0001",
         )
         self.session = build_engine_session(
-            self.admission_bound_handoff,
-            self.token,
-            authority_key_path=self.authority_key,
-            claim_root=self.claim_root,
-            session_reference="session.foa-sdk.install",
-            accepted_by="FOA-SDK package engine",
-            accepted_at_utc="2026-07-22T12:03:00Z",
+            self.admission_bound_handoff, self.token, authority_key_path=self.authority_key,
+            claim_root=self.claim_root, session_reference="session.foa-sdk.install",
+            accepted_by="FOA-SDK package engine", accepted_at_utc="2026-07-22T12:03:00Z",
         )
 
     def close(self) -> None:

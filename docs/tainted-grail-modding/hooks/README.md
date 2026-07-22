@@ -1,6 +1,6 @@
 # Tainted Grail Hook Catalogue
 
-This folder will contain exact, version-bound records for reviewed game extension points, patch targets, events, services, reflection targets, data handoffs, and adapter boundaries.
+This folder contains exact, version-bound records for reviewed game extension points, patch targets, events, services, reflection targets, data handoffs, and adapter boundaries.
 
 A hook record is documentation and evidence. It is not permission to patch a game installation or execute runtime code.
 
@@ -92,7 +92,7 @@ Hook records may contain concise type/member/signature facts and small permitted
 
 ## Catalogue work order
 
-The first extraction pass will:
+The extraction programme will:
 
 1. inventory every `HarmonyPatch`, patch registration, reflection lookup, event subscription, manager/service lookup, and runtime adapter handoff in the pinned source repository;
 2. group duplicates by intended target and profile;
@@ -100,6 +100,32 @@ The first extraction pass will:
 4. record candidate evidence and uncertainty;
 5. reconcile targets against current exact game profiles;
 6. connect reviewed hooks to system pages, examples, and compatibility records.
+
+## Completed semantic batches
+
+### Batch 001
+
+[Semantic Hook Batch 001](BATCH_001.md) dispositions seven selected source files into:
+
+- nine complete source-only candidate hook records;
+- one canonical source-system fact;
+- one research blocker requiring decomposition;
+- one explicit `not-a-hook` rejection.
+
+Candidate records:
+
+- [NPC non-critical death completion](records/ACTORS_NPC_DEATH.md)
+- [Readable steal completion](records/CRIME_READABLE_STEAL.md)
+- [Cloud-service EndSave family](records/PERSISTENCE_CLOUD_END_SAVE.md)
+- [Menu initialization and options-button lookup](records/UI_MENU_INITIALIZE.md)
+
+Other outcomes:
+
+- [Avalon Mounts plugin aggregation blocker](blockers/AVALON_MOUNTS_PLUGIN.md)
+- [Template ExamplePatch rejection](rejections/TEMPLATE_EXAMPLE_PATCH.md)
+- [Economy patch registrar fact](../systems/items-economy/PATCH_REGISTRATION_FACT.md)
+
+No Batch 001 record is promoted beyond `candidate`.
 
 ## Initial domain indexes
 

@@ -12,6 +12,7 @@ Installer/
 ├── suite.schema.json
 ├── package.schema.json
 ├── SuiteWizard/        selectable suite user experience
+│   ├── Catalog/        reviewed catalogue discovery and explicit selection
 │   ├── Resolver/       deterministic package decision and dry-run plan layer
 │   └── ViewModel/      deterministic presentation and review-confirmation layer
 ├── Bootstrapper/       prerequisites, acquisition and verified handoff
@@ -37,9 +38,11 @@ The suite wizard is the user-facing selection and review surface. It may present
 
 The wizard must display exact versions, source provenance, licence state, compatibility, required disk space, dependencies, conflicts, elevation requirements, planned filesystem changes and required acknowledgements before confirmation. It must support dry-run, repair, upgrade, uninstall, and rollback-aware review.
 
+`Installer/SuiteWizard/Catalog/` now provides the current engine-neutral discovery and selection interface. It emits reviewed suite/package/feature rows with an exact `catalog_sha256`, binds explicit choices into a `selection_sha256`, rejects stale catalogue state, then delegates resolution and presentation to the existing resolver and view-model contracts. The current command-line surface is the usable host; a later graphical host must consume the same fingerprints and decisions.
+
 The wizard does not resolve packages itself. It submits explicit selections, exclusions, features, and compatibility context to `Installer/SuiteWizard/Resolver/`, then displays the returned canonical plan and diagnostics without weakening them. Dependency closure, version constraints, compatibility, conflicts, path safety, legal state, deterministic ordering, payload collision detection, and plan fingerprinting remain resolver-owned logic.
 
-`Installer/SuiteWizard/ViewModel/` verifies the resolver plan, derives stable UI rows and required acknowledgements, and creates a review-only confirmation bound to exact `plan_sha256` and `view_model_sha256` values. Any plan, display-model, acknowledgement or confirmation mutation invalidates the record.
+`Installer/SuiteWizard/ViewModel/` verifies the resolver plan, derives stable UI rows and required acknowledgements, and creates a review-only confirmation bound to exact `plan_sha256` and `view_model_sha256` values. Any catalogue, selection, plan, display-model, acknowledgement or confirmation mutation invalidates the current review chain.
 
 A valid resolution plan and confirmation are still non-executable. A separately reviewed acquisition or execution layer must later reverify both artifacts before receiving any operational capability.
 
@@ -87,11 +90,12 @@ Installer changes require, as applicable:
 
 1. canonical schema validation;
 2. deterministic suite and package resolution;
-3. deterministic view-model and exact-hash confirmation;
-4. dependency/conflict and compatibility tests;
-5. path, symlink, case-collision, and traversal rejection;
-6. exact inventory, hash, provenance, licence, and redistribution review;
-7. clean install, repair, upgrade, rollback, and uninstall smoke tests;
-8. preservation of external workspaces and user-authored content;
-9. generated-output hygiene;
-10. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation or elevation authority was introduced by review-only contracts.
+3. deterministic catalogue discovery, stale-selection rejection and exact selection fingerprints;
+4. deterministic view-model and exact-hash confirmation;
+5. dependency/conflict and compatibility tests;
+6. path, symlink, case-collision, and traversal rejection;
+7. exact inventory, hash, provenance, licence, and redistribution review;
+8. clean install, repair, upgrade, rollback, and uninstall smoke tests;
+9. preservation of external workspaces and user-authored content;
+10. generated-output hygiene;
+11. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation or elevation authority was introduced by review-only contracts.

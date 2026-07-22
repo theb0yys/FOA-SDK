@@ -7,6 +7,7 @@ It builds `FOA-SDK-Installer.exe`, a thin launcher that opens the quick installe
 ```text
 FOA-SDK-Installer.exe
   → Installer/SuiteWizard/QuickHost/Source/quick_installer_host.py
+  → choose install location
   → one-click default install preparation
   → automatic confirmation timestamp and receipt export
 ```
@@ -19,14 +20,16 @@ FOA-SDK-Installer.exe --advanced-review
 
 ## Default user flow
 
-Normal double-click use opens a quick installer screen with an **Install** button. That path:
+Normal double-click use opens a quick installer screen with an **Install location** field, a **Browse…** button, and an **Install** button. That path:
 
 - uses the reviewed default FOA-SDK suite;
+- shows the default install location under the current user's local application data directory;
+- lets the user choose another install location before clicking Install;
 - keeps the selected default packages visible;
 - handles the internal acknowledgement set automatically as part of the Install click;
 - fills the confirmation identity from the local user account;
 - fills the UTC timestamp automatically;
-- writes a verified `.foa-receipt.json` under the local FOA-SDK receipt directory.
+- writes a verified `.foa-receipt.json` under the local FOA-SDK receipt directory using binary create-once bytes.
 
 The user should not have to manually type timestamps, hashes, acknowledgement IDs, or receipt metadata in the default path.
 

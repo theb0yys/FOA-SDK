@@ -2,7 +2,7 @@
 
 `Installer/` is the product-owned source root for installing, repairing, upgrading, and removing the FOA-SDK suite.
 
-It owns installer source and declarative package recipes. It does **not** contain generated MSI files, portable ZIP archives, staged payloads, build caches, receipts, screenshots, signing material, or release uploads. Generated output belongs beneath the external `foa-build/` root or another reviewed output directory.
+It owns installer source and declarative package recipes. It does **not** contain generated MSI files, portable ZIP archives, staged payloads, build caches, receipts, handoffs, screenshots, signing material, or release uploads. Generated output belongs beneath the external `foa-build/` root or another reviewed output directory.
 
 ## Layout
 
@@ -17,7 +17,7 @@ Installer/
 │   ├── Receipt/        deterministic local confirmation-receipt persistence
 │   ├── Resolver/       deterministic package decision and dry-run plan layer
 │   └── ViewModel/      deterministic presentation and review-confirmation layer
-├── Bootstrapper/       prerequisites, acquisition and verified handoff
+├── Bootstrapper/       prerequisites and verified non-executing package-engine handoff
 ├── Suites/             reviewed suite definitions
 ├── Packages/           reviewed installable-package definitions
 ├── Launcher/           installed product launcher source
@@ -50,15 +50,19 @@ The wizard does not resolve packages itself. It submits explicit selections, exc
 
 `Installer/SuiteWizard/Receipt/` re-verifies the exact plan, view-model and confirmation before any persistence. It emits a self-contained canonical receipt with `receipt_sha256`, publishes only to an explicitly selected existing external directory, rejects symbolic-link paths and noncanonical bytes, accepts a byte-identical existing receipt idempotently, and never overwrites a different file. The graphical host delegates to this contract and does not implement a second writer.
 
-A valid resolution plan, confirmation and receipt are still non-executable. Receipt publication is local evidence persistence, not network publication, installation or deployment. A separately reviewed acquisition or execution layer must later reverify the exact accepted chain before receiving any operational capability.
+`Installer/Bootstrapper/ExecutionHandoff/` re-verifies the complete receipt before deriving one canonical lifecycle request. It binds the requested operation, logical target and prior-installation reference to the exact receipt and records only the capability names a future package engine would require. `granted_capabilities` remains empty and every authority remains false.
 
-A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority. A confirmation or receipt also grants no acquisition, installation, elevation, or any of those operational authorities.
+A valid resolution plan, confirmation, receipt, and execution handoff are still non-executable. Receipt and handoff publication are local evidence persistence, not acquisition, installation, deployment, or elevation. A separately reviewed package engine must later reverify the exact accepted chain and receive explicit capability through a separate trusted channel.
+
+A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority. A confirmation, receipt, or execution handoff also grants no acquisition, installation, elevation, or any of those operational authorities.
 
 ## Bootstrapper
 
 The bootstrapper owns bounded prerequisite checks and the verified transition into the suite wizard or package engine. It may resolve reviewed package sources only after exact identity, version, hash, signature policy, licence, and compatibility checks pass.
 
-It must fail closed for unavailable prerequisites, hash drift, unsupported operating systems, unknown packages, dependency cycles, unsafe paths, unreviewed redistribution, unexpected elevation, and partial acquisition. Network access and elevation are explicit capabilities, never defaults.
+The receipt-to-execution handoff accepts only canonical receipt bytes, re-verifies the entire embedded chain, derives lifecycle support from every selected package, and emits a logical request for install, repair, upgrade, rollback, or uninstall. Non-install operations require a stable prior-installation reference. Filesystem paths, capability tokens, environment state, and implicit clock values are forbidden.
+
+It must fail closed for unavailable prerequisites, hash drift, unsupported operating systems, unknown packages, dependency cycles, unsafe paths, unreviewed redistribution, unexpected elevation, partial acquisition, stale receipts, unsupported lifecycle operations, logical-target drift, and capability escalation. Network access, process execution, package mutation, and elevation are explicit capabilities, never defaults.
 
 ## Suites and packages
 
@@ -78,13 +82,15 @@ For identical suite bytes, package-manifest bytes, explicit selections and compa
 
 The resolver performs no acquisition, file copying, installation, repair, upgrade, rollback, uninstall, elevation, game launch, runtime execution, deployment, save mutation, signing or publication.
 
-## Wizard view-model, confirmation and receipt
+## Wizard view-model, confirmation, receipt, and execution handoff
 
 The engine-neutral view-model contract lives at `Installer/SuiteWizard/ViewModel/`. It emits canonical JSON conforming to `view-model.schema.json`, including exact package rows, flattened payload rows, warnings, policies, totals, acknowledgement requirements and `view_model_sha256`.
 
 `confirmation.schema.json` defines a review-only record bound to the exact plan and view-model hashes, the complete acknowledgement set, caller-supplied identity and caller-supplied UTC time. Confirmation generation reads no clock or environment state and grants no execution authority.
 
 `Installer/SuiteWizard/Receipt/receipt.schema.json` defines the self-contained canonical persistence bundle. Receipt verification reconstructs and verifies the complete embedded plan/view-model/confirmation chain before accepting `receipt_sha256`.
+
+`Installer/Bootstrapper/ExecutionHandoff/request.schema.json` defines the inert package-engine request. The handoff embeds the exact receipt, records required capability names and an empty grant set, and binds the complete chain through `handoff_sha256`.
 
 ## Existing Windows packaging
 
@@ -104,10 +110,11 @@ Installer changes require, as applicable:
 6. deterministic view-model and exact-hash confirmation;
 7. deterministic canonical receipt derivation, atomic create-once persistence, idempotency and exact-chain re-verification;
 8. graphical receipt export/verification coverage, exact displayed hash binding, cancellation safety and receipt invalidation;
-9. dependency/conflict and compatibility tests;
-10. path, symlink, case-collision, and traversal rejection;
-11. exact inventory, hash, provenance, licence, and redistribution review;
-12. clean install, repair, upgrade, rollback, and uninstall smoke tests;
-13. preservation of external workspaces and user-authored content;
-14. generated-output hygiene;
-15. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation, elevation or network-publication authority was introduced by review-only contracts.
+9. deterministic receipt-to-package-engine handoff derivation, lifecycle support checks, logical-reference validation, empty capability grants, atomic publication and exact-current receipt verification;
+10. dependency/conflict and compatibility tests;
+11. path, symlink, case-collision, and traversal rejection;
+12. exact inventory, hash, provenance, licence, and redistribution review;
+13. clean install, repair, upgrade, rollback, and uninstall smoke tests;
+14. preservation of external workspaces and user-authored content;
+15. generated-output hygiene;
+16. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation, elevation or network-publication authority was introduced by review-only or handoff contracts.

@@ -22,7 +22,7 @@ MANIFEST_REL = PACKAGE_REL / "approved-sources.json"
 PLUGIN_REL = PACKAGE_REL / "plugin.json"
 GOLDEN_REL = PACKAGE_REL / "Tests/Fixtures/pinned-github-all.plan.json"
 BRIDGE_REL = Path("Gems/TaintedGrailModdingSDK/Tools/tests/test_approved_acquisition.py")
-PINNED_COMMIT = "b6975dde94a04c948bb05705fe2d36b3f38cd82e"
+PINNED_COMMIT = "7d3d31371b4327ee3abbaa48b8741b4390bb9e0e"
 REQUIRED_PACKAGE_FILES = {
     "README.md", "approved-sources.json", "plugin.json",
     "Seeds/Assets/action.svg", "Seeds/Assets/device.svg", "Seeds/Assets/frame.svg",

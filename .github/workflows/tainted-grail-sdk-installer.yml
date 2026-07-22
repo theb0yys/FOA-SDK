@@ -62,6 +62,7 @@ jobs:
       O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
       O3DE_ROOT: ${{ runner.temp }}/o3de
       FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build
+      SDK_VALIDATION_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-validation
       SDK_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-engine
       SDK_INSTALL: ${{ runner.temp }}/tg-sdk-install
       SDK_INVENTORY: ${{ runner.temp }}/tg-sdk-installer-inventory.json
@@ -72,6 +73,7 @@ jobs:
       SDK_PACKAGE_BUILD: ${{ runner.temp }}/tg-sdk-package-build
       SDK_WIX: ${{ runner.temp }}/wix
       WIX_EXTENSIONS: ${{ runner.temp }}/wix-extensions
+      SDK_BOOTSTRAPPER_BUILD: ${{ runner.temp }}/foa-sdk-installer-bootstrapper
 
     steps:
       - name: Check out exact FOA-SDK source
@@ -100,12 +102,28 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Run authoritative repository validation
+      - name: Configure compiled validation build
+        shell: pwsh
+        run: |
+          $project = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
+          $packages = Join-Path $env:RUNNER_TEMP "o3de-packages"
+          cmake -S $env:O3DE_ROOT -B $env:SDK_VALIDATION_BUILD -G "Visual Studio 17 2022" -A x64 `
+            -DLY_PROJECTS="$project" `
+            -DLY_3RDPARTY_PATH="$packages" `
+            -DLY_DISABLE_TEST_MODULES=OFF
+
+      - name: Build required compiled Catalog tests
+        run: >-
+          cmake --build $env:SDK_VALIDATION_BUILD --config profile
+          --target TaintedGrailModdingSDK.Catalog.Tests -- /m
+
+      - name: Run authoritative repository and compiled-test validation
         env:
           FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
         run: >-
           python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py
           --engine-root "${{ env.O3DE_ROOT }}"
+          --ctest-build-dir "${{ env.SDK_VALIDATION_BUILD }}"
           --keep-going
 
       - name: Configure prebuilt O3DE SDK layout
@@ -222,22 +240,59 @@ jobs:
           cpack --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `
             -G WIX -B $env:SDK_ARTIFACTS
 
-      - name: Smoke install, launch contract, repair, and uninstall
+      - name: Build self-contained installer wizard with the reviewed MSI
         if: inputs.mode == 'package'
         shell: pwsh
         run: |
           $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_ARTIFACTS -Filter *.msi -File -ErrorAction Stop)
           if ($msiFiles.Count -ne 1) { throw "Expected exactly one MSI; found $($msiFiles.Count)." }
           $msi = $msiFiles[0]
+          $checksum = "$($msi.FullName).sha256"
+          if (-not (Test-Path -LiteralPath $checksum -PathType Leaf)) {
+            throw "MSI checksum sidecar was not created: $checksum"
+          }
+          dotnet publish Installer/Launcher/Windows/FOAInstallerLauncher.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:BaseIntermediateOutputPath="$env:FOA_BUILD_ROOT/installer-wizard-obj/" `
+            -p:BaseOutputPath="$env:FOA_BUILD_ROOT/installer-wizard-bin/" `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=embedded `
+            -p:InstallerMsiPath="$($msi.FullName)" `
+            -p:InstallerMsiChecksumPath="$checksum" `
+            -o $env:SDK_BOOTSTRAPPER_BUILD
+          Copy-Item -LiteralPath "$env:SDK_BOOTSTRAPPER_BUILD/FOA-SDK-Installer.exe" `
+            -Destination "$env:SDK_ARTIFACTS/FOA-SDK-Installer.exe"
+          $wizard = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe"
+          $wizardChecksum = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe.sha256"
+          $wizardHash = (Get-FileHash -LiteralPath $wizard -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath $wizardChecksum -Encoding utf8 -NoNewline `
+            -Value "$wizardHash  FOA-SDK-Installer.exe`n"
+
+      - name: Smoke install, launch contract, repair, and uninstall
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          $wizard = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe"
+          if (-not (Test-Path -LiteralPath $wizard -PathType Leaf)) {
+            throw "Self-contained installer wizard was not created."
+          }
           $installRoot = Join-Path $env:RUNNER_TEMP "installed-foa-sdk"
           $externalWorkspace = Join-Path $env:RUNNER_TEMP "external-workspace"
           New-Item -ItemType Directory -Path $externalWorkspace | Out-Null
           Set-Content -LiteralPath (Join-Path $externalWorkspace "preserve.txt") -Value "preserve"
 
-          $install = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
-            "/i", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"",
-            "/l*v", "`"$env:RUNNER_TEMP/foa-sdk-install.log`"")
-          if ($install.ExitCode -ne 0) { throw "MSI install failed with exit $($install.ExitCode)." }
+          $wizardSmoke = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--smoke-test")
+          if ($wizardSmoke.ExitCode -ne 0) {
+            throw "Installer wizard smoke test failed with exit $($wizardSmoke.ExitCode)."
+          }
+          $install = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--quiet", "--operation", "install", "--install-root", `
+              "`"$installRoot`"", "--no-launch-after-install")
+          if ($install.ExitCode -ne 0) {
+            throw "Installer wizard install failed with exit $($install.ExitCode)."
+          }
 
           $launcher = Join-Path $installRoot `
             "bin/Windows/profile/Default/TaintedGrailModdingEditorLauncher.exe"
@@ -249,13 +304,19 @@ jobs:
           & $launcher --self-test
           if ($LASTEXITCODE -ne 0) { throw "Installed launcher self-test failed." }
 
-          $repair = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
-            "/fa", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"")
-          if ($repair.ExitCode -ne 0) { throw "MSI repair failed with exit $($repair.ExitCode)." }
+          $repair = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--quiet", "--operation", "repair", "--install-root", `
+              "`"$installRoot`"", "--no-launch-after-install")
+          if ($repair.ExitCode -ne 0) {
+            throw "Installer wizard repair failed with exit $($repair.ExitCode)."
+          }
 
-          $remove = Start-Process msiexec.exe -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
-            "/x", "`"$($msi.FullName)`"", "/qn", "INSTALL_ROOT=`"$installRoot`"")
-          if ($remove.ExitCode -ne 0) { throw "MSI uninstall failed with exit $($remove.ExitCode)." }
+          $remove = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--quiet", "--operation", "uninstall", "--install-root", `
+              "`"$installRoot`"", "--no-launch-after-install")
+          if ($remove.ExitCode -ne 0) {
+            throw "Installer wizard uninstall failed with exit $($remove.ExitCode)."
+          }
           if (Test-Path -LiteralPath $launcher -PathType Leaf) {
             throw "MSI uninstall left the product launcher installed."
           }

@@ -22,6 +22,8 @@ standard prebuilt Windows installation and a portable recovery artifact.
 
 One reviewed Windows x64 `profile` build produces:
 
+- a self-contained `FOA-SDK-Installer.exe` wizard with the exact reviewed MSI
+  and its canonical SHA-256 record embedded;
 - a per-user MSI with Start Menu integration and standard Windows Installer
   repair, upgrade, and uninstall behavior;
 - a deterministic portable ZIP for controlled testing and recovery;
@@ -74,7 +76,9 @@ validate
   -> stage and re-hash the captured bytes
   -> create deterministic portable ZIP
   -> create MSI from the same staging root
-  -> clean install / launcher self-test / repair / uninstall smoke
+  -> embed the reviewed MSI in the self-contained executable wizard
+  -> checksum the final executable
+  -> clean install / launcher self-test / repair / uninstall through the wizard
   -> retain unsigned development artifacts for review
 ```
 
@@ -107,6 +111,20 @@ manifest. The portable ZIP has one versioned root, deterministic ordering and
 timestamps, Zip64 support, and its own SHA-256 sidecar.
 
 ## Installer identity and lifecycle
+
+`FOA-SDK-Installer.exe` is the standard user entry point. It is a native Windows
+Forms executable published self-contained for Windows x64, so the user does not
+need Python or a separately installed .NET runtime. It embeds the exact MSI and
+checksum produced after redistribution review, extracts the MSI into a private
+temporary directory, verifies the captured bytes, displays the selected
+lifecycle operation and fingerprint, and invokes Windows Installer. An
+adjacent or explicitly selected MSI is a development fallback only and requires
+its canonical `.sha256` sidecar.
+
+The executable does not replace MSI ownership or implement an independent file
+copier. Windows Installer remains the sole authority for product-file mutation,
+registration, Start Menu integration, repair, major upgrade, and uninstall.
+The executable itself requests `asInvoker`; the reviewed MSI is per-user.
 
 The MSI uses CPack's WiX generator with:
 
@@ -143,7 +161,8 @@ security, legal, checksum, and signing gates.
 
 Every missing layout file, wrong engine identity, malformed version/commit/time,
 unreviewed inventory, source change during staging, unsafe path, hash mismatch,
-extra file, archive mismatch, package failure, install failure, launcher
+extra file, archive mismatch, package failure, executable-wizard build or
+payload-verification failure, install failure, launcher
 self-test failure, repair failure, or uninstall failure exits non-zero.
 
 Rollback during development is deletion of the isolated build/install/staging

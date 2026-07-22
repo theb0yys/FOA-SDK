@@ -20,6 +20,7 @@ if str(TOOLS_ROOT) not in sys.path:
 from run_local_validation import VALIDATORS
 from validate_installer_workflow import (
     LEGACY_INSTALLER_ROOT,
+    OBSOLETE_INSTALLER_ROOTS,
     REQUIRED_FILE_FRAGMENTS,
     InstallerWorkflowValidationError,
     validate_installer_workflow,
@@ -86,6 +87,18 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             legacy.parent.mkdir(parents=True, exist_ok=True)
             legacy.write_text("legacy\n", encoding="utf-8")
             with self.assertRaisesRegex(InstallerWorkflowValidationError, "Legacy installer source root"):
+                validate_installer_workflow(repo)
+
+    def test_obsolete_non_installing_installer_framework_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            obsolete = repo / OBSOLETE_INSTALLER_ROOTS[0] / "README.md"
+            obsolete.parent.mkdir(parents=True, exist_ok=True)
+            obsolete.write_text("obsolete\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "Obsolete non-installing installer framework",
+            ):
                 validate_installer_workflow(repo)
 
     def test_installer_validator_is_in_authoritative_gate(self) -> None:

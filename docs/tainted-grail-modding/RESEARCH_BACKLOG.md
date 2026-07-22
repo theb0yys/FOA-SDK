@@ -71,7 +71,7 @@ Each domain must produce an index, entity/relationship summary, candidate hook s
 | `TG-HB-052` | P1 | Which authoring plugins have usable editor vertical slices versus contracts only? | capability/status matrix |
 | `TG-HB-053` | P1 | How does deterministic interchange reach Unity-owned payloads without direct editor-to-game mutation? | conversion tutorial linked to current gates |
 | `TG-HB-054` | P1 | How are runtime adapter plans, build manifests, staging previews, confirmation, execution results, and verification related? | adapter lifecycle guide |
-| `TG-HB-055` | P2 | How should the Suite Wizard expose handbook packages, examples, and documentation without making them executable authority? | reviewed installer package design |
+| `TG-HB-055` | P2 | How should prebuilt SDK artifacts expose handbook content, examples, and documentation without making them executable authority? | reviewed installer artifact design |
 
 ## Legal, privacy, and source provenance
 

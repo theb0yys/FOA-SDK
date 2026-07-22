@@ -26,7 +26,7 @@ The manifest also binds the exact profile, generator identity/version, and gener
 
 The package defines a `net6.0` C# source project with exact local BepInEx 6, Il2CppInterop, Unity and generated-interop references. It emits a deterministic non-executable build plan. No generated DLL or PDB is committed.
 
-The external-executor review gate requires three disjoint evidence classes: adapter identity, install parity, and interop provenance. It also binds the exact build plan, interop manifest, built DLL fingerprint, Suite Wizard receipt fingerprint, requester, and UTC window. The gate records `execution_authorized=false`.
+The external-executor review gate requires three disjoint evidence classes: adapter identity, install parity, and interop provenance. It also binds the exact build plan, interop manifest, built DLL fingerprint, reviewed prebuilt-SDK installation-manifest fingerprint, requester, and UTC window. The gate records `execution_authorized=false`.
 
 ## Runtime-result evidence
 

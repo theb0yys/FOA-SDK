@@ -75,7 +75,7 @@ This automatic pull-request static validation covers:
 - deterministic Tainted Framework and Developer Preview fixture generation and
   verification;
 - redacted diagnostics fixture collection and verification;
-- Suite Wizard graphical smoke under a virtual display;
+- native executable-installer source contracts and deterministic fixture checks;
 - exact reviewed-range whitespace validation.
 
 The Linux job uses `ubuntu-latest`, read-only repository permissions, no secrets,

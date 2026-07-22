@@ -84,28 +84,21 @@ class RepositoryStructureContractTests(unittest.TestCase):
         ):
             contract.validate_paths(paths)
 
-    def test_manifest_backed_installer_suite_passes(self) -> None:
+    def test_installer_launcher_source_passes(self) -> None:
         paths = valid_tree() | {
-            "Installer/Suites/Developer/suite.json",
-            "Installer/Suites/Developer/Docs/README.md",
+            "Installer/Launcher/Windows/InstallerPayload.cs",
+            "Installer/Launcher/Windows/WindowsInstallerRunner.cs",
         }
         contract.validate_paths(paths)
 
-    def test_manifest_backed_installer_package_passes(self) -> None:
-        paths = valid_tree() | {
-            "Installer/Packages/Editor/package.json",
-            "Installer/Packages/Editor/Inventory/files.json",
-        }
-        contract.validate_paths(paths)
-
-    def test_installer_suite_without_manifest_fails(self) -> None:
-        paths = valid_tree() | {"Installer/Suites/Developer/Docs/README.md"}
-        with self.assertRaisesRegex(contract.RepositoryStructureError, "missing suite.json"):
+    def test_obsolete_installer_suite_lane_fails(self) -> None:
+        paths = valid_tree() | {"Installer/Suites/Developer/suite.json"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected installer"):
             contract.validate_paths(paths)
 
-    def test_installer_package_without_manifest_fails(self) -> None:
-        paths = valid_tree() | {"Installer/Packages/Editor/Inventory/files.json"}
-        with self.assertRaisesRegex(contract.RepositoryStructureError, "missing package.json"):
+    def test_obsolete_installer_package_lane_fails(self) -> None:
+        paths = valid_tree() | {"Installer/Packages/Editor/package.json"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected installer"):
             contract.validate_paths(paths)
 
     def test_unknown_installer_lane_fails(self) -> None:
@@ -182,7 +175,7 @@ class RepositoryStructureContractTests(unittest.TestCase):
             contract.validate_paths(paths)
 
     def test_missing_required_path_fails(self) -> None:
-        paths = valid_tree() - {"Installer/suite.schema.json"}
+        paths = valid_tree() - {"Installer/Launcher/Windows/InstallerWizardForm.cs"}
         with self.assertRaisesRegex(contract.RepositoryStructureError, "missing required"):
             contract.validate_paths(paths)
 

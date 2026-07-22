@@ -17,8 +17,9 @@ Status: implemented, continuing hardening.
   dedicated `installer` branch is a maintainer-authorised feature exception.
 - Approved prebuilt Windows SDK installer implementation is in progress on the
   maintainer-authorised `installer` branch: canonical O3DE `INSTALL` layout,
-  exact redistribution review, MSI/portable ZIP, manifest/checksums, and
-  install/repair/uninstall smoke. Public release, signing, actual two-version
+  exact redistribution review, MSI/portable ZIP, a self-contained executable
+  wizard with the reviewed MSI embedded, manifest/checksums, and
+  install/repair/uninstall smoke through the wizard. Public release, signing, actual two-version
   upgrade smoke, and exact-main Windows UI evidence remain gated.
 
 ## Phase 1 — Workspace and exact game profile

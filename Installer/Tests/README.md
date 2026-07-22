@@ -1,11 +1,9 @@
 # Installer tests
 
-Installer-specific tests belong here when they are not production-linked tests owned by the SDK foundation.
+`Installer/Tests/WindowsInstallerLauncher/` owns the source-contract tests for the native executable installer wizard. The authoritative local runner discovers those tests through `Gems/TaintedGrailModdingSDK/Tools/tests/test_installer_windows_launcher.py`.
 
-Required coverage includes deterministic suite/package resolution, schema rejection, dependency and conflict handling, exact inventories, path safety, case collisions, symlink/reparse-point refusal, clean install, repair, upgrade, rollback, uninstall, workspace preservation, and negative authority checks.
+The focused tests require a Windows Forms single-file project, optional reviewed MSI embedding, canonical SHA-256 verification, captured external payload bytes, safe `msiexec.exe` argument construction, per-user `asInvoker` behavior, lifecycle choices, external-workspace messaging, and self-contained build entry points. They also reject the deleted Python suite/receipt launcher contract.
 
-Generated payloads, MSI files, ZIP archives, logs, receipts, registry captures, and screenshots belong beneath the external build/evidence root.
+Generated MSI files, installer executables, portable ZIP archives, logs, staging trees, registry captures, screenshots, and workspace sentinels belong beneath the external build/evidence root.
 
-## Execution-security regression lane
-
-`Security/` and the operational bootstrapper suites prove wrong-key rejection, exact resolver and helper binding, capability denial, one-shot nonce consumption, bounded output, process-tree timeout handling, controlled elevation bootstrapper requests, no-replace staging publication, and authenticated installation-state publication.
+Static source-contract coverage does not replace a real Windows lifecycle smoke. A package candidate still requires executable-wizard construction from the reviewed MSI, clean install, installed-launcher self-test, repair, uninstall, and proof that an external workspace sentinel survives.

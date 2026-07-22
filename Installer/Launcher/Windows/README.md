@@ -1,94 +1,56 @@
-# FOA-SDK Windows installer launcher
+# FOA-SDK Windows installer wizard
 
-`Installer/Launcher/Windows/` owns the user-facing Windows entrypoint for the installer review flow.
+`Installer/Launcher/Windows/` builds `FOA-SDK-Installer.exe`, the self-contained Windows Forms front door for the prebuilt FOA-SDK. It runs natively on Windows x64 with no Python, repository checkout, source build, or separately installed .NET runtime.
 
-It builds `FOA-SDK-Installer.exe`, a thin launcher that opens the reviewed Suite Wizard host:
+The release artifact embeds one reviewed MSI and its canonical lowercase `.sha256` sidecar. On startup the executable captures the MSI in a private temporary directory, verifies the captured bytes, then presents install/upgrade, repair, and uninstall choices. Windows Installer remains responsible for all product-file and lifecycle changes.
 
-```text
-FOA-SDK-Installer.exe
-  → Installer/SuiteWizard/Host/Source/suite_wizard_receipt_host.py
-  → explicit suite and package review
-  → explicit acknowledgement selection
-  → caller-supplied confirmer identity and UTC time
-  → canonical create-once receipt export
+The wizard runs as the current user. The MSI is per-user and does not require administrator elevation. The executable never launches FoA, deploys runtime adapters, mutates saves or workspaces, signs artifacts, or publishes a release.
+
+## Build
+
+The packaging workflow is the authoritative producer because it binds the exact reviewed MSI:
+
+```powershell
+Installer\Launcher\Windows\build-foa-installer-launcher.ps1 `
+  -Configuration Release `
+  -RuntimeIdentifier win-x64 `
+  -InstallerMsi C:\reviewed\Tainted-Grail-FoA-SDK-0.1.0-windows-x64.msi `
+  -InstallerMsiChecksum C:\reviewed\Tainted-Grail-FoA-SDK-0.1.0-windows-x64.msi.sha256 `
+  -OutputDirectory C:\foa-build\installer-wizard
 ```
 
-The former automatic quick-confirmation path is intentionally disabled. `QuickHost/` remains only as a compatibility alias to the same reviewed host; it does not silently accept acknowledgements, synthesize identity or time, duplicate receipt publication, or claim that a receipt is an installation.
-
-## Default user flow
-
-Normal double-click use opens the complete review host. The operator must:
-
-1. review the exact suite, packages, compatibility, payload, warnings, and authority boundaries;
-2. explicitly select every required acknowledgement;
-3. provide the confirmer identity and UTC confirmation time;
-4. create the exact review confirmation;
-5. explicitly choose a receipt destination and export the canonical receipt.
-
-A receipt is review evidence only. It does not copy payloads, install packages, request elevation, launch processes, mutate an installation, publish installation state, or grant runtime authority.
-
-## Boundary
-
-The launcher does not resolve a second plan, copy payloads, launch game/runtime processes, request elevation, coordinate lifecycle execution, publish installation state, mutate products, mutate saves, sign artifacts, publish to the network, mutate catalogues, or promote evidence.
-
-Any later installer execution must separately pass through the admission-bound handoff, reviewed PackageEngine token/session, payload, process/elevation, lifecycle, publication, registry, and editor-readiness gates.
-
-## Build locally
-
-Use the CMD entrypoint on Windows. It does not depend on script execution policy.
-
-From the repository root:
+The CMD entry point avoids PowerShell execution-policy dependency:
 
 ```bat
-Installer\Launcher\Windows\build-foa-installer-launcher.cmd -Configuration Release -RuntimeIdentifier win-x64
+Installer\Launcher\Windows\build-foa-installer-launcher.cmd -InstallerMsi C:\reviewed\Tainted-Grail-FoA-SDK-0.1.0-windows-x64.msi -OutputDirectory C:\foa-build\installer-wizard
 ```
 
-If you are already in `Installer\Launcher\Windows`, run:
+Self-contained single-file output is the default. `--framework-dependent` is a development-only build option and is not the distributed artifact.
 
-```bat
-build-foa-installer-launcher.cmd -Configuration Release -RuntimeIdentifier win-x64
-```
-
-The expected output is:
-
-```text
-Installer/Launcher/Windows/artifacts/FOA-SDK-Installer.exe
-```
-
-For a self-contained binary:
-
-```bat
-Installer\Launcher\Windows\build-foa-installer-launcher.cmd -Configuration Release -RuntimeIdentifier win-x64 -SelfContained
-```
-
-The PowerShell script remains available for environments that explicitly allow scripts, but the CMD wrapper is the supported Windows front door.
-
-Launcher builds and tests remain part of the repository's governed validation surface. A separate unapproved workflow is not required.
+If no MSI is supplied at build time, the executable is a development shell and requires exactly one reviewed `.msi` plus its `.msi.sha256` sidecar beside the EXE, or an explicit `--msi` path. This mode must not be represented as the final user artifact.
 
 ## Run
 
-From the product checkout:
+Normal use is a double-click on `FOA-SDK-Installer.exe`. The supported command-line surface is:
 
-```powershell
-.\Installer\Launcher\Windows\artifacts\FOA-SDK-Installer.exe
+```text
+FOA-SDK-Installer.exe [--msi <reviewed.msi>]
+  [--install-root <absolute-directory>]
+  [--operation install|upgrade|repair|uninstall]
+  [--quiet] [--smoke-test]
+  [--launch-after-install|--no-launch-after-install]
+  [--no-dialog]
 ```
 
-Or provide explicit paths:
+`--smoke-test` verifies payload resolution and constructs the wizard without applying MSI changes. The packaging smoke then uses `--quiet` for the real clean-install, repair, and uninstall lifecycle and checks the installed Editor launcher plus an external workspace sentinel.
 
-```powershell
-FOA-SDK-Installer.exe `
-  --installer-root C:\path\to\FOA-SDK\Installer `
-  --python C:\path\to\pythonw.exe
-```
+Verbose MSI logs are written beneath `%LOCALAPPDATA%\FOA-SDK\Installer\Logs`. A success code of 1641 or 3010 is reported as successful with a Windows restart required.
 
-The launcher also checks `FOA_SDK_PYTHON` and bundled runtime locations under `runtime/python/pythonw.exe`.
+## Security and trust boundary
 
-`--advanced-review` remains accepted as a compatibility no-op because reviewed mode is now the only launcher mode.
-
-## Smoke test
-
-The CI-friendly smoke mode runs the complete graphical review/acknowledgement/confirmation/receipt smoke path and returns the host exit code:
-
-```powershell
-FOA-SDK-Installer.exe --installer-root C:\path\to\FOA-SDK\Installer --smoke-test
-```
+- Embedded and external MSI bytes are captured and SHA-256 verified before `msiexec.exe` starts.
+- External MSI paths must be regular `.msi` files, not symbolic links or reparse points.
+- The install path must be absolute, must not be a filesystem root, and must not traverse an existing reparse-point directory.
+- Process arguments use `ProcessStartInfo.ArgumentList`, not a concatenated command line.
+- The executable requests `asInvoker`; it does not use `runas` or silently elevate.
+- Current artifacts are unsigned. Verify provenance and supplied hashes; a checksum is not a code-signing identity.

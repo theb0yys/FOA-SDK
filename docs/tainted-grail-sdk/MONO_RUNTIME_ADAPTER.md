@@ -73,7 +73,7 @@ The execution gate is a review-readiness record for a later external executor. I
 1. exact Mono profile equality;
 2. positive binary size and SHA-256;
 3. separate adapter-identity and exact-install-parity evidence sets;
-4. a verified Suite Wizard confirmation-receipt fingerprint;
+4. a verified reviewed prebuilt-SDK installation-manifest fingerprint;
 5. named requester;
 6. a bounded whole-second UTC window;
 7. exact build-plan binding.

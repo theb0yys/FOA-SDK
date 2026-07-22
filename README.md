@@ -30,7 +30,7 @@ Generated builds, caches, diagnostics, screenshots, installers, packages, and va
 Gems/
 ├── ExternalToolchain/                bounded external-tool discovery and provider contracts
 └── TaintedGrailModdingSDK/           required editor foundation, schemas, services and tests
-Installer/                            suite wizard, bootstrap, package recipes and packaging source
+Installer/                            native installer wizard, installed launcher and packaging source
 Plugins/                              optional product extension packages
 ├── Authoring/                        Avalon AI, UI Framework, Road Atlas and future authoring systems
 ├── Integrations/                     Merlin's Workshop and acquisition/tool providers
@@ -53,7 +53,7 @@ LICENSE.txt                            repository licence
 
 `Gems/` contains the two always-present product foundations. `Plugins/` contains optional, independently governed packages. Every plug-in package requires a schema-valid `plugin.json`, deterministic ExtensionAPI registration, explicit compatibility and capabilities, provenance, licence state, and focused tests. A plug-in declaration never grants runtime, deployment, save, signing, publication, catalog-mutation, or evidence-promotion authority.
 
-`Installer/` owns suite selection, prerequisite/bootstrap contracts, installable-package recipes, installed-launcher source, platform packaging projects, installer assets, and lifecycle tests. Generated MSI files, portable ZIPs, staged payloads, logs, signing material, and release uploads remain outside the source checkout.
+`Installer/` owns the self-contained Windows installer wizard, installed-Editor launcher, platform packaging project, and installer tests. The wizard verifies and executes one reviewed MSI; generated EXE/MSI files, portable ZIPs, staged payloads, logs, signing material, and release uploads remain outside the source checkout.
 
 See [`Plugins/README.md`](Plugins/README.md), [`Plugins/plugin.schema.json`](Plugins/plugin.schema.json), and [`Installer/README.md`](Installer/README.md) for the extension and distribution contracts.
 
@@ -140,7 +140,7 @@ FOA-SDK owns authoring data, Editor panes, typed contracts, validation, evidence
 
 Required host integration remains in the two product Gems. Optional AI, UI, road, integration, acquisition, and runtime-adapter systems live beneath `Plugins/` and register through the public ExtensionAPI rather than acquiring mutable Foundation internals.
 
-The installer suite may select and install reviewed product packages, but its manifests and UI do not grant runtime, deployment, save, signing, publication, catalog-mutation, or evidence-promotion authority. Generated installer artifacts remain reviewed output, not source.
+The installer may install, repair, upgrade, or uninstall the complete reviewed prebuilt SDK through Windows Installer, but its UI does not grant runtime, deployment, save, signing, publication, catalog-mutation, or evidence-promotion authority. Generated installer artifacts remain reviewed output, not source.
 
 O3DE owns engine and host functionality. The target Unity game owns final runtime interpretation. Cross-engine conversion is performed through deterministic, reviewable file handoff; Unity-native files remain Unity-owned.
 
@@ -153,7 +153,7 @@ Start with:
 - [FOA-SDK documentation index](docs/tainted-grail-sdk/README.md)
 - [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
 - [Plug-in package root](Plugins/README.md)
-- [Installer and suite root](Installer/README.md)
+- [Installer root](Installer/README.md)
 - [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
 - [Developer Preview 0](docs/tainted-grail-sdk/DEVELOPER_PREVIEW_0.md)
 - [External O3DE dependency boundary](docs/tainted-grail-sdk/EXTERNAL_O3DE_DEPENDENCY.md)

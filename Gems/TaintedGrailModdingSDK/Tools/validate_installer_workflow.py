@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the external-engine Windows SDK installer and suite-root contract."""
+"""Validate the external-engine Windows SDK MSI and executable-wizard contract."""
 
 from __future__ import annotations
 
@@ -20,6 +20,12 @@ class InstallerWorkflowValidationError(RuntimeError):
 
 PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
 LEGACY_INSTALLER_ROOT = "Gems/TaintedGrailModdingSDK/Installer"
+OBSOLETE_INSTALLER_ROOTS = (
+    "Installer/Bootstrapper",
+    "Installer/Packages",
+    "Installer/Suites",
+    "Installer/SuiteWizard",
+)
 
 REQUIRED_FILE_FRAGMENTS = {
     ".github/workflows/tainted-grail-sdk-installer.yml": (
@@ -33,9 +39,13 @@ REQUIRED_FILE_FRAGMENTS = {
         PINNED_O3DE_COMMIT,
         "O3DE_ROOT: ${{ runner.temp }}/o3de",
         "FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build",
+        "SDK_VALIDATION_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-validation",
         "git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT",
         "run_local_validation.py",
         "--engine-root",
+        "--ctest-build-dir",
+        "-DLY_DISABLE_TEST_MODULES=OFF",
+        "--target TaintedGrailModdingSDK.Catalog.Tests",
         "cmake -S $env:O3DE_ROOT",
         '"$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"',
         "-DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK",
@@ -49,8 +59,20 @@ REQUIRED_FILE_FRAGMENTS = {
         "dotnet tool install wix --version 4.0.4",
         "cmake -S Installer/Packaging/Windows",
         "cpack --config",
-        "msiexec.exe",
+        "Installer/Launcher/Windows/FOAInstallerLauncher.csproj",
+        "InstallerMsiPath",
+        "InstallerMsiChecksumPath",
+        "BaseIntermediateOutputPath",
+        "BaseOutputPath",
+        "FOA-SDK-Installer.exe",
+        "FOA-SDK-Installer.exe.sha256",
+        "Get-FileHash",
         "--self-test",
+        "--smoke-test",
+        '"--operation", "install"',
+        '"--operation", "repair"',
+        '"--operation", "uninstall"',
+        "Start-Process -FilePath $wizard -Wait -PassThru",
         "MSI Start Menu entry was not created",
         "MSI uninstall left the product launcher installed",
         "external-workspace",
@@ -58,29 +80,14 @@ REQUIRED_FILE_FRAGMENTS = {
         "unsigned development installer artifacts",
     ),
     "Installer/README.md": (
-        "SuiteWizard/",
-        "Bootstrapper/",
-        "Suites/",
-        "Packages/",
         "Launcher/",
         "Packaging/",
-        "Generated output belongs beneath the external `foa-build/` root",
-        "A selection never grants game-launch",
-    ),
-    "Installer/suite.schema.json": (
-        '"schema_version"',
-        '"suite_id"',
-        '"packages"',
-        '"unreviewed_packages_allowed"',
-        '"const": false',
-    ),
-    "Installer/package.schema.json": (
-        '"package_id"',
-        '"payload"',
-        '"preserve_external_workspaces"',
-        '"runtime_execution"',
-        '"publication"',
-        '"const": false',
+        "Generated MSI files",
+        "FOA-SDK-Installer.exe",
+        "private temporary directory",
+        "install/upgrade, repair, or uninstall",
+        "no Git, Python, CMake",
+        "were non-installing review prototypes",
     ),
     "Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py": (
         'ENGINE_NAME = "TaintedGrailFoASDK"',
@@ -136,10 +143,46 @@ REQUIRED_FILE_FRAGMENTS = {
         "--self-test",
         "CreateProcessW",
     ),
+    "Installer/Launcher/Windows/FOAInstallerLauncher.csproj": (
+        "net8.0-windows",
+        "UseWindowsForms",
+        "PublishSingleFile",
+        "FOA.SDK.Payload.msi",
+        "InstallerMsiChecksumPath",
+    ),
+    "Installer/Launcher/Windows/Program.cs": (
+        "InstallerPayload.Resolve",
+        "InstallerWizardForm",
+        "WindowsInstallerRunner.RunAsync",
+    ),
+    "Installer/Launcher/Windows/InstallerPayload.cs": (
+        "FOA.SDK.Payload.msi",
+        "FOA.SDK.Payload.msi.sha256",
+        "SHA256.HashData",
+        "FileAttributes.ReparsePoint",
+        "FileShare.Read",
+        "return new InstallerPayload(captured, expected, temporaryRoot)",
+    ),
+    "Installer/Launcher/Windows/WindowsInstallerRunner.cs": (
+        'FileName = "msiexec.exe"',
+        "ArgumentList.Add",
+        'InstallerOperation.InstallOrUpgrade => "/i"',
+        'InstallerOperation.Repair => "/fa"',
+        'InstallerOperation.Uninstall => "/x"',
+        "INSTALL_ROOT=",
+    ),
+    "Installer/Launcher/Windows/InstallerWizardForm.cs": (
+        "Install or upgrade the complete FOA-SDK",
+        "Repair the installed FOA-SDK",
+        "Uninstall FOA-SDK",
+        "External workspaces are never removed",
+        "Reviewed MSI SHA-256",
+    ),
     "docs/tainted-grail-sdk/WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md": (
         "Approved design",
         "O3DE `INSTALL` target",
         "portable ZIP",
+        "self-contained `FOA-SDK-Installer.exe`",
         "exact inventory fingerprint",
         "does not publish",
         "upgrade",
@@ -149,6 +192,7 @@ REQUIRED_FILE_FRAGMENTS = {
         "Windows 64-bit",
         "INSTALL_MANIFEST.json",
         "SHA256SUMS",
+        "FOA-SDK-Installer.exe.sha256",
         "repair",
         "uninstall",
         "unsigned",
@@ -184,6 +228,9 @@ def validate_installer_workflow(repo_root: Path) -> None:
         "python scripts/license_scanner",
         "${{ github.workspace }}/build",
         LEGACY_INSTALLER_ROOT,
+        "suite_wizard_receipt_host.py",
+        "FOA_SDK_PYTHON",
+        "review evidence only",
     )
     for fragment in forbidden:
         if fragment in workflow:
@@ -195,6 +242,12 @@ def validate_installer_workflow(repo_root: Path) -> None:
         raise InstallerWorkflowValidationError(
             f"Legacy installer source root still exists: {LEGACY_INSTALLER_ROOT}."
         )
+
+    for obsolete_root in OBSOLETE_INSTALLER_ROOTS:
+        if (repo_root / obsolete_root).exists():
+            raise InstallerWorkflowValidationError(
+                f"Obsolete non-installing installer framework still exists: {obsolete_root}."
+            )
 
     runner = read_text(repo_root / "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py")
     for fragment in (
@@ -217,7 +270,7 @@ def main() -> int:
     except InstallerWorkflowValidationError as exc:
         print(f"Installer workflow validation failed: {exc}", file=sys.stderr)
         return 1
-    print("External-engine installer and suite-root validation passed.")
+    print("External-engine MSI and executable installer-wizard validation passed.")
     return 0
 
 

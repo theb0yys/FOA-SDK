@@ -10,5 +10,18 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(InstallerMsiPath)' != ''">
+    <EmbeddedResource Include="$(InstallerMsiPath)" LogicalName="FOA.SDK.Payload.msi" />
+    <EmbeddedResource Include="$(InstallerMsiChecksumPath)" LogicalName="FOA.SDK.Payload.msi.sha256" />
+  </ItemGroup>
+
+  <Target Name="ValidateEmbeddedInstallerPayload" BeforeTargets="BeforeBuild" Condition="'$(InstallerMsiPath)' != ''">
+    <Error Condition="!Exists('$(InstallerMsiPath)')" Text="InstallerMsiPath does not identify an MSI file." />
+    <Error Condition="'$(InstallerMsiChecksumPath)' == '' Or !Exists('$(InstallerMsiChecksumPath)')" Text="InstallerMsiChecksumPath must identify the MSI SHA-256 sidecar." />
+  </Target>
 </Project>

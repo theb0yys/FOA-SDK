@@ -87,6 +87,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Changed
 
+- Replaced the non-installing Python suite/receipt catalogue prototype with a self-contained Windows Forms `FOA-SDK-Installer.exe` that embeds and verifies the exact reviewed MSI, supports install/upgrade, repair, and uninstall through Windows Installer, and can launch the installed Editor.
+- Installer workflow output now includes a SHA-256 sidecar for the final executable and exercises clean install, installed-launcher self-test, repair, uninstall, and external-workspace preservation through that executable.
 - Actor/Troop status now records the deterministic fixture and public documentation as implemented; exact-head O3DE configure/build, compiled catalog tests, and Windows evidence remain the active acceptance gate before the slice is described as exact-head verified.
 - The focused Actor/Troop checklist supplements the current twenty-six-pane Hub-plus-specialist checklist instead of regressing the repository to the historical twenty-three-pane count.
 - Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.

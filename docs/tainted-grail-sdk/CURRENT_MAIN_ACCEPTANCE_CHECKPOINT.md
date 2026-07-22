@@ -9,7 +9,8 @@ release-acceptance workflow repair was merged.
 - checkpoint base: `27db6df3ba35c8db433b1e4519e978a51da6bd54`;
 - base description: merge of PR #130, including the preceding PR #127 and PR #129 deltas;
 - validation scope: exact-head static validation, reviewed-range
-  `git diff --check`, deterministic fixtures, Suite Wizard graphical smoke, and
+  `git diff --check`, deterministic fixtures, the graphical installer smoke
+  present on that exact historical head, and
   hosted Windows O3DE prerequisites.
 
 The checkpoint pull request is deliberately draft. Passing hosted checks proves

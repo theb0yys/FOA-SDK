@@ -8,6 +8,12 @@ Reconciled `main`: `3fb95284f7cbc259a3c4ab0ba4469be0c9d7baaf`
 
 Observed: 22 July 2026
 
+Historical-record note: this file describes the exact main comparison above.
+The non-installing Suite Wizard/Bootstrapper prototype mentioned below was later
+removed from the current installer implementation and is not a supported or
+normative installation path. The approved current delivery path is documented
+in `WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md`.
+
 Comparison:
 
 ```text

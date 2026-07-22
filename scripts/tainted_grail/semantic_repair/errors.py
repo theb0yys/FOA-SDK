@@ -13,5 +13,21 @@ class JournalCorruptionError(RepairError):
     """A recovery journal failed structural or hash-chain validation."""
 
 
+class LockOwnershipError(RepairError):
+    """A caller does not own the active synthetic resource lease."""
+
+
+class StaleGenerationError(RepairError):
+    """A caller attempted to use an obsolete synthetic generation."""
+
+
+class CancellationRequested(RepairError):
+    """A synthetic transaction observed an explicit cancellation request."""
+
+
+class WorkflowPolicyError(RepairError):
+    """The offline CI workflow exceeded its read-only authority boundary."""
+
+
 class SimulatedCrash(RuntimeError):
     """Synthetic crash injected after a partial durable write."""

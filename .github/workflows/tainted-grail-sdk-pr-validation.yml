@@ -64,6 +64,15 @@ jobs:
           set -o pipefail
           python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py --keep-going --static-only --skip-source-policy 2>&1 | tee tg-sdk-static-validation.log
 
+      - name: Run Suite Wizard native graphical smoke
+        if: ${{ hashFiles('Installer/SuiteWizard/Host/Source/suite_wizard_host.py') != '' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          command -v xvfb-run
+          python -c "import tkinter; print(f'Tk {tkinter.TkVersion}')"
+          xvfb-run -a python Installer/SuiteWizard/Host/Source/suite_wizard_host.py --installer-root Installer --smoke-test 2>&1 | tee -a tg-sdk-static-validation.log
+
       - name: Preserve exact-run validation log
         if: always()
         uses: actions/upload-artifact@v4

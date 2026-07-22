@@ -14,6 +14,7 @@ must be rechecked at the gate that would consume them.
 | ID | Source | Version or identity | Supports | Limitation |
 | --- | --- | --- | --- | --- |
 | `SRC-INPUT-001` | `inputs/FOA_SDK_O3DE_TO_UNITY_CONVERSION_AND_RUNTIME_BRIDGE_RESEARCH_REPORT.md` | SHA-256 `b17850a12efe97dbd92a8bdf9cfcd155204105c49e230c51cf9b10aceba9c048` | Supplied research hypotheses and its internal evidence ledger | Its `turn...` citation tokens are opaque and non-durable; the report is not an accepted decision |
+| `SRC-INPUT-002` | `inputs/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_DEEP_RESEARCH.md` | containing Git revision; normalized intake observed 22 July 2026 | Deep Research schema, identity, payload, loss, legal, fixture, and register proposals | Normalized substantive preservation rather than raw rendered-artifact bytes; stale baseline and proposals require reconciliation |
 
 ## Repository sources
 
@@ -68,11 +69,14 @@ Unless explicitly marked "this commit", paths in this section were observed at t
 
 ## Sources not yet durable
 
-The supplied report still refers to official store/news material, Unity licensing terms, Addressables documentation, BepInEx release channels, and community reports about FoA Mono/IL2CPP branches only through opaque `turn...` citations. Until the exact direct URL, relevant version or revision, retrieval date, and scoped claim are added here, those claims remain `unverified` and cannot authorize design or implementation.
+The supplied report still refers to official store/news material, Unity licensing terms, Addressables documentation,
+BepInEx release channels, and community reports about FoA Mono/IL2CPP branches only through opaque `turn...`
+citations. Until the exact direct URL, relevant version or revision, retrieval date, and scoped claim are added
+here, those claims remain `unverified` and cannot authorize design or implementation.
 
 ## Current reconciliation sources
 
-Observed 22 July 2026 against current `main` commit `8fb3f0a729e4be4e513ba896ba52708a73d03eae`.
+Observed 22 July 2026 against `main` commit `8fb3f0a729e4be4e513ba896ba52708a73d03eae`.
 
 | ID | Durable source | Supports | Limitation |
 | --- | --- | --- | --- |
@@ -84,4 +88,28 @@ Observed 22 July 2026 against current `main` commit `8fb3f0a729e4be4e513ba896ba5
 | `SRC-REPO-024` | https://github.com/theb0yys/FOA-SDK/blob/2e45192157cfe4fa5086330f99bb0cb82ed18111/Research/o3de-to-unity-conversion-and-runtime-bridge/areas/07-foa-runtime-adapters/README.md | Runtime-adapter separation, re-entry order, and current blocked capabilities | No executable adapter package is approved |
 | `SRC-REPO-025` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/Research/o3de-to-unity-conversion-and-runtime-bridge/gates/IMPLEMENTATION_GATE_MAPPING.md#L13-L88 | Controlling gate order and rejected reorderings | Mapping does not satisfy any gate |
 
-The reconciled synthesis is `FOA_SDK_PORTING_METHODS_RESEARCH.md`. It is a research conclusion derived from registered sources and is not itself implementation authority.
+## Canonical interchange reconciliation sources
+
+Observed 22 July 2026 against current `main` commit `504e10b27e46fceae4d68af200118edca27b4d1b`.
+
+| ID | Durable source | Supports | Limitation |
+| --- | --- | --- | --- |
+| `SRC-REPO-026` | https://github.com/theb0yys/FOA-SDK/compare/195f5c15f0c59d47bd54e661b37d7457af9d1d95...504e10b27e46fceae4d68af200118edca27b4d1b | Exact 179-commit drift reconciliation | Broad comparison; individual claims still require scoped files |
+| `SRC-REPO-027` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/README.md | Current product identity and authoring/runtime separation | Product state may change after this commit |
+| `SRC-REPO-028` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/docs/tainted-grail-sdk/ARCHITECTURE.md | Exact identity, ownership, evidence, and fail-closed architecture | Does not itself select Schema-1 field shapes |
+| `SRC-REPO-029` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/docs/tainted-grail-sdk/EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md | Manifest-and-payload design, identity, loss, lock, security, test, and gate requirements | Gates 1–13 remain separately reviewed |
+| `SRC-REPO-030` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/Research/o3de-to-unity-conversion-and-runtime-bridge/gates/IMPLEMENTATION_GATE_MAPPING.md | Gate 5 placement and continued Phase 9 prerequisite | Does not authorize Gate 5 |
+| `SRC-REPO-031` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/Gems/TaintedGrailModdingSDK/Code/Source/DeterministicContractJson.h | Current byte-oriented deterministic JSON and numeric serialization behavior | Generic helper is not automatically the Schema-1 canonical profile |
+| `SRC-REPO-032` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/Gems/TaintedGrailModdingSDK/Code/Tests/DeterministicContractJsonTests.cpp | Exact current non-finite, round-trip precision, and escaped-byte behavior | Focused helper tests do not prove interchange canonicalization |
+| `SRC-REPO-033` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/Gems/TaintedGrailModdingSDK/Code/Source/FoundationModels.h | Existing workspace, profile, pack, source, evidence, catalog, identity, validation, and governance fields | Existing models must not be copied into a parallel authority system |
+| `SRC-REPO-034` | https://github.com/theb0yys/FOA-SDK/blob/504e10b27e46fceae4d68af200118edca27b4d1b/o3de.lock.json | Exact O3DE 2.7.0 lock at `68683f23fb747380d3efa2424bd5f30242e9c5a2` | Engine pin does not qualify a provider or payload format |
+| `SRC-O3DE-006` | https://www.docs.o3de.org/docs/user-guide/assets/scene-settings/scene-format-support/ | O3DE right-handed Z-up basis, forward orientation, metre unit, and conversion need | Documentation does not prove cross-host fixture success |
+| `SRC-O3DE-007` | https://docs.o3de.org/docs/api/frameworks/azcore/_a_z_base_math.html | O3DE standard matrix-on-left, column-vector transform form | Does not select serialized storage by itself |
+| `SRC-BLENDER-003` | https://docs.blender.org/manual/en/4.2/files/import_export/stl.html | Blender Y-forward, Z-up export/import axis declarations | STL page documents Blender basis but does not qualify a scene payload format |
+| `SRC-UNITY-011` | https://docs.unity3d.com/current/Manual/QuaternionAndEulerRotationsInUnity.html | Unity left-handed, X-right, Y-up, Z-forward basis | Mutable current documentation; exact accepted Editor remains later qualification |
+| `SRC-RFC-001` | https://www.rfc-editor.org/rfc/rfc8785.html | Comparative JSON canonicalization, duplicate-key and deterministic serialization considerations | Accepted Schema-1 profile is not an unqualified JCS implementation |
+| `SRC-UNICODE-001` | https://www.unicode.org/reports/tr15/tr15-57.html | Unicode normalization definitions and conformance implications | Schema 1 deliberately does not normalize Unicode |
+
+The accepted Area 02 research conclusion is
+`areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`. It remains
+research-only and is not implementation authority.

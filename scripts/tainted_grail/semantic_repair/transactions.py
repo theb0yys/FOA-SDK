@@ -1,12 +1,13 @@
-"""Typed mapping and synthetic mount transactions with explicit state machines."""
+"""Typed mapping and synthetic mount transactions with cancellation semantics."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Generic, Mapping, MutableMapping, TypeVar
 
-from .errors import RepairError
+from .errors import CancellationRequested, RepairError, StateTransitionError
 from .journal import CrashRecoveryJournal
-from .state_machine import TransactionPhase, TransactionStateMachine
+from .ownership import ResourceLease
+from .state_machine import CancellationToken, TransactionPhase, TransactionStateMachine
 
 T = TypeVar("T")
 _UNSET = object()
@@ -51,6 +52,7 @@ class MappingTransaction(Generic[T]):
     proposed: T
     transaction_id: str | None = None
     journal: CrashRecoveryJournal | None = None
+    journal_lease: ResourceLease | None = None
     _original: Any = field(init=False, default=_UNSET)
     _machine: TransactionStateMachine = field(init=False)
 
@@ -58,7 +60,7 @@ class MappingTransaction(Generic[T]):
         txid = self.transaction_id or (
             f"mapping:{self.profile_id}:{self.type_id}:{self.adapter.field_name}"
         )
-        self._machine = TransactionStateMachine(txid, self.journal)
+        self._machine = TransactionStateMachine(txid, self.journal, self.journal_lease)
 
     @property
     def phase(self) -> TransactionPhase:
@@ -72,15 +74,26 @@ class MappingTransaction(Generic[T]):
     def committed(self) -> bool:
         return self._machine.committed
 
-    def prepare(self) -> None:
-        self._machine.transition(TransactionPhase.PREPARING)
+    @property
+    def cancelled(self) -> bool:
+        return self._machine.cancelled
+
+    def prepare(self, cancellation: CancellationToken | None = None) -> None:
         try:
+            if cancellation is not None:
+                cancellation.checkpoint()
+            self._machine.transition(TransactionPhase.PREPARING)
             self._original = self.adapter.read(
                 self.record,
                 profile_id=self.profile_id,
                 type_id=self.type_id,
             )
             self.adapter.validate_value(self.proposed)
+            if cancellation is not None:
+                cancellation.checkpoint()
+        except CancellationRequested as exc:
+            self._cancel_and_restore(str(exc))
+            raise
         except Exception as exc:
             self._machine.mark_failed(exc)
             raise
@@ -89,20 +102,48 @@ class MappingTransaction(Generic[T]):
             payload={"field": self.adapter.field_name},
         )
 
-    def commit(self, after_write: Callable[[], None] | None = None) -> None:
-        self._machine.transition(TransactionPhase.COMMITTING)
+    def commit(
+        self,
+        after_write: Callable[[], None] | None = None,
+        *,
+        cancellation: CancellationToken | None = None,
+    ) -> None:
         try:
+            if cancellation is not None:
+                cancellation.checkpoint()
+            self._machine.transition(TransactionPhase.COMMITTING)
             self.record[self.adapter.field_name] = self.proposed
             if after_write is not None:
                 after_write()
+            if cancellation is not None:
+                cancellation.checkpoint()
+        except CancellationRequested as exc:
+            self._cancel_and_restore(str(exc))
+            raise
         except Exception as exc:
             self._machine.mark_failed(exc)
             self.rollback()
             raise
         self._machine.transition(TransactionPhase.COMMITTED)
 
+    def cancel(self, reason: str = "cancelled") -> None:
+        if self._machine.phase in {
+            TransactionPhase.COMMITTED,
+            TransactionPhase.ROLLED_BACK,
+            TransactionPhase.CANCELLED,
+        }:
+            raise StateTransitionError(f"cannot cancel transaction in {self._machine.phase.value}")
+        self._cancel_and_restore(reason)
+
+    def _cancel_and_restore(self, reason: str) -> None:
+        self._machine.request_cancel(reason)
+        self._machine.transition(TransactionPhase.CANCELLING)
+        if self._original is not _UNSET:
+            self.record[self.adapter.field_name] = self._original
+        self._machine.transition(TransactionPhase.CANCELLED)
+
     def rollback(self) -> None:
-        if self._machine.rolled_back:
+        if self._machine.rolled_back or self._machine.cancelled:
             return
         if self._machine.phase is TransactionPhase.NEW:
             return
@@ -139,11 +180,14 @@ class MountConversionTransaction:
     state: SyntheticMountState
     transaction_id: str = "synthetic-mount-conversion"
     journal: CrashRecoveryJournal | None = None
+    journal_lease: ResourceLease | None = None
     _snapshot: SyntheticMountState | None = field(init=False, default=None)
     _machine: TransactionStateMachine = field(init=False)
 
     def __post_init__(self) -> None:
-        self._machine = TransactionStateMachine(self.transaction_id, self.journal)
+        self._machine = TransactionStateMachine(
+            self.transaction_id, self.journal, self.journal_lease
+        )
 
     @property
     def phase(self) -> TransactionPhase:
@@ -153,9 +197,21 @@ class MountConversionTransaction:
     def history(self) -> tuple[TransactionPhase, ...]:
         return tuple(self._machine.history)
 
-    def prepare(self) -> None:
-        self._machine.transition(TransactionPhase.PREPARING)
-        self._snapshot = self.state.snapshot()
+    @property
+    def cancelled(self) -> bool:
+        return self._machine.cancelled
+
+    def prepare(self, cancellation: CancellationToken | None = None) -> None:
+        try:
+            if cancellation is not None:
+                cancellation.checkpoint()
+            self._machine.transition(TransactionPhase.PREPARING)
+            self._snapshot = self.state.snapshot()
+            if cancellation is not None:
+                cancellation.checkpoint()
+        except CancellationRequested as exc:
+            self._cancel_and_restore(str(exc))
+            raise
         self._machine.transition(
             TransactionPhase.PREPARED,
             payload={
@@ -165,37 +221,69 @@ class MountConversionTransaction:
             },
         )
 
-    def commit(self, *, wolf_id: str, fail_after: str | None = None) -> None:
+    def commit(
+        self,
+        *,
+        wolf_id: str,
+        fail_after: str | None = None,
+        cancellation: CancellationToken | None = None,
+        after_stage: Callable[[str], None] | None = None,
+    ) -> None:
         if not wolf_id:
             raise RepairError("wolf_id must be non-empty")
-        self._machine.transition(TransactionPhase.COMMITTING)
         try:
+            if cancellation is not None:
+                cancellation.checkpoint()
+            self._machine.transition(TransactionPhase.COMMITTING)
             self.state.created_objects.append(f"seat:{wolf_id}")
-            if fail_after == "create":
-                raise RuntimeError("injected create failure")
+            self._stage("create", fail_after, cancellation, after_stage)
             self.state.fields["mount_kind"] = "synthetic-wolf"
-            if fail_after == "field":
-                raise RuntimeError("injected field failure")
+            self._stage("field", fail_after, cancellation, after_stage)
             self.state.movement_enabled = {
                 key: False for key in self.state.movement_enabled
             }
-            if fail_after == "movement":
-                raise RuntimeError("injected movement failure")
+            self._stage("movement", fail_after, cancellation, after_stage)
             self.state.owned_mount = wolf_id
-            if fail_after == "ownership":
-                raise RuntimeError("injected ownership failure")
+            self._stage("ownership", fail_after, cancellation, after_stage)
+        except CancellationRequested as exc:
+            self._cancel_and_restore(str(exc))
+            raise
         except Exception as exc:
             self._machine.mark_failed(exc)
             self.rollback()
             raise
         self._machine.transition(TransactionPhase.COMMITTED)
 
-    def rollback(self) -> None:
-        if self._machine.rolled_back:
-            return
-        if self._machine.phase is TransactionPhase.NEW:
-            return
-        self._machine.transition(TransactionPhase.ROLLING_BACK)
+    @staticmethod
+    def _stage(
+        stage: str,
+        fail_after: str | None,
+        cancellation: CancellationToken | None,
+        after_stage: Callable[[str], None] | None,
+    ) -> None:
+        if after_stage is not None:
+            after_stage(stage)
+        if cancellation is not None:
+            cancellation.checkpoint()
+        if fail_after == stage:
+            raise RuntimeError(f"injected {stage} failure")
+
+    def cancel(self, reason: str = "cancelled") -> None:
+        if self._machine.phase in {
+            TransactionPhase.COMMITTED,
+            TransactionPhase.ROLLED_BACK,
+            TransactionPhase.CANCELLED,
+        }:
+            raise StateTransitionError(f"cannot cancel transaction in {self._machine.phase.value}")
+        self._cancel_and_restore(reason)
+
+    def _cancel_and_restore(self, reason: str) -> None:
+        self._machine.request_cancel(reason)
+        self._machine.transition(TransactionPhase.CANCELLING)
+        self._restore_snapshot()
+        self._machine.transition(TransactionPhase.CANCELLED)
+
+    def _restore_snapshot(self) -> None:
         if self._snapshot is not None:
             restored = self._snapshot.snapshot()
             self.state.owned_mount = restored.owned_mount
@@ -203,4 +291,12 @@ class MountConversionTransaction:
             self.state.fields = restored.fields
             self.state.movement_enabled = restored.movement_enabled
             self.state.created_objects = restored.created_objects
+
+    def rollback(self) -> None:
+        if self._machine.rolled_back or self._machine.cancelled:
+            return
+        if self._machine.phase is TransactionPhase.NEW:
+            return
+        self._machine.transition(TransactionPhase.ROLLING_BACK)
+        self._restore_snapshot()
         self._machine.transition(TransactionPhase.ROLLED_BACK)

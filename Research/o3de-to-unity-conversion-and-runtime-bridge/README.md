@@ -4,27 +4,31 @@ Status: research intake and reconciliation
 
 Original intake baseline: `92aa29960bab92d646c464ae48b8cf09d881a436`
 
-Current reconciliation baseline: `8fb3f0a729e4be4e513ba896ba52708a73d03eae`
+Porting-method reconciliation baseline: `8fb3f0a729e4be4e513ba896ba52708a73d03eae`
 
-Observation dates: 20 July 2026 at intake; 22 July 2026 at current reconciliation
+Canonical-interchange reconciliation baseline: `504e10b27e46fceae4d68af200118edca27b4d1b`
+
+Observation dates: 20 July 2026 at intake; 22 July 2026 at both reconciliations
 
 ## Authority boundary
 
-This topic records evidence and unresolved design questions. It grants no implementation authority. The
-normative design independently authorises one narrow Gate 0 contract-only precursor: inert Core value objects,
-canonical serialization, pure validation, focused tests, and repository boundary validation. Research does not
-create or expand that authority. In particular, it does not approve a service, persistence, filesystem access,
-process launch, a Unity or Blender version, a native extension, game-install inspection, BepInEx or Harmony
-execution, deployment, game launch, runtime mutation, save access, live IPC, or publication.
+This topic records evidence, accepted research conclusions, and unresolved design questions. It grants no
+implementation authority. The normative design independently authorises one narrow Gate 0 contract-only
+precursor: inert Core value objects, canonical serialization, pure validation, focused tests, and repository
+boundary validation. Research does not create or expand that authority.
+
+In particular, this track does not approve a service, persistence, filesystem access, process launch, Unity or
+Blender version, native extension, game-install inspection, BepInEx or Harmony execution, deployment, game
+launch, runtime mutation, save access, live IPC, evidence promotion, signing, or publication.
 
 The normative authority remains
 `docs/tainted-grail-sdk/EDITOR_TOOLCHAIN_UNITY_INTERCHANGE_DESIGN.md` and
 `docs/tainted-grail-sdk/EXTERNAL_TOOL_INTERCHANGE_GATE_0.md`. Gate 0 may proceed before Phase 9 only within its
-Core-only boundary. The Phase 9 prerequisite continues to control Gates 1 and later.
+Core-only boundary. The Phase 9 prerequisite continues to control Gates 1 and later, including Gate 5.
 
-## Preserved input
+## Preserved inputs
 
-The supplied report is preserved unchanged at
+The original supplied report is preserved unchanged at
 `inputs/FOA_SDK_O3DE_TO_UNITY_CONVERSION_AND_RUNTIME_BRIDGE_RESEARCH_REPORT.md`.
 
 SHA-256 at intake:
@@ -33,22 +37,41 @@ SHA-256 at intake:
 b17850a12efe97dbd92a8bdf9cfcd155204105c49e230c51cf9b10aceba9c048
 ```
 
-The report contains opaque citations such as `turn5view4` and `turn34search0`. Those identifiers are local to
-the conversation that produced the report. They are not durable, resolvable repository citations and cannot
-support implementation, compatibility, licensing, or runtime decisions. Durable sources are recorded in
-[`SOURCE_REGISTER.md`](SOURCE_REGISTER.md); unresolved report claims remain marked unsupported or unverified
-in [`CLAIM_REGISTER.md`](CLAIM_REGISTER.md).
+The later canonical interchange Deep Research result is preserved as a normalized substantive intake at
+[`inputs/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_DEEP_RESEARCH.md`](inputs/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_DEEP_RESEARCH.md).
 
-## Current reconciled synthesis
+Preserved inputs are not accepted decisions. Their opaque conversation-local citations do not grant durable
+evidence. Durable sources and scoped claims live in [`SOURCE_REGISTER.md`](SOURCE_REGISTER.md) and
+[`CLAIM_REGISTER.md`](CLAIM_REGISTER.md).
 
-[`FOA_SDK_PORTING_METHODS_RESEARCH.md`](FOA_SDK_PORTING_METHODS_RESEARCH.md) records the current source-backed
-porting-method conclusion. It reconciles repository drift through current `main`, corrects the distinction
-between exact pinned Mono/IL2CPP route observations and an unselected active operator target, and selects a
-canonical file-backed interchange package with separate shared domain documents and format-specific payloads
-as the research direction.
+## Accepted research conclusions
 
-The synthesis is a research conclusion only. It does not select a schema version, tool version, runtime route,
-or operational capability.
+### Porting method
+
+[`FOA_SDK_PORTING_METHODS_RESEARCH.md`](FOA_SDK_PORTING_METHODS_RESEARCH.md) selects a canonical file-backed
+interchange package with separate shared domain documents and format-specific payloads. It preserves
+Blender-first qualification, Unity Editor-only interchange, and separate Mono and IL2CPP runtime routes.
+
+### Canonical Schema 1 and identity
+
+[`areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`](areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md)
+answers the minimum schema and identity question.
+
+It accepts:
+
+- one authoritative `manifest.tginterchange.json`;
+- a directory-only Schema-1 package;
+- typed engine-neutral domain documents;
+- ordered contained payload inventory;
+- `PackageId`, `AssetId`, `RevisionFingerprint`, `BindingId`, and first-class mapping events;
+- native IDs as bindings rather than canonical identity;
+- `foa-interchange-canonical-json-v1` with ASCII semantic tokens and byte-preserved UTF-8 display text;
+- right-handed `+X` right, `+Y` forward, `+Z` up, metres, radians, and seconds;
+- column vectors, matrix-on-left multiplication, and column-major storage;
+- explicit transformations, losses, provenance, legal state, migration, errors, blockers, and fixtures;
+- external Framework-owned qualification evidence.
+
+The accepted conclusion remains research-only. It does not authorize Gate 5 implementation.
 
 ## Research lanes
 
@@ -75,28 +98,37 @@ or operational capability.
 
 `source-supported` and `repository-observed` are evidence states, not qualification or permission states.
 
-## Reconciliation summary
+## Current process state
 
-The report's four proposed handoff/result envelopes informed the independently approved Gate 0 contract-only
-precursor. At Gate 0 they remain disabled, `NotAttempted` Core documents consumed by no service. The report's
-file-backed Unity batch execution, exact tool locks, candidate-evidence intake, and host-owned supervision stay
-later research candidates. Its proposed BepInEx compilation, game deployment, plugin-load evidence, and
-rollback slice remains incompatible with current authority and belongs to the separately reviewed runtime lane
-after the authoring interchange gates.
+Completed research sequence:
 
-The current reconciliation preserves mandatory Blender-first ordering, canonical identity, transformation,
-loss, and round-trip requirements. Exact pinned Mono and IL2CPP route observations now exist, but they do not
-select an active target or authorise build, deployment, execution, game API access, runtime mutation, or save
-access.
+```text
+preserve Deep Research input
+→ reconcile to current main
+→ correct registers and citations
+→ resolve canonicalization, spatial, migration, and error-code decisions
+→ import accepted research conclusion
+```
 
-## Active next question
+The next decision is not provider or host implementation. The process advances to:
 
-The research process now advances to:
+[`areas/02-authoring-interchange-and-assets/GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md`](areas/02-authoring-interchange-and-assets/GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md)
 
-[`areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_RESEARCH_QUESTION.md`](areas/02-authoring-interchange-and-assets/CANONICAL_INTERCHANGE_SCHEMA_RESEARCH_QUESTION.md)
+That question defines the exact contract-only design needed before any Gate 5 code can be considered. Phase 9
+entry and explicit Gate 5 authority must be confirmed separately.
 
-That question covers the minimum schema 1 field inventory, identity and binding state machine, coordinate and
-matrix basis, payload model, transformation and loss taxonomy, provenance/legal state, determinism classes,
-validation rules, schema evolution, and qualification fixtures.
+## Controlling order
 
-See [`gates/IMPLEMENTATION_GATE_MAPPING.md`](gates/IMPLEMENTATION_GATE_MAPPING.md) for the controlling order.
+See [`gates/IMPLEMENTATION_GATE_MAPPING.md`](gates/IMPLEMENTATION_GATE_MAPPING.md).
+
+The order remains:
+
+```text
+accepted research conclusion
+→ Phase 9/Gate 5 authority decision
+→ Gate 5 contract-only implementation
+→ Blender qualification
+→ O3DE round trips
+→ Unity Editor-only interchange
+→ later separately gated runtime mapping
+```

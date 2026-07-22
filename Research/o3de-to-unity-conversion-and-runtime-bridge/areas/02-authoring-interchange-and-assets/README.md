@@ -26,6 +26,10 @@ envelopes, but the envelopes do not replace its identity, transformation, proven
 [`CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`](CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md)
 answers the focused Schema-1 structure and identity question.
 
+The conclusion was written against `504e10b27e46fceae4d68af200118edca27b4d1b` and is reconciled through current
+`main` at `3d50df1ea3aaf97a5148ae4ebb5c5ade8336e6d2` by
+[`CURRENT_MAIN_RECONCILIATION_2026-07-22.md`](CURRENT_MAIN_RECONCILIATION_2026-07-22.md).
+
 The accepted research direction is:
 
 ```text
@@ -55,6 +59,8 @@ The accepted conclusion remains research-only and grants no implementation or op
 - Merge and split use first-class mapping records rather than parent references alone.
 - Qualification evidence remains Framework-owned and external to semantic package content.
 - Schema 1 uses a contained directory; deterministic archive assembly remains later packaging work.
+- The current ExtensionRequestBus and Road Atlas/Avalon AI Tool Gems confirm optional authoring ownership without
+  opening Gate 5 or changing the interchange decisions.
 
 ## Remaining qualification points
 

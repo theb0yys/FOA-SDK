@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "extension.merlins-workshop",
+  "name": "Optional Merlin's Workshop Acquisition",
+  "version": "0.1.0",
+  "category": "integration",
+  "status": "experimental",
+  "optional": true,
+  "entry_points": {
+    "python_modules": [
+      "Tools/merlins_workshop.py"
+    ],
+    "tools": [
+      "Tools/merlins_workshop.py"
+    ]
+  },
+  "capabilities": [
+    "acquisition.merlin.checkout.verify",
+    "acquisition.merlin.license.accept",
+    "acquisition.merlin.plan",
+    "acquisition.merlin.receipt.verify"
+  ],
+  "dependencies": [],
+  "compatibility": {
+    "game_versions": [],
+    "branches": [],
+    "runtime_targets": [
+      "editor-only"
+    ]
+  },
+  "provenance": {
+    "origin": "theb0yys/FOA-SDK",
+    "revision": "project-owned",
+    "license": "Apache-2.0 OR MIT",
+    "redistribution_reviewed": true
+  }
+}

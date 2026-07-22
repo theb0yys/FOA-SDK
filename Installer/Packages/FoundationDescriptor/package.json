@@ -1,0 +1,68 @@
+{
+  "$schema": "../../package.schema.json",
+  "schema_version": 1,
+  "package_id": "foa.foundation-descriptor",
+  "display_name": "FOA-SDK Foundation Descriptor",
+  "description": "Reviewed Developer Preview catalogue entry for the pinned TaintedGrailModdingSDK Gem descriptor. It is not the complete compiled SDK payload.",
+  "version": "0.1.0",
+  "kind": "core-foundation",
+  "status": "preview",
+  "source": {
+    "kind": "product",
+    "repository": "https://github.com/theb0yys/FOA-SDK",
+    "commit": "e7cec6515c9e5ac4e64c8ee3eea5dd5b769121d1",
+    "path": "Gems/TaintedGrailModdingSDK"
+  },
+  "compatibility": {
+    "platforms": [
+      "windows"
+    ],
+    "architectures": [
+      "x86_64"
+    ],
+    "game_versions": [],
+    "branches": [],
+    "runtime_targets": [
+      "editor-only"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "capabilities": [
+    "authoring.read",
+    "catalog.foundation.inspect"
+  ],
+  "payload": [
+    {
+      "source": "gem.json",
+      "destination": "FOA-SDK/Gems/TaintedGrailModdingSDK/gem.json",
+      "sha256": "324a4adf3b2209a35b61400438410c70a019318a30d79fa5128b0f2aad1e7ecd",
+      "size_bytes": 679,
+      "redistribution": "project-owned"
+    }
+  ],
+  "lifecycle": {
+    "install_scope": "per-user",
+    "elevation_required": false,
+    "repair_supported": true,
+    "upgrade_supported": true,
+    "uninstall_supported": true,
+    "rollback_required": true,
+    "preserve_external_workspaces": true
+  },
+  "legal": {
+    "license_expression": "Apache-2.0 OR MIT",
+    "redistribution_review": "approved",
+    "notice_files": []
+  },
+  "authority": {
+    "game_launch": false,
+    "runtime_execution": false,
+    "deployment": false,
+    "save_mutation": false,
+    "signing": false,
+    "publication": false,
+    "catalog_mutation": false,
+    "evidence_promotion": false
+  }
+}

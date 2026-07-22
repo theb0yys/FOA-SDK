@@ -1,0 +1,74 @@
+{
+  "$schema": "../../package.schema.json",
+  "schema_version": 1,
+  "package_id": "foa.editor-descriptor",
+  "display_name": "FOA-SDK Editor Project Descriptor",
+  "description": "Reviewed Developer Preview catalogue entry for the pinned O3DE Editor project descriptor. It depends on the foundation descriptor and is not the complete compiled Editor payload.",
+  "version": "0.1.0",
+  "kind": "editor-project",
+  "status": "preview",
+  "source": {
+    "kind": "product",
+    "repository": "https://github.com/theb0yys/FOA-SDK",
+    "commit": "e7cec6515c9e5ac4e64c8ee3eea5dd5b769121d1",
+    "path": "TaintedGrailModdingEditor"
+  },
+  "compatibility": {
+    "platforms": [
+      "windows"
+    ],
+    "architectures": [
+      "x86_64"
+    ],
+    "game_versions": [],
+    "branches": [],
+    "runtime_targets": [
+      "editor-only"
+    ]
+  },
+  "dependencies": [
+    {
+      "package_id": "foa.foundation-descriptor",
+      "version_range": ">=0.1.0 <0.2.0",
+      "required": true
+    }
+  ],
+  "conflicts": [],
+  "capabilities": [
+    "authoring.read",
+    "catalog.editor.inspect"
+  ],
+  "payload": [
+    {
+      "source": "project.json",
+      "destination": "FOA-SDK/TaintedGrailModdingEditor/project.json",
+      "sha256": "358a09000e63494c710a052526063e158bf5236e248a6a0006e33cf09af5b232",
+      "size_bytes": 882,
+      "redistribution": "project-owned"
+    }
+  ],
+  "lifecycle": {
+    "install_scope": "per-user",
+    "elevation_required": false,
+    "repair_supported": true,
+    "upgrade_supported": true,
+    "uninstall_supported": true,
+    "rollback_required": true,
+    "preserve_external_workspaces": true
+  },
+  "legal": {
+    "license_expression": "Apache-2.0 OR MIT",
+    "redistribution_review": "approved",
+    "notice_files": []
+  },
+  "authority": {
+    "game_launch": false,
+    "runtime_execution": false,
+    "deployment": false,
+    "save_mutation": false,
+    "signing": false,
+    "publication": false,
+    "catalog_mutation": false,
+    "evidence_promotion": false
+  }
+}

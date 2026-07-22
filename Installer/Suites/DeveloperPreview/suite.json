@@ -1,0 +1,76 @@
+{
+  "$schema": "../../suite.schema.json",
+  "schema_version": 1,
+  "suite_id": "foa.developer-preview",
+  "display_name": "FOA-SDK Developer Preview",
+  "description": "Reviewed non-executable catalogue for the future Suite Wizard. It exposes pinned foundation, Editor-project and documentation descriptor packages without claiming the complete compiled product payload.",
+  "version": "0.1.0",
+  "channel": "development",
+  "packages": [
+    {
+      "package_id": "foa.foundation-descriptor",
+      "selection": "required",
+      "order": 0,
+      "feature_ids": []
+    },
+    {
+      "package_id": "foa.editor-descriptor",
+      "selection": "default",
+      "order": 1,
+      "feature_ids": [
+        "foa.feature.editor"
+      ]
+    },
+    {
+      "package_id": "foa.installer-documentation",
+      "selection": "optional",
+      "order": 2,
+      "feature_ids": [
+        "foa.feature.documentation"
+      ]
+    }
+  ],
+  "features": [
+    {
+      "feature_id": "foa.feature.editor",
+      "display_name": "Editor project descriptor",
+      "description": "Include the reviewed O3DE Editor project descriptor and its required foundation descriptor.",
+      "package_ids": [
+        "foa.editor-descriptor"
+      ]
+    },
+    {
+      "feature_id": "foa.feature.documentation",
+      "display_name": "Installer suite documentation",
+      "description": "Include the reviewed installer suite catalogue documentation.",
+      "package_ids": [
+        "foa.installer-documentation"
+      ]
+    }
+  ],
+  "compatibility": {
+    "platforms": [
+      "windows"
+    ],
+    "architectures": [
+      "x86_64"
+    ]
+  },
+  "policies": {
+    "network_allowed": false,
+    "elevation_allowed": false,
+    "unreviewed_packages_allowed": false,
+    "silent_install_allowed": false
+  },
+  "provenance": {
+    "source_repository": "https://github.com/theb0yys/FOA-SDK",
+    "source_commit": "e7cec6515c9e5ac4e64c8ee3eea5dd5b769121d1",
+    "reviewed_by": "FOA-SDK maintainers",
+    "reviewed_at_utc": "2026-07-22T02:52:00Z",
+    "evidence": [
+      "Installer/README.md",
+      "Installer/SuiteWizard/Resolver/README.md",
+      "Installer/SuiteWizard/ViewModel/README.md"
+    ]
+  }
+}

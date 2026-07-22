@@ -71,7 +71,13 @@ def valid_package() -> dict[str, object]:
         "dependencies": [],
         "conflicts": [],
         "capabilities": ["authoring.read"],
-        "payload": [],
+        "payload": [{
+            "source": "payload/foa-core.bin",
+            "destination": "components/foa-core.bin",
+            "sha256": SHA256,
+            "size_bytes": 1,
+            "redistribution": "project-owned",
+        }],
         "lifecycle": {
             "install_scope": "per-user",
             "elevation_required": False,
@@ -120,6 +126,12 @@ class ManifestContractTests(unittest.TestCase):
         document = valid_package()
         document["compatibility"]["platforms"] = []
         with self.assertRaisesRegex(ResolverError, "must contain at least one"):
+            _validate_package_document(document, "package Core")
+
+    def test_empty_payload_fails(self) -> None:
+        document = valid_package()
+        document["payload"] = []
+        with self.assertRaisesRegex(ResolverError, "payload must contain at least one file"):
             _validate_package_document(document, "package Core")
 
     def test_invalid_install_scope_fails(self) -> None:

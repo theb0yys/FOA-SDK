@@ -293,7 +293,10 @@ def _validate_package_document(document: dict[str, object], label: str) -> None:
             f"{package_id} contains invalid capabilities: {', '.join(invalid_capabilities)}."
         )
 
-    for index, raw in enumerate(core.array(document.get("payload"), f"{package_id}.payload")):
+    payload_entries = core.array(document.get("payload"), f"{package_id}.payload")
+    if not payload_entries:
+        raise ResolverError(f"{package_id}.payload must contain at least one file.")
+    for index, raw in enumerate(payload_entries):
         payload = core.obj(raw, f"{package_id}.payload[{index}]")
         core.relative_path(payload.get("source"), f"{package_id}.payload[{index}].source")
         core.relative_path(

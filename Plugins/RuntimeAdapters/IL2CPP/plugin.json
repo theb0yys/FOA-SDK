@@ -1,0 +1,42 @@
+{
+  "capabilities": [
+    "runtime-adapter.il2cpp.build-plan",
+    "runtime-adapter.il2cpp.describe",
+    "runtime-adapter.il2cpp.execution-gate.review",
+    "runtime-adapter.il2cpp.interop.verify",
+    "runtime-adapter.il2cpp.result.verify"
+  ],
+  "category": "runtime-adapter",
+  "compatibility": {
+    "branches": [
+      "il2cpp"
+    ],
+    "game_versions": [
+      "1.23.401"
+    ],
+    "runtime_targets": [
+      "il2cpp"
+    ]
+  },
+  "dependencies": [],
+  "entry_points": {
+    "python_modules": [
+      "Tools/il2cpp_runtime_adapter.py"
+    ],
+    "tools": [
+      "Tools/il2cpp_runtime_adapter.py"
+    ]
+  },
+  "id": "extension.foa-il2cpp-runtime-adapter",
+  "name": "FOA IL2CPP Runtime Adapter",
+  "optional": true,
+  "provenance": {
+    "license": "Apache-2.0 OR MIT",
+    "origin": "theb0yys/FOA-SDK",
+    "redistribution_reviewed": true,
+    "revision": "project-owned"
+  },
+  "schema_version": 1,
+  "status": "experimental",
+  "version": "0.1.0"
+}

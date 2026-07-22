@@ -1,0 +1,43 @@
+{
+  "acceptance_rule": "fail-closed",
+  "authority": "offline-fixture-specification-no-runtime-authority",
+  "cases": [
+    {
+      "case_id": "synthetic.case",
+      "expected": "remain inert",
+      "promotion_effect": "none"
+    },
+    {
+      "case_id": "synthetic.case",
+      "expected": "",
+      "promotion_effect": ""
+    }
+  ],
+  "decision": {
+    "promotion": "behavior-verified",
+    "reason": "synthetic only"
+  },
+  "execution_state": "specification-only",
+  "fixture_set_id": "tg.fixture.synthetic.invalid",
+  "profile": {
+    "evidence_state": "Observed",
+    "framework": "synthetic",
+    "game_version": "0",
+    "loader": "synthetic",
+    "profile_id": "synthetic-profile",
+    "required_runtime_fingerprints": {
+      "Synthetic.dll": "present"
+    },
+    "runtime": "Mono",
+    "unity_version": "0"
+  },
+  "schema_version": 1,
+  "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_repository": "example/research",
+  "sources": [
+    {
+      "blob": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "path": "synthetic/source.cs"
+    }
+  ]
+}

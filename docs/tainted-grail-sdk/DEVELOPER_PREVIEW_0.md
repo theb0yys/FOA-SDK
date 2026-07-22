@@ -148,6 +148,8 @@ byte count and SHA-256 fingerprint. The fixture uses reserved `preview.*`
 identities and contains no proprietary game data, native FoA identifiers,
 private paths, credentials, saves, or extracted assets.
 
+The fixture is project-owned synthetic data. It does not prove Editor load/save/reopen behavior.
+
 ## Compiled persistence smoke
 
 ```powershell
@@ -158,7 +160,7 @@ ctest --test-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
   -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-This service-level persistence smoke proves load, save, close-equivalent, and reopen behavior plus canonical state equivalence. It does not prove FoA runtime compatibility.
+This service-level persistence smoke proves load, save, close-equivalent, and reopen behavior plus canonical state equivalence. It preserves proof-backed allowed usages, while legacy unproven allowances remain fail-closed. It does not prove FoA runtime compatibility.
 
 ## Launch and diagnostics
 

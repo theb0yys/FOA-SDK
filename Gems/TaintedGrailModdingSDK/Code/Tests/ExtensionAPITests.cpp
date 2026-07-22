@@ -108,35 +108,49 @@ namespace TaintedGrailModdingSDK
             m_foundation.SetWorkspace(MakeWorkspace());
         }
 
+        ExtensionAPI::Client RegisterAndBind(
+            const ExtensionAPI::ExtensionDeclaration& declaration)
+        {
+            AZStd::string error;
+            EXPECT_TRUE(m_foundation.RegisterExtension(declaration, &error))
+                << error.c_str();
+            ExtensionAPI::Client client;
+            EXPECT_TRUE(m_foundation.CreateExtensionClient(
+                declaration.m_extensionId, client, &error)) << error.c_str();
+            return client;
+        }
+
         FoundationService m_foundation;
     };
 
     TEST_F(ExtensionAPITests, RegistrationIsDeterministicAndDuplicateIdentityFailsClosed)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
         AZStd::string error;
-        EXPECT_TRUE(api.RegisterExtension(
+        EXPECT_TRUE(m_foundation.RegisterExtension(
             MakeDeclaration("extension.zeta", { ExtensionAPI::Capability::QueryCatalog }), &error));
-        EXPECT_TRUE(api.RegisterExtension(
+        EXPECT_TRUE(m_foundation.RegisterExtension(
             MakeDeclaration("extension.alpha", { ExtensionAPI::Capability::ReadActiveProfile }), &error));
-        EXPECT_FALSE(api.RegisterExtension(
+        EXPECT_FALSE(m_foundation.RegisterExtension(
             MakeDeclaration("extension.alpha", { ExtensionAPI::Capability::ReadActiveProfile }), &error));
 
-        const auto declarations = api.GetRegisteredExtensions();
+        const auto declarations = m_foundation.GetRegisteredExtensions();
         ASSERT_EQ(declarations.size(), 2);
         EXPECT_EQ(declarations[0].m_extensionId, "extension.alpha");
         EXPECT_EQ(declarations[1].m_extensionId, "extension.zeta");
     }
 
-    TEST_F(ExtensionAPITests, ProfileViewIsCapabilityGatedAndOmitsPrivatePaths)
+    TEST_F(ExtensionAPITests, ClientIsIdentityBoundAndOmitsPrivateProfilePaths)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
-        AZStd::string error;
-        ASSERT_TRUE(api.RegisterExtension(
-            MakeDeclaration("extension.profile", { ExtensionAPI::Capability::ReadActiveProfile }), &error));
+        ExtensionAPI::Client client = RegisterAndBind(
+            MakeDeclaration(
+                "extension.profile",
+                { ExtensionAPI::Capability::ReadActiveProfile }));
+        EXPECT_TRUE(client.IsBound());
+        EXPECT_EQ(client.GetExtensionId(), "extension.profile");
 
         ExtensionAPI::ProfileView profile;
-        ASSERT_TRUE(api.GetActiveProfile("extension.profile", profile, &error));
+        AZStd::string error;
+        ASSERT_TRUE(client.GetActiveProfile(profile, &error));
         EXPECT_EQ(profile.m_profileId, "profile.foa.mono");
         EXPECT_EQ(profile.m_branch, "mono");
         EXPECT_EQ(profile.m_runtimeTarget, "Mono");
@@ -145,67 +159,85 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(profile.m_dlcScopes[1], "dlc.z");
 
         AZStd::vector<CatalogRecord> records;
-        EXPECT_FALSE(api.QueryCatalog("extension.profile", CatalogQuery{}, records, 16, &error));
+        EXPECT_FALSE(client.QueryCatalog(CatalogQuery{}, records, 16, &error));
+    }
+
+    TEST_F(ExtensionAPITests, UnboundOrUnknownClientFailsClosed)
+    {
+        ExtensionAPI::Client client;
+        ExtensionAPI::ProfileView profile;
+        AZStd::string error;
+        EXPECT_FALSE(client.GetActiveProfile(profile, &error));
+        EXPECT_FALSE(error.empty());
+
+        EXPECT_FALSE(m_foundation.CreateExtensionClient(
+            "extension.not-registered", client, &error));
+        EXPECT_FALSE(client.IsBound());
     }
 
     TEST_F(ExtensionAPITests, ExactBranchAndVersionDeclarationsAreEnforced)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
         auto declaration = MakeDeclaration(
             "extension.wrong-branch", { ExtensionAPI::Capability::ReadActiveProfile });
         declaration.m_supportedBranches = { "il2cpp" };
-        AZStd::string error;
-        ASSERT_TRUE(api.RegisterExtension(declaration, &error));
+        ExtensionAPI::Client client = RegisterAndBind(declaration);
 
         ExtensionAPI::ProfileView profile;
-        EXPECT_FALSE(api.GetActiveProfile("extension.wrong-branch", profile, &error));
+        AZStd::string error;
+        EXPECT_FALSE(client.GetActiveProfile(profile, &error));
     }
 
     TEST_F(ExtensionAPITests, CatalogQueriesAreCopyOnlyAndBounded)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
-        AZStd::string error;
-        ASSERT_TRUE(api.RegisterExtension(
-            MakeDeclaration("extension.catalog", { ExtensionAPI::Capability::QueryCatalog }), &error));
+        ExtensionAPI::Client client = RegisterAndBind(
+            MakeDeclaration(
+                "extension.catalog",
+                { ExtensionAPI::Capability::QueryCatalog }));
 
+        AZStd::string error;
         AZStd::vector<CatalogRecord> records;
-        EXPECT_TRUE(api.QueryCatalog("extension.catalog", CatalogQuery{}, records, 16, &error));
+        EXPECT_TRUE(client.QueryCatalog(CatalogQuery{}, records, 16, &error));
         EXPECT_TRUE(records.empty());
-        EXPECT_FALSE(api.QueryCatalog(
-            "extension.catalog",
+        EXPECT_FALSE(client.QueryCatalog(
             CatalogQuery{},
             records,
             ExtensionAPI::Service::MaximumCatalogQueryResults + 1,
             &error));
     }
 
-    TEST_F(ExtensionAPITests, CandidateEvidenceRequiresCapabilityAndExactImportedSourceBinding)
+    TEST_F(ExtensionAPITests, CandidateEvidenceRequiresReviewBeforePublication)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
         AZStd::string error;
         ASSERT_TRUE(m_foundation.RegisterSource(MakeSource(), &error));
-        ASSERT_TRUE(api.RegisterExtension(
+        ExtensionAPI::Client client = RegisterAndBind(
             MakeDeclaration(
                 "extension.evidence",
-                { ExtensionAPI::Capability::SubmitCandidateEvidence }),
-            &error));
+                { ExtensionAPI::Capability::SubmitCandidateEvidence }));
 
         EvidenceRecord evidence = MakeEvidence();
-        EXPECT_TRUE(api.SubmitCandidateEvidence("extension.evidence", evidence, &error));
+        EXPECT_TRUE(client.SubmitCandidateEvidence(evidence, &error));
+        EXPECT_EQ(m_foundation.GetSourceRegistry().FindEvidence(evidence.m_evidenceId), nullptr);
+        EXPECT_NE(
+            m_foundation.GetSourceRegistry().FindCandidateEvidence(evidence.m_evidenceId),
+            nullptr);
+
+        ASSERT_TRUE(m_foundation.PromoteCandidateEvidence(evidence.m_evidenceId, &error));
         EXPECT_NE(m_foundation.GetSourceRegistry().FindEvidence(evidence.m_evidenceId), nullptr);
+        EXPECT_EQ(
+            m_foundation.GetSourceRegistry().FindCandidateEvidence(evidence.m_evidenceId),
+            nullptr);
 
         evidence.m_evidenceId = "evidence.extension.wrong-branch";
         evidence.m_branch = "il2cpp";
-        EXPECT_FALSE(api.SubmitCandidateEvidence("extension.evidence", evidence, &error));
+        EXPECT_FALSE(client.SubmitCandidateEvidence(evidence, &error));
     }
 
     TEST_F(ExtensionAPITests, UnknownCapabilityValueFailsRegistration)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
         auto declaration = MakeDeclaration(
             "extension.invalid-capability",
             { static_cast<ExtensionAPI::Capability>(999) });
         AZStd::string error;
-        EXPECT_FALSE(api.RegisterExtension(declaration, &error));
+        EXPECT_FALSE(m_foundation.RegisterExtension(declaration, &error));
     }
 } // namespace TaintedGrailModdingSDK

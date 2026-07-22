@@ -28,6 +28,7 @@ namespace TaintedGrailModdingSDK
             manifest.m_requiredCapabilities = { "action.follow" };
 
             BlackboardKey key;
+            key.m_keyId = "blackboard-key.companion.distance";
             key.m_namespace = manifest.m_blackboardNamespace;
             key.m_name = "distance";
             key.m_schemaVersion = 1;
@@ -50,7 +51,7 @@ namespace TaintedGrailModdingSDK
                 { "fact.player-visible", PlanningComparison::Equal, 1 },
             };
             action.m_effects = { { "fact.near-player", 1 } };
-            action.m_targetKeyId = "target.player";
+            action.m_targetKeyId = key.m_keyId;
             action.m_requiredCapability = "action.follow";
             action.m_interruptPolicy = InterruptPolicy::OnInvalidTarget;
             action.m_timeoutMilliseconds = 5000;
@@ -81,11 +82,48 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(result.m_plan.m_runtimeMutationAllowed);
     }
 
+    TEST(AvalonAiExtensionTests, UnsupportedApiMinorFailsClosed)
+    {
+        auto manifest = MakeAiPackage();
+        manifest.m_requiredRuntimeApi = { 2, 1 };
+        const auto result = AvalonAiExtension::ValidateAndPlan(manifest);
+        EXPECT_FALSE(result.m_accepted);
+        EXPECT_TRUE(result.m_plan.m_canonicalFingerprint.empty());
+    }
+
+    TEST(AvalonAiExtensionTests, ActionTargetMustResolveToDeclaredStableKey)
+    {
+        auto manifest = MakeAiPackage();
+        manifest.m_actions[0].m_targetKeyId = "blackboard-key.companion.missing";
+        const auto result = AvalonAiExtension::ValidateAndPlan(manifest);
+        EXPECT_FALSE(result.m_accepted);
+        ASSERT_FALSE(result.m_issues.empty());
+        EXPECT_EQ(result.m_issues.back().m_code, "action.target-key-invalid");
+    }
+
     TEST(AvalonAiExtensionTests, CanonicalFingerprintChangesWithPlanningEffect)
     {
         auto first = MakeAiPackage();
         auto second = first;
         second.m_actions[0].m_effects[0].m_assignedValue = 2;
+        EXPECT_NE(
+            AvalonAiExtension::CalculatePackageFingerprint(first),
+            AvalonAiExtension::CalculatePackageFingerprint(second));
+    }
+
+    TEST(AvalonAiExtensionTests, CanonicalFingerprintPreservesCollectionBoundaries)
+    {
+        auto first = MakeAiPackage();
+        auto second = first;
+        first.m_supportedActorRoles = { "a.role" };
+        first.m_requiredCapabilities = { "b.shared", "c.capability" };
+        first.m_actions[0].m_requiredCapability = "c.capability";
+        second.m_supportedActorRoles = { "a.role", "b.shared" };
+        second.m_requiredCapabilities = { "c.capability" };
+        second.m_actions[0].m_requiredCapability = "c.capability";
+
+        ASSERT_TRUE(AvalonAiExtension::ValidateAndPlan(first).m_accepted);
+        ASSERT_TRUE(AvalonAiExtension::ValidateAndPlan(second).m_accepted);
         EXPECT_NE(
             AvalonAiExtension::CalculatePackageFingerprint(first),
             AvalonAiExtension::CalculatePackageFingerprint(second));

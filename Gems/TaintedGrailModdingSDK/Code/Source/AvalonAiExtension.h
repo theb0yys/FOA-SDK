@@ -82,6 +82,7 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
 
     struct BlackboardKey
     {
+        AZStd::string m_keyId;
         AZStd::string m_namespace;
         AZStd::string m_name;
         int m_schemaVersion = 1;

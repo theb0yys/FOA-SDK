@@ -18,6 +18,7 @@ namespace TaintedGrailModdingSDK
     public:
         static constexpr size_t MaximumSourceCount = 4096;
         static constexpr size_t MaximumEvidenceCount = 65536;
+        static constexpr size_t MaximumCandidateEvidenceCount = 65536;
 
         SourceEvidenceRegistry();
         SourceEvidenceRegistry(const SourceEvidenceRegistry& other);
@@ -27,6 +28,15 @@ namespace TaintedGrailModdingSDK
 
         bool RegisterSource(const SourceRecord& source, AZStd::string* error = nullptr);
         bool RegisterEvidence(const EvidenceRecord& evidence, AZStd::string* error = nullptr);
+        bool RegisterCandidateEvidence(
+            const EvidenceRecord& evidence,
+            AZStd::string* error = nullptr);
+        bool PromoteCandidateEvidence(
+            const AZStd::string& evidenceId,
+            AZStd::string* error = nullptr);
+        bool RejectCandidateEvidence(
+            const AZStd::string& evidenceId,
+            AZStd::string* error = nullptr);
         void Clear();
 
         const SourceRecord* FindSource(const AZStd::string& sourceId) const;
@@ -34,16 +44,22 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& fingerprint,
             const AZStd::string& profileId) const;
         const EvidenceRecord* FindEvidence(const AZStd::string& evidenceId) const;
+        const EvidenceRecord* FindCandidateEvidence(const AZStd::string& evidenceId) const;
         AZStd::vector<EvidenceRecord> FindEvidenceForSource(const AZStd::string& sourceId) const;
         AZStd::vector<EvidenceRecord> FindEvidenceForSubject(const AZStd::string& subjectRef) const;
 
         const AZStd::vector<SourceRecord>& GetSources() const;
         const AZStd::vector<EvidenceRecord>& GetEvidence() const;
+        const AZStd::vector<EvidenceRecord>& GetCandidateEvidence() const;
 
     private:
         void ReserveStableStorage();
+        bool ValidateEvidenceRecord(
+            const EvidenceRecord& evidence,
+            AZStd::string* error) const;
 
         AZStd::vector<SourceRecord> m_sources;
         AZStd::vector<EvidenceRecord> m_evidence;
+        AZStd::vector<EvidenceRecord> m_candidateEvidence;
     };
 } // namespace TaintedGrailModdingSDK

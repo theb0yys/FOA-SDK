@@ -14,13 +14,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 TOOLS_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(TOOLS_ROOT))
 
 import validate_tainted_system_ports as validator
-
 
 FIXTURE_PATHS = (
     "Gems/TaintedGrailModdingSDK/Code/Source/SourceEvidenceIntakeWidget.cpp",
@@ -28,9 +26,12 @@ FIXTURE_PATHS = (
     "Gems/TaintedGrailModdingSDK/Code/Source/TaintedInterfaceUiUtilities.cpp",
     "Gems/TaintedGrailModdingSDK/Code/Source/TaintedInterfaceUiUtilities.h",
     "Gems/TaintedGrailModdingSDK/Code/Source/GameInformationAcquisition.cpp",
+    "Gems/TaintedGrailModdingSDK/Code/Source/GameInformationAcquisition.h",
     "Gems/TaintedGrailModdingSDK/Code/Source/RoadAtlasExtension.cpp",
     "Gems/TaintedGrailModdingSDK/Code/Source/AvalonAiExtension.cpp",
+    "Gems/TaintedGrailModdingSDK/Code/Source/AvalonAiExtension.h",
     "Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.cpp",
+    "Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.h",
     "Gems/TaintedGrailModdingSDK/Code/Tests/GameInformationAcquisitionTests.cpp",
     "Gems/TaintedGrailModdingSDK/Code/Tests/RoadAtlasExtensionTests.cpp",
     "Gems/TaintedGrailModdingSDK/Code/Tests/AvalonAiExtensionTests.cpp",
@@ -147,10 +148,18 @@ class TaintedSystemPortValidatorTests(unittest.TestCase):
     def test_runtime_route_authority_escalation_fails(self) -> None:
         self.mutate(
             "Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.cpp",
-            "build=false|deploy=false|execute=false|mutation=false|save=false",
-            "build=true|deploy=true|execute=true|mutation=true|save=true",
+            'AppendBool(output, "build", route.m_buildAllowed)',
+            'AppendBool(output, "build", true)',
         )
-        self.assert_fails("build=false")
+        self.assert_fails("route.m_buildAllowed")
+
+    def test_runtime_route_registry_dependency_removal_fails(self) -> None:
+        self.mutate(
+            "Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.h",
+            "const SourceEvidenceRegistry& evidenceRegistry",
+            "const AZStd::string& evidenceRegistry",
+        )
+        self.assert_fails("Runtime evidence dependency")
 
 
 if __name__ == "__main__":

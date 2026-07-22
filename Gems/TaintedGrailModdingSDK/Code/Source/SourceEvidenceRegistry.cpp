@@ -9,6 +9,9 @@
 
 #include "ResearchContractValidation.h"
 
+#include <AzCore/std/algorithm.h>
+#include <AzCore/std/utility/move.h>
+
 namespace TaintedGrailModdingSDK
 {
     namespace
@@ -18,8 +21,17 @@ namespace TaintedGrailModdingSDK
             size_t maximumLength,
             bool allowEmpty = false)
         {
-            return value.size() <= maximumLength
-                && (allowEmpty || !value.empty());
+            if (value.size() > maximumLength || (!allowEmpty && value.empty()))
+            {
+                return false;
+            }
+            return AZStd::all_of(
+                value.begin(), value.end(),
+                [](char character)
+                {
+                    const unsigned char byte = static_cast<unsigned char>(character);
+                    return byte >= 0x20 && byte != 0x7f;
+                });
         }
 
         void SetError(AZStd::string* error, const char* message)
@@ -40,6 +52,7 @@ namespace TaintedGrailModdingSDK
         const SourceEvidenceRegistry& other)
         : m_sources(other.m_sources)
         , m_evidence(other.m_evidence)
+        , m_candidateEvidence(other.m_candidateEvidence)
     {
         ReserveStableStorage();
     }
@@ -53,12 +66,18 @@ namespace TaintedGrailModdingSDK
         }
         AZStd::vector<SourceRecord> sources;
         AZStd::vector<EvidenceRecord> evidence;
+        AZStd::vector<EvidenceRecord> candidates;
         sources.reserve(MaximumSourceCount);
         evidence.reserve(MaximumEvidenceCount);
+        candidates.reserve(MaximumCandidateEvidenceCount);
         sources.assign(other.m_sources.begin(), other.m_sources.end());
         evidence.assign(other.m_evidence.begin(), other.m_evidence.end());
+        candidates.assign(
+            other.m_candidateEvidence.begin(),
+            other.m_candidateEvidence.end());
         m_sources.swap(sources);
         m_evidence.swap(evidence);
+        m_candidateEvidence.swap(candidates);
         return *this;
     }
 
@@ -66,6 +85,7 @@ namespace TaintedGrailModdingSDK
     {
         m_sources.reserve(MaximumSourceCount);
         m_evidence.reserve(MaximumEvidenceCount);
+        m_candidateEvidence.reserve(MaximumCandidateEvidenceCount);
     }
 
     bool SourceEvidenceRegistry::RegisterSource(
@@ -110,7 +130,7 @@ namespace TaintedGrailModdingSDK
         {
             SetError(
                 error,
-                "Source metadata requires bounded identity, locator, media type, strict versions, valid UTC times, and a usable import status.");
+                "Source metadata requires bounded control-free identity, locator, media type, strict versions, valid UTC times, and a usable import status.");
             return false;
         }
         if (source.m_importedAt < source.m_capturedAt)
@@ -139,15 +159,10 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
-    bool SourceEvidenceRegistry::RegisterEvidence(
+    bool SourceEvidenceRegistry::ValidateEvidenceRecord(
         const EvidenceRecord& evidence,
-        AZStd::string* error)
+        AZStd::string* error) const
     {
-        if (m_evidence.size() >= MaximumEvidenceCount)
-        {
-            SetError(error, "The evidence registry reached its bounded capacity.");
-            return false;
-        }
         if (!IsStableContractId(evidence.m_evidenceId)
             || !IsSafePersistenceId(evidence.m_sourceId))
         {
@@ -189,7 +204,7 @@ namespace TaintedGrailModdingSDK
         {
             SetError(
                 error,
-                "Evidence requires a stable fingerprint, bounded provenance fields, and a valid UTC extraction time.");
+                "Evidence requires a stable fingerprint, bounded control-free provenance fields, and a valid UTC extraction time.");
             return false;
         }
         if (evidence.m_extractedAt < source->m_capturedAt
@@ -200,9 +215,26 @@ namespace TaintedGrailModdingSDK
                 "Evidence extraction time must fall between source capture and import.");
             return false;
         }
-        if (FindEvidence(evidence.m_evidenceId))
+        return true;
+    }
+
+    bool SourceEvidenceRegistry::RegisterEvidence(
+        const EvidenceRecord& evidence,
+        AZStd::string* error)
+    {
+        if (m_evidence.size() >= MaximumEvidenceCount)
         {
-            SetError(error, "Evidence ID already exists.");
+            SetError(error, "The evidence registry reached its bounded capacity.");
+            return false;
+        }
+        if (!ValidateEvidenceRecord(evidence, error))
+        {
+            return false;
+        }
+        if (FindEvidence(evidence.m_evidenceId)
+            || FindCandidateEvidence(evidence.m_evidenceId))
+        {
+            SetError(error, "Evidence ID already exists in the active or candidate registry.");
             return false;
         }
 
@@ -214,10 +246,97 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
+    bool SourceEvidenceRegistry::RegisterCandidateEvidence(
+        const EvidenceRecord& evidence,
+        AZStd::string* error)
+    {
+        if (m_candidateEvidence.size() >= MaximumCandidateEvidenceCount)
+        {
+            SetError(error, "The candidate-evidence registry reached its bounded capacity.");
+            return false;
+        }
+        if (!ValidateEvidenceRecord(evidence, error))
+        {
+            return false;
+        }
+        if (FindEvidence(evidence.m_evidenceId)
+            || FindCandidateEvidence(evidence.m_evidenceId))
+        {
+            SetError(error, "Evidence ID already exists in the active or candidate registry.");
+            return false;
+        }
+
+        m_candidateEvidence.push_back(evidence);
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
+    }
+
+    bool SourceEvidenceRegistry::PromoteCandidateEvidence(
+        const AZStd::string& evidenceId,
+        AZStd::string* error)
+    {
+        const auto candidate = AZStd::find_if(
+            m_candidateEvidence.begin(), m_candidateEvidence.end(),
+            [&evidenceId](const EvidenceRecord& evidence)
+            {
+                return evidence.m_evidenceId == evidenceId;
+            });
+        if (candidate == m_candidateEvidence.end())
+        {
+            SetError(error, "Candidate evidence does not exist.");
+            return false;
+        }
+        if (m_evidence.size() >= MaximumEvidenceCount)
+        {
+            SetError(error, "The evidence registry reached its bounded capacity.");
+            return false;
+        }
+        if (!ValidateEvidenceRecord(*candidate, error)
+            || FindEvidence(evidenceId))
+        {
+            return false;
+        }
+
+        m_evidence.push_back(*candidate);
+        m_candidateEvidence.erase(candidate);
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
+    }
+
+    bool SourceEvidenceRegistry::RejectCandidateEvidence(
+        const AZStd::string& evidenceId,
+        AZStd::string* error)
+    {
+        const auto candidate = AZStd::find_if(
+            m_candidateEvidence.begin(), m_candidateEvidence.end(),
+            [&evidenceId](const EvidenceRecord& evidence)
+            {
+                return evidence.m_evidenceId == evidenceId;
+            });
+        if (candidate == m_candidateEvidence.end())
+        {
+            SetError(error, "Candidate evidence does not exist.");
+            return false;
+        }
+        m_candidateEvidence.erase(candidate);
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
+    }
+
     void SourceEvidenceRegistry::Clear()
     {
         m_sources.clear();
         m_evidence.clear();
+        m_candidateEvidence.clear();
     }
 
     const SourceRecord* SourceEvidenceRegistry::FindSource(
@@ -252,6 +371,19 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& evidenceId) const
     {
         for (const EvidenceRecord& evidence : m_evidence)
+        {
+            if (evidence.m_evidenceId == evidenceId)
+            {
+                return &evidence;
+            }
+        }
+        return nullptr;
+    }
+
+    const EvidenceRecord* SourceEvidenceRegistry::FindCandidateEvidence(
+        const AZStd::string& evidenceId) const
+    {
+        for (const EvidenceRecord& evidence : m_candidateEvidence)
         {
             if (evidence.m_evidenceId == evidenceId)
             {
@@ -297,5 +429,10 @@ namespace TaintedGrailModdingSDK
     const AZStd::vector<EvidenceRecord>& SourceEvidenceRegistry::GetEvidence() const
     {
         return m_evidence;
+    }
+
+    const AZStd::vector<EvidenceRecord>& SourceEvidenceRegistry::GetCandidateEvidence() const
+    {
+        return m_candidateEvidence;
     }
 } // namespace TaintedGrailModdingSDK

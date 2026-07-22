@@ -141,6 +141,17 @@ class ApprovedAcquisitionValidatorTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        hardening_test = package / "Tests/test_approved_acquisition_hardening.py"
+        hardening_test.write_text(
+            "\n".join(
+                (
+                    "test_blocked_source_pattern_is_enforced_by_provider",
+                    "test_blocked_bundle_pattern_is_enforced_by_provider",
+                    "test_local_source_root_with_symlinked_ancestor_fails",
+                )
+            ),
+            encoding="utf-8",
+        )
         module = load_module(tool)
         approved = module.load_manifest(package / "approved-sources.json")
         golden = package / "Tests/Fixtures/pinned-github-all.plan.json"
@@ -151,6 +162,11 @@ class ApprovedAcquisitionValidatorTests(unittest.TestCase):
         bridge.parent.mkdir(parents=True, exist_ok=True)
         bridge.write_text(
             "ApprovedAcquisition/Tests/test_approved_acquisition.py\nload_tests\nApprovedAcquisitionTests\n",
+            encoding="utf-8",
+        )
+        hardening_bridge = root / "Gems/TaintedGrailModdingSDK/Tools/tests/test_approved_acquisition_hardening.py"
+        hardening_bridge.write_text(
+            "test_approved_acquisition_hardening.py\nApprovedAcquisitionHardeningTests\n",
             encoding="utf-8",
         )
         integrations = root / "Plugins/Integrations/README.md"

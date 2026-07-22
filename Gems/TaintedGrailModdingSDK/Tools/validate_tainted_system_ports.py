@@ -6,13 +6,12 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the exact-source Tainted Grail system port boundary."""
+"""Validate the exact-source Tainted Grail system-port and authority boundary."""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PINNED_COMMIT = "d7e740e7f167b73152b53409e483dab07d80d048"
@@ -34,6 +33,13 @@ def require(text: str, fragment: str, label: str) -> None:
         raise TaintedSystemPortError(f"{label} is missing required fragment: {fragment}")
 
 
+def reject_host_linkage(source: str) -> None:
+    if "#include <Unity" in source or "#include <BepInEx" in source:
+        raise TaintedSystemPortError(
+            "Portable system ports must not link Unity or BepInEx hosts."
+        )
+
+
 def validate(root: Path = REPO_ROOT) -> None:
     intake = read_required(
         root,
@@ -46,14 +52,13 @@ def validate(root: Path = REPO_ROOT) -> None:
 
     framework_manifest = read_required(
         root,
-        (
-            "Gems/TaintedGrailModdingSDK/Code/"
-            "taintedgrailmoddingsdk_framework_files.cmake"
-        ),
+        "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_framework_files.cmake",
     )
     for name in (
+        "Source/ExtensionAPIClient.cpp",
+        "Source/FoundationEvidenceReviewService.cpp",
+        "Source/FoundationExtensionAPI.cpp",
         "Source/TaintedFrameworkKnowledge.cpp",
-        "Source/TaintedFrameworkKnowledge.h",
         "Source/FoundationTaintedInterfaceUiUtilities.cpp",
         "Source/TaintedInterfaceUiUtilities.cpp",
         "Source/TaintedInterfaceUiUtilities.h",
@@ -78,26 +83,21 @@ def validate(root: Path = REPO_ROOT) -> None:
 
     test_manifest = read_required(
         root,
-        (
-            "Gems/TaintedGrailModdingSDK/Code/"
-            "taintedgrailmoddingsdk_extension_api_tests_files.cmake"
-        ),
+        "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_extension_api_tests_files.cmake",
     )
     for name in (
         "Tests/AvalonAiExtensionTests.cpp",
         "Tests/FoARuntimeAdapterRoutesTests.cpp",
         "Tests/GameInformationAcquisitionTests.cpp",
         "Tests/RoadAtlasExtensionTests.cpp",
+        "Tests/SourceEvidenceRegistryCandidateTests.cpp",
         "Tests/TaintedInterfaceUiUtilitiesTests.cpp",
     ):
         require(test_manifest, name, "Extension test manifest")
 
     framework_test_manifest = read_required(
         root,
-        (
-            "Gems/TaintedGrailModdingSDK/Code/"
-            "taintedgrailmoddingsdk_tainted_framework_tests_files.cmake"
-        ),
+        "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_tainted_framework_tests_files.cmake",
     )
     require(
         framework_test_manifest,
@@ -141,55 +141,107 @@ def validate(root: Path = REPO_ROOT) -> None:
         "FOA-SDK project-owned generated semantic fallback",
     ):
         require(interface, fragment, "Safe UI utility boundary")
-    if "#include <Unity" in interface or "#include <BepInEx" in interface:
-        raise TaintedSystemPortError(
-            "Editor extension sources must not link Unity or BepInEx hosts."
-        )
+    reject_host_linkage(interface)
 
     acquisition = read_required(
         root,
         "Gems/TaintedGrailModdingSDK/Code/Source/GameInformationAcquisition.cpp",
     )
+    acquisition_header = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Source/GameInformationAcquisition.h",
+    )
+    acquisition_tests = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Tests/GameInformationAcquisitionTests.cpp",
+    )
     for fragment in (
         "provider.foa-local-capture",
         "provider.tainted-grail-github",
         "provider.merlin-workshop",
-        "QualificationState::ContractOnly",
+        "QualificationState::ExactInstallBound",
         "m_autoPromotionAllowed",
         "m_canPromoteAutomatically = false",
         "m_grantsRuntimePermission = false",
+        "FindDuplicateObservationIds",
+        "left.m_claimId",
+        "conflict.m_claimId",
     ):
         require(acquisition, fragment, "Acquisition provider boundary")
+    require(acquisition_header, "AZStd::string m_claimId;", "Typed acquisition claim")
+    for fragment in (
+        "DifferentTypedClaimsForOneSubjectDoNotConflict",
+        "DuplicateObservationIdentityHasOneRejectedDisposition",
+    ):
+        require(acquisition_tests, fragment, "Acquisition negative coverage")
 
     road = read_required(
         root,
         "Gems/TaintedGrailModdingSDK/Code/Source/RoadAtlasExtension.cpp",
     )
+    road_tests = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Tests/RoadAtlasExtensionTests.cpp",
+    )
     require(road, PINNED_COMMIT, "Road Atlas source binding")
     for fragment in (
         "RoadAtlasSchemaContracts.cs",
         "ApprovedForPlanning",
+        "element.m_evidenceRequirements.empty()",
+        "hasRequiredEvidence",
+        "DeterministicContractJson",
         "snapshot.m_runtimeMutationAllowed",
         "CalculateCanonicalSha256",
     ):
         require(road, fragment, "Road Atlas boundary")
+    require(
+        road_tests,
+        "PlanningApprovalRequiresNonEmptyRequiredEvidenceSet",
+        "Road Atlas negative coverage",
+    )
 
     ai = read_required(
         root,
         "Gems/TaintedGrailModdingSDK/Code/Source/AvalonAiExtension.cpp",
     )
+    ai_header = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Source/AvalonAiExtension.h",
+    )
+    ai_tests = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Tests/AvalonAiExtensionTests.cpp",
+    )
     require(ai, PINNED_COMMIT, "Avalon AI source binding")
     for fragment in (
         "AvalonAI.Contracts.V2",
+        "manifest.m_requiredRuntimeApi.m_minor > knowledge.m_apiMinor",
+        "Contains(keyIds, action.m_targetKeyId)",
+        "DeterministicContractJson",
         "manifest.m_executionEnabled",
         "manifest.m_hostLinked",
         "m_executionAllowed = false",
     ):
         require(ai, fragment, "Avalon AI authoring boundary")
+    require(ai_header, "AZStd::string m_keyId;", "Avalon stable key identity")
+    for fragment in (
+        "UnsupportedApiMinorFailsClosed",
+        "ActionTargetMustResolveToDeclaredStableKey",
+        "CanonicalFingerprintPreservesCollectionBoundaries",
+    ):
+        require(ai_tests, fragment, "Avalon AI negative coverage")
 
     routes = read_required(
         root,
         "Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.cpp",
+    )
+    route_header = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.h",
+    )
+    route_tests = read_required(
+        root,
+        "Gems/TaintedGrailModdingSDK/Code/Tests/FoARuntimeAdapterRoutesTests.cpp",
     )
     require(routes, PINNED_COMMIT, "Runtime adapter route source binding")
     for fragment in (
@@ -197,15 +249,32 @@ def validate(root: Path = REPO_ROOT) -> None:
         "adapter.foa.il2cpp",
         'mono.m_frameworkVersion = "0.1.33"',
         'il2Cpp.m_frameworkVersion = "0.1.36"',
+        "active-evidence-registry-required",
+        "adapter-identity",
+        "adapter-install-parity",
         "requested-authority-not-granted-by-route-import",
-        "build=false|deploy=false|execute=false|mutation=false|save=false",
+        'AppendBool(output, "build", route.m_buildAllowed)',
+        'AppendBool(output, "deployment", route.m_deploymentAllowed)',
+        'AppendBool(output, "execution", route.m_executionAllowed)',
+        'AppendBool(output, "runtime_mutation", route.m_runtimeMutationAllowed)',
+        'AppendBool(output, "save_access", route.m_saveAccessAllowed, false)',
     ):
         require(routes, fragment, "Runtime adapter route boundary")
+    require(
+        route_header,
+        "const SourceEvidenceRegistry& evidenceRegistry",
+        "Runtime evidence dependency",
+    )
+    for fragment in (
+        "RegistryFreeQualificationFailsClosed",
+        "FabricatedOrPendingEvidenceCannotQualify",
+        "OneEvidenceRecordCannotSatisfyBothClasses",
+        "CanonicalFingerprintBindsActualAuthorityFields",
+    ):
+        require(route_tests, fragment, "Runtime route negative coverage")
+
     for source in (acquisition, road, ai, routes):
-        if "#include <Unity" in source or "#include <BepInEx" in source:
-            raise TaintedSystemPortError(
-                "Portable system ports must not link Unity or BepInEx hosts."
-            )
+        reject_host_linkage(source)
 
     research = read_required(root, "Research/tainted-grail-system-ports/README.md")
     source_register = read_required(

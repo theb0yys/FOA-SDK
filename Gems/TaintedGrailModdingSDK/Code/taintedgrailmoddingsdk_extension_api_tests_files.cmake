@@ -11,5 +11,6 @@ set(FILES
     Tests/FoARuntimeAdapterRoutesTests.cpp
     Tests/GameInformationAcquisitionTests.cpp
     Tests/RoadAtlasExtensionTests.cpp
+    Tests/SourceEvidenceRegistryCandidateTests.cpp
     Tests/TaintedInterfaceUiUtilitiesTests.cpp
 )

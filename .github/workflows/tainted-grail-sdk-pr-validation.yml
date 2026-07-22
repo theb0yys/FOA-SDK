@@ -2,8 +2,16 @@ name: Tainted Grail SDK PR Static Validation
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+      - converted_to_draft
     paths:
       - ".github/workflows/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
       - "Gems/TaintedGrailModdingSDK/**"
       - "Gems/ExternalToolchain/**"
       - "Installer/**"
@@ -20,6 +28,7 @@ on:
       - main
     paths:
       - ".github/workflows/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
       - "Gems/TaintedGrailModdingSDK/**"
       - "Gems/ExternalToolchain/**"
       - "Installer/**"
@@ -57,6 +66,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Validate mandatory merge obligations
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligations.py --event "$GITHUB_EVENT_PATH"
+
+      - name: Validate merge-obligation policy contract
+        shell: bash
+        run: |
+          python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligation_policy.py
 
       - name: Run non-compiled TG SDK validation layer
         shell: bash

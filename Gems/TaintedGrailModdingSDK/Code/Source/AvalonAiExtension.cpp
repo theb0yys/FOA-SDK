@@ -8,11 +8,12 @@
 #include "AvalonAiExtension.h"
 
 #include "CanonicalFingerprint.h"
+#include "DeterministicContractJson.h"
 #include "ResearchContractValidation.h"
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/sort.h>
-#include <AzCore/std/string/conversions.h>
+#include <AzCore/std/utility/move.h>
 
 namespace TaintedGrailModdingSDK::AvalonAiExtension
 {
@@ -110,29 +111,108 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
             return pack;
         }
 
-        void AppendString(AZStd::string& output, const AZStd::string& value)
+        bool IsValidComparison(PlanningComparison value)
         {
-            output += AZStd::to_string(value.size());
-            output.push_back(':');
-            output += value;
-            output.push_back('|');
+            return value >= PlanningComparison::Equal
+                && value <= PlanningComparison::LessThanOrEqual;
         }
 
-        AZStd::string KeyIdentity(const BlackboardKey& key)
+        bool IsValidInterruptPolicy(InterruptPolicy value)
         {
-            return key.m_namespace + ":" + key.m_name + "@"
-                + AZStd::to_string(key.m_schemaVersion) + ":"
-                + AZStd::to_string(static_cast<int>(key.m_scope));
+            return value >= InterruptPolicy::Never
+                && value <= InterruptPolicy::Always;
         }
 
         bool ValidateCondition(const PlanningCondition& condition)
         {
-            return IsStableContractId(condition.m_factId);
+            return IsStableContractId(condition.m_factId)
+                && IsValidComparison(condition.m_comparison);
         }
 
         bool ValidateEffect(const PlanningEffect& effect)
         {
             return IsStableContractId(effect.m_factId);
+        }
+
+        bool ConditionLess(
+            const PlanningCondition& left,
+            const PlanningCondition& right)
+        {
+            if (left.m_factId != right.m_factId)
+            {
+                return left.m_factId < right.m_factId;
+            }
+            if (left.m_comparison != right.m_comparison)
+            {
+                return static_cast<int>(left.m_comparison)
+                    < static_cast<int>(right.m_comparison);
+            }
+            return left.m_value < right.m_value;
+        }
+
+        bool EffectLess(
+            const PlanningEffect& left,
+            const PlanningEffect& right)
+        {
+            return left.m_factId != right.m_factId
+                ? left.m_factId < right.m_factId
+                : left.m_assignedValue < right.m_assignedValue;
+        }
+
+        void AppendConditions(
+            AZStd::string& output,
+            const char* name,
+            AZStd::vector<PlanningCondition> conditions)
+        {
+            using namespace DeterministicContractJson;
+            AZStd::sort(conditions.begin(), conditions.end(), ConditionLess);
+            AppendName(output, name);
+            output.push_back('[');
+            for (size_t index = 0; index < conditions.size(); ++index)
+            {
+                if (index != 0)
+                {
+                    output.push_back(',');
+                }
+                const PlanningCondition& condition = conditions[index];
+                output.push_back('{');
+                AppendString(output, "fact_id", condition.m_factId);
+                AppendSigned(
+                    output,
+                    "comparison",
+                    static_cast<AZ::s64>(condition.m_comparison));
+                AppendSigned(output, "value", condition.m_value, false);
+                output.push_back('}');
+            }
+            output += "],";
+        }
+
+        void AppendEffects(
+            AZStd::string& output,
+            const char* name,
+            AZStd::vector<PlanningEffect> effects)
+        {
+            using namespace DeterministicContractJson;
+            AZStd::sort(effects.begin(), effects.end(), EffectLess);
+            AppendName(output, name);
+            output.push_back('[');
+            for (size_t index = 0; index < effects.size(); ++index)
+            {
+                if (index != 0)
+                {
+                    output.push_back(',');
+                }
+                const PlanningEffect& effect = effects[index];
+                output.push_back('{');
+                AppendString(output, "fact_id", effect.m_factId);
+                AppendSigned(
+                    output,
+                    "assigned_value",
+                    effect.m_assignedValue,
+                    false);
+                output.push_back('}');
+            }
+            output += "],";
         }
     } // namespace
 
@@ -145,12 +225,14 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
     ValidationResult ValidateAndPlan(const PackageManifest& manifest)
     {
         ValidationResult result;
+        const KnowledgePack& knowledge = GetCanonicalKnowledgePack();
         if (manifest.m_schemaVersion != 1
             || !IsStableContractId(manifest.m_packageId)
             || !IsBoundedText(manifest.m_displayName, 512)
             || !IsStrictSemanticVersion(manifest.m_packageVersion)
-            || manifest.m_requiredRuntimeApi.m_major != 2
+            || manifest.m_requiredRuntimeApi.m_major != knowledge.m_apiMajor
             || manifest.m_requiredRuntimeApi.m_minor < 0
+            || manifest.m_requiredRuntimeApi.m_minor > knowledge.m_apiMinor
             || !IsStableContractId(manifest.m_blackboardNamespace)
             || manifest.m_blackboardSchemaVersion < 1
             || manifest.m_maximumPolicyCadenceMilliseconds == 0
@@ -159,7 +241,7 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
         {
             AddIssue(
                 result, manifest.m_packageId, "manifest.invalid",
-                "Avalon AI manifest identity, API, cadence, schema, or inert authority is invalid.");
+                "Avalon AI manifest identity, supported API, cadence, schema, or inert authority is invalid.");
         }
         if (manifest.m_blackboardKeys.size() > MaximumKeys
             || manifest.m_goals.empty() || manifest.m_goals.size() > MaximumGoals
@@ -198,8 +280,9 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
         AZStd::vector<AZStd::string> keyIds;
         for (const BlackboardKey& key : manifest.m_blackboardKeys)
         {
-            keyIds.push_back(KeyIdentity(key));
-            if (key.m_namespace != manifest.m_blackboardNamespace
+            keyIds.push_back(key.m_keyId);
+            if (!IsStableContractId(key.m_keyId)
+                || key.m_namespace != manifest.m_blackboardNamespace
                 || !IsStableContractId(key.m_namespace)
                 || !IsBoundedText(key.m_name, 128)
                 || key.m_schemaVersion < 1
@@ -208,15 +291,15 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
                 || !IsBoundedText(key.m_valueType, 128))
             {
                 AddIssue(
-                    result, KeyIdentity(key), "blackboard-key.invalid",
-                    "Package keys must be package-local, namespaced, typed, and schema-compatible.");
+                    result, key.m_keyId, "blackboard-key.invalid",
+                    "Package keys must have stable IDs and remain package-local, namespaced, typed, and schema-compatible.");
             }
         }
         if (HasDuplicates(keyIds))
         {
             AddIssue(
                 result, manifest.m_packageId, "blackboard-key.duplicate",
-                "Avalon AI blackboard key identities must be unique.");
+                "Avalon AI blackboard key IDs must be unique.");
         }
 
         AZStd::vector<AZStd::string> goalIds;
@@ -225,8 +308,9 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
             goalIds.push_back(goal.m_goalId);
             if (!IsStableContractId(goal.m_goalId) || goal.m_priority < 0)
             {
-                AddIssue(result, goal.m_goalId,
-                    "goal.invalid", "Avalon AI goal identity or priority is invalid.");
+                AddIssue(
+                    result, goal.m_goalId, "goal.invalid",
+                    "Avalon AI goal identity or priority is invalid.");
             }
             for (const PlanningCondition& condition : goal.m_conditions)
             {
@@ -252,18 +336,20 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
             if (!IsStableContractId(action.m_actionId)
                 || !IsStableContractId(action.m_requiredCapability)
                 || !Contains(manifest.m_requiredCapabilities, action.m_requiredCapability)
+                || !IsValidInterruptPolicy(action.m_interruptPolicy)
                 || action.m_timeoutMilliseconds == 0)
             {
                 AddIssue(
                     result, action.m_actionId, "action.invalid",
-                    "Avalon AI action identity, capability, or timeout is invalid.");
+                    "Avalon AI action identity, capability, interrupt policy, or timeout is invalid.");
             }
             if (!action.m_targetKeyId.empty()
-                && !IsStableContractId(action.m_targetKeyId))
+                && (!IsStableContractId(action.m_targetKeyId)
+                    || !Contains(keyIds, action.m_targetKeyId)))
             {
                 AddIssue(
                     result, action.m_actionId, "action.target-key-invalid",
-                    "Avalon AI action target-key ID is invalid.");
+                    "Avalon AI action target-key ID must resolve to one declared package key.");
             }
             for (const PlanningCondition& condition : action.m_conditions)
             {
@@ -312,34 +398,40 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
 
     AZStd::string BuildCanonicalPackage(const PackageManifest& manifest)
     {
-        AZStd::string output = "avalon-ai-package-v1|";
-        output += AZStd::to_string(manifest.m_schemaVersion);
-        output.push_back('|');
-        AppendString(output, manifest.m_packageId);
-        AppendString(output, manifest.m_displayName);
-        AppendString(output, manifest.m_packageVersion);
-        output += AZStd::to_string(manifest.m_requiredRuntimeApi.m_major);
-        output.push_back('.');
-        output += AZStd::to_string(manifest.m_requiredRuntimeApi.m_minor);
-        output.push_back('|');
-        AppendString(output, manifest.m_blackboardNamespace);
-        output += AZStd::to_string(manifest.m_blackboardSchemaVersion);
-        output.push_back('|');
-        output += AZStd::to_string(manifest.m_maximumPolicyCadenceMilliseconds);
-        output.push_back('|');
+        using namespace DeterministicContractJson;
 
-        AZStd::vector<AZStd::string> roles = manifest.m_supportedActorRoles;
-        AZStd::vector<AZStd::string> capabilities = manifest.m_requiredCapabilities;
-        AZStd::sort(roles.begin(), roles.end());
-        AZStd::sort(capabilities.begin(), capabilities.end());
-        for (const AZStd::string& role : roles)
-        {
-            AppendString(output, role);
-        }
-        for (const AZStd::string& capability : capabilities)
-        {
-            AppendString(output, capability);
-        }
+        AZStd::string output = "{";
+        AppendString(output, "schema", "avalon-ai-package-v1");
+        AppendUnsigned(output, "schema_version", manifest.m_schemaVersion);
+        AppendString(output, "package_id", manifest.m_packageId);
+        AppendString(output, "display_name", manifest.m_displayName);
+        AppendString(output, "package_version", manifest.m_packageVersion);
+        AppendName(output, "required_runtime_api");
+        output.push_back('{');
+        AppendSigned(output, "major", manifest.m_requiredRuntimeApi.m_major);
+        AppendSigned(
+            output,
+            "minor",
+            manifest.m_requiredRuntimeApi.m_minor,
+            false);
+        output += "},";
+        AppendString(output, "blackboard_namespace", manifest.m_blackboardNamespace);
+        AppendSigned(
+            output,
+            "blackboard_schema_version",
+            manifest.m_blackboardSchemaVersion);
+        AppendUnsigned(
+            output,
+            "maximum_policy_cadence_ms",
+            manifest.m_maximumPolicyCadenceMilliseconds);
+        AppendSortedStringArray(
+            output,
+            "supported_actor_roles",
+            manifest.m_supportedActorRoles);
+        AppendSortedStringArray(
+            output,
+            "required_capabilities",
+            manifest.m_requiredCapabilities);
 
         AZStd::vector<const BlackboardKey*> keys;
         for (const BlackboardKey& key : manifest.m_blackboardKeys)
@@ -350,16 +442,29 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
             keys.begin(), keys.end(),
             [](const BlackboardKey* left, const BlackboardKey* right)
             {
-                return KeyIdentity(*left) < KeyIdentity(*right);
+                return left->m_keyId < right->m_keyId;
             });
-        for (const BlackboardKey* key : keys)
+        AppendName(output, "blackboard_keys");
+        output.push_back('[');
+        for (size_t index = 0; index < keys.size(); ++index)
         {
-            AppendString(output, KeyIdentity(*key));
-            output += AZStd::to_string(static_cast<int>(key->m_access));
-            output.push_back('|');
-            AppendString(output, key->m_valueType);
-            output += key->m_persistent ? "persistent|" : "transient|";
+            if (index != 0)
+            {
+                output.push_back(',');
+            }
+            const BlackboardKey& key = *keys[index];
+            output.push_back('{');
+            AppendString(output, "key_id", key.m_keyId);
+            AppendString(output, "namespace", key.m_namespace);
+            AppendString(output, "name", key.m_name);
+            AppendSigned(output, "schema_version", key.m_schemaVersion);
+            AppendSigned(output, "access", static_cast<AZ::s64>(key.m_access));
+            AppendSigned(output, "scope", static_cast<AZ::s64>(key.m_scope));
+            AppendString(output, "value_type", key.m_valueType);
+            AppendBool(output, "persistent", key.m_persistent, false);
+            output.push_back('}');
         }
+        output += "],";
 
         AZStd::vector<const GoalDefinition*> goals;
         for (const GoalDefinition& goal : manifest.m_goals)
@@ -372,20 +477,23 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
             {
                 return left->m_goalId < right->m_goalId;
             });
-        for (const GoalDefinition* goal : goals)
+        AppendName(output, "goals");
+        output.push_back('[');
+        for (size_t index = 0; index < goals.size(); ++index)
         {
-            AppendString(output, goal->m_goalId);
-            output += AZStd::to_string(goal->m_priority);
-            output.push_back('|');
-            for (const PlanningCondition& condition : goal->m_conditions)
+            if (index != 0)
             {
-                AppendString(output, condition.m_factId);
-                output += AZStd::to_string(static_cast<int>(condition.m_comparison));
-                output.push_back('|');
-                output += AZStd::to_string(condition.m_value);
-                output.push_back('|');
+                output.push_back(',');
             }
+            const GoalDefinition& goal = *goals[index];
+            output.push_back('{');
+            AppendString(output, "goal_id", goal.m_goalId);
+            AppendSigned(output, "priority", goal.m_priority);
+            AppendConditions(output, "conditions", goal.m_conditions);
+            TrimTrailingComma(output);
+            output.push_back('}');
         }
+        output += "],";
 
         AZStd::vector<const ActionDefinition*> actions;
         for (const ActionDefinition& action : manifest.m_actions)
@@ -398,32 +506,39 @@ namespace TaintedGrailModdingSDK::AvalonAiExtension
             {
                 return left->m_actionId < right->m_actionId;
             });
-        for (const ActionDefinition* action : actions)
+        AppendName(output, "actions");
+        output.push_back('[');
+        for (size_t index = 0; index < actions.size(); ++index)
         {
-            AppendString(output, action->m_actionId);
-            AppendString(output, action->m_targetKeyId);
-            AppendString(output, action->m_requiredCapability);
-            output += AZStd::to_string(static_cast<int>(action->m_interruptPolicy));
-            output.push_back('|');
-            output += AZStd::to_string(action->m_timeoutMilliseconds);
-            output.push_back('|');
-            for (const PlanningCondition& condition : action->m_conditions)
+            if (index != 0)
             {
-                AppendString(output, condition.m_factId);
-                output += AZStd::to_string(static_cast<int>(condition.m_comparison));
-                output.push_back('|');
-                output += AZStd::to_string(condition.m_value);
-                output.push_back('|');
+                output.push_back(',');
             }
-            for (const PlanningEffect& effect : action->m_effects)
-            {
-                AppendString(output, effect.m_factId);
-                output += AZStd::to_string(effect.m_assignedValue);
-                output.push_back('|');
-            }
+            const ActionDefinition& action = *actions[index];
+            output.push_back('{');
+            AppendString(output, "action_id", action.m_actionId);
+            AppendString(output, "target_key_id", action.m_targetKeyId);
+            AppendString(
+                output,
+                "required_capability",
+                action.m_requiredCapability);
+            AppendSigned(
+                output,
+                "interrupt_policy",
+                static_cast<AZ::s64>(action.m_interruptPolicy));
+            AppendUnsigned(
+                output,
+                "timeout_ms",
+                action.m_timeoutMilliseconds);
+            AppendConditions(output, "conditions", action.m_conditions);
+            AppendEffects(output, "effects", action.m_effects);
+            TrimTrailingComma(output);
+            output.push_back('}');
         }
-        output += manifest.m_executionEnabled ? "execution|" : "inert|";
-        output += manifest.m_hostLinked ? "host-linked|" : "host-free|";
+        output += "],";
+        AppendBool(output, "execution_enabled", manifest.m_executionEnabled);
+        AppendBool(output, "host_linked", manifest.m_hostLinked, false);
+        output.push_back('}');
         return output;
     }
 

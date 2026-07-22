@@ -7,15 +7,49 @@
 
 #include "FoundationService.h"
 
+#include <AzCore/std/algorithm.h>
+
 namespace TaintedGrailModdingSDK
 {
-    ExtensionAPI::Service& FoundationService::GetExtensionAPI()
+    bool FoundationService::RegisterExtension(
+        const ExtensionAPI::ExtensionDeclaration& declaration,
+        AZStd::string* error)
     {
-        return m_extensionApi;
+        return m_extensionApi.RegisterExtension(declaration, error);
     }
 
-    const ExtensionAPI::Service& FoundationService::GetExtensionAPI() const
+    bool FoundationService::CreateExtensionClient(
+        const AZStd::string& extensionId,
+        ExtensionAPI::Client& client,
+        AZStd::string* error)
     {
-        return m_extensionApi;
+        const auto declarations = m_extensionApi.GetRegisteredExtensions();
+        const auto found = AZStd::find_if(
+            declarations.begin(), declarations.end(),
+            [&extensionId](const ExtensionAPI::ExtensionDeclaration& declaration)
+            {
+                return declaration.m_extensionId == extensionId;
+            });
+        if (found == declarations.end())
+        {
+            if (error)
+            {
+                *error = "Extension client requires one previously registered extension identity.";
+            }
+            client = {};
+            return false;
+        }
+        client = ExtensionAPI::Client(m_extensionApi, extensionId);
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
+    }
+
+    AZStd::vector<ExtensionAPI::ExtensionDeclaration>
+    FoundationService::GetRegisteredExtensions() const
+    {
+        return m_extensionApi.GetRegisteredExtensions();
     }
 } // namespace TaintedGrailModdingSDK

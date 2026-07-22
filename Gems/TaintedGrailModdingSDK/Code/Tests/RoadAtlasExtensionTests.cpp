@@ -114,6 +114,22 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(result.m_canonicalFingerprint.empty());
     }
 
+    TEST(RoadAtlasExtensionTests, PlanningApprovalRequiresNonEmptyRequiredEvidenceSet)
+    {
+        auto snapshot = MakeRoadSnapshot();
+        snapshot.m_elements[0].m_evidenceRequirements.clear();
+        const auto result = RoadAtlasExtension::ValidateSnapshot(
+            snapshot, MakeRoadProfile());
+        EXPECT_FALSE(result.m_accepted);
+        EXPECT_FALSE(result.m_canUseForPlanning);
+        EXPECT_TRUE(AZStd::any_of(
+            result.m_issues.begin(), result.m_issues.end(),
+            [](const RoadAtlasExtension::ValidationIssue& issue)
+            {
+                return issue.m_code == "evidence.requirements-unsatisfied";
+            }));
+    }
+
     TEST(RoadAtlasExtensionTests, CanonicalFingerprintIgnoresElementOrdering)
     {
         auto first = MakeRoadSnapshot();

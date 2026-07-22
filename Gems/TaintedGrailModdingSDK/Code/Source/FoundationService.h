@@ -98,8 +98,25 @@ namespace TaintedGrailModdingSDK
         bool SaveCatalog(AZStd::string* error = nullptr);
         bool ReloadCatalog(AZStd::string* error = nullptr);
 
+        // Trusted host intake/review operations. Extensions never receive this service.
         bool RegisterSource(const SourceRecord& source, AZStd::string* error = nullptr);
         bool RegisterEvidence(const EvidenceRecord& evidence, AZStd::string* error = nullptr);
+        bool PromoteCandidateEvidence(
+            const AZStd::string& evidenceId,
+            AZStd::string* error = nullptr);
+        bool RejectCandidateEvidence(
+            const AZStd::string& evidenceId,
+            AZStd::string* error = nullptr);
+
+        bool RegisterExtension(
+            const ExtensionAPI::ExtensionDeclaration& declaration,
+            AZStd::string* error = nullptr);
+        bool CreateExtensionClient(
+            const AZStd::string& extensionId,
+            ExtensionAPI::Client& client,
+            AZStd::string* error = nullptr);
+        AZStd::vector<ExtensionAPI::ExtensionDeclaration>
+            GetRegisteredExtensions() const;
 
         const WorkspaceModel& GetWorkspace() const;
         const AZStd::string& GetWorkspaceFilePath() const;
@@ -112,8 +129,6 @@ namespace TaintedGrailModdingSDK
         const CatalogDatabase& GetCatalog() const;
         const AZStd::string& GetCatalogFilePath() const;
         const FoundationSnapshot& GetSnapshot() const;
-        ExtensionAPI::Service& GetExtensionAPI();
-        const ExtensionAPI::Service& GetExtensionAPI() const;
         TaintedFrameworkEditorServices::Service& GetTaintedFrameworkEditorServices();
         const TaintedFrameworkEditorServices::Service& GetTaintedFrameworkEditorServices() const;
         TaintedInterfaceUi::Service& GetTaintedInterfaceUiUtilities();

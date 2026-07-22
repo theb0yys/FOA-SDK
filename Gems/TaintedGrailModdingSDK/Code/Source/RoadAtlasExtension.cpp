@@ -8,14 +8,14 @@
 #include "RoadAtlasExtension.h"
 
 #include "CanonicalFingerprint.h"
+#include "DeterministicContractJson.h"
 #include "ResearchContractValidation.h"
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/sort.h>
-#include <AzCore/std/string/conversions.h>
+#include <AzCore/std/utility/move.h>
 
 #include <cmath>
-#include <cstdio>
 
 namespace TaintedGrailModdingSDK::RoadAtlasExtension
 {
@@ -90,15 +90,24 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
 
         bool RequirementsSatisfied(const Element& element)
         {
+            if (element.m_evidenceRequirements.empty())
+            {
+                return false;
+            }
+            bool hasRequiredEvidence = false;
             for (const EvidenceRequirement& requirement : element.m_evidenceRequirements)
             {
-                if (requirement.m_required
-                    && (!requirement.m_satisfied || requirement.m_evidenceIds.empty()))
+                if (!requirement.m_required)
+                {
+                    continue;
+                }
+                hasRequiredEvidence = true;
+                if (!requirement.m_satisfied || requirement.m_evidenceIds.empty())
                 {
                     return false;
                 }
             }
-            return true;
+            return hasRequiredEvidence;
         }
 
         KnowledgePack BuildKnowledgePack()
@@ -142,25 +151,6 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
                 "Scene mutation, spawning, path execution, and game calls remain adapter-only.",
             };
             return pack;
-        }
-
-        void AppendString(AZStd::string& output, const AZStd::string& value)
-        {
-            output += AZStd::to_string(value.size());
-            output.push_back(':');
-            output += value;
-            output.push_back('|');
-        }
-
-        void AppendDouble(AZStd::string& output, double value)
-        {
-            char buffer[64] = {};
-            const int count = std::snprintf(buffer, sizeof(buffer), "%.17g", value);
-            if (count > 0)
-            {
-                output.append(buffer, static_cast<size_t>(count));
-            }
-            output.push_back('|');
         }
     } // namespace
 
@@ -341,7 +331,7 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
             {
                 AddIssue(
                     result, element.m_elementId, "evidence.requirements-unsatisfied",
-                    "Planning-approved elements require unique, satisfied evidence requirements.");
+                    "Planning-approved elements require a non-empty set of unique, required, satisfied evidence requirements.");
             }
         }
         if (totalGeometryPoints > MaximumGeometryPointCount)
@@ -362,16 +352,18 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
 
     AZStd::string BuildCanonicalSnapshot(const Snapshot& snapshot)
     {
-        AZStd::string output = "road-atlas-snapshot-v1|";
-        output += AZStd::to_string(snapshot.m_schemaVersion);
-        output.push_back('|');
-        AppendString(output, snapshot.m_snapshotId);
-        AppendString(output, snapshot.m_profileId);
-        AppendString(output, snapshot.m_gameVersion);
-        AppendString(output, snapshot.m_branch);
-        AppendString(output, snapshot.m_runtimeTarget);
-        AppendString(output, snapshot.m_sourceFingerprint);
-        AppendString(output, snapshot.m_capturedAtUtc);
+        using namespace DeterministicContractJson;
+
+        AZStd::string output = "{";
+        AppendString(output, "schema", "road-atlas-snapshot-v1");
+        AppendUnsigned(output, "schema_version", snapshot.m_schemaVersion);
+        AppendString(output, "snapshot_id", snapshot.m_snapshotId);
+        AppendString(output, "profile_id", snapshot.m_profileId);
+        AppendString(output, "game_version", snapshot.m_gameVersion);
+        AppendString(output, "branch", snapshot.m_branch);
+        AppendString(output, "runtime_target", snapshot.m_runtimeTarget);
+        AppendString(output, "source_fingerprint", snapshot.m_sourceFingerprint);
+        AppendString(output, "captured_at_utc", snapshot.m_capturedAtUtc);
 
         AZStd::vector<const Element*> elements;
         for (const Element& element : snapshot.m_elements)
@@ -384,46 +376,61 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
             {
                 return left->m_elementId < right->m_elementId;
             });
-        output += AZStd::to_string(elements.size());
-        output.push_back('|');
-        for (const Element* element : elements)
+        AppendName(output, "elements");
+        output.push_back('[');
+        for (size_t elementIndex = 0; elementIndex < elements.size(); ++elementIndex)
         {
-            AppendString(output, element->m_elementId);
-            AppendString(output, element->m_ownerPackId);
-            output += AZStd::to_string(static_cast<int>(element->m_kind));
-            output.push_back('|');
-            output += AZStd::to_string(static_cast<int>(element->m_promotionState));
-            output.push_back('|');
-            AppendString(output, element->m_displayName);
-            AppendString(output, element->m_regionRef);
-            AppendString(output, element->m_sceneRef);
-            AppendString(output, element->m_roadRef);
-            AppendString(output, element->m_nameRef);
-            AppendString(output, element->m_segmentRef);
-            AppendString(output, element->m_junctionRef);
-            AppendString(output, element->m_anchorRef);
-            AppendString(output, element->m_connectorRef);
-            AppendString(output, element->m_fromElementRef);
-            AppendString(output, element->m_toElementRef);
-            AppendString(output, element->m_worldNodeRef);
-            AppendString(output, element->m_coordinateRef);
-            AZStd::vector<AZStd::string> connected = element->m_connectedSegmentRefs;
-            AZStd::sort(connected.begin(), connected.end());
-            for (const AZStd::string& segmentRef : connected)
+            if (elementIndex != 0)
             {
-                AppendString(output, segmentRef);
+                output.push_back(',');
             }
-            output += AZStd::to_string(element->m_geometry.size());
-            output.push_back('|');
-            for (const Coordinate& point : element->m_geometry)
+            const Element& element = *elements[elementIndex];
+            output.push_back('{');
+            AppendString(output, "element_id", element.m_elementId);
+            AppendString(output, "owner_pack_id", element.m_ownerPackId);
+            AppendSigned(output, "kind", static_cast<AZ::s64>(element.m_kind));
+            AppendSigned(
+                output,
+                "promotion_state",
+                static_cast<AZ::s64>(element.m_promotionState));
+            AppendString(output, "display_name", element.m_displayName);
+            AppendString(output, "region_ref", element.m_regionRef);
+            AppendString(output, "scene_ref", element.m_sceneRef);
+            AppendString(output, "road_ref", element.m_roadRef);
+            AppendString(output, "name_ref", element.m_nameRef);
+            AppendString(output, "segment_ref", element.m_segmentRef);
+            AppendString(output, "junction_ref", element.m_junctionRef);
+            AppendString(output, "anchor_ref", element.m_anchorRef);
+            AppendString(output, "connector_ref", element.m_connectorRef);
+            AppendString(output, "from_element_ref", element.m_fromElementRef);
+            AppendString(output, "to_element_ref", element.m_toElementRef);
+            AppendString(output, "world_node_ref", element.m_worldNodeRef);
+            AppendString(output, "coordinate_ref", element.m_coordinateRef);
+            AppendSortedStringArray(
+                output,
+                "connected_segment_refs",
+                element.m_connectedSegmentRefs);
+
+            AppendName(output, "geometry");
+            output.push_back('[');
+            for (size_t pointIndex = 0; pointIndex < element.m_geometry.size(); ++pointIndex)
             {
-                AppendDouble(output, point.m_x);
-                AppendDouble(output, point.m_y);
-                AppendDouble(output, point.m_z);
-                AppendString(output, point.m_pointRef);
+                if (pointIndex != 0)
+                {
+                    output.push_back(',');
+                }
+                const Coordinate& point = element.m_geometry[pointIndex];
+                output.push_back('{');
+                AppendDouble(output, "x", point.m_x);
+                AppendDouble(output, "y", point.m_y);
+                AppendDouble(output, "z", point.m_z);
+                AppendString(output, "point_ref", point.m_pointRef, false);
+                output.push_back('}');
             }
+            output += "],";
+
             AZStd::vector<const EvidenceRequirement*> requirements;
-            for (const EvidenceRequirement& requirement : element->m_evidenceRequirements)
+            for (const EvidenceRequirement& requirement : element.m_evidenceRequirements)
             {
                 requirements.push_back(&requirement);
             }
@@ -433,32 +440,50 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
                 {
                     return left->m_requirementId < right->m_requirementId;
                 });
-            for (const EvidenceRequirement* requirement : requirements)
+            AppendName(output, "evidence_requirements");
+            output.push_back('[');
+            for (size_t requirementIndex = 0;
+                 requirementIndex < requirements.size();
+                 ++requirementIndex)
             {
-                AppendString(output, requirement->m_requirementId);
-                output += AZStd::to_string(static_cast<int>(requirement->m_kind));
-                output.push_back('|');
-                output += requirement->m_required ? "required|" : "optional|";
-                output += requirement->m_satisfied ? "satisfied|" : "unsatisfied|";
-                AZStd::vector<AZStd::string> evidenceIds = requirement->m_evidenceIds;
-                AZStd::sort(evidenceIds.begin(), evidenceIds.end());
-                for (const AZStd::string& evidenceId : evidenceIds)
+                if (requirementIndex != 0)
                 {
-                    AppendString(output, evidenceId);
+                    output.push_back(',');
                 }
-                AppendString(output, requirement->m_notes);
+                const EvidenceRequirement& requirement = *requirements[requirementIndex];
+                output.push_back('{');
+                AppendString(output, "requirement_id", requirement.m_requirementId);
+                AppendSigned(
+                    output,
+                    "kind",
+                    static_cast<AZ::s64>(requirement.m_kind));
+                AppendBool(output, "required", requirement.m_required);
+                AppendBool(output, "satisfied", requirement.m_satisfied);
+                AppendSortedStringArray(
+                    output,
+                    "evidence_ids",
+                    requirement.m_evidenceIds);
+                AppendString(output, "notes", requirement.m_notes, false);
+                output.push_back('}');
             }
-            AZStd::vector<AZStd::string> tags = element->m_tags;
-            AZStd::sort(tags.begin(), tags.end());
-            for (const AZStd::string& tag : tags)
-            {
-                AppendString(output, tag);
-            }
-            AppendString(output, element->m_notes);
-            output += element->m_runtimeMutationAllowed ? "element-runtime|" : "element-inert|";
+            output += "],";
+            AppendSortedStringArray(output, "tags", element.m_tags);
+            AppendString(output, "notes", element.m_notes);
+            AppendBool(
+                output,
+                "runtime_mutation_allowed",
+                element.m_runtimeMutationAllowed,
+                false);
+            output.push_back('}');
         }
-        output += snapshot.m_planningOnly ? "planning|" : "not-planning|";
-        output += snapshot.m_runtimeMutationAllowed ? "runtime|" : "inert|";
+        output += "],";
+        AppendBool(output, "planning_only", snapshot.m_planningOnly);
+        AppendBool(
+            output,
+            "runtime_mutation_allowed",
+            snapshot.m_runtimeMutationAllowed,
+            false);
+        output.push_back('}');
         return output;
     }
 

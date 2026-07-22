@@ -16,8 +16,10 @@ set(FILES
     Source/EconomyAuthoringService.h
     Source/ExtensionAPI.cpp
     Source/ExtensionAPI.h
+    Source/ExtensionAPIClient.cpp
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
+    Source/FoundationEvidenceReviewService.cpp
     Source/FoundationExtensionAPI.cpp
     Source/FoundationGovernanceService.cpp
     Source/FoundationNotificationBus.h
@@ -62,7 +64,7 @@ set(FILES
 # retain normal internal linkage instead of colliding in generated unity files.
 set(SKIP_UNITY_BUILD_INCLUSION_FILES)
 foreach(source_file IN LISTS FILES)
-    if(source_file MATCHES "\\.cpp$")
+    if(source_file MATCHES "\.cpp$")
         list(APPEND SKIP_UNITY_BUILD_INCLUSION_FILES ${source_file})
     endif()
 endforeach()

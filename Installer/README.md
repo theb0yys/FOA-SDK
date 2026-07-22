@@ -12,7 +12,8 @@ Installer/
 ├── suite.schema.json
 ├── package.schema.json
 ├── SuiteWizard/        selectable suite user experience
-│   └── Resolver/       deterministic package decision and dry-run plan layer
+│   ├── Resolver/       deterministic package decision and dry-run plan layer
+│   └── ViewModel/      deterministic presentation and review-confirmation layer
 ├── Bootstrapper/       prerequisites, acquisition and verified handoff
 ├── Suites/             reviewed suite definitions
 ├── Packages/           reviewed installable-package definitions
@@ -34,13 +35,15 @@ The suite wizard is the user-facing selection and review surface. It may present
 - optional Mono or IL2CPP runtime-adapter packages;
 - documentation, examples, and developer components.
 
-The wizard must display exact versions, source provenance, licence state, compatibility, required disk space, dependencies, conflicts, elevation requirements, and planned filesystem changes before confirmation. It must support dry-run, repair, upgrade, uninstall, and rollback-aware review.
+The wizard must display exact versions, source provenance, licence state, compatibility, required disk space, dependencies, conflicts, elevation requirements, planned filesystem changes and required acknowledgements before confirmation. It must support dry-run, repair, upgrade, uninstall, and rollback-aware review.
 
 The wizard does not resolve packages itself. It submits explicit selections, exclusions, features, and compatibility context to `Installer/SuiteWizard/Resolver/`, then displays the returned canonical plan and diagnostics without weakening them. Dependency closure, version constraints, compatibility, conflicts, path safety, legal state, deterministic ordering, payload collision detection, and plan fingerprinting remain resolver-owned logic.
 
-A valid resolution plan is still non-executable. The wizard must later bind confirmation to the exact `plan_sha256` before handing the plan to a separately reviewed acquisition or execution layer.
+`Installer/SuiteWizard/ViewModel/` verifies the resolver plan, derives stable UI rows and required acknowledgements, and creates a review-only confirmation bound to exact `plan_sha256` and `view_model_sha256` values. Any plan, display-model, acknowledgement or confirmation mutation invalidates the record.
 
-A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority.
+A valid resolution plan and confirmation are still non-executable. A separately reviewed acquisition or execution layer must later reverify both artifacts before receiving any operational capability.
+
+A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority. A confirmation also grants no acquisition, installation, elevation, or any of those operational authorities.
 
 ## Bootstrapper
 
@@ -66,6 +69,12 @@ For identical suite bytes, package-manifest bytes, explicit selections and compa
 
 The resolver performs no acquisition, file copying, installation, repair, upgrade, rollback, uninstall, elevation, game launch, runtime execution, deployment, save mutation, signing or publication.
 
+## Wizard view-model and confirmation
+
+The engine-neutral view-model contract lives at `Installer/SuiteWizard/ViewModel/`. It emits canonical JSON conforming to `view-model.schema.json`, including exact package rows, flattened payload rows, warnings, policies, totals, acknowledgement requirements and `view_model_sha256`.
+
+`confirmation.schema.json` defines a review-only record bound to the exact plan and view-model hashes, the complete acknowledgement set, caller-supplied identity and caller-supplied UTC time. Confirmation generation reads no clock or environment state and grants no execution authority.
+
 ## Existing Windows packaging
 
 The current reviewed Windows MSI/portable workflow is owned beneath `Installer/Packaging/Windows/`. It converts an already verified staging payload into an unsigned development MSI or portable ZIP. It does not select unreviewed files, publish releases, sign artifacts, modify FoA, or remove external workspaces.
@@ -78,10 +87,11 @@ Installer changes require, as applicable:
 
 1. canonical schema validation;
 2. deterministic suite and package resolution;
-3. dependency/conflict and compatibility tests;
-4. path, symlink, case-collision, and traversal rejection;
-5. exact inventory, hash, provenance, licence, and redistribution review;
-6. clean install, repair, upgrade, rollback, and uninstall smoke tests;
-7. preservation of external workspaces and user-authored content;
-8. generated-output hygiene;
-9. explicit proof that no release, signing, runtime, deployment, or save authority was introduced.
+3. deterministic view-model and exact-hash confirmation;
+4. dependency/conflict and compatibility tests;
+5. path, symlink, case-collision, and traversal rejection;
+6. exact inventory, hash, provenance, licence, and redistribution review;
+7. clean install, repair, upgrade, rollback, and uninstall smoke tests;
+8. preservation of external workspaces and user-authored content;
+9. generated-output hygiene;
+10. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation or elevation authority was introduced by review-only contracts.

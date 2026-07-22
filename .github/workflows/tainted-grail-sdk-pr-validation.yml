@@ -23,6 +23,14 @@ on:
       - "*.md"
       - ".gitattributes"
       - "o3de.lock.json"
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+      - auto_merge_enabled
   push:
     branches:
       - main
@@ -50,10 +58,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  enforce-obligations:
+    name: Enforce ready-PR obligations
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out trusted base policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate exact-head obligations or return PR to draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST_NODE_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          set +e
+          python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligations.py \
+            --event "$GITHUB_EVENT_PATH"
+          validation_status=$?
+          set -e
+
+          if [[ $validation_status -eq 0 ]]; then
+            exit 0
+          fi
+
+          gh api graphql \
+            -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' \
+            -f id="$PULL_REQUEST_NODE_ID"
+          echo "Incomplete or stale merge obligations returned the pull request to draft." >&2
+          exit "$validation_status"
+
   static-validation:
     name: Python, validators, and fixtures
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - name: Check out exact workflow commit
         uses: actions/checkout@v4

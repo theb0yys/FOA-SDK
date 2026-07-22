@@ -24,10 +24,10 @@ from validate_population_actor_troop_editor import (  # noqa: E402
 
 _CURRENT_DESIGN = (
     "Status: implemented vertical slice\n"
-    "6. **Complete** — immutable population action-lane derivation\n"
-    "7. **Complete** — deterministic synthetic population fixture and full vertical-slice local-validation integration\n"
-    "8. **Complete** — public user, architecture/data-format, release-readiness documentation and twenty-four-pane checklist\n"
-    "9. **Active acceptance gate** — exact-head O3DE configure/build, compiled Catalog tests, and Windows UI evidence\n"
+    "6. **Complete** \u2014 immutable population action-lane derivation\n"
+    "7. **Complete** \u2014 deterministic synthetic population fixture and full vertical-slice local-validation integration\n"
+    "8. **Complete** \u2014 public user, architecture/data-format, release-readiness documentation and twenty-six-pane checklist\n"
+    "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build, compiled Catalog tests, and Windows UI evidence\n"
     "independently tracked actor, troop, and unstaged-member drafts\n"
     "does not claim that compiled tests have run in an exact-head configured build or that Windows UI evidence exists\n"
 )
@@ -59,8 +59,8 @@ class PopulationActorTroopCurrentStateTests(unittest.TestCase):
     def test_fixture_regression_to_next_work_fails(self) -> None:
         self.design.write_text(
             _CURRENT_DESIGN.replace(
-                "7. **Complete** — deterministic synthetic population fixture",
-                "7. **Next** — deterministic synthetic population fixture",
+                "7. **Complete** \u2014 deterministic synthetic population fixture",
+                "7. **Next** \u2014 deterministic synthetic population fixture",
             ),
             encoding="utf-8",
         )

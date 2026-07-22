@@ -94,6 +94,14 @@ namespace TaintedGrailModdingSDK
                 const ExtensionDeclaration& declaration,
                 AZStd::string* error = nullptr);
 
+            bool UnregisterExtension(
+                const AZStd::string& extensionId,
+                AZStd::string* error = nullptr);
+
+            bool IsExtensionRegistered(const AZStd::string& extensionId) const;
+
+            void Clear();
+
             AZStd::vector<ExtensionDeclaration> GetRegisteredExtensions() const;
 
             bool GetActiveProfile(

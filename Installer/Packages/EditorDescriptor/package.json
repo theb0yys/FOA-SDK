@@ -42,8 +42,8 @@
     {
       "source": "project.json",
       "destination": "FOA-SDK/TaintedGrailModdingEditor/project.json",
-      "sha256": "358a09000e63494c710a052526063e158bf5236e248a6a0006e33cf09af5b232",
-      "size_bytes": 882,
+      "sha256": "7173e387575578edd7270374b423f5738dd82d6102aa0e8fe341955c75e257e8",
+      "size_bytes": 1032,
       "redistribution": "project-owned"
     }
   ],

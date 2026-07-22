@@ -8,4 +8,5 @@ validation logic first. Execution backends, Blaze mappings, and FoA Mono assembl
 role, goal, action, fact, target, capability, and blackboard identities, package-local blackboard declarations,
 goal/action planning inputs, deterministic validation, and canonical inert authoring plans. It rejects host
 linkage and execution flags. Rabbit, Blaze, Unity lifecycle, ownership migration, observation hosts, and action
-dispatch remain excluded runtime surfaces.
+dispatch remain excluded runtime surfaces. The optional Avalon AI Tool Gem now supplies typed package JSON,
+deterministic validation/planning, and host-owned atomic persistence without linking those runtime surfaces.

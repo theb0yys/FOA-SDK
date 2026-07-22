@@ -33,6 +33,14 @@ Available under **Tools → Tainted Grail SDK**:
 - **Tainted Grail Catalog Browser**
 - **Tainted Grail Catalog Governance**
 - **Tainted Grail Item and Recipe Editor**
+- **Tainted Grail Actor and Troop Editor**
+- **Tainted Grail Economy Coverage Dashboard**
+- **Tainted Grail Adapter and release-planning panes**
+- **Tainted Grail Tainted Framework and Interface utilities**
+- **Tainted Grail Road Atlas Editor** (optional authoring Tool Gem)
+- **Tainted Grail Avalon AI Editor** (optional authoring Tool Gem)
+
+The complete registered inventory contains 26 panes. The FOA Development Hub exposes every specialist pane through task routes, while each pane remains directly available from the Tools menu.
 
 ## Workspace documents
 
@@ -110,10 +118,12 @@ Run from the repository root:
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_catalog_tests.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_plugin_packages.py
+python Gems/TaintedGrailModdingSDK/Tools/validate_editor_lifecycle.py
 ```
 
 The checks validate public governance, Gem registration, exact source/test manifests, workspace and pack editing, importer contracts, source/evidence persistence, canonical catalog persistence, governance transitions, proof-backed permissions, typed economy models and joins, the Item and Recipe Editor pane, unit-test registration, and absence of FoA runtime integration. They do not replace a full O3DE configure and compile.
 
-## Next development slice
+## Current boundary
 
-After this item/recipe milestone is integrated, the next specialised domain tool will be selected from the shared roadmap. No displayed, imported, typed, validated, or reviewed state grants runtime execution by itself.
+All 26 editor panes have registered lifecycle and navigation contracts. Road Atlas and Avalon AI are optional Tool Gems with validated, durable editor-owned JSON workflows. Provider retrieval and executable Mono/IL2CPP packages remain separately gated. No displayed, imported, typed, validated, or reviewed state grants runtime execution by itself.

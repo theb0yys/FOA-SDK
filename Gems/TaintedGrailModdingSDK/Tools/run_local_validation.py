@@ -29,12 +29,16 @@ import developer_preview
 PRODUCT_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = TOOLS_ROOT / "tests"
 PRODUCT_GEM_PATHS = (
-    PRODUCT_ROOT / "Gems/ExternalToolchain",
-    PRODUCT_ROOT / "Gems/TaintedGrailModdingSDK",
+    ("ExternalToolchain", PRODUCT_ROOT / "Gems/ExternalToolchain"),
+    ("AvalonAIAuthoring", PRODUCT_ROOT / "Plugins/Authoring/AvalonAI/Gem"),
+    ("RoadAtlasAuthoring", PRODUCT_ROOT / "Plugins/Authoring/RoadAtlas/Gem"),
+    ("TaintedGrailModdingSDK", PRODUCT_ROOT / "Gems/TaintedGrailModdingSDK"),
 )
 
 VALIDATORS = (
     "validate_repository_structure.py",
+    "validate_plugin_packages.py",
+    "validate_editor_lifecycle.py",
     "validate_ci_runner_policy.py",
     "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",
@@ -141,10 +145,10 @@ def build_static_commands(
             source_policy_engine_root
             / "scripts/commit_validation/validate_file_or_folder.py"
         )
-        for gem_path in PRODUCT_GEM_PATHS:
+        for gem_name, gem_path in PRODUCT_GEM_PATHS:
             commands.append(
                 ValidationCommand(
-                    f"O3DE source policy: {gem_path.name}",
+                    f"O3DE source policy: {gem_name}",
                     python_command(str(validator), "--path", str(gem_path)),
                     cwd=source_policy_engine_root,
                 )

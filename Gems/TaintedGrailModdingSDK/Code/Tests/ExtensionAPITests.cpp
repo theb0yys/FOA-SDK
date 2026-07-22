@@ -240,4 +240,30 @@ namespace TaintedGrailModdingSDK
         AZStd::string error;
         EXPECT_FALSE(m_foundation.RegisterExtension(declaration, &error));
     }
+
+    TEST_F(ExtensionAPITests, UnregisterRevokesOperationsAndClearResetsRegistry)
+    {
+        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
+        AZStd::string error;
+        ASSERT_TRUE(api.RegisterExtension(
+            MakeDeclaration(
+                "extension.lifecycle",
+                { ExtensionAPI::Capability::ReadActiveProfile }),
+            &error));
+        EXPECT_TRUE(api.IsExtensionRegistered("extension.lifecycle"));
+        EXPECT_TRUE(api.UnregisterExtension("extension.lifecycle", &error));
+        EXPECT_FALSE(api.IsExtensionRegistered("extension.lifecycle"));
+
+        ExtensionAPI::ProfileView profile;
+        EXPECT_FALSE(api.GetActiveProfile("extension.lifecycle", profile, &error));
+        EXPECT_FALSE(api.UnregisterExtension("extension.lifecycle", &error));
+
+        ASSERT_TRUE(api.RegisterExtension(
+            MakeDeclaration(
+                "extension.lifecycle",
+                { ExtensionAPI::Capability::ReadActiveProfile }),
+            &error));
+        api.Clear();
+        EXPECT_TRUE(api.GetRegisteredExtensions().empty());
+    }
 } // namespace TaintedGrailModdingSDK

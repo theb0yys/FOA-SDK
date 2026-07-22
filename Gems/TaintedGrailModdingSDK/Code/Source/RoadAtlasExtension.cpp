@@ -230,12 +230,15 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
         return pack;
     }
 
-    ValidationResult ValidateSnapshot(const Snapshot& snapshot, const GameProfile& profile)
+    ValidationResult ValidateSnapshot(const Snapshot& snapshot, const ProfileBinding& profile)
     {
         ValidationResult result;
         if (snapshot.m_schemaVersion != 1
             || !IsStableContractId(snapshot.m_snapshotId)
-            || !profile.IsConfigured()
+            || !IsStableContractId(profile.m_profileId)
+            || !IsBoundedText(profile.m_gameVersion, 128)
+            || !IsBoundedText(profile.m_branch, 128)
+            || (profile.m_runtimeTarget != "Mono" && profile.m_runtimeTarget != "IL2CPP")
             || snapshot.m_profileId != profile.m_profileId
             || snapshot.m_gameVersion != profile.m_gameVersion
             || snapshot.m_branch != profile.m_branch
@@ -469,6 +472,25 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
             result.m_canonicalFingerprint = CalculateSnapshotFingerprint(snapshot);
         }
         return result;
+    }
+
+    ValidationResult ValidateSnapshot(const Snapshot& snapshot, const GameProfile& profile)
+    {
+        if (!profile.IsConfigured())
+        {
+            ValidationResult result;
+            AddIssue(
+                result, snapshot.m_snapshotId, "profile.invalid",
+                "Road Atlas validation requires one configured exact game profile.");
+            return result;
+        }
+        return ValidateSnapshot(
+            snapshot,
+            ProfileBinding{
+                profile.m_profileId,
+                profile.m_gameVersion,
+                profile.m_branch,
+                profile.m_runtimeTarget });
     }
 
     AZStd::string BuildCanonicalSnapshot(const Snapshot& snapshot)

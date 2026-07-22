@@ -68,6 +68,16 @@ CHECKLIST = (
         "screenshot_required": True,
     },
     {
+        "id": "road-atlas-editor-functional",
+        "title": "Road Atlas Tool Gem validates, saves, reloads, and reverts an inert snapshot",
+        "screenshot_required": True,
+    },
+    {
+        "id": "avalon-ai-editor-functional",
+        "title": "Avalon AI Tool Gem validates, plans, saves, reloads, and reverts an inert package",
+        "screenshot_required": True,
+    },
+    {
         "id": "station-learnability-displayed",
         "title": "Station visibility and learnability rows display expected status and reasons",
         "screenshot_required": True,

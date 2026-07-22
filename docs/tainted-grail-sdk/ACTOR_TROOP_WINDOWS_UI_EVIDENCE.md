@@ -4,7 +4,7 @@ Status: checklist implemented; exact-head Windows evidence remains pending.
 
 ## Relationship to the full UI smoke
 
-The full Developer Preview checklist currently covers **twenty-four** TG SDK panes: the FOA Development Hub plus twenty-three specialist panes. This focused checklist adds Actor/Troop acceptance detail and does not reduce or replace the full checklist.
+The full Developer Preview checklist currently covers **twenty-six** TG SDK panes: the FOA Development Hub plus twenty-five specialist panes. This focused checklist adds Actor/Troop acceptance detail and does not reduce or replace the full checklist.
 
 Use the same exact commit, Windows environment, privacy attestation, screenshot tooling, and no-runtime boundary defined by `DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md`.
 
@@ -188,4 +188,4 @@ Do not commit screenshots. Attach them only through the existing reviewed eviden
 
 ## Acceptance
 
-This focused checklist passes only when every check above passes on the same exact commit that passed configure, build, compiled tests, fixture verification, and the full twenty-four-pane checklist.
+This focused checklist passes only when every check above passes on the same exact commit that passed configure, build, compiled tests, fixture verification, and the full twenty-six-pane checklist.

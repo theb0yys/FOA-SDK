@@ -130,6 +130,15 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
         bool m_runtimeMutationAllowed = false;
     };
 
+    //! Sanitized exact-profile identity accepted from the public ExtensionAPI.
+    struct ProfileBinding
+    {
+        AZStd::string m_profileId;
+        AZStd::string m_gameVersion;
+        AZStd::string m_branch;
+        AZStd::string m_runtimeTarget;
+    };
+
     struct ValidationIssue
     {
         AZStd::string m_elementId;
@@ -157,6 +166,10 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
     ValidationResult ValidateSnapshot(
         const Snapshot& snapshot,
         const GameProfile& profile);
+
+    ValidationResult ValidateSnapshot(
+        const Snapshot& snapshot,
+        const ProfileBinding& profile);
 
     AZStd::string BuildCanonicalSnapshot(const Snapshot& snapshot);
     AZStd::string CalculateSnapshotFingerprint(const Snapshot& snapshot);

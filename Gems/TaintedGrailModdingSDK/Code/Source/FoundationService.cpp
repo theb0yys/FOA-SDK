@@ -8,7 +8,9 @@
 #include "FoundationService.h"
 
 #include "FoundationNotificationBus.h"
+#include "TaintedFrameworkKnowledge.h"
 
+#include <AzCore/Debug/Trace.h>
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/utility/move.h>
 
@@ -71,6 +73,17 @@ namespace TaintedGrailModdingSDK
 
         m_workspace.m_workspaceId = "tgfoa.workspace.default";
         m_workspace.m_displayName = "Tainted Grail Modding Workspace";
+        ExtensionRequestBus::Handler::BusConnect();
+        AZStd::string registrationError;
+        if (!TaintedFrameworkKnowledge::RegisterExtensionConsumer(
+                m_extensionApi, &registrationError))
+        {
+            AZ_Error(
+                "TaintedGrailModdingSDK",
+                false,
+                "Unable to register the canonical Tainted Framework extension: %s",
+                registrationError.c_str());
+        }
         m_initialized = true;
         RefreshSnapshot();
     }
@@ -93,6 +106,11 @@ namespace TaintedGrailModdingSDK
 
     void FoundationService::Shutdown()
     {
+        if (ExtensionRequestBus::Handler::BusIsConnected())
+        {
+            ExtensionRequestBus::Handler::BusDisconnect();
+        }
+        m_extensionApi.Clear();
         m_workspace = {};
         ClearWorkspaceScopedState(true);
         m_snapshot = {};

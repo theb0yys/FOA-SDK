@@ -35,6 +35,8 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogGovernancePane = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorPane = "Tainted Grail Item and Recipe Editor";
         constexpr const char* ActorTroopEditorPane = "Tainted Grail Actor and Troop Editor";
+        constexpr const char* RoadAtlasEditorPane = "Tainted Grail Road Atlas Editor";
+        constexpr const char* AvalonAIEditorPane = "Tainted Grail Avalon AI Editor";
         constexpr const char* EconomyCoveragePane = "Tainted Grail Economy Acquisition Coverage";
         constexpr const char* EconomyDuplicatesPane = "Tainted Grail Economy Cross-Pack Duplicates";
         constexpr const char* AdapterCapabilityPane = "Tainted Grail Adapter Capability Matrix";
@@ -237,6 +239,8 @@ namespace TaintedGrailModdingSDK
                 { tr("Catalog governance"), tr("Record reviewed validation, permission, prohibition, and staleness decisions."), CatalogGovernancePane },
                 { tr("Item and recipe editor"), tr("Author typed economy profiles against existing canonical identities."), ItemRecipeEditorPane },
                 { tr("Actor and troop editor"), tr("Author evidence-bound population profiles and troop composition without runtime spawn authority."), ActorTroopEditorPane },
+                { tr("Road Atlas editor"), tr("Author and validate exact-profile planning-only road topology snapshots."), RoadAtlasEditorPane },
+                { tr("Avalon AI editor"), tr("Author API 2.0 packages and deterministic inert AI plans."), AvalonAIEditorPane },
             }));
 
         contentLayout->addWidget(CreateRouteGroup(

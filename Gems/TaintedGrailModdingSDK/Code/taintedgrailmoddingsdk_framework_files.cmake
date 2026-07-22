@@ -17,10 +17,12 @@ set(FILES
     Source/ExtensionAPI.cpp
     Source/ExtensionAPI.h
     Source/ExtensionAPIClient.cpp
+    Source/ExtensionRequestBus.h
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
     Source/FoundationEvidenceReviewService.cpp
     Source/FoundationExtensionAPI.cpp
+    Source/FoundationExtensionRequestBus.cpp
     Source/FoundationGovernanceService.cpp
     Source/FoundationNotificationBus.h
     Source/FoundationPersistenceBoundary.cpp

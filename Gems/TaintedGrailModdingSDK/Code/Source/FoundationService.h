@@ -15,6 +15,7 @@
 #include "CatalogTransactionService.h"
 #include "EconomyBlockerService.h"
 #include "ExtensionAPI.h"
+#include "ExtensionRequestBus.h"
 #include "FoundationPersistenceBoundary.h"
 #include "FoundationValidationService.h"
 #include "FoundationWorkspaceLoadService.h"
@@ -28,6 +29,7 @@
 namespace TaintedGrailModdingSDK
 {
     class FoundationService
+        : private ExtensionRequestBus::Handler
     {
     public:
         static FoundationService& Get();
@@ -135,6 +137,38 @@ namespace TaintedGrailModdingSDK
         const TaintedInterfaceUi::Service& GetTaintedInterfaceUiUtilities() const;
 
         void RefreshSnapshot();
+
+        bool RegisterExtension(
+            const ExtensionAPI::ExtensionDeclaration& declaration,
+            AZStd::string* error) override;
+        bool UnregisterExtension(
+            const AZStd::string& extensionId,
+            AZStd::string* error) override;
+        bool IsExtensionRegistered(const AZStd::string& extensionId) const override;
+        bool GetActiveProfile(
+            const AZStd::string& extensionId,
+            ExtensionAPI::ProfileView& profile,
+            AZStd::string* error) const override;
+        bool QueryCatalog(
+            const AZStd::string& extensionId,
+            const CatalogQuery& query,
+            AZStd::vector<CatalogRecord>& records,
+            size_t maximumResults,
+            AZStd::string* error) const override;
+        bool SubmitCandidateEvidence(
+            const AZStd::string& extensionId,
+            const EvidenceRecord& evidence,
+            AZStd::string* error) override;
+        bool SaveExtensionDocument(
+            const AZStd::string& extensionId,
+            const AZStd::string& relativePath,
+            const AZStd::string& contents,
+            AZStd::string* error) override;
+        bool LoadExtensionDocument(
+            const AZStd::string& extensionId,
+            const AZStd::string& relativePath,
+            AZStd::string& contents,
+            AZStd::string* error) const override;
 
     private:
         FoundationService();

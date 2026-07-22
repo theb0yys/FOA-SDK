@@ -292,6 +292,56 @@ namespace TaintedGrailModdingSDK
         return AZ::Success(canonicalCandidate);
     }
 
+    AZ::Outcome<AZStd::string, AZStd::string> PathPolicyService::ResolveExtensionDocumentPath(
+        const AZStd::string& canonicalWorkspaceRoot,
+        const AZStd::string& extensionId,
+        const AZStd::string& relativePath,
+        bool requireExisting) const
+    {
+        if (canonicalWorkspaceRoot.empty() || extensionId.empty() || relativePath.empty())
+        {
+            return AZ::Failure(AZStd::string(
+                "Extension document resolution requires a workspace root, extension identity, and relative path."));
+        }
+        const Filesystem::path extensionRoot =
+            FromUtf8(canonicalWorkspaceRoot) / "Extensions" / FromUtf8(extensionId);
+        AZ::Outcome<Filesystem::path, AZStd::string> candidate = ResolveFilesystemPath(
+            relativePath,
+            extensionRoot,
+            requireExisting,
+            false);
+        if (!candidate.IsSuccess())
+        {
+            return AZ::Failure(AZStd::string(candidate.GetError()));
+        }
+        if (!HasSuffix(candidate.GetValue(), ".json", PlatformPathsAreCaseInsensitive))
+        {
+            return AZ::Failure(AZStd::string(
+                "Extension documents must use the .json suffix."));
+        }
+
+        std::error_code rootError;
+        const Filesystem::path canonicalExtensionRoot =
+            Filesystem::weakly_canonical(extensionRoot, rootError);
+        if (rootError)
+        {
+            return AZ::Failure(
+                AZStd::string("Unable to resolve the extension document root: ")
+                + rootError.message().c_str());
+        }
+        const AZStd::string rootText = ToUtf8(canonicalExtensionRoot);
+        const AZStd::string candidateText = ToUtf8(candidate.GetValue());
+        if (!IsCanonicalPathContained(
+                canonicalWorkspaceRoot, rootText, PlatformPathsAreCaseInsensitive)
+            || !IsCanonicalPathContained(
+                rootText, candidateText, PlatformPathsAreCaseInsensitive))
+        {
+            return AZ::Failure(AZStd::string(
+                "Extension documents must remain inside their canonical extension root."));
+        }
+        return AZ::Success(candidateText);
+    }
+
     bool PathPolicyService::IsCanonicalPathContained(
         const AZStd::string& rootPath,
         const AZStd::string& candidatePath,

@@ -120,7 +120,7 @@ Status: implemented vertical slice, continuing hardening and exact-head host/UI 
 - Schema-1 catalog migration, schema-2-only writing, deterministic population ordering, malformed input rejection, and save/reopen equivalence are implemented.
 - Atomic troop-definition bootstrap persists a troop profile and supplied members as one validated candidate without removing omitted members; failed evidence, integrity, or persistence never publishes partial state.
 - The Actor/Troop pane derives and presents population action lanes without runtime, spawn, deployment, or save-mutation authority.
-- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-four-pane evidence pass remain the active acceptance gate; no host-verification result is claimed by documentation or fixture success alone.
+- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-six-pane evidence pass remain the active acceptance gate; no host-verification result is claimed by documentation or fixture success alone.
 - Spawn and Encounter Editor is the next population authoring capability.
 - Templates, identities, pools, routes, lifecycle, uniqueness, density, cleanup, and rollback research continue behind separate reviewed contracts.
 
@@ -480,7 +480,7 @@ Remaining Phase 8 work includes controlled package assembly, trusted filesystem 
 
 ### Proven Tainted Grail system extensions
 
-Status: exact-source contract import layer implemented; provider execution and full domain vertical slices remain gated.
+Status: exact-source contract imports and the first two optional authoring Tool Gem vertical slices are implemented; provider execution and runtime packages remain gated.
 
 - The public `ExtensionAPI` remains the only editor extension boundary: read-only profile/catalog copies and
   governed candidate-evidence submission, with no mutable catalog or runtime authority.
@@ -494,7 +494,8 @@ Status: exact-source contract import layer implemented; provider execution and f
   provider precedence, visible conflicts, and candidate-only authority. Local and Merlin retrieval remain
   unqualified; pinned GitHub observations are exact-commit bound.
 - Avalon Core Road Atlas schemas and Avalon AI API 2.0 authoring contracts are compiled, deterministic, and
-  inert. Their durable catalog/persistence/Editor vertical slices remain later first-party domain work.
+  inert. Independently selectable Tool Gems now provide typed JSON editors, host-owned atomic persistence,
+  save/revert controls, exact validation, and deterministic fingerprints without runtime authority.
 - Separate Mono `0.1.33` and IL2CPP `0.1.36` runtime adapter routes preserve exact upstream host evidence and
   profile requirements while build, deployment, execution, game APIs, mutation, and save access remain disabled.
 - FoA Mod Manager, Template Diagnostics, and Avalon Awakened/Kandra remain separately reviewed imports.

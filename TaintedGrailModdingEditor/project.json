@@ -20,13 +20,17 @@
     "modules": [],
     "external_subdirectories": [
         "../Gems/ExternalToolchain",
-        "../Gems/TaintedGrailModdingSDK"
+        "../Gems/TaintedGrailModdingSDK",
+        "../Plugins/Authoring/AvalonAI/Gem",
+        "../Plugins/Authoring/RoadAtlas/Gem"
     ],
     "gem_names": [
         "Atom",
         "DiffuseProbeGrid",
         "PhysX5",
         "ExternalToolchain",
-        "TaintedGrailModdingSDK"
+        "TaintedGrailModdingSDK",
+        "AvalonAIAuthoring",
+        "RoadAtlasAuthoring"
     ]
 }

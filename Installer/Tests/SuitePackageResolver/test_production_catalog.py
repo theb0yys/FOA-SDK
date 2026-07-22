@@ -90,7 +90,7 @@ class ProductionCatalogTests(unittest.TestCase):
         self.assertEqual(view_model["summary"], {
             "package_count": 3,
             "payload_file_count": 3,
-            "payload_size_bytes": 2142,
+            "payload_size_bytes": 2292,
         })
         self.assertTrue(all(value is False for value in view_model["authority"].values()))
 

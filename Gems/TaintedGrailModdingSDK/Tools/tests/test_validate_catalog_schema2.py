@@ -264,7 +264,7 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "6. **Complete** \u2014 immutable population action-lane derivation, "
             "Actor and Troop Editor pane, and lifecycle registration\n"
             "7. **Complete** \u2014 deterministic synthetic population fixture and local validation\n"
-            "8. **Complete** \u2014 public user, architecture/data-format, release-readiness documentation and twenty-four-pane checklist\n"
+            "8. **Complete** \u2014 public user, architecture/data-format, release-readiness documentation and twenty-six-pane checklist\n"
             "9. **Active acceptance gate** \u2014 exact-head O3DE configure/build and compiled tests\n"
             "does not claim that compiled tests have run\n"
             "loaded candidate remains schema 1\n"
@@ -279,7 +279,7 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "evidence-bound Framework candidate publication, and positive/negative production-linked population tests are implemented.\n"
             "- The immutable seven-lane population action contract and registered **Tainted Grail Actor and Troop Editor** pane are implemented.\n"
             "- The project-owned deterministic schema-2 population fixture, focused negative tests, and local-validation integration are implemented.\n"
-            "- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-four-pane evidence pass remain the active acceptance gate.\n"
+            "- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-six-pane evidence pass remain the active acceptance gate.\n"
             "- Spawn and Encounter Editor is the next population authoring capability.\n"
             "### World and societies\n",
         )

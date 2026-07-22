@@ -19,8 +19,9 @@ portable editor logic are ported independently. Runtime behavior remains behind 
 
 The compiled import layer now includes Tainted Framework knowledge, Tainted Interface semantics,
 provider-neutral acquisition observations, Road Atlas schema validation, Avalon AI API 2.0 authoring
-contracts, and distinct inert Mono/IL2CPP adapter routes. Provider execution, Road/AI durable editor vertical
-slices, and executable runtime packages remain later gates rather than hidden authority in these ports.
+contracts, and distinct inert Mono/IL2CPP adapter routes. Road/AI now have separately selectable durable
+authoring Tool Gem vertical slices. Provider execution and executable runtime packages remain later gates
+rather than hidden authority in these ports.
 
 ## Areas
 

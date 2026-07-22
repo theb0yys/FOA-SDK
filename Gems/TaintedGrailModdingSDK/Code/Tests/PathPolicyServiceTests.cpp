@@ -261,6 +261,77 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(result.GetError().find(".tgpack.json"), AZStd::string::npos);
     }
 
+    TEST(PathPolicyServiceTests, ExtensionDocumentIsBoundToItsCanonicalRoot)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+
+        PathPolicyService policy;
+        const auto result = policy.ResolveExtensionDocumentPath(
+            ToAzString(canonicalRoot),
+            "extension.road-atlas",
+            "road-atlas.snapshot.json",
+            false);
+        ASSERT_TRUE(result.IsSuccess()) << result.GetError().c_str();
+        EXPECT_TRUE(PathPolicyService::IsCanonicalPathContained(
+            ToAzString(canonicalRoot), result.GetValue(), false));
+    }
+
+    TEST(PathPolicyServiceTests, ExtensionDocumentSymlinkEscapeIsRejected)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        const QString outsidePath = QDir(temporary.path()).filePath("outside");
+        ASSERT_TRUE(QDir().mkpath(QDir(workspacePath).filePath("Extensions")));
+        ASSERT_TRUE(QDir().mkpath(outsidePath));
+
+        const std::filesystem::path linkPath = FromUtf8(ToAzString(
+            QDir(workspacePath).filePath("Extensions/extension.road-atlas")));
+        const std::filesystem::path targetPath = FromUtf8(ToAzString(outsidePath));
+        std::error_code error;
+        std::filesystem::create_directory_symlink(targetPath, linkPath, error);
+        if (error)
+        {
+            GTEST_SKIP() << "Filesystem links are unavailable for this test host: "
+                         << error.message();
+        }
+
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+        PathPolicyService policy;
+        const auto result = policy.ResolveExtensionDocumentPath(
+            ToAzString(canonicalRoot),
+            "extension.road-atlas",
+            "road-atlas.snapshot.json",
+            false);
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("canonical extension root"), AZStd::string::npos);
+    }
+
+    TEST(PathPolicyServiceTests, ExtensionDocumentRequiresJsonSuffix)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspacePath = QDir(temporary.path()).filePath("workspace");
+        ASSERT_TRUE(QDir().mkpath(workspacePath));
+        const QString canonicalRoot = QFileInfo(workspacePath).canonicalFilePath();
+        ASSERT_FALSE(canonicalRoot.isEmpty());
+
+        PathPolicyService policy;
+        const auto result = policy.ResolveExtensionDocumentPath(
+            ToAzString(canonicalRoot),
+            "extension.road-atlas",
+            "payload.bin",
+            false);
+        EXPECT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find(".json"), AZStd::string::npos);
+    }
+
     TEST(PathPolicyServiceTests, EveryConfiguredProfilePathCanValidate)
     {
         QTemporaryDir temporary;

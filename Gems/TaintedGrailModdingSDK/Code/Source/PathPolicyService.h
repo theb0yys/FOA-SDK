@@ -36,6 +36,12 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& filePath,
             bool requireExisting) const;
 
+        AZ::Outcome<AZStd::string, AZStd::string> ResolveExtensionDocumentPath(
+            const AZStd::string& canonicalWorkspaceRoot,
+            const AZStd::string& extensionId,
+            const AZStd::string& relativePath,
+            bool requireExisting) const;
+
         static bool IsCanonicalPathContained(
             const AZStd::string& rootPath,
             const AZStd::string& candidatePath,

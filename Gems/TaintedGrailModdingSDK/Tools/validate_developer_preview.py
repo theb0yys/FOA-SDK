@@ -20,6 +20,8 @@ PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
 EXPECTED_PROJECT_EXTERNAL_SUBDIRECTORIES = (
     "../Gems/ExternalToolchain",
     "../Gems/TaintedGrailModdingSDK",
+    "../Plugins/Authoring/AvalonAI/Gem",
+    "../Plugins/Authoring/RoadAtlas/Gem",
 )
 
 
@@ -84,14 +86,19 @@ def validate_project_external_boundary(product_root: Path) -> None:
     external_subdirectories = project.get("external_subdirectories")
     if external_subdirectories != list(EXPECTED_PROJECT_EXTERNAL_SUBDIRECTORIES):
         fail(
-            "Developer Preview project must register exactly the two product-owned Gem "
+            "Developer Preview project must register the complete product-owned Gem "
             f"directories in deterministic order: {EXPECTED_PROJECT_EXTERNAL_SUBDIRECTORIES}"
         )
 
     gem_names = project.get("gem_names")
     if not isinstance(gem_names, list):
         fail(f"Developer Preview project must declare gem_names: {project_path}")
-    for gem_name in ("ExternalToolchain", "TaintedGrailModdingSDK"):
+    for gem_name in (
+        "ExternalToolchain",
+        "TaintedGrailModdingSDK",
+        "AvalonAIAuthoring",
+        "RoadAtlasAuthoring",
+    ):
         if gem_names.count(gem_name) != 1:
             fail(f"Developer Preview project must enable {gem_name!r} exactly once.")
 

@@ -76,7 +76,7 @@ class SuiteWizardCatalogTests(unittest.TestCase):
         self.assertEqual(set(packages), set(EXPECTED_ORDER))
         self.assertEqual(packages["foa.editor-descriptor"]["payload_summary"], {
             "file_count": 1,
-            "size_bytes": 882,
+            "size_bytes": 1032,
         })
 
     def test_review_only_selection_resolves_to_plan_and_view_model(self) -> None:
@@ -94,7 +94,7 @@ class SuiteWizardCatalogTests(unittest.TestCase):
         )
         self.assertEqual(
             result["view_model"]["summary"],
-            {"package_count": 3, "payload_file_count": 3, "payload_size_bytes": 2142},
+            {"package_count": 3, "payload_file_count": 3, "payload_size_bytes": 2292},
         )
         self.assertTrue(all(value is False for value in result["authority"].values()))
         unsigned = {key: value for key, value in result.items() if key != "result_sha256"}

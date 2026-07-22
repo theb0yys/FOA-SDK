@@ -6,11 +6,17 @@ Implemented as a public Framework service. The API is an editor-side authoring a
 
 ## Access
 
-Extensions obtain the persistent service from:
+External Tool Gems use the public request bus:
 
 ```cpp
-auto& api = TaintedGrailModdingSDK::FoundationService::Get().GetExtensionAPI();
+TaintedGrailModdingSDK::ExtensionRequestBus::BroadcastResult(
+    registered,
+    &TaintedGrailModdingSDK::ExtensionRequests::RegisterExtension,
+    declaration,
+    error);
 ```
+
+The Foundation system component owns the single bus handler and registry lifetime. In-tree SDK code may still use `FoundationService::Get().GetExtensionAPI()` directly, but optional Gems do not link to or construct the Foundation singleton.
 
 The service owns no game runtime hooks and exposes no `CatalogDatabase&`, `SourceEvidenceRegistry&`, mutable `GameProfile`, workspace path, install path, plugin path, diagnostics path, or extracted-data path.
 
@@ -25,6 +31,8 @@ An extension registers one `ExtensionDeclaration` containing:
 - a non-empty capability set.
 
 Registrations are canonicalized and returned in extension-ID order. Compatibility lists and capabilities are sorted. Duplicate identities, duplicate declarations, unknown capability values, oversized declarations, and registry overflow fail closed.
+
+Optional Tool Gems register during component activation and unregister during deactivation. Unregistration immediately revokes profile, catalog, evidence, and document operations. The canonical Tainted Framework consumer is host-owned and cannot be unregistered through the public bus.
 
 Supported capabilities are:
 
@@ -65,6 +73,19 @@ The API does not expose catalog mutation, persistence, governance, validation, p
 
 Submission creates candidate evidence only. It does not promote evidence into the catalog. Promotion, governance, validation, permissions, persistence, and publication remain owned by the existing Foundation services.
 
+## Host-owned extension documents
+
+Registered extensions may save and load their own JSON authoring documents through `SaveExtensionDocument` and `LoadExtensionDocument`. The host:
+
+- accepts only portable relative `.json` paths;
+- confines each document to `Extensions/<extension-id>/` beneath the canonical workspace root;
+- rejects symlink or reparse-point escapes;
+- limits documents to 4 MiB;
+- writes with `QSaveFile` so a failed write cannot replace the prior document;
+- returns document content without exposing the workspace path.
+
+Document storage grants no catalog, deployment, runtime, or game-save authority.
+
 ## Explicit non-authority
 
 The ExtensionAPI cannot:
@@ -80,4 +101,4 @@ The ExtensionAPI cannot:
 
 ## Verification
 
-Production-linked compiled tests cover deterministic registration, duplicate refusal, capability gating, sanitized profiles, exact branch/version compatibility, bounded copy-only catalog queries, exact-source candidate evidence, and unknown enum rejection.
+Production-linked compiled tests cover deterministic registration, duplicate refusal, revocation and reset, capability gating, sanitized profiles, exact branch/version compatibility, bounded copy-only catalog queries, exact-source candidate evidence, extension-document confinement, symlink escape refusal, and unknown enum rejection.

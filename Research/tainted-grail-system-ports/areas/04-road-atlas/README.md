@@ -8,5 +8,5 @@ movement, spawning, scene mutation, or gameplay execution is authorized by the e
 The first compiled port is `RoadAtlasExtension`. It pins seven upstream schema/gate sources, carries typed road,
 name, segment, junction, anchor, connector, geometry, connectivity, and evidence-requirement data, and produces
 an order-independent canonical snapshot fingerprint. Planning approval fails closed when exact-profile binding,
-geometry, topology, or required evidence is incomplete. It does not copy reviewed upstream road payloads and is
-not the later durable Road Editor vertical slice.
+geometry, topology, or required evidence is incomplete. The optional Road Atlas Tool Gem now supplies the
+durable host-owned document and Editor vertical slice without copying reviewed upstream road payloads.

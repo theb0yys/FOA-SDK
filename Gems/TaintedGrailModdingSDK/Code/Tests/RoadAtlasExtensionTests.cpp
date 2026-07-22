@@ -231,4 +231,19 @@ namespace TaintedGrailModdingSDK
                 return issue.m_code == "snapshot.geometry-count";
             }));
     }
+
+    TEST(RoadAtlasExtensionTests, SanitizedExtensionProfileBindingValidatesWithoutPrivatePaths)
+    {
+        const auto profile = MakeRoadProfile();
+        const RoadAtlasExtension::ProfileBinding binding{
+            profile.m_profileId,
+            profile.m_gameVersion,
+            profile.m_branch,
+            profile.m_runtimeTarget,
+        };
+        const auto result = RoadAtlasExtension::ValidateSnapshot(
+            MakeRoadSnapshot(), binding);
+        EXPECT_TRUE(result.m_accepted);
+        EXPECT_TRUE(result.m_canUseForPlanning);
+    }
 } // namespace TaintedGrailModdingSDK

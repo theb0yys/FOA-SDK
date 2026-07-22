@@ -8,6 +8,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Governed optional O3DE Tool Gem infrastructure with exact schema-1 package validation, dependency-cycle rejection, deterministic project selection, cross-module ExtensionAPI registration/revocation, and host-owned atomic extension documents without workspace-path disclosure.
+- Independently selectable Road Atlas and Avalon AI authoring Tool Gems with registered panes, typed JSON parsing, exact contract validation, deterministic planning fingerprints, atomic save/load/revert workflows, Hub routes, and no runtime authority.
+- Twenty-six-pane lifecycle and Windows evidence coverage with adversarial checks for missing routes, missing deactivation, duplicate layout keys, non-atomic writes, unsafe capabilities, and process leakage.
 - Exact-commit Tainted Grail system-port research archive covering Tainted Framework, Tainted Interface,
   Avalon Core/Road Atlas, FoA Mod Manager, Template Diagnostics, Avalon AI, Avalon Awakened/Kandra, and the
   later local/GitHub/optional-Merlin acquisition routes, with every Waning/Bannerlord repository excluded.
@@ -27,11 +30,11 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Public **Actor and Troop Editor Guide** covering typed actor/troop/member authoring, exact template and leader bindings, governed action lanes, dirty-draft protection, deterministic fixture use, persistence, and runtime limits.
 - Public **Actor and Troop Architecture and Data Formats** contract covering Core/Framework/Editor ownership, catalog schema 2, exact evidence and identity, deterministic serialization, fixture format, and deferred spawn/runtime contracts.
 - Public **Actor and Troop Release Readiness** gate covering local validation, exact-head O3DE configure/build, compiled catalog tests, Windows evidence, release claims, and rollback.
-- Focused **Actor and Troop Windows UI Evidence** checklist for the current twenty-four-pane surface, including resolved/unresolved templates, exact troop composition, allow/forbid governance, dirty drafts, save/reopen, actionable failure, and runtime separation.
+- Focused **Actor and Troop Windows UI Evidence** checklist for the current twenty-six-pane surface, including resolved/unresolved templates, exact troop composition, allow/forbid governance, dirty drafts, save/reopen, actionable failure, and runtime separation.
 - Deterministic project-owned schema-2 population fixture with two typed actors, one actor template, one patrol troop, two exact member rows, resolved and unresolved template coverage, exact evidence, and allowed/forbidden `spawn_candidate` examples.
 - Approved Windows prebuilt SDK installer path using O3DE's canonical `INSTALL` layout, an installed project launcher, exact redistribution-reviewed inventory, canonical manifest/checksums/provenance/SPDX metadata, deterministic portable ZIP, CPack/WiX MSI, manual-only artifact workflow, and install/repair/uninstall smoke contract without public release or FoA runtime authority.
 - Read-only **FOA Development Hub** default entry pane with live Foundation workspace/profile/pack context, explicit blocker and persistence-state visibility, task-first navigation, and deep-links to all existing specialist panes without duplicated domain logic or new runtime authority.
-- Twenty-four-pane Windows manual UI checklist coverage for Hub launch, live context, deep-links, and the existing accessibility and runtime-separation checks.
+- Twenty-six-pane Windows manual UI checklist coverage for Hub launch, live context, optional Tool Gem panes, deep-links, and the existing accessibility and runtime-separation checks.
 - Repository-owned standard default level plus a bounded writable per-user project materialization, synchronous clean-first-run asset preflight, and canonical opener/shortcut arguments that start a visible lit 3D viewport without Windows security exceptions; managed bootstrap updates fail closed and user-created levels are preserved.
 - Tracked Developer Preview `Levels` root, contract regression coverage, and explicit Windows Controlled Folder Access diagnostics for level-authoring readiness.
 - Pure-Core `AdapterReleaseArtifactProvenanceService` and typed release-artifact contracts for exact approved-reconciliation/ready-package binding, complete content coverage, declared SHA-256 values, provenance, legal dispositions, signing intent, publication targets, deterministic canonical JSON, and candidate evidence return.
@@ -85,13 +88,13 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 ### Changed
 
 - Actor/Troop status now records the deterministic fixture and public documentation as implemented; exact-head O3DE configure/build, compiled catalog tests, and Windows evidence remain the active acceptance gate before the slice is described as exact-head verified.
-- The focused Actor/Troop checklist supplements the current twenty-four-pane Hub-plus-specialist checklist instead of regressing the repository to the historical twenty-three-pane count.
+- The focused Actor/Troop checklist supplements the current twenty-six-pane Hub-plus-specialist checklist instead of regressing the repository to the historical twenty-three-pane count.
 - Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.
 - The inherited full-engine `AR` workflow and generic upstream `Validation` workflow are removed from this fork so queued checks are not misrepresented as TG SDK test evidence.
 - Exact local validation evidence is the development merge gate until automatic Actions are safely restored; **no automated per-commit test result is claimed**.
 - Phase 8 now includes deterministic release-artifact provenance/signing-intent metadata; an externally supplied release-assembly and checksum-result envelope is the next ordered slice.
 - Focused execution-result validators continue to enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
-- The Windows manual UI checklist now covers all twenty-four panes and the default Hub plus zero-transient-input states.
+- The Windows manual UI checklist now covers all twenty-six panes and the default Hub plus zero-transient-input states.
 - Phase 8 retains confirmation/work-order, staging/deployment, package-assembly, reproducible-build, execution-result, post-deployment-report, independent-verifier, reconciliation, release-artifact, release-assembly, and release-signing contracts as prerequisite handoffs; metadata readiness never authorises file, archive, signing, upload, publication, or runtime operations.
 - Phase 7 retains typed adapter capabilities, deterministic work-order plans, and runtime-result evidence returns as separate fail-closed contracts.
 - Production implementation files compile exactly once under Core, Framework, or Editor, while tests link production libraries.

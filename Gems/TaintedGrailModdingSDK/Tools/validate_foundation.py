@@ -24,10 +24,14 @@ PROJECT_MANIFEST_PATH = Path("TaintedGrailModdingEditor/project.json")
 PRODUCT_GEM_DIRECTORIES = (
     "../Gems/ExternalToolchain",
     "../Gems/TaintedGrailModdingSDK",
+    "../Plugins/Authoring/AvalonAI/Gem",
+    "../Plugins/Authoring/RoadAtlas/Gem",
 )
 PRODUCT_GEM_NAMES = (
     "ExternalToolchain",
     "TaintedGrailModdingSDK",
+    "AvalonAIAuthoring",
+    "RoadAtlasAuthoring",
 )
 
 
@@ -73,7 +77,7 @@ def validate_project_registration(repo_root: Path) -> None:
     external = project.get("external_subdirectories")
     if external != list(PRODUCT_GEM_DIRECTORIES):
         fail(
-            f"{project_path} must register exactly the two product Gem directories "
+            f"{project_path} must register the complete product Gem directories "
             "in deterministic order."
         )
 

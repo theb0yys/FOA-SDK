@@ -4,7 +4,7 @@ Status: implemented vertical slice — Core contracts/database, schema-2 migrati
 evidence-bound candidate publication, production-linked population tests, the immutable population action-lane
 contract, Actor and Troop Editor lifecycle, deterministic synthetic fixture, full local-validation integration,
 and public release-readiness documentation are implemented. Exact-head O3DE configure/build, compiled Catalog
-test execution, and the real Windows twenty-four-pane evidence pass remain the active acceptance gate.
+test execution, and the real Windows twenty-six-pane evidence pass remain the active acceptance gate.
 
 Target: first Phase 6 functional-expansion vertical slice
 
@@ -467,7 +467,7 @@ After design approval, implementation proceeds in focused reviewable units:
 6. **Complete** — immutable population action-lane derivation, Actor and Troop Editor pane, and lifecycle
    registration;
 7. **Complete** — deterministic synthetic population fixture and full vertical-slice local-validation integration;
-8. **Complete** — public user, architecture/data-format, release-readiness, changelog, and twenty-four-pane
+8. **Complete** — public user, architecture/data-format, release-readiness, changelog, and twenty-six-pane
    evidence-checklist updates;
 9. **Active acceptance gate** — exact-head O3DE configure/build, compiled Catalog tests, and Windows UI evidence.
 
@@ -476,7 +476,7 @@ persistence, Framework authoring commands, positive/negative production-linked t
 the registered Editor pane, deterministic project-owned fixture, validator integration, and public documentation.
 It does not claim that compiled tests have run in an exact-head configured build or that Windows UI evidence exists.
 
-Unit 9 owns the remaining exact-head host and real Windows twenty-four-pane acceptance evidence.
+Unit 9 owns the remaining exact-head host and real Windows twenty-six-pane acceptance evidence.
 
 Every commit receives complete staged-diff self-review, DCO sign-off, relevant focused validation, and
 `FOA-plug-in-development` synchronization before and after publication.

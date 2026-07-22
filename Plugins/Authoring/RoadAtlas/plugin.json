@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "extension.avalon-core-road-atlas",
+  "name": "Road Atlas Authoring",
+  "version": "0.8.4",
+  "category": "authoring",
+  "status": "available",
+  "optional": true,
+  "entry_points": {
+    "o3de_gems": [
+      "Gem"
+    ]
+  },
+  "capabilities": [
+    "query-catalog",
+    "read-active-profile",
+    "submit-candidate-evidence"
+  ],
+  "dependencies": [],
+  "compatibility": {
+    "game_versions": [
+      "1.23.401"
+    ],
+    "branches": [
+      "il2cpp",
+      "mono"
+    ],
+    "runtime_targets": [
+      "editor-only"
+    ]
+  },
+  "provenance": {
+    "origin": "theb0yys/Tainted-Grail-The-Fall-of-Avalon-mods",
+    "revision": "d7e740e7f167b73152b53409e483dab07d80d048",
+    "license": "NOASSERTION",
+    "redistribution_reviewed": false
+  }
+}

@@ -38,11 +38,12 @@ Only files required by a package should be present. Package directories are not 
 
 Optional editor-side systems that operate through read-only queries, governed authoring commands, candidate evidence, validation, and reviewed handoff contracts.
 
-Planned destinations include:
+Available packages include:
 
 - `Plugins/Authoring/AvalonAI/` for the custom AI authoring and validation layer;
-- `Plugins/Authoring/UIFramework/` for reusable approved UI utilities and embedded assets;
 - `Plugins/Authoring/RoadAtlas/` for the typed road domain and editor.
+
+The reusable Tainted Interface utilities remain Foundation-owned because they are shared by the host and optional panes; an independent UI payload package remains gated by upstream licence review.
 
 Authoring packages are editor-only unless a separately reviewed runtime adapter consumes their output.
 
@@ -76,7 +77,7 @@ Every package must provide a canonical `plugin.json` containing:
 
 Discovery must fail closed for malformed manifests, duplicate IDs, missing dependencies, dependency cycles, unknown capabilities, unsupported profiles, branch drift, version drift, or unsafe paths.
 
-Registration is deterministic and occurs through `TaintedGrailModdingSDK::ExtensionAPI`. Packages receive no mutable catalog, workspace, profile, source-registry, runtime, deployment, save, signing, or publication references.
+Registration is deterministic and occurs through the cross-module `ExtensionRequestBus`, whose single Foundation handler delegates to `TaintedGrailModdingSDK::ExtensionAPI`. Package documents are read and atomically written by the host beneath an extension-owned workspace directory; packages never receive the workspace path. Packages receive no mutable catalog, workspace, profile, source-registry, runtime, deployment, save, signing, or publication references.
 
 ## Import rule
 

@@ -86,6 +86,8 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
                     "external_subdirectories": [
                         "../Gems/ExternalToolchain",
                         "../Gems/TaintedGrailModdingSDK",
+                        "../Plugins/Authoring/AvalonAI/Gem",
+                        "../Plugins/Authoring/RoadAtlas/Gem",
                     ],
                     "gem_names": [
                         "Atom",
@@ -93,6 +95,8 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
                         "PhysX5",
                         "ExternalToolchain",
                         "TaintedGrailModdingSDK",
+                        "AvalonAIAuthoring",
+                        "RoadAtlasAuthoring",
                     ],
                 }
             ),
@@ -201,7 +205,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
             document = json.loads(path.read_text(encoding="utf-8"))
             document["external_subdirectories"] = ["../Gems/TaintedGrailModdingSDK"]
             path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(contract.PreviewProjectContractError, "exactly the two"):
+            with self.assertRaisesRegex(contract.PreviewProjectContractError, "complete product-owned"):
                 contract.validate_preview_project(product)
 
     def test_missing_required_gem_name_fails(self) -> None:

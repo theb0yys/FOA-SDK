@@ -203,6 +203,41 @@ namespace TaintedGrailModdingSDK::ExtensionAPI
         return m_extensions;
     }
 
+    bool Service::UnregisterExtension(
+        const AZStd::string& extensionId,
+        AZStd::string* error)
+    {
+        const auto found = AZStd::lower_bound(
+            m_extensions.begin(),
+            m_extensions.end(),
+            extensionId,
+            [](const ExtensionDeclaration& declaration, const AZStd::string& identity)
+            {
+                return declaration.m_extensionId < identity;
+            });
+        if (found == m_extensions.end() || found->m_extensionId != extensionId)
+        {
+            SetError(error, "Extension identity is not registered.");
+            return false;
+        }
+        m_extensions.erase(found);
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
+    }
+
+    bool Service::IsExtensionRegistered(const AZStd::string& extensionId) const
+    {
+        return FindExtension(extensionId) != nullptr;
+    }
+
+    void Service::Clear()
+    {
+        m_extensions.clear();
+    }
+
     const ExtensionDeclaration* Service::FindExtension(
         const AZStd::string& extensionId) const
     {

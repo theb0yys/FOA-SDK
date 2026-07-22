@@ -31,10 +31,14 @@ REQUIRED_PREVIEW_GEMS = (
     "DiffuseProbeGrid",
     "PhysX5",
     *REQUIRED_PRODUCT_GEMS,
+    "AvalonAIAuthoring",
+    "RoadAtlasAuthoring",
 )
 EXPECTED_EXTERNAL_SUBDIRECTORIES = (
     "../Gems/ExternalToolchain",
     "../Gems/TaintedGrailModdingSDK",
+    "../Plugins/Authoring/AvalonAI/Gem",
+    "../Plugins/Authoring/RoadAtlas/Gem",
 )
 FORBIDDEN_ENGINE_ROOT_PATHS = (
     "Assets",
@@ -167,7 +171,7 @@ def validate_preview_project(product_root: Path) -> None:
     )
     if external_subdirectories != list(EXPECTED_EXTERNAL_SUBDIRECTORIES):
         raise PreviewProjectContractError(
-            "Developer Preview project must register exactly the two product-owned Gem directories "
+            "Developer Preview project must register the complete product-owned Gem directories "
             "in deterministic order."
         )
     gem_names = require_string_list(project, "gem_names", "Developer Preview project manifest")

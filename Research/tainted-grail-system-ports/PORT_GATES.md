@@ -8,8 +8,8 @@
 | 3. Tainted Framework | Complete contract port | Build-linked knowledge pack, canonical exact `Mono` profile branch, compiled tests | BepInEx/Unity host linkage |
 | 4. Tainted Interface | Complete utility port | Semantic asset catalog, safe resolver, project-owned fallback SVGs, editor theme, provenance tests | Unlicensed asset payloads, Unity IMGUI calls |
 | 5. Local/GitHub/Merlin providers | Contract port complete; qualification pending | Common observation contract, pinned-GitHub applicability, provider precedence, conflict reporting, contract-only local/Merlin routes | Provider retrieval, local inspection, credentials, network calls, auto-promotion |
-| 6. Avalon Core and Road Atlas | Schema port complete; vertical slice pending | Exact-source schemas, evidence requirements, geometry/topology references, deterministic snapshot validation/fingerprints | Road Editor persistence, runtime road movement, scene mutation |
-| 7. Avalon AI | Authoring contract port complete; vertical slice pending | API 2.0 package, blackboard, goal, action, planning-input validation and inert deterministic plans | AI execution host linkage, runtime blackboards, action dispatch |
+| 6. Avalon Core and Road Atlas | Editor vertical slice complete | Exact-source schemas, evidence requirements, geometry/topology references, deterministic snapshot validation/fingerprints, optional Tool Gem pane, host-owned atomic persistence | Runtime road movement, scene mutation |
+| 7. Avalon AI | Editor vertical slice complete | API 2.0 package, blackboard, goal, action, planning-input validation, inert deterministic plans, optional Tool Gem pane, host-owned atomic persistence | AI execution host linkage, runtime blackboards, action dispatch |
 | 8. Kandra and Unity authoring routes | Pending | Version-locked Unity conversion evidence and loss reports | Direct editor-to-game mutation |
 | 9. Runtime adapters | Route contract port complete; executable packages pending | Separate exact Mono 0.1.33 and IL2CPP 0.1.36 evidence routes, exact-profile qualification, inert route fingerprints | Building, deployment, execution, mutation, save access, cross-branch inference |
 

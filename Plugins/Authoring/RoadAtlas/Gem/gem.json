@@ -1,0 +1,11 @@
+{
+  "gem_name": "RoadAtlasAuthoring",
+  "version": "0.8.4",
+  "display_name": "Road Atlas Authoring",
+  "license": "Apache-2.0 OR MIT",
+  "type": "Tool",
+  "summary": "Optional evidence-bound Road Atlas snapshot authoring and validation editor.",
+  "canonical_tags": ["Gem"],
+  "user_tags": ["Editor", "World", "Tainted Grail"],
+  "dependencies": ["TaintedGrailModdingSDK"]
+}

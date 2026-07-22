@@ -109,7 +109,7 @@ Record the command, configuration, test count, result, exact commit, and log loc
 
 ## Windows Editor evidence gate
 
-The current product surface contains twenty-four TG SDK panes because the FOA Development Hub is now the default entry and routes to twenty-three specialist panes. Actor/Troop is one of those specialist panes.
+The current product surface contains twenty-six TG SDK panes because the FOA Development Hub is the default entry and routes to twenty-five specialist panes, including the optional Road Atlas and Avalon AI authoring Tool Gems. Actor/Troop is one of those specialist panes.
 
 The Actor/Troop evidence pass must prove:
 
@@ -145,7 +145,7 @@ For each exact-head verification, record:
 | local validation | command and result |
 | fixture | manifest ID and verification result |
 | Editor launch | exit/start result and log path |
-| pane coverage | all 24 panes plus Actor/Troop checks |
+| pane coverage | all 26 panes plus Actor/Troop checks |
 | persistence | save/close/reopen result |
 | privacy review | completed |
 | runtime boundary | confirmed absent |

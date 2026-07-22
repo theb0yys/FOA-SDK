@@ -11,7 +11,14 @@ if TYPE_CHECKING:
     from .journal import CrashRecoveryJournal, JournalRecord
 
 _SCHEMA_VERSION = 1
-_TERMINAL = {"committed", "rolled-back", "cancelled"}
+_TERMINAL = {
+    "committed",
+    "rolled-back",
+    "cancelled",
+    "intent-committed",
+    "intent-rolled-back",
+    "compacted-checkpoint",
+}
 _ROLLBACK = {
     "preparing",
     "prepared",
@@ -20,6 +27,8 @@ _ROLLBACK = {
     "rolling-back",
     "cancel-requested",
     "cancelling",
+    "intent-prepared",
+    "intent-file-published",
 }
 
 

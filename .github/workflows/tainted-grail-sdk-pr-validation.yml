@@ -54,7 +54,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tg-sdk-static-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: tg-sdk-static-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

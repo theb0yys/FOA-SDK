@@ -37,7 +37,8 @@ jobs:
         shell: bash
         run: |
           set +e
-          {
+          (
+            set -euo pipefail
             python -m py_compile Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             python - <<'PY'
@@ -63,7 +64,7 @@ jobs:
             git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             git rm -r Gems/TaintedGrailModdingSDK/Tools/project_wide_security_repair_bundle
             git rm .github/workflows/apply-project-wide-security-repairs.yml
-          } 2>&1 | tee project-wide-security-validation.log
+          ) 2>&1 | tee project-wide-security-validation.log
           status=${PIPESTATUS[0]}
           exit "$status"
 
@@ -85,22 +86,28 @@ jobs:
       - name: Run focused installer security regression tests
         shell: bash
         run: |
-          set -euo pipefail
-          python -m unittest discover \
-            -s Gems/TaintedGrailModdingSDK/Tools/tests \
-            -p 'test_installer_*.py' \
-            -v
+          set +e
+          (
+            set -euo pipefail
+            python -m unittest discover \
+              -s Gems/TaintedGrailModdingSDK/Tools/tests \
+              -p 'test_installer_*.py' \
+              -v
+          ) 2>&1 | tee -a project-wide-security-validation.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Validate Core-only canonical interchange test contract
         shell: bash
         run: |
           set +e
-          {
+          (
+            set -euo pipefail
             python Gems/TaintedGrailModdingSDK/Tools/validate_canonical_interchange_compiled_tests.py
             python -m unittest \
               Gems.TaintedGrailModdingSDK.Tools.tests.test_validate_canonical_interchange_compiled_tests \
               -v
-          } 2>&1 | tee -a project-wide-security-validation.log
+          ) 2>&1 | tee -a project-wide-security-validation.log
           status=${PIPESTATUS[0]}
           exit "$status"
 

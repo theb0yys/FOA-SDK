@@ -52,9 +52,12 @@ The system reference summarizes and connects those owners. It does not copy thei
 ## Imported source-system facts
 
 - [Economy patch registrar](items-economy/PATCH_REGISTRATION_FACT.md) — establishes the pinned upstream registrar's caller-supplied, fail-open registration pattern and links the twenty processed Batch 002 target candidates.
-- [Avalon Mounts runtime structure](mounts/AVALON_MOUNTS_RUNTIME_FACTS.md) — separates plug-in lifecycle/cleanup, per-frame controller work, and filename-token compatibility detection from the seven independent mount target candidates.
+- [Economy helper semantics](items-economy/HELPER_SEMANTICS_FACTS.md) — separates seven dry-run/delegation source facts from the six blocked reflection, pricing, quantity, protection, and story-mutation helpers reviewed in Batch 003.
+- [Avalon Mounts runtime structure](mounts/AVALON_MOUNTS_RUNTIME_FACTS.md) — separates plug-in lifecycle/cleanup, exact frame-controller behavior, filename-token compatibility detection, the blocked wolf-seat controller, and the optional Avalon Companions adapter candidates.
 
 A source-system fact describes a verified property of the selected source architecture. It is not automatically a fact about the current game runtime. Native type/member facts still require exact-profile evidence and hook promotion.
+
+A fact that a helper is diagnostics-only or delegates through a configuration gate does not prove reflected-member identity, bounded output, mutation safety, rollback, persistence semantics, or combined-mod compatibility.
 
 ## Coverage rule
 

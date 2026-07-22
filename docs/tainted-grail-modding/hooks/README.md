@@ -85,6 +85,7 @@ limitations:
 4. Controlled evidence of intended behavior permits `behavior-verified`.
 5. Combined-mod/load-order testing and reviewed risks permit `compatibility-reviewed`.
 6. A new game patch does not inherit an old status. The hook remains bound to its original profile until reverified.
+7. A helper or controller does not inherit safety, cleanup, or validation from its caller. Configuration gates and `try/catch` wrappers are source facts, not promotion evidence.
 
 ## Evidence boundary
 
@@ -142,6 +143,26 @@ Other outcomes:
 - [Processed economy registrar fact](../systems/items-economy/PATCH_REGISTRATION_FACT.md)
 
 Batch 002 adds 27 source-only candidate records and promotes none.
+
+### Batch 003
+
+[Semantic Hook Batch 003](BATCH_003.md) reviews thirteen downstream economy helper files and the two Avalon Mounts frame-ticked controllers without inheriting safety or validation from their callers.
+
+Candidate adapter records:
+
+- [Avalon Companions dialogue registration and cleanup](records/MOUNTS_AVALON_COMPANIONS_DIALOGUE_BRIDGE.md)
+
+Canonical source facts:
+
+- [Economy helper semantics](../systems/items-economy/HELPER_SEMANTICS_FACTS.md)
+- [Resolved mount frame-controller behavior](../systems/mounts/AVALON_MOUNTS_RUNTIME_FACTS.md)
+
+Research blockers:
+
+- [Economy reflection, pricing, quantity, protection, and reward mutation](blockers/ECONOMY_HELPER_SAFETY.md)
+- [Wolf mount seat frame controller and native contract ownership](blockers/WOLF_MOUNT_SEAT_CONTROLLER.md)
+
+Batch 003 dispositions fifteen selected files into two source-only adapter candidates, seven canonical helper facts, and seven blockers. It promotes none.
 
 ## Initial domain indexes
 

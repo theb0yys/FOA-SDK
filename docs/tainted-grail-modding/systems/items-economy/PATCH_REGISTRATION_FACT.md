@@ -61,6 +61,16 @@ The first eight callers are processed. They create twenty source-only candidates
 
 The complete ledger is [Semantic Hook Batch 002](../../hooks/BATCH_002.md).
 
+## Batch 003 helper completion
+
+The first downstream helper set is processed independently from the registrar and callers:
+
+- [seven dry-run and thin-delegation source facts](HELPER_SEMANTICS_FACTS.md);
+- [six reflection, pricing, quantity, protection, and reward mutation blockers](../../hooks/blockers/ECONOMY_HELPER_SAFETY.md);
+- [Semantic Hook Batch 003 ledger](../../hooks/BATCH_003.md).
+
+A helper does not inherit its caller's candidate status, configuration gate, exception handling, or cleanup assumptions. No helper is promoted by Batch 003.
+
 ## Remaining boundary
 
-The caller records still invoke downstream reflection, pricing, quantity, protected-item, dry-run, diagnostics, and rule helpers. Those helpers are not proven by the registrar or caller records and form a later semantic batch.
+Exact-profile fixtures, diagnostic-writer bounds, rollback, persistence, and combined-mod evidence remain unfinished. The next batch must prove or prohibit those behaviors rather than infer them from historical source intent.

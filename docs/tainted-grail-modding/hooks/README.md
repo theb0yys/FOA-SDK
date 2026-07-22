@@ -88,6 +88,7 @@ limitations:
 7. A helper or controller does not inherit safety, cleanup, or validation from its caller. Configuration gates and `try/catch` wrappers are source facts, not promotion evidence.
 8. A fixture specification is not an executed fixture result. Profile binding without the required assembly fingerprints and observations creates no promotion evidence.
 9. A deterministic adverse implementation finding may produce `prohibited-current-source` without claiming that the underlying modding goal is permanently impossible.
+10. An offline specification receipt has no runtime or promotion authority.
 
 ## Evidence boundary
 
@@ -170,22 +171,19 @@ Batch 003 dispositions fifteen selected files into two source-only adapter candi
 
 [Semantic Hook Batch 004](BATCH_004.md) binds the Batch 003 high-risk surfaces to the exact Mono handbook profile, specifies deterministic fixtures, and records explicit promotion-or-prohibition decisions.
 
-Fixture manifests:
-
 - [fixture contract and evidence ceiling](fixtures/README.md)
-- [economy reflection and mutation](fixtures/batch-004-economy-profile.json)
-- [diagnostic writer and support output](fixtures/batch-004-diagnostic-writer.json)
-- [wolf native mount rollback](fixtures/batch-004-wolf-mount-rollback.json)
-- [Avalon Companions API v1](fixtures/batch-004-avalon-companions-api.json)
+- [Batch 004 decision register](decisions/BATCH_004_PROMOTION_PROHIBITION.md)
 
-Decisions and source facts:
+Batch 004 adds four specification-only manifests containing 33 deterministic cases, accepts two source facts, records seven `prohibited-current-source` decisions, and promotes no hook.
 
-- [Batch 004 promotion and prohibition register](decisions/BATCH_004_PROMOTION_PROHIBITION.md)
-- [Tainted Economy diagnostic writer source fact](../systems/items-economy/DIAGNOSTIC_WRITER_FACT.md)
-- [Avalon Companions API v1 source fact](../systems/mounts/AVALON_COMPANIONS_API_V1_FACT.md)
-- [updated Avalon Companions adapter candidates](records/MOUNTS_AVALON_COMPANIONS_DIALOGUE_BRIDGE.md)
+### Batch 005
 
-Batch 004 adds four specification-only manifests containing 33 deterministic cases, accepts two source facts, records seven `prohibited-current-source` decisions, and promotes no hook. No fixture is represented as executed.
+[Semantic Hook Batch 005](BATCH_005.md) defines source repairs and adds a project-owned offline fixture runner without runtime or promotion authority.
+
+- [source-repair designs](repairs/BATCH_005_SOURCE_REPAIR_DESIGNS.md)
+- [offline runner guide](fixtures/OFFLINE_RUNNER.md)
+
+Batch 005 adds a standard-library runner and eight tests. It leaves every Batch 004 prohibition unchanged and promotes nothing.
 
 ## Initial domain indexes
 

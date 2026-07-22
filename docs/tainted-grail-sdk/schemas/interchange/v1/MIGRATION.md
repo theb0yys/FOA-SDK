@@ -20,8 +20,7 @@ process, provider, host, runtime, deployment, save, evidence-promotion, signing,
 | target beyond the adjacent unavailable version | `unsupported-target-version` | absent | false |
 | candidate violates identity/digest/evidence rules | `semantic-drift` | absent | false |
 
-The enum reserves `succeeded` for a future, separately reviewed adjacent migrator. In Schema 1, no code path returns
-`succeeded`.
+The enum reserves `succeeded` for a future, separately reviewed adjacent migrator. In Schema 1, no code path returns `succeeded`.
 
 ## Digest and evidence binding
 

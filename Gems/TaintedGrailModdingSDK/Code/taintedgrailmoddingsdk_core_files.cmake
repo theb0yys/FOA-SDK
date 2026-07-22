@@ -109,6 +109,8 @@ set(FILES
     Source/CanonicalInterchangeCanonical.h
     Source/CanonicalInterchangeTypes.cpp
     Source/CanonicalInterchangeTypes.h
+    Source/CanonicalInterchangeValidation.cpp
+    Source/CanonicalInterchangeValidation.h
     Source/DeterministicContractJson.h
     Source/ExternalToolInterchangeCanonical.cpp
     Source/ExternalToolInterchangeCanonical.h

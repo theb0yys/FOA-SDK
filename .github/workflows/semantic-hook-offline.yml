@@ -1,0 +1,46 @@
+name: Semantic Hook Offline Suite
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/semantic-hook-offline.yml"
+      - "scripts/tainted_grail/**"
+      - "docs/tainted-grail-modding/hooks/BATCH_007.md"
+      - "docs/tainted-grail-modding/hooks/README.md"
+  push:
+    paths:
+      - ".github/workflows/semantic-hook-offline.yml"
+      - "scripts/tainted_grail/**"
+      - "docs/tainted-grail-modding/hooks/BATCH_007.md"
+      - "docs/tainted-grail-modding/hooks/README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semantic-hook-offline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-tests:
+    name: Python ${{ matrix.python-version }} offline tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile offline modules
+        run: python -m compileall -q scripts/tainted_grail
+      - name: Run offline suite
+        run: python -m unittest discover -s scripts/tainted_grail -p 'test_*.py' -v

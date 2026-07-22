@@ -5,10 +5,31 @@
 FOA-SDK uses separate validation layers because a GitHub-hosted Linux job cannot
 prove a Windows O3DE build or editor pass.
 
+### Automatic pull-request obligation enforcement
+
+The governed workflow has a narrow `pull_request_target` job for ready pull
+requests. It checks out only the trusted base commit identified by
+`github.event.pull_request.base.sha`; it never checks out or executes pull-request
+head code. The job reads the GitHub event payload and validates the pull-request
+body with the base branch copy of `validate_pr_obligations.py`.
+
+A ready pull request must contain every mandatory obligation exactly once, mark
+each one complete, and record the current 40-character PR head in its
+`merge-head` marker. A new commit makes that marker stale. Missing, duplicate,
+unchecked, malformed, or stale obligations cause the governor to use GitHub's
+API to return the pull request to draft and fail the check.
+
+The privileged job has only `contents: read` and `pull-requests: write`. It does
+not run the static suite, install dependencies, invoke build tools, use LFS, or
+execute repository code from the proposed head. Repository rules must require
+both `Enforce ready-PR obligations` and the static validation job as required
+status checks on `main`; workflow source alone cannot prevent an administrator
+from bypassing repository rules.
+
 ### Automatic pull-request static validation
 
-`.github/workflows/tainted-grail-sdk-pr-validation.yml` runs on relevant pull
-requests, pushes to `main`, and manual dispatch. It executes:
+`.github/workflows/tainted-grail-sdk-pr-validation.yml` runs the read-only static
+job on relevant pull requests, pushes to `main`, and manual dispatch. It executes:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \

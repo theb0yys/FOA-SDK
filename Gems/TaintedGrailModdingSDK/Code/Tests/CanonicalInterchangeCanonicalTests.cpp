@@ -6,6 +6,7 @@
  */
 #include "CanonicalInterchangeTestFixtures.h"
 
+#include <AzCore/std/algorithm.h>
 #include <AzTest/AzTest.h>
 
 #include <limits>
@@ -16,7 +17,8 @@ namespace TaintedGrailModdingSDK::Interchange
 
     TEST(CanonicalInterchangeCanonicalTests, Utf8AndPresentationEscapingAreExact)
     {
-        EXPECT_TRUE(IsValidUtf8V1("Avalon âAvalon \xE2Avalon \xE2\x98Avalon \xE2\x98\x83"));
+        const AZStd::string snowman("Avalon \xE2\x98\x83", 10);
+        EXPECT_TRUE(IsValidUtf8V1(snowman));
         const AZStd::string malformed("\xC3\x28", 2);
         EXPECT_FALSE(IsValidUtf8V1(malformed));
 

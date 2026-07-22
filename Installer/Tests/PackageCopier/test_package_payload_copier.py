@@ -93,12 +93,7 @@ class PackagePayloadCopierTests(unittest.TestCase):
         grant = self.grant()
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary) / "foa-staging"
-            receipt = stage_payload(
-                grant,
-                REPO_ROOT,
-                target,
-                copied_at_utc="2026-07-22T12:12:00Z",
-            )
+            receipt = stage_payload(grant, REPO_ROOT, target, copied_at_utc="2026-07-22T12:12:00Z")
             self.assertTrue(target.is_dir())
             self.assertTrue(receipt["copy_performed"])
             self.assertFalse(receipt["process_launched"])
@@ -129,7 +124,7 @@ class PackagePayloadCopierTests(unittest.TestCase):
             validate_copy_grant(grant)
 
     def test_source_has_no_process_or_elevation_surface(self) -> None:
-        source = (REPO_ROOT / "Installer/Bootstrapper/PackageCopier/Source/package_payload_copier.py").read_text(encoding="utf-8")
+        source = (REPO_ROOT / "Installer/Bootstrapper/PackageCopier/Source/package_payload_copier_impl.py").read_text(encoding="utf-8")
         for forbidden in ("subprocess", "Popen(", "ShellExecute", "msiexec", "elevate(", "socket", "requests"):
             self.assertNotIn(forbidden, source)
         for required in ("os.O_NOFOLLOW", "os.fsync", "os.rename", "COPY_CAPABILITY"):

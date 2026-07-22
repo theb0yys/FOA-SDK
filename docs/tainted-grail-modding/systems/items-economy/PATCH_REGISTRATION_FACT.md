@@ -36,30 +36,31 @@ The selected file establishes all of the following about the upstream mod's regi
 
 This file is **not a hook record** because it defines no native target of its own. Target identity is supplied by its callers. Treating the helper as evidence for every caller would collapse multiple unrelated targets into one false record and would hide overload ambiguity.
 
-The canonical result is therefore a system fact about the upstream economy mod's registration pattern. Every caller of `PatchRegistration.TryPatch` must receive an independent semantic disposition:
-
-- a candidate hook record with its exact caller-supplied target;
-- a canonical system fact when the caller describes source architecture rather than a native hook;
-- a research blocker when the target or behavior cannot be bounded;
-- or an explicit rejection when no hook exists.
+The canonical result is therefore a system fact about the upstream economy mod's registration pattern. Every caller of `PatchRegistration.TryPatch` receives an independent semantic disposition.
 
 ## Safety and compatibility implications
 
-The helper is intentionally fail-open at registration time: absent targets or registration exceptions disable that diagnostic lane rather than throwing from this helper. That is useful, but incomplete.
+The helper is fail-open at registration time: absent targets or registration exceptions return `false` rather than throwing from this helper. Callers may disable a lane when all primary targets are absent.
 
-The name-only method lookup can select the wrong overload or become ambiguous when the native API changes. A caller cannot advance beyond `candidate` until its exact parameter list, return type, patch style, downstream behavior, and target assembly fingerprint are recorded.
+That behavior is useful but incomplete. The name-only method lookup can select the wrong overload or become ambiguous when the native API changes. A caller cannot advance beyond `candidate` until its exact parameter list, return type, patch style, downstream behavior, and target assembly fingerprint are recorded.
 
-## Next extraction queue
+## Batch 002 caller completion
 
-The first caller queue is:
+The first eight callers are processed. They create twenty source-only candidates and no promotions:
 
-- `mods/TaintedEconomy/src/Patches/CraftingCostLive.cs`;
-- `mods/TaintedEconomy/src/Patches/RecipeCostDiagnosticsPatch.cs`;
-- `mods/TaintedEconomy/src/Patches/HarvestYieldDiagnosticsPatch.cs`;
-- `mods/TaintedEconomy/src/Patches/RewardPayoutDiagnosticsPatch.cs`;
-- `mods/TaintedEconomy/src/Patches/ServiceCostPatches.cs`;
-- `mods/TaintedEconomy/src/Patches/ContainerLootLive.cs`;
-- `mods/TaintedEconomy/src/Patches/VendorPriceDiagnosticsPatch.cs`;
-- `mods/TaintedEconomy/src/Patches/ContainerLootDiagnosticsPatch.cs`.
+| Caller | Result |
+|---|---|
+| `CraftingCostLive.cs` | [Ingredient count getter](../../hooks/records/ECONOMY_CRAFTING_RECIPE.md) |
+| `RecipeCostDiagnosticsPatch.cs` | [Recipe-grid Refresh and ClickSlot](../../hooks/records/ECONOMY_CRAFTING_RECIPE.md) |
+| `HarvestYieldDiagnosticsPatch.cs` | [Three harvest interaction prefixes](../../hooks/records/ECONOMY_HARVEST.md) |
+| `RewardPayoutDiagnosticsPatch.cs` | [Four reward/story routes](../../hooks/records/ECONOMY_REWARDS.md) |
+| `ServiceCostPatches.cs` | [Six service-cost getters](../../hooks/records/ECONOMY_SERVICE_COSTS.md) |
+| `ContainerLootLive.cs` | [SearchAction initialization and live display prefix](../../hooks/records/ECONOMY_CONTAINER_LOOT.md) |
+| `VendorPriceDiagnosticsPatch.cs` | [TradeUtils.Price](../../hooks/records/ECONOMY_VENDOR_PRICE.md) |
+| `ContainerLootDiagnosticsPatch.cs` | [SearchAction display diagnostics postfix](../../hooks/records/ECONOMY_CONTAINER_LOOT.md) |
 
-No target from those files is promoted or implied by this fact record.
+The complete ledger is [Semantic Hook Batch 002](../../hooks/BATCH_002.md).
+
+## Remaining boundary
+
+The caller records still invoke downstream reflection, pricing, quantity, protected-item, dry-run, diagnostics, and rule helpers. Those helpers are not proven by the registrar or caller records and form a later semantic batch.

@@ -313,9 +313,9 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
             3,
             dry_run=False,
         )
-        self.assertEqual(payload["product_root"], "/product")
-        self.assertEqual(payload["engine_root"], "/engine")
-        self.assertEqual(payload["build_root"], "/build")
+        self.assertEqual(payload["product_root"], str(Path("/product")))
+        self.assertEqual(payload["engine_root"], str(Path("/engine")))
+        self.assertEqual(payload["build_root"], str(Path("/build")))
         self.assertEqual(payload["engine_commit"], self.pinned_commit)
         self.assertEqual(payload["status"], "failed")
 

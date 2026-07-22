@@ -141,7 +141,10 @@ class MerlinsWorkshopTests(unittest.TestCase):
         target = self.checkout / "real-readme"
         target.write_bytes(self.anchor_payload)
         (self.checkout / "README.md").unlink()
-        os.symlink(target, self.checkout / "README.md")
+        try:
+            os.symlink(target, self.checkout / "README.md")
+        except OSError as error:
+            self.skipTest(f"symlink creation unavailable: {error}")
         with self.assertRaisesRegex(merlin.MerlinAcquisitionError, "symlink"):
             merlin.inspect_checkout(self.checkout, merlin.load_manifest(self.manifest_path))
 

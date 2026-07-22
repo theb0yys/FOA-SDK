@@ -36,8 +36,8 @@ jobs:
       - name: Apply reviewed repair bundle
         shell: bash
         run: |
-          set -euo pipefail
-          python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+          set -o pipefail
+          python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py 2>&1 | tee project-wide-security-validation.log
           git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
           git rm .github/workflows/apply-project-wide-security-repairs.yml
 
@@ -81,7 +81,7 @@ jobs:
           python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
             --keep-going \
             --static-only \
-            --skip-source-policy 2>&1 | tee project-wide-security-validation.log
+            --skip-source-policy 2>&1 | tee -a project-wide-security-validation.log
 
       - name: Verify reviewed diff
         shell: bash

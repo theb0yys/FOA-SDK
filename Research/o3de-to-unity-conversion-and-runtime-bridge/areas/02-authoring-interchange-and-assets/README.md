@@ -26,9 +26,10 @@ envelopes, but the envelopes do not replace its identity, transformation, proven
 [`CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md`](CANONICAL_INTERCHANGE_SCHEMA_AND_IDENTITY_RESEARCH.md)
 answers the focused Schema-1 structure and identity question.
 
-The conclusion was written against `504e10b27e46fceae4d68af200118edca27b4d1b` and is reconciled through current
-`main` at `3d50df1ea3aaf97a5148ae4ebb5c5ade8336e6d2` by
-[`CURRENT_MAIN_RECONCILIATION_2026-07-22.md`](CURRENT_MAIN_RECONCILIATION_2026-07-22.md).
+The conclusion was written against `504e10b27e46fceae4d68af200118edca27b4d1b` and reconciled through
+`3d50df1ea3aaf97a5148ae4ebb5c5ade8336e6d2` by
+[`CURRENT_MAIN_RECONCILIATION_2026-07-22.md`](CURRENT_MAIN_RECONCILIATION_2026-07-22.md). The Gate 5 design is
+based on later `main` commit `eb840862c9d3e239dec91770495c7669c00d10df`.
 
 The accepted research direction is:
 
@@ -49,39 +50,57 @@ matrix-on-left multiplication, and column-major storage.
 
 The accepted conclusion remains research-only and grants no implementation or operational authority.
 
-## Resolved reconciliation points
+## Proposed Gate 5 contract design
 
-- The canonical forward axis, vector convention, matrix storage, multiplication, and mapping direction are now
-  explicit.
-- FBX remains one payload candidate rather than the schema or a presumed deterministic container.
-- External source-native references remain non-material provenance or become contained fingerprinted payloads.
-- Schema evolution and canonical errors fail closed.
-- Merge and split use first-class mapping records rather than parent references alone.
-- Qualification evidence remains Framework-owned and external to semantic package content.
-- Schema 1 uses a contained directory; deterministic archive assembly remains later packaging work.
-- The current ExtensionRequestBus and Road Atlas/Avalon AI Tool Gems confirm optional authoring ownership without
-  opening Gate 5 or changing the interchange decisions.
+[`GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md`](GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md) is
+answered by:
 
-## Remaining qualification points
+- [`../../../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN.md`](../../../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN.md);
+- [`../../../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN_DECISIONS.md`](../../../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN_DECISIONS.md).
 
-- Gate 5 implementation API and file ownership are not authorized or designed yet.
-- Exact maximum sizes, counts, and public JSON Schema packaging remain open for Gate 5 design.
-- Exact Blender and Unity versions remain unqualified.
-- Asset Processor candidate publication remains a later Gate 7 design and fixture concern.
-- No cross-host compatibility claim exists without exact fixtures and accepted evidence.
+The proposed design fixes:
 
-## Next focused question
+```text
+Core type and file ownership
+→ dedicated canonical parser/writer
+→ intrinsic validator and exact issue ordering
+→ pure migration dispatch
+→ public schema package
+→ Core-only compiled fixtures
+→ source-tree consistency validation
+→ explicit all-false authority matrix
+```
 
-The research process advances to
-[`GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md`](GATE_5_CONTRACT_IMPLEMENTATION_DESIGN_QUESTION.md).
+The design is ready for maintainer review but is not implementation authority.
 
-That question asks for the exact Core API, canonical serializer boundary, validator limits, migration interface,
-public schema package, synthetic fixture matrix, source ownership, and no-authority acceptance boundary for the
-first Gate 5 contract-only implementation slice.
+## Resolved design points
+
+- Four exact Core translation-unit pairs own types, canonical bytes, validation, and migration.
+- A dedicated test target links Core.Static and AzTest only.
+- Core gains no Framework, Editor, Qt, filesystem, provider, host, or runtime dependency.
+- Exact count, byte, path, token, digest, and nesting limits are selected.
+- JSON tokens retain the research-approved hyphenated spellings.
+- UTF-8 presentation strings are preserved without NFC normalization.
+- Optional `display_name` is omitted when empty rather than normalized to an empty property.
+- The intrinsic and reserved cross-layer issue-code inventories are complete.
+- Schema-1 migration supports exact `1 -> 1` identity and fails closed for every unavailable route.
+- The exact public schema, test, validator, and proposed changed-file layout is selected.
+- Every operational capability remains absent or false.
+
+## Remaining gate decision
+
+Implementation remains blocked until:
+
+1. the Phase 9 entry prerequisite is explicitly accepted for Gate 5;
+2. the proposed design and addendum receive explicit maintainer acceptance;
+3. an authority record names the exact implementation base, contract-only scope, tests, evidence, and prohibited
+   capabilities.
+
+Exact Blender and Unity versions remain unqualified. Asset Processor candidate publication remains a later Gate 7
+design. No cross-host compatibility claim exists without exact fixtures and accepted evidence.
 
 ## Authority boundary
 
-Format documentation, accepted research, and a successful import do not establish cross-engine compatibility or
-implementation authority. Phase 9 entry and a separately accepted Gate 5 design remain prerequisites. No format
-or round-trip claim becomes supported until the exact adapters, hosts, profiles, and fixtures pass the applicable
-implementation gates.
+Format documentation, accepted research, and an accepted design do not establish cross-engine compatibility or
+implementation authority. Gate 6 and later remain closed. No format or round-trip claim becomes supported until
+the exact adapters, hosts, profiles, and fixtures pass the applicable implementation gates.

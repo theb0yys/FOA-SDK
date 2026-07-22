@@ -25,7 +25,7 @@ Phase 9 entry gate is accepted. The active first-party vertical-slice order rema
 | 2 | Descriptor-generated provider and command UI over existing registration/configuration | Generic progress and result presentation | Provider-specific logic in Editor, hidden execution |
 | 3 | Source-artifact manifests and Asset Processor handoff contracts with candidate evidence return | Any generic `ExternalToolHandoff` concept and source-manifest binding | Interchange schema, process execution, publication on failure |
 | 4 | Read-only provider inventory, typed qualification contracts, and Blender Provider Gem discovery | Blender application/add-on identities, compatibility claims, licence and provenance records | Add-on installation or Blender launch |
-| 5 | Interchange schema 1, canonical identity, transformation, loss, lock, package validation, and synthetic fixtures | `manifest.tginterchange.json`; package/asset/revision/binding identities; coordinate/material/animation mapping; loss reports | Native-extension execution or host compatibility claim |
+| 5 | Interchange schema 1, canonical identity, transformation, loss, lock, package validation, pure migration dispatch, public structural schema, and synthetic fixtures | Accepted Schema-1 research plus proposed `CANONICAL_INTERCHANGE_GATE_5_DESIGN.md` and its decisions addendum | Any implementation until the pending authority record is accepted; all services, filesystem, providers, native hosts, runtime, deployment, save, signing, publication, evidence promotion, and compatibility claims |
 | 6 | Separately reviewed Blender native-extension execution through the host supervisor into isolated staging | Exact Blender command and extension behavior; removal/disablement of unsafe DCCsi bootstrap/legacy launch behavior | O3DE publication or Unity execution |
 | 7 | Reviewed `SceneProcessing` activation/binding, O3DE handoff, qualified reverse export, and Blender round-trip evidence | Asset Processor isolation, reverse export, deterministic/tolerance/loss fixtures | Unity provider or runtime behavior |
 | 8 | Unity Provider Gem plus editor-only Unity interchange package for synthetic test projects | Unity Editor profile, final provider/package IDs, dedicated versus user-owned project model, GUID binding, package lock, editor-only assembly boundary | Unity process launch, runtime adapter build, game project access |
@@ -37,6 +37,20 @@ Phase 9 entry gate is accepted. The active first-party vertical-slice order rema
 
 Every focused unit still requires its own design review when it introduces a durable schema, dependency,
 process execution, licence obligation, runtime-facing behavior, or different security boundary.
+
+## Active Gate 5 design state
+
+The Schema-1 research conclusion is merged. The proposed design package is:
+
+```text
+docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN.md
+docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN_DECISIONS.md
+docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_CURRENT_MAIN_RECONCILIATION_2026-07-22.md
+Research/o3de-to-unity-conversion-and-runtime-bridge/gates/GATE_5_IMPLEMENTATION_AUTHORITY_DECISION.md
+```
+
+The authority decision remains pending with Phase 9 entry, design acceptance, and Gate 5 implementation all
+false. Merging design documents or passing documentation validation does not authorize source implementation.
 
 ## Supplied-report crosswalk
 
@@ -52,7 +66,7 @@ process execution, licence obligation, runtime-facing behavior, or different sec
 | Manual local deployment and no-op plugin load | After Gate 13 and the existing deployment/executor gates | Not part of the first authoring slice and not authorized by research |
 | AssetBundle/Addressables generation | Later runtime/asset design after exact target evidence | Remains absent from the first Unity authoring slice |
 | Live preview, hot reload, or IPC | Gate 12 for authoring research; Gate 13 plus runtime review when game-facing | File-backed documents remain authoritative |
-| Mono-first or IL2CPP implementation | Runtime-target decision after exact lawful evidence | No target is currently selected |
+| Mono-first or IL2CPP implementation | Runtime-target decision after exact lawful evidence | A separately governed Mono package does not select a Gate 5 host or grant authoring-interchange authority |
 
 ## Runtime re-entry after Gate 13
 
@@ -82,5 +96,6 @@ log entry does not establish compatibility, permission, safe mutation, cleanup, 
 - A generic execution envelope does not turn `ExecutionAllowed: false` or `BuildAllowed: false` into authority.
 - Provider discovery does not run Unity, Blender, package managers, registry searches, or game scans.
 - Host-side worker cleanup does not own game deployment rollback.
+- A runtime-adapter package or installer execution handoff does not authorize Gate 5 or alter its Core-only scope.
 - Research approval does not authorise Gate 0, satisfy Gate 0 acceptance, satisfy Phase 9 entry, or satisfy any
   later implementation gate. Gate 0 authority comes only from the normative design amendment.

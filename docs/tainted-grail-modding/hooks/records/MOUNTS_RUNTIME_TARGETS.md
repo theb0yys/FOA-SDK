@@ -6,6 +6,7 @@ All seven records are source-only candidates from the pinned Mono project. The s
 
 ```yaml
 hook_id: tg.hook.mounts.vmount-get-player-desired-movement
+title: VMount player desired movement fallback
 status: candidate
 hook_class: method-patch
 domain: mounts-movement-input
@@ -44,6 +45,7 @@ limitations:
 
 ```yaml
 hook_id: tg.hook.mounts.hero-movement-system-init-probe
+title: Hero movement-system initialization probe
 status: candidate
 hook_class: method-patch
 domain: mounts-lifecycle-diagnostics
@@ -82,6 +84,7 @@ limitations:
 
 ```yaml
 hook_id: tg.hook.mounts.vmount-running-velocity-getter
+title: VMount running velocity getter
 status: candidate
 hook_class: method-patch
 domain: mounts-movement
@@ -102,6 +105,7 @@ limitations: [Exact property type and getter frequency are unverified, multiplie
 
 ```yaml
 hook_id: tg.hook.mounts.vmount-turning-velocity-getter
+title: VMount turning velocity getter
 status: candidate
 hook_class: method-patch
 domain: mounts-movement
@@ -122,6 +126,7 @@ limitations: [Exact property type and getter frequency are unverified, multiplie
 
 ```yaml
 hook_id: tg.hook.mounts.mount-hero-seeker-should-teleport-horse
+title: Mount recall teleport decision
 status: candidate
 hook_class: method-patch
 domain: mounts-travel-and-recall
@@ -142,6 +147,7 @@ limitations: [World and scene safety are unverified, native reasons for a false 
 
 ```yaml
 hook_id: tg.hook.mounts.vmount-get-target-forward-speed
+title: VMount target forward speed
 status: candidate
 hook_class: method-patch
 domain: mounts-movement
@@ -162,6 +168,7 @@ limitations: [Exact call frequency and locomotion-pipeline ordering are unverifi
 
 ```yaml
 hook_id: tg.hook.mounts.mount-element-mount-location-marker
+title: Mounted location marker enablement
 status: candidate
 hook_class: method-patch
 domain: mounts-map-and-ui

@@ -70,6 +70,7 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
         automatic,
         (
             "pull_request:",
+            "pull_request_target:",
             "push:",
             "workflow_dispatch:",
             "runs-on: ubuntu-latest",
@@ -77,8 +78,15 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
             "contents: read",
             "timeout-minutes:",
             "run_local_validation.py --keep-going --static-only --skip-source-policy",
+            "Enforce ready-PR obligations",
+            "github.event_name == 'pull_request_target'",
+            "github.event.pull_request.base.sha",
+            "pull-requests: write",
+            "persist-credentials: false",
+            "convertPullRequestToDraft",
+            "github.event_name != 'pull_request_target'",
         ),
-        "Automatic TG SDK static workflow",
+        "Automatic TG SDK workflow",
     )
     reject_fragments(
         automatic,
@@ -87,8 +95,41 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
             "--ctest-build-dir",
             "windows-latest",
             "secrets.",
+            "github.event.pull_request.head.repo",
+            "github.event.pull_request.head.ref",
         ),
-        "Automatic TG SDK static workflow",
+        "Automatic TG SDK workflow",
+    )
+
+    target_job_start = automatic.find("  enforce-obligations:")
+    static_job_start = automatic.find("  static-validation:")
+    if target_job_start < 0 or static_job_start <= target_job_start:
+        raise CiRunnerPolicyError(
+            "Automatic TG SDK workflow does not keep target enforcement before the static job."
+        )
+    privileged_job = automatic[target_job_start:static_job_start]
+    require_fragments(
+        privileged_job,
+        (
+            "github.event.pull_request.base.sha",
+            "validate_pr_obligations.py",
+            "convertPullRequestToDraft",
+        ),
+        "Privileged PR-target job",
+    )
+    reject_fragments(
+        privileged_job,
+        (
+            "run_local_validation.py",
+            "ctest",
+            "cmake",
+            "xvfb-run",
+            "pip install",
+            "npm ",
+            "make ",
+            "lfs: true",
+        ),
+        "Privileged PR-target job",
     )
 
     for relative_path in MANUAL_WORKFLOWS:
@@ -133,6 +174,10 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
     required_policy_fragments = (
         "run_local_validation.py",
         "automatic pull-request static validation",
+        "pull_request_target",
+        "trusted base commit",
+        "returns the pull request to draft",
+        "required status checks",
         "--static-only",
         "--ctest-build-dir",
         "compiled Catalog CTest",
@@ -156,8 +201,8 @@ def main() -> int:
         print(f"CI runner policy validation failed: {error}", file=sys.stderr)
         return 1
     print(
-        "CI runner policy validation passed: automatic static coverage and "
-        "mandatory exact-head host coverage remain separate and explicit."
+        "CI runner policy validation passed: trusted-base PR governance, automatic "
+        "static coverage, and mandatory exact-head host coverage remain separate."
     )
     return 0
 

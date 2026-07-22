@@ -20,23 +20,35 @@ Instead, it consumes already-verified lower-level evidence:
 
 - package payload copy receipt from `PackageCopier/`;
 - process-launch result from `ProcessLauncher/`;
-- elevation result from `ElevationHelper/` when the lifecycle grant explicitly allows it.
+- elevation result from `ElevationHelper/` when the lifecycle grant explicitly allows it;
+- elevated completion observation from `ElevatedCompletionReceipt/` when the lifecycle grant explicitly allows elevated execution evidence.
 
-Install, repair, and upgrade require a verified copy receipt because those operations depend on staged payload evidence. Rollback and uninstall do not require a copy receipt, but every operation requires either process-launch or elevation evidence.
+Install, repair, and upgrade require a verified copy receipt because those operations depend on staged payload evidence. Rollback and uninstall do not require a copy receipt, but every operation requires exactly one execution evidence lane: direct launch result, raw elevation result, or elevated completion observation.
 
 ## Elevated operations
 
-An elevation result proves only that the operating system accepted an explicit elevation request. It does not prove process completion, installer success, or product state mutation. The coordinator therefore records elevated operations as:
+A raw elevation result proves only that the operating system accepted an explicit elevation request. It does not prove process completion, installer success, or product state mutation. If only the raw elevation result is supplied, the coordinator records:
 
 ```text
 elevation-requested-pending-completion-receipt
 ```
 
-A later completion/finalization receipt must close that loop.
+When an authenticated elevated completion observation is supplied, the coordinator finalizes the lifecycle result from the observed elevated helper outcome:
+
+```text
+completed
+blocked-nonzero-return
+blocked-timeout
+blocked-output-limit
+```
+
+The lifecycle result records both that elevation was requested and whether elevated completion was observed. It still does not claim product or game directory mutation; installation-state publication remains a separate gate.
 
 ## Result boundary
 
-A lifecycle result may mark a non-elevated operation as `completed` only when the exact process-launch result reports `return_code = 0` and `timed_out = false`.
+A lifecycle result may mark a non-elevated operation as `completed` only when the exact process-launch result reports `return_code = 0`, `timed_out = false`, and `output_limit_exceeded = false`.
+
+A lifecycle result may mark an elevated operation as `completed` only when the exact elevated completion observation reports `completed = true` and is bound to the same package-engine session and operation.
 
 The result always records the following forbidden side effects as false:
 
@@ -52,4 +64,4 @@ This gate coordinates lifecycle evidence. Installation-state publication remains
 
 ## Security hardening
 
-Lifecycle grants and results are authenticated, one-shot records and every consumed copy, launch, elevation, or bootstrapper-completion receipt is reverified against the same session trust anchor.
+Lifecycle grants and results are authenticated, one-shot records and every consumed copy, launch, elevation, or elevated completion observation is reverified against the same session trust anchor.

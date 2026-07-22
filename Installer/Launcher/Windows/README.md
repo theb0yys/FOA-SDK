@@ -31,11 +31,11 @@ A receipt is review evidence only. It does not copy payloads, install packages, 
 
 The launcher does not resolve a second plan, copy payloads, launch game/runtime processes, request elevation, coordinate lifecycle execution, publish installation state, mutate products, mutate saves, sign artifacts, publish to the network, mutate catalogues, or promote evidence.
 
-Any later installer execution must separately pass through the admission-bound handoff, exact-capability PackageEngine token/session, payload, process/elevation, lifecycle, publication, registry, and editor-readiness gates.
+Any later installer execution must separately pass through the admission-bound handoff, reviewed PackageEngine token/session, payload, process/elevation, lifecycle, publication, registry, and editor-readiness gates.
 
 ## Build locally
 
-Use the CMD entrypoint on Windows. It does not depend on PowerShell script execution policy.
+Use the CMD entrypoint on Windows. It does not depend on script execution policy.
 
 From the repository root:
 
@@ -63,19 +63,7 @@ Installer\Launcher\Windows\build-foa-installer-launcher.cmd -Configuration Relea
 
 The PowerShell script remains available for environments that explicitly allow scripts, but the CMD wrapper is the supported Windows front door.
 
-## CI artifact
-
-The workflow `FOA-SDK Installer Launcher Build` builds the same launcher on `windows-latest` and uploads this artifact:
-
-```text
-FOA-SDK-Installer-win-x64
-```
-
-That artifact contains:
-
-```text
-FOA-SDK-Installer.exe
-```
+Launcher builds and tests remain part of the repository's governed validation surface. A separate unapproved workflow is not required.
 
 ## Run
 

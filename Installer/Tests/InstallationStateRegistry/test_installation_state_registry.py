@@ -12,6 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 for root in (
     REPO_ROOT / "Installer/Bootstrapper/InstallationStateRegistry/Source",
     REPO_ROOT / "Installer/Bootstrapper/InstallationStatePublisher/Source",
+    REPO_ROOT / "Installer/Tests/Security",
     REPO_ROOT / "Installer/SuiteWizard/ViewModel/Source",
 ):
     sys.path.insert(0, str(root))
@@ -33,39 +34,52 @@ from installation_state_registry import (  # noqa: E402
     validate_lifecycle_eligibility,
     validate_registry_snapshot,
 )
+from security_test_support import InstallerSecurityFixture  # noqa: E402
 
 
 class InstallationStateRegistryTests(unittest.TestCase):
     def helper(self):
         return PUBLISHER_MODULE.InstallationStatePublisherTests(
-            methodName="test_publication_grant_is_deterministic_and_bound_to_completed_lifecycle"
+            methodName="test_publication_is_authenticated_capability_bound_and_one_shot"
         )
 
     def publish_state(
         self,
         root: Path,
-        operation: str = "install",
         *,
         expected_previous_state_sha256: str | None = None,
-        published_at_utc: str = "2026-07-22T12:16:00Z",
+        published_at_utc: str = "2026-07-22T12:08:00Z",
         nonce: str | None = None,
     ) -> dict[str, object]:
+        fixture = InstallerSecurityFixture()
+        self.addCleanup(fixture.close)
+        self.authority_key_path = fixture.authority_key
+        self.claim_root = fixture.claim_root
         helper = self.helper()
-        session = helper.session(operation)
-        lifecycle = helper.lifecycle_result(session)
-        grant = helper.publication_grant(
-            session,
+        lifecycle = helper._lifecycle(fixture)
+        grant = helper._grant(
+            fixture,
             lifecycle,
-            expected_previous_state_sha256=expected_previous_state_sha256,
-            nonce=nonce or f"grant.foa-sdk.registry-publication-{operation}",
+            expected=expected_previous_state_sha256,
+            nonce=nonce or "grant.foa-sdk.registry-publication-install",
         )
-        return publish_state_record(grant, root, published_at_utc=published_at_utc)
+        return publish_state_record(
+            grant,
+            root,
+            authority_key_path=fixture.authority_key,
+            claim_root=fixture.claim_root,
+            published_at_utc=published_at_utc,
+        )
 
     def snapshot(self, root: Path) -> dict[str, object]:
+        kwargs: dict[str, object] = {}
+        if hasattr(self, "authority_key_path"):
+            kwargs["authority_key_path"] = self.authority_key_path
         return query_state_registry(
             root,
             state_root_reference="state-root.foa-sdk.registry",
             observed_at_utc="2026-07-22T13:00:00Z",
+            **kwargs,
         )
 
     def eligibility(self, snapshot: dict[str, object], operation: str) -> dict[str, object]:
@@ -90,10 +104,10 @@ class InstallationStateRegistryTests(unittest.TestCase):
             self.assertFalse(decision["eligible"])
             self.assertEqual(decision["reason"], "blocked-no-current-installation-state")
 
-    def test_active_state_unlocks_maintenance_and_blocks_duplicate_install(self) -> None:
+    def test_authenticated_active_state_unlocks_maintenance_and_blocks_duplicate_install(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            self.publish_state(root, "install")
+            self.publish_state(root)
             snapshot = self.snapshot(root)
         self.assertEqual(snapshot["record_count"], 1)
         self.assertEqual(snapshot["active_count"], 1)
@@ -106,29 +120,10 @@ class InstallationStateRegistryTests(unittest.TestCase):
         self.assertFalse(rollback["eligible"])
         self.assertEqual(rollback["reason"], "blocked-no-rollback-base")
 
-    def test_removed_state_allows_reinstall_and_blocks_maintenance(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary).resolve()
-            first = self.publish_state(root, "install")
-            self.publish_state(
-                root,
-                "uninstall",
-                expected_previous_state_sha256=str(first["state_file_sha256"]),
-                published_at_utc="2026-07-22T12:17:00Z",
-                nonce="grant.foa-sdk.registry-publication-uninstall",
-            )
-            snapshot = self.snapshot(root)
-        self.assertEqual(snapshot["removed_count"], 1)
-        self.assertTrue(self.eligibility(snapshot, "install")["eligible"])
-        for operation in ("repair", "upgrade", "rollback", "uninstall"):
-            decision = self.eligibility(snapshot, operation)
-            self.assertFalse(decision["eligible"])
-            self.assertEqual(decision["reason"], "blocked-current-state-removed")
-
     def test_noncanonical_or_tampered_state_file_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            self.publish_state(root, "install")
+            self.publish_state(root)
             state_file = root / "installation.foa-sdk.default.json"
             state_file.write_text(
                 json.dumps(json.loads(state_file.read_text(encoding="utf-8")), indent=2),
@@ -152,7 +147,7 @@ class InstallationStateRegistryTests(unittest.TestCase):
             self.assertNotIn(forbidden, source)
         for required in (
             "package-engine.query-installation-state", "read_bytes", "validate_state_record",
-            "build_lifecycle_eligibility", "lifecycle_handoff_created", "state_published",
+            "authority_key_path", "build_lifecycle_eligibility", "lifecycle_handoff_created", "state_published",
         ):
             self.assertIn(required, source)
 

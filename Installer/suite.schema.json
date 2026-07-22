@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/theb0yys/FOA-SDK/blob/main/Installer/suite.schema.json",
+  "title": "FOA-SDK installer suite manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "suite_id",
+    "display_name",
+    "version",
+    "channel",
+    "packages",
+    "compatibility",
+    "policies",
+    "provenance"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "suite_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$",
+      "maxLength": 128
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "version": {
+      "$ref": "#/$defs/semantic_version"
+    },
+    "channel": {
+      "enum": [
+        "development",
+        "alpha",
+        "beta",
+        "release-candidate",
+        "stable"
+      ]
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "package_id",
+          "selection",
+          "order"
+        ],
+        "properties": {
+          "package_id": {
+            "$ref": "#/$defs/namespaced_id"
+          },
+          "selection": {
+            "enum": [
+              "required",
+              "default",
+              "optional"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "feature_ids": {
+            "type": "array",
+            "maxItems": 128,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/namespaced_id"
+            }
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "feature_id",
+          "display_name",
+          "package_ids"
+        ],
+        "properties": {
+          "feature_id": {
+            "$ref": "#/$defs/namespaced_id"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "package_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/namespaced_id"
+            }
+          }
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platforms",
+        "architectures"
+      ],
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "windows"
+            ]
+          }
+        },
+        "architectures": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "x86_64"
+            ]
+          }
+        },
+        "minimum_os_version": {
+          "type": "string",
+          "maxLength": 64
+        }
+      }
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "network_allowed",
+        "elevation_allowed",
+        "unreviewed_packages_allowed",
+        "silent_install_allowed"
+      ],
+      "properties": {
+        "network_allowed": {
+          "type": "boolean"
+        },
+        "elevation_allowed": {
+          "type": "boolean"
+        },
+        "unreviewed_packages_allowed": {
+          "const": false
+        },
+        "silent_install_allowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    }
+  },
+  "$defs": {
+    "semantic_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+      "maxLength": 128
+    },
+    "namespaced_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$",
+      "maxLength": 128
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_repository",
+        "source_commit",
+        "reviewed_by",
+        "reviewed_at_utc"
+      ],
+      "properties": {
+        "source_repository": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 512
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "reviewed_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "reviewed_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      }
+    }
+  }
+}

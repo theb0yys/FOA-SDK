@@ -51,6 +51,45 @@ class RepositoryStructureContractTests(unittest.TestCase):
     def test_reviewed_product_tree_passes(self) -> None:
         contract.validate_paths(valid_tree())
 
+    def test_manifest_backed_installer_suite_passes(self) -> None:
+        paths = valid_tree() | {
+            "Installer/Suites/Developer/suite.json",
+            "Installer/Suites/Developer/Docs/README.md",
+        }
+        contract.validate_paths(paths)
+
+    def test_manifest_backed_installer_package_passes(self) -> None:
+        paths = valid_tree() | {
+            "Installer/Packages/Editor/package.json",
+            "Installer/Packages/Editor/Inventory/files.json",
+        }
+        contract.validate_paths(paths)
+
+    def test_installer_suite_without_manifest_fails(self) -> None:
+        paths = valid_tree() | {"Installer/Suites/Developer/Docs/README.md"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "missing suite.json"):
+            contract.validate_paths(paths)
+
+    def test_installer_package_without_manifest_fails(self) -> None:
+        paths = valid_tree() | {"Installer/Packages/Editor/Inventory/files.json"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "missing package.json"):
+            contract.validate_paths(paths)
+
+    def test_unknown_installer_lane_fails(self) -> None:
+        paths = valid_tree() | {"Installer/Misc/Thing/file.txt"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected installer"):
+            contract.validate_paths(paths)
+
+    def test_loose_installer_lane_file_fails(self) -> None:
+        paths = valid_tree() | {"Installer/Assets/banner.png"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected installer"):
+            contract.validate_paths(paths)
+
+    def test_legacy_gem_installer_path_fails(self) -> None:
+        paths = valid_tree() | {"Gems/TaintedGrailModdingSDK/Installer/CMakeLists.txt"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "legacy Gem-owned installer"):
+            contract.validate_paths(paths)
+
     def test_manifest_backed_plugin_package_passes(self) -> None:
         paths = valid_tree() | {
             "Plugins/Authoring/AvalonAI/plugin.json",
@@ -105,13 +144,13 @@ class RepositoryStructureContractTests(unittest.TestCase):
             contract.validate_paths(paths)
 
     def test_missing_required_path_fails(self) -> None:
-        paths = valid_tree() - {"Plugins/plugin.schema.json"}
+        paths = valid_tree() - {"Installer/suite.schema.json"}
         with self.assertRaisesRegex(contract.RepositoryStructureError, "missing required"):
             contract.validate_paths(paths)
 
     def test_noncanonical_path_fails(self) -> None:
         with self.assertRaisesRegex(contract.RepositoryStructureError, "Non-canonical"):
-            contract.validate_paths(valid_tree() | {"Plugins/../engine.json"})
+            contract.validate_paths(valid_tree() | {"Installer/../engine.json"})
 
 
 if __name__ == "__main__":

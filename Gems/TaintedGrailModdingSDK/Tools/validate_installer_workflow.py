@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate the external-engine Windows SDK installer and artifact workflow contract."""
+"""Validate the external-engine Windows SDK installer and suite-root contract."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ class InstallerWorkflowValidationError(RuntimeError):
 
 
 PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+LEGACY_INSTALLER_ROOT = "Gems/TaintedGrailModdingSDK/Installer"
 
 REQUIRED_FILE_FRAGMENTS = {
     ".github/workflows/tainted-grail-sdk-installer.yml": (
@@ -46,6 +47,7 @@ REQUIRED_FILE_FRAGMENTS = {
         "developer_preview_installer.py archive",
         "developer_preview_installer.py verify-archive",
         "dotnet tool install wix --version 4.0.4",
+        "cmake -S Installer/Packaging/Windows",
         "cpack --config",
         "msiexec.exe",
         "--self-test",
@@ -54,6 +56,31 @@ REQUIRED_FILE_FRAGMENTS = {
         "external-workspace",
         "actions/upload-artifact@v4",
         "unsigned development installer artifacts",
+    ),
+    "Installer/README.md": (
+        "SuiteWizard/",
+        "Bootstrapper/",
+        "Suites/",
+        "Packages/",
+        "Launcher/",
+        "Packaging/",
+        "Generated output belongs beneath the external `foa-build/` root",
+        "A selection never grants game-launch",
+    ),
+    "Installer/suite.schema.json": (
+        '"schema_version"',
+        '"suite_id"',
+        '"packages"',
+        '"unreviewed_packages_allowed"',
+        '"const": false',
+    ),
+    "Installer/package.schema.json": (
+        '"package_id"',
+        '"payload"',
+        '"preserve_external_workspaces"',
+        '"runtime_execution"',
+        '"publication"',
+        '"const": false',
     ),
     "Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py": (
         'ENGINE_NAME = "TaintedGrailFoASDK"',
@@ -76,7 +103,7 @@ REQUIRED_FILE_FRAGMENTS = {
         'subparsers.add_parser("inventory"',
         'subparsers.add_parser("stage"',
     ),
-    "Gems/TaintedGrailModdingSDK/Installer/CMakeLists.txt": (
+    "Installer/Packaging/Windows/CMakeLists.txt": (
         "install(DIRECTORY",
         "INSTALL_MANIFEST.json",
         "tg_manifest_version",
@@ -90,7 +117,7 @@ REQUIRED_FILE_FRAGMENTS = {
         "string(\n    UUID CPACK_WIX_PRODUCT_GUID",
         "include(CPack)",
     ),
-    "Gems/TaintedGrailModdingSDK/Installer/.config/dotnet-tools.json": (
+    "Installer/Packaging/Windows/.config/dotnet-tools.json": (
         '"wix"',
         '"version": "4.0.4"',
     ),
@@ -98,7 +125,11 @@ REQUIRED_FILE_FRAGMENTS = {
         "NAME TaintedGrailModdingEditorLauncher APPLICATION",
         "taintedgrailmoddingsdk_installed_launcher_files.cmake",
     ),
-    "Gems/TaintedGrailModdingSDK/Installer/Source/Windows/InstalledEditorLauncher.cpp": (
+    "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_installed_launcher_files.cmake": (
+        "../../../Installer/Launcher/Windows/InstalledEditorLauncher.cpp",
+        "../../../Installer/Launcher/Windows/InstalledEditorLauncher.rc",
+    ),
+    "Installer/Launcher/Windows/InstalledEditorLauncher.cpp": (
         "INSTALL_MANIFEST.json",
         "TaintedGrailModdingEditor",
         "--project-path",
@@ -152,12 +183,18 @@ def validate_installer_workflow(repo_root: Path) -> None:
         "cmake -S .",
         "python scripts/license_scanner",
         "${{ github.workspace }}/build",
+        LEGACY_INSTALLER_ROOT,
     )
     for fragment in forbidden:
         if fragment in workflow:
             raise InstallerWorkflowValidationError(
                 f"Installer workflow contains forbidden automatic/product-root behavior {fragment!r}."
             )
+
+    if (repo_root / LEGACY_INSTALLER_ROOT).exists():
+        raise InstallerWorkflowValidationError(
+            f"Legacy installer source root still exists: {LEGACY_INSTALLER_ROOT}."
+        )
 
     runner = read_text(repo_root / "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py")
     for fragment in (
@@ -180,7 +217,7 @@ def main() -> int:
     except InstallerWorkflowValidationError as exc:
         print(f"Installer workflow validation failed: {exc}", file=sys.stderr)
         return 1
-    print("External-engine installer workflow validation passed.")
+    print("External-engine installer and suite-root validation passed.")
     return 0
 
 

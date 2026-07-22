@@ -6,6 +6,7 @@ This family contains one initialization postfix and two separate patches on `Sea
 
 ```yaml
 hook_id: tg.hook.economy.search-action-on-initialize-live
+title: Search-action initialization live lane
 status: candidate
 hook_class: method-patch
 domain: containers-loot-and-economy
@@ -29,6 +30,7 @@ limitations:
 
 ```yaml
 hook_id: tg.hook.economy.search-action-show-container-contents-live-prefix
+title: Show-container live prefix
 status: candidate
 hook_class: method-patch
 domain: containers-loot-and-economy
@@ -49,6 +51,7 @@ limitations: [Exact arguments and original method semantics are unresolved, rule
 
 ```yaml
 hook_id: tg.hook.economy.search-action-show-container-contents-diagnostics-postfix
+title: Show-container diagnostics postfix
 status: candidate
 hook_class: method-patch
 domain: containers-loot-and-economy

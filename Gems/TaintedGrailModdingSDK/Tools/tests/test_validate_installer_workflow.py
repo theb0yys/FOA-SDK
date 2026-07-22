@@ -19,6 +19,7 @@ if str(TOOLS_ROOT) not in sys.path:
 
 from run_local_validation import VALIDATORS
 from validate_installer_workflow import (
+    LEGACY_INSTALLER_ROOT,
     REQUIRED_FILE_FRAGMENTS,
     InstallerWorkflowValidationError,
     validate_installer_workflow,
@@ -35,11 +36,16 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
         runner = repo / "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
         runner.parent.mkdir(parents=True, exist_ok=True)
         runner.write_text(
-            '"validate_installer_workflow.py"\n'
-            "resolve_engine_root\n"
-            "source_policy_engine_root\n"
-            "Gems/ExternalToolchain\n"
-            "Gems/TaintedGrailModdingSDK\n",
+            "\n".join(
+                (
+                    '"validate_installer_workflow.py"',
+                    "resolve_engine_root",
+                    "source_policy_engine_root",
+                    "Gems/ExternalToolchain",
+                    "Gems/TaintedGrailModdingSDK",
+                )
+            )
+            + "\n",
             encoding="utf-8",
         )
         return repo
@@ -73,18 +79,36 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             ):
                 validate_installer_workflow(repo)
 
+    def test_legacy_installer_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            legacy = repo / LEGACY_INSTALLER_ROOT / "CMakeLists.txt"
+            legacy.parent.mkdir(parents=True, exist_ok=True)
+            legacy.write_text("legacy\n", encoding="utf-8")
+            with self.assertRaisesRegex(InstallerWorkflowValidationError, "Legacy installer source root"):
+                validate_installer_workflow(repo)
+
     def test_installer_validator_is_in_authoritative_gate(self) -> None:
         self.assertIn("validate_installer_workflow.py", VALIDATORS)
 
-    def test_launcher_source_is_owned_by_installer_component(self) -> None:
-        installer_source = (
+    def test_launcher_source_is_owned_by_installer_root(self) -> None:
+        installer_source = "Installer/Launcher/Windows/InstalledEditorLauncher.cpp"
+        legacy_installer_source = (
             "Gems/TaintedGrailModdingSDK/Installer/Source/Windows/InstalledEditorLauncher.cpp"
         )
         legacy_core_source = (
             "Gems/TaintedGrailModdingSDK/Code/Source/Platform/Windows/InstalledEditorLauncher.cpp"
         )
         self.assertIn(installer_source, REQUIRED_FILE_FRAGMENTS)
+        self.assertNotIn(legacy_installer_source, REQUIRED_FILE_FRAGMENTS)
         self.assertNotIn(legacy_core_source, REQUIRED_FILE_FRAGMENTS)
+
+    def test_packaging_project_is_owned_by_installer_root(self) -> None:
+        self.assertIn("Installer/Packaging/Windows/CMakeLists.txt", REQUIRED_FILE_FRAGMENTS)
+        self.assertNotIn(
+            "Gems/TaintedGrailModdingSDK/Installer/CMakeLists.txt",
+            REQUIRED_FILE_FRAGMENTS,
+        )
 
 
 if __name__ == "__main__":

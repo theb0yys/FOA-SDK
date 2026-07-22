@@ -1,9 +1,10 @@
 # Claim Register
 
-Baseline: `92aa29960bab92d646c464ae48b8cf09d881a436`, observed 20 July 2026.
+Original intake baseline: `92aa29960bab92d646c464ae48b8cf09d881a436`, observed 20 July 2026.
 
-No claim state in this register grants implementation, compatibility, execution, deployment, runtime, save,
-licensing, or publication authority.
+Current reconciliation baseline: `8fb3f0a729e4be4e513ba896ba52708a73d03eae`, observed 22 July 2026. Earlier rows retain their original evidence scope; later reconciliation rows supersede only the claims they name.
+
+No claim state in this register grants implementation, compatibility, execution, deployment, runtime, save, licensing, or publication authority.
 
 | ID | Claim | Classification | State | Sources | Gate consequence |
 | --- | --- | --- | --- | --- | --- |
@@ -32,7 +33,7 @@ licensing, or publication authority.
 | `CLM-UNITY-003` | Executing Unity with `-version` is part of current read-only provider discovery | Boundary assertion | `contradicted` | `SRC-REPO-009` | Executable interrogation belongs to the later execution gate |
 | `CLM-UNITY-004` | A persistent, version-locked conversion project will preserve deterministic GUID bindings | Architecture hypothesis | `unverified` | `SRC-INPUT-001`, `SRC-UNITY-002` | Define retained `.meta`/binding lifecycle and test clean rebuilds and renames |
 | `CLM-UNITY-005` | The IDs `unity.foa.conversion` and `com.foa.conversion` are accepted identities | Naming assertion | `unverified` | `SRC-INPUT-001`, `SRC-REPO-003` | Resolve once at Gate 8; current design candidates remain `foa.unity-editor` and `com.foa.sdk.interchange` |
-| `CLM-RUNTIME-001` | Exact FoA build, branch, Unity player, runtime target, assembly layout, BepInEx version, and content-loading model are known | Runtime-profile assertion | `contradicted` | `SRC-INPUT-001` | They remain blockers before runtime implementation |
+| `CLM-RUNTIME-001` | Exact FoA build, branch, Unity player, runtime target, assembly layout, BepInEx version, and content-loading model are known for the active target | Runtime-profile assertion | `contradicted` | `SRC-INPUT-001` | Active target selection remains blocked; see current route-evidence reconciliation rows below |
 | `CLM-RUNTIME-002` | Public community reports prove default IL2CPP and a separate Mono branch | Game-specific assertion | `unverified` | Opaque report citations only | Community observations cannot select a runtime target |
 | `CLM-RUNTIME-003` | BepInEx compilation, manual deployment, and no-op plugin load belong in the first authoring slice | Ordering assertion | `contradicted` | `SRC-REPO-002`–`SRC-REPO-005`, `SRC-REPO-011`–`SRC-REPO-014` | Route after Gate 13 and existing build/deployment/executor gates |
 | `CLM-RUNTIME-004` | A Unity Editor interchange package should build or contain the FoA runtime adapter | Ownership assertion | `contradicted` | `SRC-REPO-003` | Runtime adapter build/package remains a separate reviewed component |
@@ -45,3 +46,18 @@ licensing, or publication authority.
 | `CLM-QUAL-001` | C# compiler determinism proves a Unity conversion project or mod package is byte-identical | Determinism assertion | `contradicted` | `SRC-MS-001` | Compiler determinism covers scoped compiler inputs, not the whole toolchain |
 | `CLM-QUAL-002` | Live IPC or hot loading may precede the file-backed qualification path | Ordering assertion | `contradicted` | `SRC-REPO-003`, `SRC-REPO-008` | IPC remains later research and cannot replace durable file authority |
 | `CLM-QUAL-003` | Unity AssetBundle constraints establish that FoA accepts an SDK-produced bundle | Target-specific inference | `contradicted` | `SRC-UNITY-009` | The official format constraints do not establish FoA's loading model; bundle work remains deferred |
+
+## Current reconciliation claims
+
+| ID | Claim | Classification | State | Sources | Gate consequence |
+| --- | --- | --- | --- | --- | --- |
+| `CLM-REPO-004` | Current `main` at the 22 July 2026 reconciliation is `8fb3f0a729e4be4e513ba896ba52708a73d03eae` | Repository observation | `repository-observed` | `SRC-REPO-019`, `SRC-REPO-020` | Reconcile later drift before implementation or new exact-head claims |
+| `CLM-REPO-005` | The eight commits from `195f5c15f0c59d47bd54e661b37d7457af9d1d95` to `8fb3f0a729e4be4e513ba896ba52708a73d03eae` change Suite Wizard catalogue discovery, installer documentation, and tests but do not change porting or runtime-route contracts | Repository observation | `repository-observed` | `SRC-REPO-020` | Correct the baseline without discarding the porting-method conclusion |
+| `CLM-ARCH-004` | A canonical interchange package combined with separate shared domain documents and format-specific payloads is the research-selected primary porting method | Comparative research conclusion | `repository-observed` | `SRC-REPO-003`, `SRC-REPO-019`, `SRC-REPO-021`, `SRC-REPO-025` | Advance to Gate 5 schema and identity research; no implementation authority follows |
+| `CLM-INT-006` | Direct O3DE-native to Unity-native conversion must not become the primary identity or schema authority | Boundary conclusion | `repository-observed` | `SRC-REPO-003`, `SRC-REPO-021`, `CLM-INT-004`, `CLM-INT-005` | Native IDs remain bindings; schema and identity stay engine-neutral |
+| `CLM-RUNTIME-007` | The repository records an exact Mono route observation for FoA `1.23.401`, branch `mono`, Unity `6000.0.64f1`, BepInEx `5.4.23.3`, and framework `0.1.33` | Repository fact | `repository-observed` | `SRC-REPO-022` | May inform later exact-target review but grants no build, deployment, or execution authority |
+| `CLM-RUNTIME-008` | The repository records an exact IL2CPP route observation for FoA `1.23.401`, branch `il2cpp`, Unity `6000.0.64f1`, BepInEx `6.0.0-be.735`, and framework `0.1.36` | Repository fact | `repository-observed` | `SRC-REPO-022` | May inform later exact-target review but grants no build, deployment, or execution authority |
+| `CLM-RUNTIME-009` | Exact pinned route observations are distinct from selecting or verifying an active operator installation and requested runtime capability | Evidence-scope rule | `repository-observed` | `SRC-REPO-022`, `SRC-REPO-023`, `SRC-REPO-024` | A later bounded active-profile capture and explicit target decision remain required |
+| `CLM-RUNTIME-010` | Both current routes block adapter build, deployment, execution, game API access, runtime mutation, and save access; the IL2CPP route also blocks feature-tested gameplay | Repository fact | `repository-observed` | `SRC-REPO-022` | Route evidence cannot be promoted into executable authority |
+| `CLM-RUNTIME-011` | The broad statement that all runtime facts are unknown is superseded: exact route observations exist, while active target selection, content-loading evidence, dependency licensing, and executable authority remain unresolved | Reconciliation conclusion | `repository-observed` | `SRC-REPO-022`–`SRC-REPO-024` | Use the route-versus-active-profile distinction in all later research and design |
+| `CLM-NEXT-001` | The next focused research question is the minimum canonical interchange schema and identity model | Research sequencing conclusion | `repository-observed` | `CLM-ARCH-004`, `CLM-INT-006`, `SRC-REPO-025` | Produce schema field inventory, identity state machine, loss taxonomy, validation rules, migration consequences, and fixtures before provider execution research advances |

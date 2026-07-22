@@ -219,13 +219,34 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+      O3DE_ROOT: "${{ runner.temp }}/o3de-policy"
+      FOA_BUILD_ROOT: "${{ runner.temp }}/foa-build/tg-sdk-developer-preview-0-windows-profile"
     steps:
-      - name: Check out workflow commit
+      - name: Check out exact pull-request head
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Check out exact non-PR commit
+        if: github.event_name != 'pull_request'
         uses: actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Report Windows Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Report Windows prerequisite environment
         shell: pwsh
-        run: python --version
+        run: |
+          python --version
+          Write-Output "O3DE_ROOT=$env:O3DE_ROOT"
+          Write-Output "FOA_BUILD_ROOT=$env:FOA_BUILD_ROOT"

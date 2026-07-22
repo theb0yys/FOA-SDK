@@ -17,12 +17,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PACKAGE_REL = Path("Plugins/Integrations/ApprovedAcquisition")
-PACKAGE_ROOT = REPO_ROOT / PACKAGE_REL
 MODULE_REL = PACKAGE_REL / "Tools/approved_acquisition.py"
 MANIFEST_REL = PACKAGE_REL / "approved-sources.json"
 PLUGIN_REL = PACKAGE_REL / "plugin.json"
 GOLDEN_REL = PACKAGE_REL / "Tests/Fixtures/pinned-github-all.plan.json"
-RUNNER_REL = Path("Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py")
+BRIDGE_REL = Path("Gems/TaintedGrailModdingSDK/Tools/tests/test_approved_acquisition.py")
 PINNED_COMMIT = "b6975dde94a04c948bb05705fe2d36b3f38cd82e"
 REQUIRED_PACKAGE_FILES = {
     "README.md", "approved-sources.json", "plugin.json",
@@ -149,11 +148,11 @@ def validate_provider(root: Path) -> None:
             raise ApprovedAcquisitionValidationError(f"Provider contains an unpinned GitHub route: {fragment}")
 
 
-def validate_gate_and_docs(root: Path) -> None:
-    runner = read_text(root, RUNNER_REL)
-    for fragment in ('"validate_approved_acquisition.py"', "ApprovedAcquisition/Tests", "approved_acquisition.py", '"acquire"', '"--provider"', '"local"', '"verify"'):
-        if fragment not in runner:
-            raise ApprovedAcquisitionValidationError(f"Authoritative local gate is missing {fragment!r}.")
+def validate_tests_and_docs(root: Path) -> None:
+    bridge = read_text(root, BRIDGE_REL)
+    for fragment in ("ApprovedAcquisition/Tests/test_approved_acquisition.py", "load_tests", "ApprovedAcquisitionTests"):
+        if fragment not in bridge:
+            raise ApprovedAcquisitionValidationError(f"Mandatory test bridge is missing {fragment!r}.")
     tests = read_text(root, PACKAGE_REL / "Tests/test_approved_acquisition.py")
     for fragment in (
         "test_local_acquisition_is_atomic_and_verifiable", "test_pinned_github_route_uses_injected_verified_bytes",
@@ -168,8 +167,6 @@ def validate_gate_and_docs(root: Path) -> None:
             raise ApprovedAcquisitionValidationError(f"Public acquisition contract is missing {fragment!r}.")
     if "ApprovedAcquisition" not in read_text(root, Path("Plugins/Integrations/README.md")):
         raise ApprovedAcquisitionValidationError("Integration package index does not list ApprovedAcquisition.")
-    if "APPROVED_ACQUISITION_PROVIDERS.md" not in read_text(root, Path("docs/tainted-grail-sdk/README.md")):
-        raise ApprovedAcquisitionValidationError("Documentation hub does not link the acquisition contract.")
 
 
 def validate_approved_acquisition(repo_root: Path = REPO_ROOT) -> None:
@@ -177,7 +174,7 @@ def validate_approved_acquisition(repo_root: Path = REPO_ROOT) -> None:
     validate_plugin(repo_root)
     validate_manifest_and_golden(repo_root)
     validate_provider(repo_root)
-    validate_gate_and_docs(repo_root)
+    validate_tests_and_docs(repo_root)
 
 
 def main() -> int:

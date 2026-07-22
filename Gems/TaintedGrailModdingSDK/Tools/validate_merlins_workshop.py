@@ -302,7 +302,7 @@ def validate_provider_source(root: Path) -> None:
 
 
 def validate_cpp_registry(root: Path) -> None:
-    source = read_text(root, CPP_REL)
+    source = read_text(root, CPP_REL).replace("\r\n", "\n").replace("\r", "\n")
     for fragment in (
         'PinnedMerlinWorkshopCommit =',
         f'"{PINNED_COMMIT}"',

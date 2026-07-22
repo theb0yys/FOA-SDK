@@ -277,11 +277,11 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $buildDir = Join-Path $env:RUNNER_TEMP "foa-gate5-canonical-interchange"
-          cmake --preset windows-vs-unity `
-            -S "$env:GITHUB_WORKSPACE\o3de" `
-            -B $buildDir `
-            -A x64 `
-            "-DLY_PROJECTS=$env:GITHUB_WORKSPACE\TaintedGrailModdingEditor"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
+            --engine-root "$env:GITHUB_WORKSPACE\o3de" `
+            --build-dir $buildDir 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "configure.log")
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build Core-only canonical interchange test target
@@ -289,10 +289,12 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $buildDir = Join-Path $env:RUNNER_TEMP "foa-gate5-canonical-interchange"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
           cmake --build $buildDir `
             --config "$env:CONFIGURATION" `
             --target "$env:TEST_TARGET" `
-            --parallel 2
+            --parallel 2 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "build.log")
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run canonical interchange compiled tests
@@ -300,11 +302,13 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $buildDir = Join-Path $env:RUNNER_TEMP "foa-gate5-canonical-interchange"
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "gate5-canonical-interchange-evidence"
           ctest --test-dir $buildDir `
             -C "$env:CONFIGURATION" `
             --output-on-failure `
             --no-tests=error `
-            -R "$env:TEST_PATTERN"
+            -R "$env:TEST_PATTERN" 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "ctest.log")
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Write exact-head compiled success receipt
@@ -332,7 +336,9 @@ jobs:
         with:
           name: gate5-canonical-interchange-compiled-${{ github.run_id }}
           path: |
-            ${{ runner.temp }}\gate5-canonical-interchange-evidence\*.json
+            ${{ runner.temp }}\gate5-canonical-interchange-evidence\*
+            ${{ runner.temp }}\foa-gate5-canonical-interchange\CMakeCache.txt
+            ${{ runner.temp }}\foa-gate5-canonical-interchange\CMakeFiles\CMakeConfigureLog.yaml
             ${{ runner.temp }}\foa-gate5-canonical-interchange\Testing\Temporary\LastTest.log
             ${{ runner.temp }}\foa-gate5-canonical-interchange\Testing\Temporary\LastTestsFailed.log
           if-no-files-found: error

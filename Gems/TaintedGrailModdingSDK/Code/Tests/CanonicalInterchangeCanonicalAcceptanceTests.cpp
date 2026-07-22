@@ -77,6 +77,32 @@ namespace TaintedGrailModdingSDK::Interchange
         EXPECT_LT(assetPayload, documentPayload);
     }
 
+    TEST(CanonicalInterchangeCanonicalAcceptanceTests, CorrectedManifestDigestBindsDeclaredPackageInput)
+    {
+        const AZStd::string bytes = DocumentsExampleBytes();
+        ASSERT_FALSE(bytes.empty());
+
+        CanonicalInterchangeManifestV1 manifest;
+        ASSERT_TRUE(ParseCanonicalManifestV1(bytes, manifest).IsValid());
+        ASSERT_TRUE(manifest.m_displayName.empty());
+
+        const AZStd::string canonical = SerializeCanonicalManifestV1(manifest);
+        ASSERT_EQ(bytes, canonical);
+        const Sha256DigestV1 manifestDigest =
+            CalculateCanonicalBytesDigestV1(canonical);
+        EXPECT_EQ(manifestDigest, CalculateCanonicalManifestDigestV1(manifest));
+
+        const AZStd::string packageInput =
+            SerializeDeclaredPackageFingerprintInputV1(manifest);
+        ASSERT_FALSE(packageInput.empty());
+        const AZStd::string digestPrefix =
+            AZStd::string("{\"manifest_digest\":\"") + manifestDigest.m_hex + "\"";
+        EXPECT_TRUE(packageInput.starts_with(digestPrefix));
+        EXPECT_EQ(
+            CalculateCanonicalBytesDigestV1(packageInput),
+            CalculateDeclaredPackageFingerprintV1(manifest));
+    }
+
     TEST(CanonicalInterchangeCanonicalAcceptanceTests, PublicDocumentsExampleRoundTripsThroughCpp)
     {
         const AZStd::string bytes = DocumentsExampleBytes();

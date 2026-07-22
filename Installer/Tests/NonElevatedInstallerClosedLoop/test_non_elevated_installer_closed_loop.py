@@ -68,6 +68,7 @@ class NonElevatedInstallerClosedLoopTests(unittest.TestCase):
             )
             snapshot = query_state_registry(
                 state_root,
+                authority_key_path=fixture.authority_key,
                 state_root_reference="state-root.foa-sdk.closed-loop",
                 observed_at_utc="2026-07-22T12:09:00Z",
             )

@@ -20,7 +20,12 @@ if str(TOOLS_ROOT) not in sys.path:
 import validate_plugin_packages as contract
 
 
-def manifest(extension_id: str, category: str, *, dependencies: list[str] | None = None) -> dict:
+def manifest(
+    extension_id: str,
+    category: str,
+    *,
+    dependencies: list[str] | None = None,
+) -> dict:
     return {
         "schema_version": 1,
         "id": extension_id,
@@ -35,7 +40,9 @@ def manifest(extension_id: str, category: str, *, dependencies: list[str] | None
         "compatibility": {
             "game_versions": ["1.23.401"],
             "branches": ["mono"],
-            "runtime_targets": ["editor-only" if category == "authoring" else "mono"],
+            "runtime_targets": [
+                "editor-only" if category == "authoring" else "mono"
+            ],
         },
         "provenance": {
             "origin": "owner/repository",
@@ -73,7 +80,9 @@ class PluginPackageContractTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (gem_root / "CMakeLists.txt").write_text("project(Test)\n", encoding="utf-8")
+            (gem_root / "CMakeLists.txt").write_text(
+                "project(Test)\n", encoding="utf-8"
+            )
             external.append(f"../Plugins/{category}/{name}/Gem")
             gems.append(gem_name)
 
@@ -94,10 +103,19 @@ class PluginPackageContractTests(unittest.TestCase):
             root = Path(temporary)
             self.make_tree(
                 root,
-                [("Authoring", "RoadAtlas", manifest("extension.road-atlas", "authoring"))],
+                [
+                    (
+                        "Authoring",
+                        "RoadAtlas",
+                        manifest("extension.road-atlas", "authoring"),
+                    )
+                ],
             )
             packages = contract.validate_plugin_packages(root)
-            self.assertEqual([package.extension_id for package in packages], ["extension.road-atlas"])
+            self.assertEqual(
+                [package.extension_id for package in packages],
+                ["extension.road-atlas"],
+            )
 
     def test_project_owned_package_may_use_project_owned_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -111,7 +129,10 @@ class PluginPackageContractTests(unittest.TestCase):
             }
             self.make_tree(root, [("Authoring", "LocalTooling", payload)])
             packages = contract.validate_plugin_packages(root)
-            self.assertEqual([package.extension_id for package in packages], ["extension.local-tooling"])
+            self.assertEqual(
+                [package.extension_id for package in packages],
+                ["extension.local-tooling"],
+            )
 
     def test_integration_package_may_leave_game_branch_compatibility_unbound(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -121,7 +142,10 @@ class PluginPackageContractTests(unittest.TestCase):
             payload["compatibility"]["branches"] = []
             self.make_tree(root, [("Integrations", "Integration", payload)])
             packages = contract.validate_plugin_packages(root)
-            self.assertEqual([package.extension_id for package in packages], ["extension.integration"])
+            self.assertEqual(
+                [package.extension_id for package in packages],
+                ["extension.integration"],
+            )
 
     def test_unknown_manifest_key_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -137,7 +161,13 @@ class PluginPackageContractTests(unittest.TestCase):
             root = Path(temporary)
             self.make_tree(
                 root,
-                [("Authoring", "RoadAtlas", manifest("extension.road-atlas", "integration"))],
+                [
+                    (
+                        "Authoring",
+                        "RoadAtlas",
+                        manifest("extension.road-atlas", "integration"),
+                    )
+                ],
             )
             with self.assertRaisesRegex(contract.PluginPackageError, "category"):
                 contract.validate_plugin_packages(root)
@@ -148,8 +178,30 @@ class PluginPackageContractTests(unittest.TestCase):
             payload = manifest("extension.road-atlas", "authoring")
             payload["capabilities"] = ["runtime.execute"]
             self.make_tree(root, [("Authoring", "RoadAtlas", payload)])
-            with self.assertRaisesRegex(contract.PluginPackageError, "unknown governed"):
+            with self.assertRaisesRegex(
+                contract.PluginPackageError, "unknown governed"
+            ):
                 contract.validate_plugin_packages(root)
+
+    def test_mono_capabilities_are_governed_for_the_exact_owner(self) -> None:
+        capabilities = sorted(contract.CAPABILITY_OWNERS)
+        self.assertEqual(
+            contract.validate_capabilities(
+                "extension.foa-mono-runtime-adapter",
+                capabilities,
+            ),
+            capabilities,
+        )
+
+    def test_mono_capabilities_cannot_be_borrowed_by_another_extension(self) -> None:
+        with self.assertRaisesRegex(
+            contract.PluginPackageError,
+            "owned by another extension",
+        ):
+            contract.validate_capabilities(
+                "extension.road-atlas",
+                ["runtime.mono.build-plan"],
+            )
 
     def test_missing_entry_point_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -157,7 +209,9 @@ class PluginPackageContractTests(unittest.TestCase):
             payload = manifest("extension.road-atlas", "authoring")
             payload["entry_points"] = {"o3de_gems": ["Missing"]}
             self.make_tree(root, [("Authoring", "RoadAtlas", payload)])
-            with self.assertRaisesRegex(contract.PluginPackageError, "does not exist"):
+            with self.assertRaisesRegex(
+                contract.PluginPackageError, "does not exist"
+            ):
                 contract.validate_plugin_packages(root)
 
     def test_dependency_cycle_fails(self) -> None:
@@ -166,8 +220,24 @@ class PluginPackageContractTests(unittest.TestCase):
             self.make_tree(
                 root,
                 [
-                    ("Authoring", "Alpha", manifest("extension.alpha", "authoring", dependencies=["extension.beta"])),
-                    ("Authoring", "Beta", manifest("extension.beta", "authoring", dependencies=["extension.alpha"])),
+                    (
+                        "Authoring",
+                        "Alpha",
+                        manifest(
+                            "extension.alpha",
+                            "authoring",
+                            dependencies=["extension.beta"],
+                        ),
+                    ),
+                    (
+                        "Authoring",
+                        "Beta",
+                        manifest(
+                            "extension.beta",
+                            "authoring",
+                            dependencies=["extension.alpha"],
+                        ),
+                    ),
                 ],
             )
             with self.assertRaisesRegex(contract.PluginPackageError, "cycle"):
@@ -187,13 +257,22 @@ class PluginPackageContractTests(unittest.TestCase):
             root = Path(temporary)
             self.make_tree(
                 root,
-                [("Authoring", "RoadAtlas", manifest("extension.road-atlas", "authoring"))],
+                [
+                    (
+                        "Authoring",
+                        "RoadAtlas",
+                        manifest("extension.road-atlas", "authoring"),
+                    )
+                ],
             )
             project = root / "TaintedGrailModdingEditor/project.json"
             payload = json.loads(project.read_text(encoding="utf-8"))
             payload["gem_names"].remove("RoadAtlasGem")
             project.write_text(json.dumps(payload), encoding="utf-8")
-            with self.assertRaisesRegex(contract.PluginPackageError, "does not deterministically select"):
+            with self.assertRaisesRegex(
+                contract.PluginPackageError,
+                "does not deterministically select",
+            ):
                 contract.validate_plugin_packages(root)
 
 

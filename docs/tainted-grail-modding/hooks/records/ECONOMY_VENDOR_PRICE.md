@@ -2,6 +2,7 @@
 
 ```yaml
 hook_id: tg.hook.economy.trade-utils-price
+title: Vendor price calculation
 status: candidate
 hook_class: method-patch
 domain: vendors-items-and-economy

@@ -25,6 +25,10 @@ CHECKBOX_RE = re.compile(
     r"^\s*-\s*\[(?P<state>[ xX])\].*?"
     r"<!--\s*merge-obligation:(?P<identity>[a-z0-9-]+)\s*-->\s*$"
 )
+HEAD_MARKER_RE = re.compile(
+    r"^\s*<!--\s*merge-head:(?P<sha>[0-9a-f]{40})\s*-->\s*$"
+)
+GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 class PullRequestObligationError(RuntimeError):
@@ -48,12 +52,25 @@ def extract_section(body: str) -> list[str]:
     return section
 
 
-def validate_body(body: str, *, draft: bool) -> None:
+def validate_body(body: str, *, draft: bool, head_sha: str = "") -> None:
     if draft:
         return
+    if GIT_SHA_RE.fullmatch(head_sha) is None:
+        raise PullRequestObligationError(
+            "Ready pull request event is missing a valid 40-character head SHA."
+        )
 
     records: dict[str, bool] = {}
+    recorded_heads: list[str] = []
+    malformed_head_marker = False
     for line in extract_section(body):
+        head_match = HEAD_MARKER_RE.match(line)
+        if head_match:
+            recorded_heads.append(head_match.group("sha"))
+            continue
+        if "merge-head:" in line:
+            malformed_head_marker = True
+
         match = CHECKBOX_RE.match(line)
         if not match:
             continue
@@ -63,6 +80,24 @@ def validate_body(body: str, *, draft: bool) -> None:
                 f"Mandatory merge obligation {identity!r} appears more than once."
             )
         records[identity] = match.group("state").lower() == "x"
+
+    if malformed_head_marker:
+        raise PullRequestObligationError(
+            "Ready pull request body contains a malformed merge-head marker."
+        )
+    if not recorded_heads:
+        raise PullRequestObligationError(
+            "Ready pull request body is missing its exact merge-head marker."
+        )
+    if len(recorded_heads) != 1:
+        raise PullRequestObligationError(
+            "Ready pull request merge-head marker appears more than once."
+        )
+    if recorded_heads[0] != head_sha:
+        raise PullRequestObligationError(
+            "Ready pull request merge obligations are stale: recorded head "
+            f"{recorded_heads[0]} does not match current head {head_sha}."
+        )
 
     missing = [identity for identity in OBLIGATION_IDS if identity not in records]
     if missing:
@@ -94,11 +129,19 @@ def validate_event(event: Mapping[str, object]) -> None:
         raise PullRequestObligationError("pull_request event payload is malformed.")
     body = pull_request.get("body")
     draft = pull_request.get("draft")
+    head = pull_request.get("head")
     if body is None:
         body = ""
-    if not isinstance(body, str) or not isinstance(draft, bool):
-        raise PullRequestObligationError("pull_request body or draft state is malformed.")
-    validate_body(body, draft=draft)
+    if (
+        not isinstance(body, str)
+        or not isinstance(draft, bool)
+        or not isinstance(head, dict)
+        or not isinstance(head.get("sha"), str)
+    ):
+        raise PullRequestObligationError(
+            "pull_request body, draft state, or head identity is malformed."
+        )
+    validate_body(body, draft=draft, head_sha=head["sha"])
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -117,7 +160,10 @@ def main() -> int:
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, PullRequestObligationError) as exc:
         print(f"Pull request obligation validation failed: {exc}", file=sys.stderr)
         return 1
-    print("Pull request mandatory merge obligations are complete or the pull request remains draft.")
+    print(
+        "Pull request mandatory merge obligations are complete for the exact head "
+        "or the pull request remains draft."
+    )
     return 0
 
 

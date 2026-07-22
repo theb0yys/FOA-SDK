@@ -11,9 +11,11 @@ LAUNCHER_ROOT = REPO_ROOT / "Installer" / "Launcher" / "Windows"
 PROJECT = LAUNCHER_ROOT / "FOAInstallerLauncher.csproj"
 PROGRAM = LAUNCHER_ROOT / "Program.cs"
 MANIFEST = LAUNCHER_ROOT / "app.manifest"
-BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.ps1"
+POWERSHELL_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.ps1"
+CMD_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.cmd"
 README = LAUNCHER_ROOT / "README.md"
 QUICK_HOST = REPO_ROOT / "Installer" / "SuiteWizard" / "QuickHost" / "Source" / "quick_installer_host.py"
+LAUNCHER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build-foa-sdk-installer-launcher.yml"
 DISCOVERY_BRIDGE = REPO_ROOT / "Gems" / "TaintedGrailModdingSDK" / "Tools" / "tests" / "test_installer_windows_launcher.py"
 
 
@@ -75,8 +77,19 @@ class WindowsInstallerLauncherTests(unittest.TestCase):
         self.assertNotIn("confirmation_hash_vars", host)
         self.assertNotRegex(host, re.compile(r"\b(password|credential|secret)\b", re.IGNORECASE))
 
-    def test_build_script_publishes_expected_exe(self) -> None:
-        build = BUILD.read_text(encoding="utf-8")
+    def test_cmd_build_entrypoint_publishes_expected_exe_without_powershell_policy(self) -> None:
+        build = CMD_BUILD.read_text(encoding="utf-8")
+        self.assertIn("dotnet publish", build)
+        self.assertIn("FOAInstallerLauncher.csproj", build)
+        self.assertIn("/p:PublishSingleFile=true", build)
+        self.assertIn("/p:AssemblyName=FOA-SDK-Installer", build)
+        self.assertIn("FOA-SDK-Installer.exe", build)
+        self.assertIn("-RuntimeIdentifier", build)
+        self.assertNotIn("Set-ExecutionPolicy", build)
+        self.assertNotIn("powershell", build.lower())
+
+    def test_powershell_build_script_remains_available(self) -> None:
+        build = POWERSHELL_BUILD.read_text(encoding="utf-8")
         self.assertIn("dotnet", build)
         self.assertIn("publish", build)
         self.assertIn("/p:PublishSingleFile=true", build)
@@ -84,12 +97,23 @@ class WindowsInstallerLauncherTests(unittest.TestCase):
         self.assertIn("--self-contained=false", build)
         self.assertIn("SelfContained", build)
 
-    def test_readme_documents_quick_default_and_advanced_review_escape_hatch(self) -> None:
+    def test_launcher_artifact_workflow_builds_and_uploads_exe(self) -> None:
+        workflow = LAUNCHER_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("windows-latest", workflow)
+        self.assertIn("build-foa-installer-launcher.cmd", workflow)
+        self.assertIn("actions/setup-dotnet@v4", workflow)
+        self.assertIn("actions/upload-artifact@v4", workflow)
+        self.assertIn("FOA-SDK-Installer-win-x64", workflow)
+        self.assertIn("FOA-SDK-Installer.exe", workflow)
+
+    def test_readme_documents_cmd_build_artifact_and_quick_default(self) -> None:
         readme = README.read_text(encoding="utf-8")
         self.assertIn("FOA-SDK-Installer.exe", readme)
         self.assertIn("quick installer", readme)
         self.assertIn("one-click", readme)
         self.assertIn("install location", readme.lower())
+        self.assertIn("build-foa-installer-launcher.cmd", readme)
+        self.assertIn("FOA-SDK-Installer-win-x64", readme)
         self.assertIn("--advanced-review", readme)
         self.assertIn("--smoke-test", readme)
         self.assertIn("capability-gated PackageEngine", readme)

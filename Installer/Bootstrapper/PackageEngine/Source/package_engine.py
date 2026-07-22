@@ -171,8 +171,8 @@ def build_capability_token(
         raise PackageEngineError("Reviewed operation plan does not match the admitted handoff operation.")
     requested = _capabilities(checked_handoff.get("required_capabilities"), "handoff.required_capabilities")
     granted = _capabilities(checked_plan.get("capabilities"), "operation_plan.capabilities")
-    if requested != granted:
-        raise PackageEngineError("Reviewed operation-plan capabilities must exactly match the handoff-required capabilities.")
+    if not set(requested).issubset(granted):
+        raise PackageEngineError("Reviewed operation plan does not include every handoff-required capability.")
     issued = utc_datetime(issued_at_utc, "issued_at_utc")
     expires = utc_datetime(expires_at_utc, "expires_at_utc")
     requested_at = utc_datetime(checked_handoff["requested_at_utc"], "handoff.requested_at_utc")

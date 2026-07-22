@@ -60,6 +60,14 @@ jobs:
           if text.count(old_test) != 1:
               raise RuntimeError("Unable to repair the canonical validator unit-test shape.")
           test.write_text(text.replace(old_test, new_test), encoding="utf-8")
+
+          support = Path("Installer/Tests/Security/security_test_support.py")
+          text = support.read_text(encoding="utf-8")
+          old_expiry = '            expires_at_utc="2026-07-22T12:20:00Z",\n'
+          new_expiry = '            expires_at_utc="2026-07-22T12:15:00Z",\n'
+          if text.count(old_expiry) != 1:
+              raise RuntimeError("Unable to repair the authority-proof fixture expiry.")
+          support.write_text(text.replace(old_expiry, new_expiry), encoding="utf-8")
           PY
             git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
             git rm -r Gems/TaintedGrailModdingSDK/Tools/project_wide_security_repair_bundle

@@ -65,8 +65,16 @@ namespace TaintedGrailModdingSDK::Interchange
         EXPECT_EQ(firstBefore, manifest.m_payloads[0].m_payloadId.m_value);
         EXPECT_EQ(secondBefore, manifest.m_payloads[1].m_payloadId.m_value);
         EXPECT_EQ(subjectsBefore, manifest.m_assets[0].m_subjectReferences.size());
-        EXPECT_LT(canonical.find("\"payload_id\":\"payload.asset\""),
-            canonical.find("\"payload_id\":\"payload.document\""));
+
+        const size_t payloadCollection = canonical.find("\"payloads\":[");
+        ASSERT_NE(AZStd::string::npos, payloadCollection);
+        const size_t assetPayload = canonical.find(
+            "\"payload_id\":\"payload.asset\"", payloadCollection);
+        const size_t documentPayload = canonical.find(
+            "\"payload_id\":\"payload.document\"", payloadCollection);
+        ASSERT_NE(AZStd::string::npos, assetPayload);
+        ASSERT_NE(AZStd::string::npos, documentPayload);
+        EXPECT_LT(assetPayload, documentPayload);
     }
 
     TEST(CanonicalInterchangeCanonicalAcceptanceTests, PublicDocumentsExampleRoundTripsThroughCpp)

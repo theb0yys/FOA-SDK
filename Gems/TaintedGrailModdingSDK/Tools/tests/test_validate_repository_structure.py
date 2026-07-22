@@ -41,6 +41,9 @@ def valid_tree() -> set[str]:
             "Research/o3de-to-unity-conversion-and-runtime-bridge/inputs/report.md",
             "TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab",
             "docs/tainted-grail-sdk/ARCHITECTURE.md",
+            "docs/tainted-grail-modding/INFORMATION_ARCHITECTURE.md",
+            "docs/tainted-grail-modding/getting-started/README.md",
+            "docs/tainted-grail-modding/systems/README.md",
         }
     )
     paths.update(contract.ALLOWED_GITHUB_FILES)
@@ -50,6 +53,20 @@ def valid_tree() -> set[str]:
 class RepositoryStructureContractTests(unittest.TestCase):
     def test_reviewed_product_tree_passes(self) -> None:
         contract.validate_paths(valid_tree())
+
+    def test_documentation_hub_roots_are_explicitly_governed(self) -> None:
+        self.assertEqual(
+            contract.ALLOWED_DOC_TREES,
+            {"tainted-grail-sdk", "tainted-grail-modding"},
+        )
+        self.assertEqual(contract.ALLOWED_DOC_ROOT_FILES, {"docs/README.md"})
+        contract.validate_paths(
+            valid_tree()
+            | {
+                "docs/tainted-grail-modding/runtime/README.md",
+                "docs/tainted-grail-modding/reference/README.md",
+            }
+        )
 
     def test_automatic_static_workflow_is_required(self) -> None:
         self.assertIn(
@@ -156,6 +173,11 @@ class RepositoryStructureContractTests(unittest.TestCase):
 
     def test_non_foa_docs_root_fails(self) -> None:
         paths = valid_tree() | {"docs/upstream-engine/building.md"}
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected top-level"):
+            contract.validate_paths(paths)
+
+    def test_loose_docs_root_file_fails(self) -> None:
+        paths = valid_tree() | {"docs/private-notes.md"}
         with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected top-level"):
             contract.validate_paths(paths)
 

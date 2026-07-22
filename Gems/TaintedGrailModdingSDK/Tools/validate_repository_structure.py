@@ -89,6 +89,8 @@ ALLOWED_GITHUB_FILES = {
     ".github/workflows/tainted-grail-sdk-foundation.yml",
     ".github/workflows/tainted-grail-sdk-installer.yml",
 }
+ALLOWED_DOC_ROOT_FILES = {"docs/README.md"}
+ALLOWED_DOC_TREES = {"tainted-grail-sdk", "tainted-grail-modding"}
 REQUIRED_PATHS = {
     ".github/CODEOWNERS",
     AUTOMATIC_STATIC_WORKFLOW,
@@ -116,7 +118,9 @@ REQUIRED_PATHS = {
     "Plugins/Integrations/README.md",
     "Plugins/RuntimeAdapters/README.md",
     "TaintedGrailModdingEditor/project.json",
+    "docs/README.md",
     "docs/tainted-grail-sdk/README.md",
+    "docs/tainted-grail-modding/README.md",
     "Research/o3de-to-unity-conversion-and-runtime-bridge/README.md",
     "o3de.lock.json",
     "README.md",
@@ -252,8 +256,12 @@ def validate_paths(paths: Iterable[str]) -> None:
             plugin_packages.add((category, package))
         elif top == ".github" and path not in ALLOWED_GITHUB_FILES:
             unexpected_github.add(path)
-        elif top == "docs" and (len(parts) < 2 or parts[1] != "tainted-grail-sdk"):
-            unexpected_top_level_directories.add(path)
+        elif top == "docs":
+            if len(parts) == 2:
+                if path not in ALLOWED_DOC_ROOT_FILES:
+                    unexpected_top_level_directories.add(path)
+            elif parts[1] not in ALLOWED_DOC_TREES:
+                unexpected_top_level_directories.add(path)
 
     missing_plugin_manifests = sorted(
         f"Plugins/{category}/{package}/plugin.json"

@@ -13,7 +13,7 @@ Installer/
 ├── package.schema.json
 ├── SuiteWizard/        selectable suite user experience
 │   ├── Catalog/        reviewed catalogue discovery and explicit selection
-│   ├── Host/           native graphical choice and review surface
+│   ├── Host/           native graphical choice, review, and confirmation surface
 │   ├── Resolver/       deterministic package decision and dry-run plan layer
 │   └── ViewModel/      deterministic presentation and review-confirmation layer
 ├── Bootstrapper/       prerequisites, acquisition and verified handoff
@@ -41,13 +41,13 @@ The wizard must display exact versions, source provenance, licence state, compat
 
 `Installer/SuiteWizard/Catalog/` provides the engine-neutral discovery and selection interface. It emits reviewed suite/package/feature rows with an exact `catalog_sha256`, binds explicit choices into a `selection_sha256`, rejects stale catalogue state, then delegates resolution and presentation to the existing resolver and view-model contracts.
 
-`Installer/SuiteWizard/Host/` provides the current native graphical review host. It renders the exact catalogue fingerprint, suite/package/feature rows and compatibility context, translates user controls into explicit selection inputs, and displays the resolver-owned package order, planned files, warnings, acknowledgements and complete review fingerprint chain. It contains no confirmation or execution control.
+`Installer/SuiteWizard/Host/` provides the current native graphical review and confirmation host. It renders the exact catalogue fingerprint, suite/package/feature rows and compatibility context, translates user controls into explicit selection inputs, and displays the resolver-owned package order, planned files, warnings, acknowledgements and complete review fingerprint chain. Its Confirm page collects the full required acknowledgement set plus caller-supplied identity and UTC time, compares the displayed `plan_sha256` and `view_model_sha256` with the exact current review, then delegates confirmation creation and verification to the existing ViewModel contract.
 
 The wizard does not resolve packages itself. It submits explicit selections, exclusions, features, and compatibility context to `Installer/SuiteWizard/Resolver/`, then displays the returned canonical plan and diagnostics without weakening them. Dependency closure, version constraints, compatibility, conflicts, path safety, legal state, deterministic ordering, payload collision detection, and plan fingerprinting remain resolver-owned logic.
 
-`Installer/SuiteWizard/ViewModel/` verifies the resolver plan, derives stable UI rows and required acknowledgements, and creates a review-only confirmation bound to exact `plan_sha256` and `view_model_sha256` values. Any catalogue, selection, plan, display-model, acknowledgement or confirmation mutation invalidates the current review chain.
+`Installer/SuiteWizard/ViewModel/` verifies the resolver plan, derives stable UI rows and required acknowledgements, and creates a review-only confirmation bound to exact `plan_sha256` and `view_model_sha256` values. Any catalogue, selection, plan, display-model, acknowledgement, confirmer identity, timestamp, or confirmation mutation invalidates the current review chain.
 
-A valid resolution plan and confirmation are still non-executable. A separately reviewed acquisition or execution layer must later reverify both artifacts before receiving any operational capability.
+A valid resolution plan and confirmation are still non-executable. The graphical confirmation remains transient and is not written by this unit. A separately reviewed persistence, acquisition, or execution layer must later reverify the exact accepted chain before receiving any operational capability.
 
 A selection never grants game-launch, runtime-execution, deployment, save-mutation, signing, publication, catalog-mutation, or evidence-promotion authority. A confirmation also grants no acquisition, installation, elevation, or any of those operational authorities.
 
@@ -95,11 +95,12 @@ Installer changes require, as applicable:
 2. deterministic suite and package resolution;
 3. deterministic catalogue discovery, stale-selection rejection and exact selection fingerprints;
 4. graphical host coverage for required/default/optional controls, refresh invalidation and resolver-backed review rows;
-5. deterministic view-model and exact-hash confirmation;
-6. dependency/conflict and compatibility tests;
-7. path, symlink, case-collision, and traversal rejection;
-8. exact inventory, hash, provenance, licence, and redistribution review;
-9. clean install, repair, upgrade, rollback, and uninstall smoke tests;
-10. preservation of external workspaces and user-authored content;
-11. generated-output hygiene;
-12. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation or elevation authority was introduced by review-only contracts.
+5. graphical acknowledgement coverage, exact plan/view-model binding, deterministic confirmation creation and confirmation invalidation;
+6. deterministic view-model and exact-hash confirmation;
+7. dependency/conflict and compatibility tests;
+8. path, symlink, case-collision, and traversal rejection;
+9. exact inventory, hash, provenance, licence, and redistribution review;
+10. clean install, repair, upgrade, rollback, and uninstall smoke tests;
+11. preservation of external workspaces and user-authored content;
+12. generated-output hygiene;
+13. explicit proof that no release, signing, runtime, deployment, save, acquisition, installation or elevation authority was introduced by review-only contracts.

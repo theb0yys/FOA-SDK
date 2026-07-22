@@ -1,0 +1,108 @@
+name: Apply project-wide security repairs
+
+on:
+  push:
+    branches:
+      - agent/project-wide-security-repairs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: project-wide-security-repairs
+  cancel-in-progress: false
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/project-wide-security-repairs
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply reviewed repair bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+          git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+          git rm .github/workflows/apply-project-wide-security-repairs.yml
+
+      - name: Compile Python repair surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q \
+            Installer/Bootstrapper/Security \
+            Installer/Bootstrapper/PackageEngine \
+            Installer/Bootstrapper/PackageCopier \
+            Installer/Bootstrapper/ProcessLauncher \
+            Installer/Bootstrapper/ElevationHelper \
+            Installer/Bootstrapper/LifecycleCoordinator \
+            Installer/Bootstrapper/InstallationStatePublisher \
+            Installer/Tests/Security \
+            Gems/TaintedGrailModdingSDK/Tools/validate_canonical_interchange_compiled_tests.py
+
+      - name: Run focused installer security regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover \
+            -s Gems/TaintedGrailModdingSDK/Tools/tests \
+            -p 'test_installer_*.py' \
+            -v
+
+      - name: Validate Core-only canonical interchange test contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Gems/TaintedGrailModdingSDK/Tools/validate_canonical_interchange_compiled_tests.py
+          python -m unittest \
+            Gems.TaintedGrailModdingSDK.Tools.tests.test_validate_canonical_interchange_compiled_tests \
+            -v
+
+      - name: Run complete hosted static validation
+        shell: bash
+        run: |
+          set -o pipefail
+          python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
+            --keep-going \
+            --static-only \
+            --skip-source-policy 2>&1 | tee project-wide-security-validation.log
+
+      - name: Verify reviewed diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git add -A
+          git diff --cached --check
+          git status --short
+
+      - name: Commit and push validated repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "FOA-SDK Security Repair Bot"
+          git config user.email "264552926+theb0yys@users.noreply.github.com"
+          git commit -s -m "Harden installer execution trust and Gate 5 contracts"
+          git push origin HEAD:agent/project-wide-security-repairs
+
+      - name: Preserve validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-wide-security-validation-${{ github.run_id }}
+          path: project-wide-security-validation.log
+          if-no-files-found: warn
+          retention-days: 7

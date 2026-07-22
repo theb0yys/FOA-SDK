@@ -79,14 +79,16 @@ class DiagnosticTests(unittest.TestCase):
             summary = session.session_dir / "diagnostic-summary.json"
             row.write_bytes(b"old-row\n")
             summary.write_bytes(b"old-summary\n")
-            original_replace = __import__("repair_primitives").os.replace
+            import semantic_repair.diagnostics as diagnostics
+
+            original_replace = diagnostics.os.replace
 
             def failing_replace(src, dst):
                 if Path(dst).name == "diagnostic-summary.json":
                     raise OSError("injected")
                 return original_replace(src, dst)
 
-            with mock.patch("repair_primitives.os.replace", side_effect=failing_replace):
+            with mock.patch("semantic_repair.diagnostics.os.replace", side_effect=failing_replace):
                 with self.assertRaises(OSError):
                     session.publish("rows.csv", b"new-row\n", {"count": 1})
             self.assertEqual(row.read_bytes(), b"old-row\n")

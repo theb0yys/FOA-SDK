@@ -58,6 +58,7 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
         AZStd::string m_branch;
         AZStd::string m_runtimeTarget;
         AZStd::string m_subjectRef;
+        AZStd::string m_claimId;
         AZStd::string m_claim;
         AZStd::string m_valueFingerprint;
         AZStd::string m_evidenceKind;
@@ -72,6 +73,7 @@ namespace TaintedGrailModdingSDK::GameInformationAcquisition
     struct Conflict
     {
         AZStd::string m_subjectRef;
+        AZStd::string m_claimId;
         AZStd::vector<AZStd::string> m_observationIds;
         AZStd::vector<AZStd::string> m_valueFingerprints;
         AZStd::string m_reason;

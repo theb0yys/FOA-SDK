@@ -133,8 +133,7 @@ python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
 
 ## Synthetic fixture
 
-Generate the deterministic synthetic fixture and verify byte-for-byte
-project-owned data outside the source tree:
+Generate the deterministic synthetic fixture and verify byte-for-byte deterministic project-owned data outside the source tree:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
@@ -159,9 +158,7 @@ ctest --test-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
   -R "TaintedGrailModdingSDK\.Catalog\.Tests"
 ```
 
-This service-level persistence smoke proves load, save, close-equivalent, and
-reopen behavior plus canonical state equivalence. It does not prove FoA runtime
-compatibility.
+This service-level persistence smoke proves load, save, close-equivalent, and reopen behavior plus canonical state equivalence. It does not prove FoA runtime compatibility.
 
 ## Launch and diagnostics
 
@@ -190,8 +187,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify
 ```
 
 Diagnostics and screenshot evidence must remain under the external build root or
-another reviewed output directory. Nothing is uploaded automatically; review
-every generated file before sharing.
+another reviewed output directory. Nothing is uploaded automatically; review every generated file before sharing.
 
 ## Windows manual UI smoke
 

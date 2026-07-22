@@ -63,12 +63,30 @@ class CiRunnerPolicyTests(unittest.TestCase):
             "name: Tainted Grail SDK PR Static Validation\n"
             "on:\n"
             "  pull_request:\n"
+            "  pull_request_target:\n"
             "  push:\n"
             "  workflow_dispatch:\n"
             "permissions:\n"
             "  contents: read\n"
             "jobs:\n"
+            "  enforce-obligations:\n"
+            "    name: Enforce ready-PR obligations\n"
+            "    if: github.event_name == 'pull_request_target'\n"
+            "    runs-on: ubuntu-latest\n"
+            "    timeout-minutes: 5\n"
+            "    permissions:\n"
+            "      contents: read\n"
+            "      pull-requests: write\n"
+            "    steps:\n"
+            "      - uses: actions/checkout@v4\n"
+            "        with:\n"
+            "          ref: ${{ github.event.pull_request.base.sha }}\n"
+            "          persist-credentials: false\n"
+            "          fetch-depth: 1\n"
+            "      - run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligations.py\n"
+            "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n"
             "  static-validation:\n"
+            "    if: github.event_name != 'pull_request_target'\n"
             "    runs-on: ubuntu-latest\n"
             "    timeout-minutes: 45\n"
             "    steps:\n"
@@ -101,7 +119,8 @@ class CiRunnerPolicyTests(unittest.TestCase):
         policy.parent.mkdir(parents=True, exist_ok=True)
         policy.write_text(
             "run_local_validation.py automatic pull-request static validation "
-            "--static-only --ctest-build-dir compiled Catalog CTest "
+            "pull_request_target trusted base commit returns the pull request to draft "
+            "required status checks --static-only --ctest-build-dir compiled Catalog CTest "
             "self-hosted runner registration token does not claim an O3DE build "
             "Pending is not passing\n",
             encoding="utf-8",
@@ -171,6 +190,19 @@ class CiRunnerPolicyTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(CiRunnerPolicyError, "registration token"):
+                validate_ci_runner_policy(repo)
+
+    def test_privileged_job_cannot_run_head_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            path = repo / AUTOMATIC_STATIC_WORKFLOW
+            text = path.read_text(encoding="utf-8").replace(
+                "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n",
+                "      - run: python run_local_validation.py\n"
+                "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n",
+            )
+            path.write_text(text, encoding="utf-8")
+            with self.assertRaisesRegex(CiRunnerPolicyError, "Privileged PR-target job"):
                 validate_ci_runner_policy(repo)
 
 

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foa-sdk.local/installer/bootstrapper/package-engine/session.schema.json",
+  "title": "FOA-SDK Package Engine Intake Session",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "session_scope",
+    "session_state",
+    "session_reference",
+    "handoff_sha256",
+    "token_sha256",
+    "receipt_sha256",
+    "plan_sha256",
+    "view_model_sha256",
+    "confirmation_sha256",
+    "operation",
+    "target_reference",
+    "prior_installation_reference",
+    "package_order",
+    "summary",
+    "authorized_capabilities",
+    "accepted_by",
+    "accepted_at_utc",
+    "handoff",
+    "capability_token",
+    "effects",
+    "statement",
+    "authority",
+    "session_sha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "session_scope": { "const": "package-engine-capability-session" },
+    "session_state": { "const": "capability-accepted-no-effects" },
+    "session_reference": { "$ref": "#/$defs/logical_reference" },
+    "handoff_sha256": { "$ref": "#/$defs/sha256" },
+    "token_sha256": { "$ref": "#/$defs/sha256" },
+    "receipt_sha256": { "$ref": "#/$defs/sha256" },
+    "plan_sha256": { "$ref": "#/$defs/sha256" },
+    "view_model_sha256": { "$ref": "#/$defs/sha256" },
+    "confirmation_sha256": { "$ref": "#/$defs/sha256" },
+    "operation": { "enum": ["install", "repair", "upgrade", "rollback", "uninstall"] },
+    "target_reference": { "$ref": "#/$defs/logical_reference" },
+    "prior_installation_reference": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/logical_reference" }] },
+    "package_order": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/logical_reference" } },
+    "summary": {
+      "type": "object",
+      "required": ["package_count", "payload_file_count", "payload_size_bytes"],
+      "additionalProperties": false,
+      "properties": {
+        "package_count": { "type": "integer", "minimum": 0 },
+        "payload_file_count": { "type": "integer", "minimum": 0 },
+        "payload_size_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "authorized_capabilities": { "$ref": "#/$defs/capabilities" },
+    "accepted_by": { "$ref": "#/$defs/actor" },
+    "accepted_at_utc": { "$ref": "#/$defs/utc" },
+    "handoff": { "$ref": "../ExecutionHandoff/request.schema.json" },
+    "capability_token": { "$ref": "token.schema.json" },
+    "effects": { "$ref": "#/$defs/all_false_effects" },
+    "statement": {
+      "const": "This package-engine session records successful handoff and capability-token verification only. It performs no package copy, process launch, elevation, installation, repair, upgrade, rollback, uninstall, runtime execution, deployment, save mutation, signing, publication, catalog mutation, or evidence promotion."
+    },
+    "authority": { "$ref": "#/$defs/all_false_authority" },
+    "session_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T.+Z$", "maxLength": 64 },
+    "actor": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "logical_reference": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$", "maxLength": 128 },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^package-engine\\.[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$" }
+    },
+    "all_false_effects": {
+      "type": "object",
+      "required": ["package_copy_performed", "process_launched", "elevation_requested", "installation_performed", "repair_performed", "upgrade_performed", "rollback_performed", "uninstall_performed", "runtime_executed", "deployment_performed", "save_mutated", "signing_performed", "publication_performed", "catalog_mutated", "evidence_promoted"],
+      "additionalProperties": false,
+      "properties": {
+        "package_copy_performed": { "const": false },
+        "process_launched": { "const": false },
+        "elevation_requested": { "const": false },
+        "installation_performed": { "const": false },
+        "repair_performed": { "const": false },
+        "upgrade_performed": { "const": false },
+        "rollback_performed": { "const": false },
+        "uninstall_performed": { "const": false },
+        "runtime_executed": { "const": false },
+        "deployment_performed": { "const": false },
+        "save_mutated": { "const": false },
+        "signing_performed": { "const": false },
+        "publication_performed": { "const": false },
+        "catalog_mutated": { "const": false },
+        "evidence_promoted": { "const": false }
+      }
+    },
+    "all_false_authority": {
+      "type": "object",
+      "required": ["acquisition", "installation", "elevation", "game_launch", "runtime_execution", "deployment", "save_mutation", "signing", "publication", "catalog_mutation", "evidence_promotion"],
+      "additionalProperties": false,
+      "properties": {
+        "acquisition": { "const": false },
+        "installation": { "const": false },
+        "elevation": { "const": false },
+        "game_launch": { "const": false },
+        "runtime_execution": { "const": false },
+        "deployment": { "const": false },
+        "save_mutation": { "const": false },
+        "signing": { "const": false },
+        "publication": { "const": false },
+        "catalog_mutation": { "const": false },
+        "evidence_promotion": { "const": false }
+      }
+    }
+  }
+}

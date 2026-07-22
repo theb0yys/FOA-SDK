@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0 OR MIT
-"""Authenticated reviewed-helper launcher with one-shot and bounded execution."""
+"""Authenticated reviewed-helper launcher with one-shot, verified bundles, and bounded execution."""
 from __future__ import annotations
 
 import datetime as dt
 import hashlib
-import os
 import re
 import sys
 from pathlib import Path
@@ -23,7 +22,9 @@ for root in (
 from execution_security import (  # noqa: E402
     ExecutionSecurityError,
     claim_once,
+    copy_reviewed_bundle,
     file_sha256,
+    remove_tree,
     resolve_reviewed_path,
     run_bounded_process,
     seal_authenticated_record,
@@ -42,11 +43,11 @@ MAX_GRANT_SECONDS = 900
 REFERENCE_RE = re.compile(r"^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GRANT_STATEMENT = (
-    "This authenticated grant selects one exact helper from the signed reviewed operation plan. "
-    "Executable, argv, working directory, environment, timeout, and output bound are not caller-authored."
+    "This authenticated grant selects one exact helper and its reviewed support files from the signed "
+    "operation plan. Executable, argv, working directory, environment, timeout, and output bound are not caller-authored."
 )
 RESULT_STATEMENT = (
-    "This result records one one-shot bounded non-shell launch of an immutable private copy of the reviewed helper."
+    "This result records one one-shot bounded non-shell launch of a verified private copy of the reviewed helper bundle."
 )
 
 
@@ -110,20 +111,31 @@ def build_launch_grant(
     if issued < accepted or expires <= issued or expires - issued > dt.timedelta(seconds=MAX_GRANT_SECONDS):
         raise ProcessLaunchError("Launch grant must follow session acceptance and expire within 15 minutes.")
     base = {
-        "schema_version": 2, "grant_scope": GRANT_SCOPE, "session_sha256": checked["session_sha256"],
-        "operation_plan_sha256": checked["operation_plan_sha256"], "capability": LAUNCH_CAPABILITY,
-        "helper_reference": helper["helper_reference"], "helper": helper,
-        "executable_sha256": helper["executable_sha256"], "argv_sha256": sha256(helper["argv"]),
-        "environment_sha256": sha256(helper["environment"]), "working_directory": helper["working_directory"],
-        "timeout_seconds": helper["timeout_seconds"], "output_limit_bytes": helper["output_limit_bytes"],
-        "requires_elevation": helper["requires_elevation"], "issuer": _text(issuer, "issuer", 160),
-        "issued_at_utc": _utc(issued_at_utc, "issued_at_utc"), "expires_at_utc": _utc(expires_at_utc, "expires_at_utc"),
-        "nonce": _reference(nonce, "nonce"), "session": checked, "statement": GRANT_STATEMENT, "authority": _authority(),
+        "schema_version": 2,
+        "grant_scope": GRANT_SCOPE,
+        "session_sha256": checked["session_sha256"],
+        "operation_plan_sha256": checked["operation_plan_sha256"],
+        "capability": LAUNCH_CAPABILITY,
+        "helper_reference": helper["helper_reference"],
+        "helper": helper,
+        "executable_sha256": helper["executable_sha256"],
+        "support_files_sha256": sha256(helper.get("support_files", [])),
+        "argv_sha256": sha256(helper["argv"]),
+        "environment_sha256": sha256(helper["environment"]),
+        "working_directory": helper["working_directory"],
+        "timeout_seconds": helper["timeout_seconds"],
+        "output_limit_bytes": helper["output_limit_bytes"],
+        "requires_elevation": helper["requires_elevation"],
+        "issuer": _text(issuer, "issuer", 160),
+        "issued_at_utc": _utc(issued_at_utc, "issued_at_utc"),
+        "expires_at_utc": _utc(expires_at_utc, "expires_at_utc"),
+        "nonce": _reference(nonce, "nonce"),
+        "session": checked,
+        "statement": GRANT_STATEMENT,
+        "authority": _authority(),
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="grant_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="grant_sha256")
     except ExecutionSecurityError as exc:
         raise ProcessLaunchError(f"Launch grant authentication failed: {exc}") from exc
 
@@ -135,9 +147,7 @@ def validate_launch_grant(grant: Mapping[str, object], *, authority_key_path: Pa
     if document.get("authority") != _authority():
         raise ProcessLaunchError("Launch grant authority must remain all false.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="grant_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="grant_sha256")
     except ExecutionSecurityError as exc:
         raise ProcessLaunchError(f"Launch grant authentication failed: {exc}") from exc
     expected = build_launch_grant(
@@ -153,38 +163,6 @@ def validate_launch_grant(grant: Mapping[str, object], *, authority_key_path: Pa
     return document
 
 
-def _copy_private_executable(source: Path, root: Path, grant_sha: str) -> Path:
-    private_root = root / "private-executables"
-    private_root.mkdir(mode=0o700, exist_ok=True)
-    if private_root.is_symlink() or not private_root.is_dir():
-        raise ProcessLaunchError("Private executable root is invalid.")
-    directory = private_root / grant_sha
-    try:
-        directory.mkdir(mode=0o700)
-    except FileExistsError as exc:
-        raise ProcessLaunchError("Private executable directory already exists for this grant.") from exc
-    suffix = source.suffix if source.suffix else ".bin"
-    destination = directory / f"reviewed-helper{suffix}"
-    output = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0), 0o700)
-    input_fd = os.open(source, os.O_RDONLY | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0))
-    try:
-        while True:
-            chunk = os.read(input_fd, 1024 * 1024)
-            if not chunk:
-                break
-            view = memoryview(chunk)
-            while view:
-                written = os.write(output, view)
-                if written <= 0:
-                    raise ProcessLaunchError("Private executable copy made no forward progress.")
-                view = view[written:]
-        os.fsync(output)
-    finally:
-        os.close(input_fd); os.close(output)
-    os.chmod(destination, 0o700)
-    return destination
-
-
 def launch_process(
     grant: Mapping[str, object], execution_root: Path, *, authority_key_path: Path,
     claim_root: Path, launched_at_utc: str,
@@ -195,48 +173,76 @@ def launch_process(
         raise ProcessLaunchError("Launch grant is not valid at process start.")
     if checked.get("requires_elevation") is True:
         raise ProcessLaunchError("Reviewed helper requires the controlled elevation bootstrapper and cannot launch directly.")
+    helper = _object(checked["helper"], "grant.helper")
+    private_directory: Path | None = None
     try:
-        claim = claim_once(
-            claim_root, authority_key_path=authority_key_path, claim_kind="claim.package-launch-grant", artifact_sha256=str(checked["grant_sha256"]),
-            nonce=str(checked["nonce"]), claimed_at_utc=launched_at_utc,
+        working_directory = resolve_reviewed_path(
+            execution_root, str(helper["working_directory"]), file_required=False, label="Reviewed working directory"
         )
-        helper = _object(checked["helper"], "grant.helper")
-        executable = resolve_reviewed_path(execution_root, str(helper["executable_path"]), file_required=True, label="Reviewed executable")
-        working_directory = resolve_reviewed_path(execution_root, str(helper["working_directory"]), file_required=False, label="Reviewed working directory")
-    except ExecutionSecurityError as exc:
-        raise ProcessLaunchError(f"Reviewed launch preparation failed: {exc}") from exc
-    actual_hash, executable_size = file_sha256(executable)
-    if actual_hash != checked["executable_sha256"]:
-        raise ProcessLaunchError("Reviewed executable SHA-256 does not match the signed operation plan.")
-    private_executable = _copy_private_executable(executable, Path(claim_root), str(checked["grant_sha256"]))
-    if file_sha256(private_executable)[0] != actual_hash:
-        raise ProcessLaunchError("Immutable private executable copy failed verification.")
-    try:
-        outcome = run_bounded_process(
-            [str(private_executable), *list(helper["argv"])], cwd=working_directory,
-            environment=dict(helper["environment"]), timeout_seconds=int(helper["timeout_seconds"]),
-            output_limit_bytes=int(helper["output_limit_bytes"]),
+        private_executable, private_directory = copy_reviewed_bundle(
+            Path(execution_root), helper, Path(claim_root), str(checked["grant_sha256"])
         )
+        actual_hash, executable_size = file_sha256(private_executable)
+        if actual_hash != checked["executable_sha256"]:
+            raise ProcessLaunchError("Verified private executable does not match the authenticated launch grant.")
     except (OSError, ExecutionSecurityError) as exc:
-        raise ProcessLaunchError(f"Reviewed helper launch failed: {exc}") from exc
-    stdout = bytes(outcome.pop("stdout")); stderr = bytes(outcome.pop("stderr"))
+        if private_directory is not None:
+            remove_tree(private_directory)
+        raise ProcessLaunchError(f"Reviewed launch preflight failed: {exc}") from exc
+
+    try:
+        try:
+            claim = claim_once(
+                claim_root, authority_key_path=authority_key_path,
+                claim_kind="claim.package-launch-grant", artifact_sha256=str(checked["grant_sha256"]),
+                nonce=str(checked["nonce"]), claimed_at_utc=launched_at_utc,
+            )
+        except ExecutionSecurityError as exc:
+            raise ProcessLaunchError(f"Launch grant consumption failed: {exc}") from exc
+        try:
+            outcome = run_bounded_process(
+                [str(private_executable), *list(helper["argv"])], cwd=working_directory,
+                environment=dict(helper["environment"]), timeout_seconds=int(helper["timeout_seconds"]),
+                output_limit_bytes=int(helper["output_limit_bytes"]),
+            )
+        except (OSError, ExecutionSecurityError) as exc:
+            raise ProcessLaunchError(f"Reviewed helper launch failed: {exc}") from exc
+    finally:
+        if private_directory is not None:
+            remove_tree(private_directory)
+
+    stdout = bytes(outcome.pop("stdout"))
+    stderr = bytes(outcome.pop("stderr"))
     base = {
-        "schema_version": 2, "result_scope": RESULT_SCOPE, "session_sha256": checked["session_sha256"],
-        "grant_sha256": checked["grant_sha256"], "claim_sha256": claim["claim_sha256"],
-        "helper_reference": checked["helper_reference"], "executable_sha256": actual_hash,
-        "executable_size_bytes": executable_size, "argv_sha256": checked["argv_sha256"],
-        "environment_sha256": checked["environment_sha256"], "working_directory": checked["working_directory"],
-        "launched_at_utc": _utc(launched_at_utc, "launched_at_utc"), **outcome,
-        "stdout_sha256": hashlib.sha256(stdout).hexdigest(), "stdout_size_bytes": len(stdout),
-        "stderr_sha256": hashlib.sha256(stderr).hexdigest(), "stderr_size_bytes": len(stderr),
-        "process_launched": True, "elevation_requested": False, "shell_used": False,
-        "immutable_private_copy_used": True, "statement": RESULT_STATEMENT, "authority": _authority(),
+        "schema_version": 2,
+        "result_scope": RESULT_SCOPE,
+        "session_sha256": checked["session_sha256"],
+        "grant_sha256": checked["grant_sha256"],
+        "claim_sha256": claim["claim_sha256"],
+        "helper_reference": checked["helper_reference"],
+        "executable_sha256": actual_hash,
+        "executable_size_bytes": executable_size,
+        "support_files_sha256": checked["support_files_sha256"],
+        "argv_sha256": checked["argv_sha256"],
+        "environment_sha256": checked["environment_sha256"],
+        "working_directory": checked["working_directory"],
+        "launched_at_utc": _utc(launched_at_utc, "launched_at_utc"),
+        **outcome,
+        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
+        "stdout_size_bytes": len(stdout),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+        "stderr_size_bytes": len(stderr),
+        "process_launched": True,
+        "elevation_requested": False,
+        "shell_used": False,
+        "immutable_private_copy_used": True,
+        "private_bundle_removed": True,
+        "statement": RESULT_STATEMENT,
+        "authority": _authority(),
         "launch_grant": checked,
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="result_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="result_sha256")
     except ExecutionSecurityError as exc:
         raise ProcessLaunchError(f"Launch result authentication failed: {exc}") from exc
 
@@ -248,15 +254,18 @@ def validate_launch_result(result: Mapping[str, object], *, authority_key_path: 
     checked_grant = validate_launch_grant(_object(document.get("launch_grant"), "result.launch_grant"), authority_key_path=authority_key_path)
     if document.get("grant_sha256") != checked_grant["grant_sha256"] or document.get("session_sha256") != checked_grant["session_sha256"]:
         raise ProcessLaunchError("Launch result is not bound to its authenticated grant.")
-    for field, expected in (("process_launched", True), ("elevation_requested", False), ("shell_used", False), ("immutable_private_copy_used", True)):
+    for field, expected in (
+        ("process_launched", True), ("elevation_requested", False), ("shell_used", False),
+        ("immutable_private_copy_used", True), ("private_bundle_removed", True),
+    ):
         if document.get(field) is not expected:
             raise ProcessLaunchError(f"Launch result flag {field} is invalid.")
+    if document.get("support_files_sha256") != checked_grant["support_files_sha256"]:
+        raise ProcessLaunchError("Launch result support-file binding is invalid.")
     if document.get("authority") != _authority():
         raise ProcessLaunchError("Launch result authority must remain all false.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="result_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="result_sha256")
     except ExecutionSecurityError as exc:
         raise ProcessLaunchError(f"Launch result authentication failed: {exc}") from exc
     return document

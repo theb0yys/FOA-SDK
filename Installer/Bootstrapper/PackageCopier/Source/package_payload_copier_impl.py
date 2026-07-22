@@ -23,6 +23,7 @@ from execution_security import (  # noqa: E402
     ExecutionSecurityError,
     claim_once,
     file_sha256,
+    remove_tree,
     rename_no_replace,
     seal_authenticated_record,
     sha256,
@@ -132,8 +133,11 @@ def _inventory(session: Mapping[str, object]) -> list[dict[str, object]]:
                 raise PackageCopyError("size_bytes must be non-negative.")
             source = (PurePosixPath(package_root) / PurePosixPath(_relative(item.get("source"), "source"))).as_posix()
             rows.append({
-                "package_id": package_id, "source": source, "destination": destination,
-                "sha256": _hash(item.get("sha256"), "sha256"), "size_bytes": size,
+                "package_id": package_id,
+                "source": source,
+                "destination": destination,
+                "sha256": _hash(item.get("sha256"), "sha256"),
+                "size_bytes": size,
                 "redistribution": _text(item.get("redistribution"), "redistribution"),
             })
     rows.sort(key=lambda row: (str(row["destination"]).casefold(), str(row["destination"])))
@@ -161,16 +165,21 @@ def build_copy_grant(
         raise PackageCopyError("Copy grant must follow session acceptance and expire within 30 minutes.")
     inventory = _inventory(checked)
     base = {
-        "schema_version": 2, "grant_scope": GRANT_SCOPE, "session_sha256": checked["session_sha256"],
-        "capability": COPY_CAPABILITY, "issuer": _text(issuer, "issuer"),
-        "issued_at_utc": _utc(issued_at_utc, "issued_at_utc"), "expires_at_utc": _utc(expires_at_utc, "expires_at_utc"),
-        "nonce": _ref(nonce, "nonce"), "inventory_sha256": sha256(inventory), "session": checked,
-        "statement": GRANT_STATEMENT, "authority": _authority(),
+        "schema_version": 2,
+        "grant_scope": GRANT_SCOPE,
+        "session_sha256": checked["session_sha256"],
+        "capability": COPY_CAPABILITY,
+        "issuer": _text(issuer, "issuer"),
+        "issued_at_utc": _utc(issued_at_utc, "issued_at_utc"),
+        "expires_at_utc": _utc(expires_at_utc, "expires_at_utc"),
+        "nonce": _ref(nonce, "nonce"),
+        "inventory_sha256": sha256(inventory),
+        "session": checked,
+        "statement": GRANT_STATEMENT,
+        "authority": _authority(),
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="grant_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="grant_sha256")
     except ExecutionSecurityError as exc:
         raise PackageCopyError(f"Copy grant authentication failed: {exc}") from exc
 
@@ -182,30 +191,48 @@ def validate_copy_grant(grant: Mapping[str, object], *, authority_key_path: Path
     if document.get("authority") != _authority():
         raise PackageCopyError("Copy grant authority must remain all false.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="grant_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="grant_sha256")
     except ExecutionSecurityError as exc:
         raise PackageCopyError(f"Copy grant authentication failed: {exc}") from exc
     expected = build_copy_grant(
         _obj(document.get("session"), "grant.session"), authority_key_path=authority_key_path,
-        issuer=_text(document.get("issuer"), "issuer"), issued_at_utc=_utc(document.get("issued_at_utc"), "issued_at_utc"),
-        expires_at_utc=_utc(document.get("expires_at_utc"), "expires_at_utc"), nonce=_ref(document.get("nonce"), "nonce"),
+        issuer=_text(document.get("issuer"), "issuer"),
+        issued_at_utc=_utc(document.get("issued_at_utc"), "issued_at_utc"),
+        expires_at_utc=_utc(document.get("expires_at_utc"), "expires_at_utc"),
+        nonce=_ref(document.get("nonce"), "nonce"),
     )
     if document != expected:
         raise PackageCopyError("Copy grant is stale, altered, or not canonically derived.")
     return document
 
 
-def _remove_tree(root: Path) -> None:
-    if not root.exists() or root.is_symlink():
-        return
-    for child in sorted(root.rglob("*"), key=lambda path: len(path.parts), reverse=True):
-        if child.is_file() or child.is_symlink():
-            child.unlink()
-        elif child.is_dir():
-            child.rmdir()
-    root.rmdir()
+def _copy_file(source: Path, destination: Path, expected_hash: str, expected_size: int) -> None:
+    if source.is_symlink() or not source.is_file():
+        raise PackageCopyError(f"Payload source is not a regular non-symlink file: {source}")
+    _no_links(source.parent, "Payload source")
+    if file_sha256(source) != (expected_hash, expected_size):
+        raise PackageCopyError(f"Payload source hash or size mismatch: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0)
+    output = os.open(destination, flags, 0o600)
+    input_fd = os.open(source, os.O_RDONLY | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0))
+    try:
+        while True:
+            chunk = os.read(input_fd, 1024 * 1024)
+            if not chunk:
+                break
+            view = memoryview(chunk)
+            while view:
+                written = os.write(output, view)
+                if written <= 0:
+                    raise PackageCopyError("Payload copy made no forward progress.")
+                view = view[written:]
+        os.fsync(output)
+    finally:
+        os.close(input_fd)
+        os.close(output)
+    if file_sha256(destination) != (expected_hash, expected_size):
+        raise PackageCopyError(f"Staged payload verification failed: {destination}")
 
 
 def stage_payload(
@@ -216,76 +243,63 @@ def stage_payload(
     copied = utc_datetime(copied_at_utc, "copied_at_utc")
     if copied < utc_datetime(checked["issued_at_utc"], "issued_at_utc") or copied > utc_datetime(checked["expires_at_utc"], "expires_at_utc"):
         raise PackageCopyError("Copy grant is not valid at staging time.")
-    try:
-        claim = claim_once(
-            claim_root, authority_key_path=authority_key_path, claim_kind="claim.package-copy-grant", artifact_sha256=str(checked["grant_sha256"]),
-            nonce=str(checked["nonce"]), claimed_at_utc=copied_at_utc,
-        )
-    except ExecutionSecurityError as exc:
-        raise PackageCopyError(f"Copy grant consumption failed: {exc}") from exc
-    source = Path(source_root); target = Path(staging_root)
-    if not source.is_dir() or source.is_symlink():
-        raise PackageCopyError("Source root must be an existing non-symlink directory.")
+    source = Path(source_root)
+    target = Path(staging_root)
+    if not source.is_absolute() or not source.is_dir() or source.is_symlink():
+        raise PackageCopyError("Source root must be an absolute existing non-symlink directory.")
     _no_links(source, "Source root")
-    if target.exists() or target.is_symlink():
-        raise PackageCopyError("Staging root must not already exist.")
+    if not target.is_absolute() or target.exists() or target.is_symlink():
+        raise PackageCopyError("Staging root must be an absent absolute path.")
     if not target.parent.is_dir() or target.parent.is_symlink():
         raise PackageCopyError("Staging parent must be an existing non-symlink directory.")
     _no_links(target.parent, "Staging parent")
+    inventory = _inventory(_obj(checked.get("session"), "grant.session"))
     temporary = target.parent / f".{target.name}.{checked['grant_sha256']}.tmp"
     if temporary.exists() or temporary.is_symlink():
         raise PackageCopyError("Deterministic temporary staging directory already exists.")
-    inventory = _inventory(_obj(checked.get("session"), "grant.session"))
     temporary.mkdir(mode=0o700)
     copied_rows: list[dict[str, object]] = []
     try:
         for row in inventory:
             source_file = source.joinpath(*PurePosixPath(str(row["source"])).parts)
             destination = temporary.joinpath(*PurePosixPath(str(row["destination"])).parts)
-            if source_file.is_symlink() or not source_file.is_file():
-                raise PackageCopyError(f"Payload source is not a regular non-symlink file: {row['source']}")
-            _no_links(source_file.parent, "Payload source")
-            if file_sha256(source_file) != (row["sha256"], row["size_bytes"]):
-                raise PackageCopyError(f"Payload source hash or size mismatch: {row['source']}")
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0)
-            output = os.open(destination, flags, 0o600)
-            input_fd = os.open(source_file, os.O_RDONLY | (os.O_NOFOLLOW if hasattr(os, "O_NOFOLLOW") else 0))
-            try:
-                while True:
-                    chunk = os.read(input_fd, 1024 * 1024)
-                    if not chunk:
-                        break
-                    view = memoryview(chunk)
-                    while view:
-                        written = os.write(output, view)
-                        if written <= 0:
-                            raise PackageCopyError("Payload copy made no forward progress.")
-                        view = view[written:]
-                os.fsync(output)
-            finally:
-                os.close(input_fd); os.close(output)
-            if file_sha256(destination) != (row["sha256"], row["size_bytes"]):
-                raise PackageCopyError(f"Staged payload verification failed: {row['destination']}")
+            _copy_file(source_file, destination, str(row["sha256"]), int(row["size_bytes"]))
             copied_rows.append(dict(row))
+        # Authority is consumed only after all caller-controlled paths and payload bytes have passed preflight.
+        try:
+            claim = claim_once(
+                claim_root, authority_key_path=authority_key_path,
+                claim_kind="claim.package-copy-grant", artifact_sha256=str(checked["grant_sha256"]),
+                nonce=str(checked["nonce"]), claimed_at_utc=copied_at_utc,
+            )
+        except ExecutionSecurityError as exc:
+            raise PackageCopyError(f"Copy grant consumption failed: {exc}") from exc
         rename_no_replace(temporary, target)
     except (OSError, ExecutionSecurityError, PackageCopyError):
-        _remove_tree(temporary)
+        remove_tree(temporary)
         raise
     base = {
-        "schema_version": 2, "receipt_scope": RECEIPT_SCOPE, "grant_sha256": checked["grant_sha256"],
-        "session_sha256": checked["session_sha256"], "claim_sha256": claim["claim_sha256"],
-        "inventory_sha256": checked["inventory_sha256"], "copied_at_utc": _utc(copied_at_utc, "copied_at_utc"),
-        "staging_reference": _ref("staging.foa-sdk.payload", "staging_reference"), "file_count": len(copied_rows),
-        "size_bytes": sum(int(row["size_bytes"]) for row in copied_rows), "files": copied_rows,
-        "copy_performed": True, "process_launched": False, "elevation_requested": False,
-        "installation_finalized": False, "statement": RECEIPT_STATEMENT, "authority": _authority(),
+        "schema_version": 2,
+        "receipt_scope": RECEIPT_SCOPE,
+        "grant_sha256": checked["grant_sha256"],
+        "session_sha256": checked["session_sha256"],
+        "claim_sha256": claim["claim_sha256"],
+        "inventory_sha256": checked["inventory_sha256"],
+        "copied_at_utc": _utc(copied_at_utc, "copied_at_utc"),
+        "staging_reference": _ref("staging.foa-sdk.payload", "staging_reference"),
+        "file_count": len(copied_rows),
+        "size_bytes": sum(int(row["size_bytes"]) for row in copied_rows),
+        "files": copied_rows,
+        "copy_performed": True,
+        "process_launched": False,
+        "elevation_requested": False,
+        "installation_finalized": False,
+        "statement": RECEIPT_STATEMENT,
+        "authority": _authority(),
         "copy_grant": checked,
     }
     try:
-        return seal_authenticated_record(
-            base, authority_key_path=authority_key_path, digest_field="copy_receipt_sha256"
-        )
+        return seal_authenticated_record(base, authority_key_path=authority_key_path, digest_field="copy_receipt_sha256")
     except ExecutionSecurityError as exc:
         raise PackageCopyError(f"Copy receipt authentication failed: {exc}") from exc
 
@@ -302,9 +316,7 @@ def validate_copy_receipt(receipt: Mapping[str, object], *, authority_key_path: 
     if document.get("authority") != _authority():
         raise PackageCopyError("Copy receipt authority must remain all false.")
     try:
-        verify_sealed_record(
-            document, authority_key_path=authority_key_path, digest_field="copy_receipt_sha256"
-        )
+        verify_sealed_record(document, authority_key_path=authority_key_path, digest_field="copy_receipt_sha256")
     except ExecutionSecurityError as exc:
         raise PackageCopyError(f"Copy receipt authentication failed: {exc}") from exc
     return document

@@ -1,47 +1,41 @@
 # FOA-SDK Windows installer launcher
 
-`Installer/Launcher/Windows/` owns the user-facing Windows entrypoint for the installer flow.
+`Installer/Launcher/Windows/` owns the user-facing Windows entrypoint for the installer review flow.
 
-It builds `FOA-SDK-Installer.exe`, a thin launcher that opens the quick installer by default:
+It builds `FOA-SDK-Installer.exe`, a thin launcher that opens the reviewed Suite Wizard host:
 
 ```text
 FOA-SDK-Installer.exe
-  → Installer/SuiteWizard/QuickHost/Source/quick_installer_host.py
-  → choose install location
-  → one-click default install preparation
-  → automatic confirmation timestamp and receipt export
+  → Installer/SuiteWizard/Host/Source/suite_wizard_receipt_host.py
+  → explicit suite and package review
+  → explicit acknowledgement selection
+  → caller-supplied confirmer identity and UTC time
+  → canonical create-once receipt export
 ```
 
-The old detailed Suite Wizard receipt host is still available, but only as an advanced/audit path:
-
-```powershell
-FOA-SDK-Installer.exe --advanced-review
-```
+The former automatic quick-confirmation path is intentionally disabled. `QuickHost/` remains only as a compatibility alias to the same reviewed host; it does not silently accept acknowledgements, synthesize identity or time, duplicate receipt publication, or claim that a receipt is an installation.
 
 ## Default user flow
 
-Normal double-click use opens a quick installer screen with an **Install location** field, a **Browse…** button, and an **Install** button. That path:
+Normal double-click use opens the complete review host. The operator must:
 
-- uses the reviewed default FOA-SDK suite;
-- shows the default install location under the current user's local application data directory;
-- lets the user choose another install location before clicking Install;
-- keeps the selected default packages visible;
-- handles the internal acknowledgement set automatically as part of the Install click;
-- fills the confirmation identity from the local user account;
-- fills the UTC timestamp automatically;
-- writes a verified `.foa-receipt.json` under the local FOA-SDK receipt directory using binary create-once bytes.
+1. review the exact suite, packages, compatibility, payload, warnings, and authority boundaries;
+2. explicitly select every required acknowledgement;
+3. provide the confirmer identity and UTC confirmation time;
+4. create the exact review confirmation;
+5. explicitly choose a receipt destination and export the canonical receipt.
 
-The user should not have to manually type timestamps, hashes, acknowledgement IDs, or receipt metadata in the default path.
+A receipt is review evidence only. It does not copy payloads, install packages, request elevation, launch processes, mutate an installation, publish installation state, or grant runtime authority.
 
 ## Boundary
 
-The launcher and quick host do not copy payloads, launch game/runtime processes, request elevation, coordinate lifecycle execution, publish installation state, mutate products, mutate saves, sign artifacts, publish to the network, mutate catalogues, or promote evidence.
+The launcher does not resolve a second plan, copy payloads, launch game/runtime processes, request elevation, coordinate lifecycle execution, publish installation state, mutate products, mutate saves, sign artifacts, publish to the network, mutate catalogues, or promote evidence.
 
-They provide the user-facing executable and quick preparation flow. Any later installer execution still has to pass through the capability-gated PackageEngine, admission, handoff, lifecycle, publication, registry, and editor-readiness chain.
+Any later installer execution must separately pass through the admission-bound handoff, reviewed PackageEngine token/session, payload, process/elevation, lifecycle, publication, registry, and editor-readiness gates.
 
 ## Build locally
 
-Use the CMD entrypoint on Windows. It does not depend on PowerShell script execution policy.
+Use the CMD entrypoint on Windows. It does not depend on script execution policy.
 
 From the repository root:
 
@@ -69,19 +63,7 @@ Installer\Launcher\Windows\build-foa-installer-launcher.cmd -Configuration Relea
 
 The PowerShell script remains available for environments that explicitly allow scripts, but the CMD wrapper is the supported Windows front door.
 
-## CI artifact
-
-The workflow `FOA-SDK Installer Launcher Build` builds the same launcher on `windows-latest` and uploads this artifact:
-
-```text
-FOA-SDK-Installer-win-x64
-```
-
-That artifact contains:
-
-```text
-FOA-SDK-Installer.exe
-```
+Launcher builds and tests remain part of the repository's governed validation surface. A separate unapproved workflow is not required.
 
 ## Run
 
@@ -101,19 +83,11 @@ FOA-SDK-Installer.exe `
 
 The launcher also checks `FOA_SDK_PYTHON` and bundled runtime locations under `runtime/python/pythonw.exe`.
 
-## Advanced review
-
-Use this only when you specifically need the full audit/receipt host:
-
-```powershell
-FOA-SDK-Installer.exe --advanced-review
-```
-
-That advanced path exposes the detailed review, acknowledgement, confirmation, and receipt tabs.
+`--advanced-review` remains accepted as a compatibility no-op because reviewed mode is now the only launcher mode.
 
 ## Smoke test
 
-The CI-friendly smoke mode runs the quick installer path, writes a temporary verified receipt, and returns the host exit code:
+The CI-friendly smoke mode runs the complete graphical review/acknowledgement/confirmation/receipt smoke path and returns the host exit code:
 
 ```powershell
 FOA-SDK-Installer.exe --installer-root C:\path\to\FOA-SDK\Installer --smoke-test

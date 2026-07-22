@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Forms;
 
@@ -27,7 +28,7 @@ internal static class Program
             string python = ResolvePython(options, paths);
             ProcessStartInfo startInfo = BuildStartInfo(options, paths, python);
             using Process process = Process.Start(startInfo)
-                ?? throw new InvalidOperationException("The FOA-SDK installer process did not start.");
+                ?? throw new InvalidOperationException("The FOA-SDK reviewed installer process did not start.");
             if (options.Detach)
             {
                 return 0;
@@ -35,7 +36,7 @@ internal static class Program
             process.WaitForExit();
             return process.ExitCode;
         }
-        catch (Exception ex) when (ex is ArgumentException or IOException or InvalidOperationException)
+        catch (Exception ex) when (ex is ArgumentException or IOException or InvalidOperationException or Win32Exception)
         {
             if (LaunchOptions.WantsConsoleError(args))
             {
@@ -52,31 +53,21 @@ internal static class Program
 
     private static ProcessStartInfo BuildStartInfo(LaunchOptions options, PathBundle paths, string python)
     {
-        FileInfo host = options.AdvancedReview ? paths.AdvancedReviewHost : paths.QuickInstallerHost;
         string installerRoot = paths.InstallerRoot.FullName;
-        List<string> arguments = new()
-        {
-            Quote(host.FullName),
-            "--installer-root",
-            Quote(installerRoot)
-        };
-        if (options.ReceiptRoot is not null && !options.AdvancedReview)
-        {
-            arguments.Add("--receipt-root");
-            arguments.Add(Quote(options.ReceiptRoot.FullName));
-        }
-        if (options.SmokeTest)
-        {
-            arguments.Add("--smoke-test");
-        }
         ProcessStartInfo info = new()
         {
             FileName = python,
-            Arguments = string.Join(" ", arguments),
             WorkingDirectory = paths.ProductRoot.FullName,
             UseShellExecute = false,
             CreateNoWindow = !options.SmokeTest,
         };
+        info.ArgumentList.Add(paths.ReviewHost.FullName);
+        info.ArgumentList.Add("--installer-root");
+        info.ArgumentList.Add(installerRoot);
+        if (options.SmokeTest)
+        {
+            info.ArgumentList.Add("--smoke-test");
+        }
         info.Environment["FOA_SDK_INSTALLER_ROOT"] = installerRoot;
         info.Environment["FOA_SDK_PRODUCT_ROOT"] = paths.ProductRoot.FullName;
         return info;
@@ -144,30 +135,21 @@ internal static class Program
         return file;
     }
 
-    private static string Quote(string value)
-    {
-        return "\"" + value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
-    }
-
     private sealed record LaunchOptions(
         DirectoryInfo? InstallerRoot,
-        DirectoryInfo? ReceiptRoot,
         string? PythonPath,
         bool SmokeTest,
         bool Detach,
-        bool NoDialog,
-        bool AdvancedReview
+        bool NoDialog
     )
     {
         public static LaunchOptions Parse(string[] args)
         {
             DirectoryInfo? installerRoot = null;
-            DirectoryInfo? receiptRoot = null;
             string? pythonPath = null;
             bool smokeTest = false;
             bool detach = false;
             bool noDialog = false;
-            bool advancedReview = false;
             for (int index = 0; index < args.Length; index++)
             {
                 string current = args[index];
@@ -175,9 +157,6 @@ internal static class Program
                 {
                     case "--installer-root":
                         installerRoot = new DirectoryInfo(RequireValue(args, ref index, current));
-                        break;
-                    case "--receipt-root":
-                        receiptRoot = new DirectoryInfo(RequireValue(args, ref index, current));
                         break;
                     case "--python":
                         pythonPath = RequireValue(args, ref index, current);
@@ -193,7 +172,7 @@ internal static class Program
                         noDialog = true;
                         break;
                     case "--advanced-review":
-                        advancedReview = true;
+                        // Retained as a compatibility no-op: reviewed mode is now the only launcher mode.
                         break;
                     case "--help":
                     case "-h":
@@ -202,7 +181,7 @@ internal static class Program
                         throw new ArgumentException($"Unknown option: {current}\n\n{HelpText()}");
                 }
             }
-            return new LaunchOptions(installerRoot, receiptRoot, pythonPath, smokeTest, detach, noDialog, advancedReview);
+            return new LaunchOptions(installerRoot, pythonPath, smokeTest, detach, noDialog);
         }
 
         public static bool WantsConsoleError(string[] args)
@@ -222,29 +201,24 @@ internal static class Program
 
         private static string HelpText()
         {
-            return "Usage: FOA-SDK-Installer.exe [--installer-root <Installer>] [--receipt-root <Receipts>] [--python <pythonw.exe>] [--smoke-test] [--detach] [--no-dialog] [--advanced-review]";
+            return "Usage: FOA-SDK-Installer.exe [--installer-root <Installer>] [--python <pythonw.exe>] [--smoke-test] [--detach] [--no-dialog]";
         }
     }
 
-    private sealed record PathBundle(DirectoryInfo ProductRoot, DirectoryInfo InstallerRoot, FileInfo QuickInstallerHost, FileInfo AdvancedReviewHost)
+    private sealed record PathBundle(DirectoryInfo ProductRoot, DirectoryInfo InstallerRoot, FileInfo ReviewHost)
     {
         public static PathBundle Resolve(LaunchOptions options)
         {
             DirectoryInfo installer = options.InstallerRoot is not null
                 ? ExistingDirectory(options.InstallerRoot.FullName, "Installer root")
                 : DiscoverInstallerRoot();
-            FileInfo quickHost = new(Path.Combine(installer.FullName, "SuiteWizard", "QuickHost", "Source", "quick_installer_host.py"));
-            if (!quickHost.Exists)
+            FileInfo reviewHost = new(Path.Combine(installer.FullName, "SuiteWizard", "Host", "Source", "suite_wizard_receipt_host.py"));
+            if (!reviewHost.Exists)
             {
-                throw new InvalidOperationException($"Quick installer host was not found: {quickHost.FullName}");
-            }
-            FileInfo advancedHost = new(Path.Combine(installer.FullName, "SuiteWizard", "Host", "Source", "suite_wizard_receipt_host.py"));
-            if (!advancedHost.Exists)
-            {
-                throw new InvalidOperationException($"Advanced Suite Wizard host was not found: {advancedHost.FullName}");
+                throw new InvalidOperationException($"Reviewed Suite Wizard host was not found: {reviewHost.FullName}");
             }
             DirectoryInfo productRoot = installer.Parent ?? throw new InvalidOperationException("Installer root has no product root.");
-            return new PathBundle(productRoot, installer, quickHost, advancedHost);
+            return new PathBundle(productRoot, installer, reviewHost);
         }
 
         public IEnumerable<FileInfo> BundledPythonCandidates()
@@ -267,8 +241,8 @@ internal static class Program
                 while (current is not null)
                 {
                     DirectoryInfo candidate = new(Path.Combine(current.FullName, "Installer"));
-                    FileInfo quickHost = new(Path.Combine(candidate.FullName, "SuiteWizard", "QuickHost", "Source", "quick_installer_host.py"));
-                    if (candidate.Exists && quickHost.Exists)
+                    FileInfo reviewHost = new(Path.Combine(candidate.FullName, "SuiteWizard", "Host", "Source", "suite_wizard_receipt_host.py"));
+                    if (candidate.Exists && reviewHost.Exists)
                     {
                         return candidate;
                     }

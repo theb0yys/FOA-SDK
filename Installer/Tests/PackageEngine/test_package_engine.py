@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import sys
 import unittest
@@ -18,6 +19,8 @@ from package_engine import (  # noqa: E402
     PackageEngineError,
     build_capability_token,
     build_engine_session,
+    canonical_token_bytes,
+    load_token,
     validate_capability_token,
     validate_engine_session,
     verify_token_for_admission_bound_handoff,
@@ -32,61 +35,80 @@ class PackageEngineCapabilityTests(unittest.TestCase):
             self.assertEqual(validate_engine_session(fixture.session, authority_key_path=fixture.authority_key), fixture.session)
             self.assertEqual(
                 verify_token_for_admission_bound_handoff(
-                    fixture.token,
-                    fixture.admission_bound_handoff,
-                    authority_key_path=fixture.authority_key,
+                    fixture.token, fixture.admission_bound_handoff, authority_key_path=fixture.authority_key,
                 ),
                 fixture.token,
             )
-            self.assertEqual(
-                fixture.token["admission_bound_handoff_sha256"],
-                fixture.admission_bound_handoff["binding_sha256"],
-            )
-            self.assertEqual(
-                fixture.session["admission_bound_handoff_sha256"],
-                fixture.admission_bound_handoff["binding_sha256"],
-            )
+            self.assertEqual(fixture.token["admission_bound_handoff_sha256"], fixture.admission_bound_handoff["binding_sha256"])
+            self.assertEqual(fixture.session["admission_bound_handoff_sha256"], fixture.admission_bound_handoff["binding_sha256"])
             self.assertEqual(fixture.session["operation_plan_sha256"], fixture.operation_plan["operation_plan_sha256"])
             self.assertIn("package-engine.copy-payload", fixture.session["authorized_capabilities"])
             self.assertIn("package-engine.launch-process", fixture.session["authorized_capabilities"])
             with self.assertRaisesRegex(PackageEngineError, "already been consumed"):
                 build_engine_session(
-                    fixture.admission_bound_handoff,
-                    fixture.token,
-                    authority_key_path=fixture.authority_key,
-                    claim_root=fixture.claim_root,
-                    session_reference="session.foa-sdk.replay",
-                    accepted_by="replay",
+                    fixture.admission_bound_handoff, fixture.token,
+                    authority_key_path=fixture.authority_key, claim_root=fixture.claim_root,
+                    session_reference="session.foa-sdk.replay", accepted_by="replay",
                     accepted_at_utc="2026-07-22T12:04:00Z",
                 )
+
+    def test_invalid_session_input_does_not_consume_token(self) -> None:
+        with InstallerSecurityFixture() as fixture:
+            token = build_capability_token(
+                fixture.admission_bound_handoff, fixture.operation_plan, fixture.authority_proof,
+                authority_key_path=fixture.authority_key, subject="FOA-SDK package engine",
+                issued_at_utc="2026-07-22T12:02:00Z", expires_at_utc="2026-07-22T12:15:00Z",
+                nonce="token.foa-sdk.preflight-0002",
+            )
+            claim_path = fixture.claim_root / "claim.package-engine-token" / f"{token['token_sha256']}.claim.json"
+            with self.assertRaisesRegex(PackageEngineError, "logical ID"):
+                build_engine_session(
+                    fixture.admission_bound_handoff, token,
+                    authority_key_path=fixture.authority_key, claim_root=fixture.claim_root,
+                    session_reference="invalid", accepted_by="FOA-SDK package engine",
+                    accepted_at_utc="2026-07-22T12:04:00Z",
+                )
+            self.assertFalse(claim_path.exists())
+
+    def test_token_loader_rejects_noncanonical_and_symlink_inputs(self) -> None:
+        with InstallerSecurityFixture() as fixture:
+            real = fixture.root / "token.foa-package-engine-token.json"
+            real.write_bytes(canonical_token_bytes(fixture.token, authority_key_path=fixture.authority_key))
+            self.assertEqual(load_token(real, authority_key_path=fixture.authority_key), fixture.token)
+            pretty = fixture.root / "pretty.foa-package-engine-token.json"
+            pretty.write_text(json.dumps(fixture.token, indent=2) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(PackageEngineError, "not canonical"):
+                load_token(pretty, authority_key_path=fixture.authority_key)
+            linked = fixture.root / "linked.foa-package-engine-token.json"
+            try:
+                linked.symlink_to(real)
+            except (OSError, NotImplementedError):
+                return
+            with self.assertRaisesRegex(PackageEngineError, "non-symlink"):
+                load_token(linked, authority_key_path=fixture.authority_key)
 
     def test_raw_handoff_no_longer_issues_tokens_or_sessions(self) -> None:
         with InstallerSecurityFixture() as fixture:
             with self.assertRaisesRegex(PackageEngineError, "Admission-bound handoff"):
                 build_capability_token(
-                    fixture.handoff,
-                    fixture.operation_plan,
-                    fixture.authority_proof,
-                    authority_key_path=fixture.authority_key,
-                    subject="FOA-SDK package engine",
-                    issued_at_utc="2026-07-22T12:02:00Z",
-                    expires_at_utc="2026-07-22T12:15:00Z",
+                    fixture.handoff, fixture.operation_plan, fixture.authority_proof,
+                    authority_key_path=fixture.authority_key, subject="FOA-SDK package engine",
+                    issued_at_utc="2026-07-22T12:02:00Z", expires_at_utc="2026-07-22T12:15:00Z",
                     nonce="token.foa-sdk.raw-handoff",
                 )
             with self.assertRaisesRegex(PackageEngineError, "Admission-bound handoff"):
                 build_engine_session(
-                    fixture.handoff,
-                    fixture.token,
-                    authority_key_path=fixture.authority_key,
+                    fixture.handoff, fixture.token, authority_key_path=fixture.authority_key,
                     claim_root=fixture.root / "raw-claim-root",
-                    session_reference="session.foa-sdk.raw-handoff",
-                    accepted_by="raw",
+                    session_reference="session.foa-sdk.raw-handoff", accepted_by="raw",
                     accepted_at_utc="2026-07-22T12:04:00Z",
                 )
 
     def test_wrong_authority_key_and_rehashed_tamper_fail(self) -> None:
         with InstallerSecurityFixture() as fixture:
-            wrong = fixture.root / "wrong.key"; wrong.write_bytes(bytes.fromhex("24" * 32)); os.chmod(wrong, 0o600)
+            wrong = fixture.root / "wrong.key"
+            wrong.write_bytes(bytes.fromhex("24" * 32))
+            os.chmod(wrong, 0o600)
             with self.assertRaises(PackageEngineError):
                 validate_capability_token(fixture.token, authority_key_path=wrong)
             tampered = copy.deepcopy(fixture.token)

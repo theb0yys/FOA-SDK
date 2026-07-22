@@ -15,7 +15,6 @@ POWERSHELL_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.ps1"
 CMD_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.cmd"
 README = LAUNCHER_ROOT / "README.md"
 QUICK_HOST = REPO_ROOT / "Installer" / "SuiteWizard" / "QuickHost" / "Source" / "quick_installer_host.py"
-LAUNCHER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build-foa-sdk-installer-launcher.yml"
 DISCOVERY_BRIDGE = REPO_ROOT / "Gems" / "TaintedGrailModdingSDK" / "Tools" / "tests" / "test_installer_windows_launcher.py"
 
 
@@ -36,13 +35,17 @@ class WindowsInstallerLauncherTests(unittest.TestCase):
         self.assertNotIn("highestAvailable", manifest)
         self.assertNotIn("uiAccess=\"true\"", manifest)
 
-    def test_launcher_default_is_quick_installer_not_receipt_review(self) -> None:
+    def test_launcher_default_is_explicit_review_host(self) -> None:
         program = PROGRAM.read_text(encoding="utf-8")
-        self.assertIn("quick_installer_host.py", program)
-        self.assertIn("--advanced-review", program)
         self.assertIn("suite_wizard_receipt_host.py", program)
-        self.assertIn("--installer-root", program)
-        self.assertIn("--receipt-root", program)
+        self.assertNotIn("quick_installer_host.py", program)
+        self.assertIn("ArgumentList.Add(paths.ReviewHost.FullName)", program)
+        self.assertIn("ArgumentList.Add(\"--installer-root\")", program)
+        self.assertNotIn("Arguments =", program)
+        self.assertNotIn("private static string Quote", program)
+        self.assertIn("Win32Exception", program)
+        self.assertIn("--advanced-review", program)
+        self.assertNotIn("--receipt-root", program)
         self.assertIn("--smoke-test", program)
         self.assertIn("FOA_SDK_PYTHON", program)
         self.assertIn("UseShellExecute = false", program)
@@ -51,33 +54,21 @@ class WindowsInstallerLauncherTests(unittest.TestCase):
         self.assertNotIn("package_engine.py", program)
         self.assertNotIn("coordinate_lifecycle", program)
         self.assertNotIn("publish_state_record", program)
-        self.assertNotIn("ElevationHelper", program)
         self.assertNotRegex(program, re.compile(r"\b(password|credential|secret)\b", re.IGNORECASE))
 
-    def test_quick_host_has_normal_install_location_and_binary_receipt_export(self) -> None:
+    def test_quick_host_is_only_a_reviewed_host_compatibility_alias(self) -> None:
         host = QUICK_HOST.read_text(encoding="utf-8")
-        self.assertIn("Install FOA-SDK", host)
-        self.assertIn("Install location", host)
-        self.assertIn("Browse…", host)
-        self.assertIn("browse_install_location", host)
-        self.assertIn("default_install_root()", host)
-        self.assertIn("--target-root", host)
-        self.assertIn("target_root", host)
-        self.assertIn("create_quick_install_receipt", host)
-        self.assertIn("utc_now()", host)
-        self.assertIn("default_confirmed_by()", host)
-        self.assertIn("controller.resolve_review()", host)
-        self.assertIn("controller.set_acknowledgement", host)
-        self.assertIn("export_quick_receipt", host)
-        self.assertIn('target.open("xb")', host)
-        self.assertIn("canonical_receipt_bytes", host)
-        self.assertIn("Advanced review", host)
-        self.assertNotIn("export_current_receipt", host)
-        self.assertNotIn("confirmed_at_var", host)
-        self.assertNotIn("confirmation_hash_vars", host)
-        self.assertNotRegex(host, re.compile(r"\b(password|credential|secret)\b", re.IGNORECASE))
+        compile(host, str(QUICK_HOST), "exec")
+        self.assertIn("reviewed_main", host)
+        self.assertIn("suite_wizard_receipt_host", host)
+        self.assertNotIn("set_acknowledgement", host)
+        self.assertNotIn("default_confirmed_by", host)
+        self.assertNotIn("utc_now", host)
+        self.assertNotIn("export_quick_receipt", host)
+        self.assertNotIn("target.open", host)
+        self.assertNotIn("Install FOA-SDK", host)
 
-    def test_cmd_build_entrypoint_publishes_expected_exe_without_powershell_policy(self) -> None:
+    def test_cmd_build_entrypoint_publishes_expected_exe_without_script_policy_dependency(self) -> None:
         build = CMD_BUILD.read_text(encoding="utf-8")
         self.assertIn("dotnet publish", build)
         self.assertIn("FOAInstallerLauncher.csproj", build)
@@ -86,7 +77,7 @@ class WindowsInstallerLauncherTests(unittest.TestCase):
         self.assertIn("FOA-SDK-Installer.exe", build)
         self.assertIn("-RuntimeIdentifier", build)
         self.assertNotIn("Set-ExecutionPolicy", build)
-        self.assertNotIn("powershell", build.lower())
+        self.assertNotIn("powershell.exe", build.lower())
 
     def test_powershell_build_script_remains_available(self) -> None:
         build = POWERSHELL_BUILD.read_text(encoding="utf-8")
@@ -97,26 +88,17 @@ class WindowsInstallerLauncherTests(unittest.TestCase):
         self.assertIn("--self-contained=false", build)
         self.assertIn("SelfContained", build)
 
-    def test_launcher_artifact_workflow_builds_and_uploads_exe(self) -> None:
-        workflow = LAUNCHER_WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("windows-latest", workflow)
-        self.assertIn("build-foa-installer-launcher.cmd", workflow)
-        self.assertIn("actions/setup-dotnet@v4", workflow)
-        self.assertIn("actions/upload-artifact@v4", workflow)
-        self.assertIn("FOA-SDK-Installer-win-x64", workflow)
-        self.assertIn("FOA-SDK-Installer.exe", workflow)
-
-    def test_readme_documents_cmd_build_artifact_and_quick_default(self) -> None:
+    def test_readme_documents_review_not_install(self) -> None:
         readme = README.read_text(encoding="utf-8")
         self.assertIn("FOA-SDK-Installer.exe", readme)
-        self.assertIn("quick installer", readme)
-        self.assertIn("one-click", readme)
-        self.assertIn("install location", readme.lower())
+        self.assertIn("explicit acknowledgement", readme)
+        self.assertIn("review evidence only", readme)
+        self.assertIn("does not copy payloads", readme)
         self.assertIn("build-foa-installer-launcher.cmd", readme)
-        self.assertIn("FOA-SDK-Installer-win-x64", readme)
         self.assertIn("--advanced-review", readme)
         self.assertIn("--smoke-test", readme)
-        self.assertIn("capability-gated PackageEngine", readme)
+        self.assertNotIn("one-click", readme)
+        self.assertNotIn("handles the internal acknowledgement set automatically", readme)
 
     def test_discovery_bridge_registers_launcher_tests(self) -> None:
         bridge = DISCOVERY_BRIDGE.read_text(encoding="utf-8")

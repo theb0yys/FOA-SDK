@@ -13,6 +13,8 @@
 
 namespace TaintedGrailModdingSDK::Interchange
 {
+    struct CanonicalInterchangeValidationResultV1;
+
     // Gate 5 canonical functions are pure and operate only on caller-supplied
     // values. They perform no filesystem, clock, environment, provider, host,
     // runtime, deployment, save, evidence-promotion, signing, or publication
@@ -29,6 +31,10 @@ namespace TaintedGrailModdingSDK::Interchange
     bool CanonicalBytesDigestMatchesV1(
         AZStd::string_view bytes,
         const Sha256DigestV1& digest);
+
+    CanonicalInterchangeValidationResultV1 ParseCanonicalManifestV1(
+        AZStd::string_view bytes,
+        CanonicalInterchangeManifestV1& manifest);
 
     // Returns an empty string when a supplied value cannot be represented by
     // the closed Schema-1 canonical profile. Intrinsic issue reporting belongs

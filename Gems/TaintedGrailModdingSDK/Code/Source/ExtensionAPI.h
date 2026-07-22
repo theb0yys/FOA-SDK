@@ -51,6 +51,39 @@ namespace TaintedGrailModdingSDK
             AZStd::vector<AZStd::string> m_dlcScopes;
         };
 
+        class Service;
+
+        class Client
+        {
+        public:
+            Client() = default;
+
+            bool IsBound() const;
+            const AZStd::string& GetExtensionId() const;
+
+            bool GetActiveProfile(
+                ProfileView& profile,
+                AZStd::string* error = nullptr) const;
+
+            bool QueryCatalog(
+                const CatalogQuery& query,
+                AZStd::vector<CatalogRecord>& records,
+                size_t maximumResults = 512,
+                AZStd::string* error = nullptr) const;
+
+            bool SubmitCandidateEvidence(
+                const EvidenceRecord& evidence,
+                AZStd::string* error = nullptr);
+
+        private:
+            friend class ::TaintedGrailModdingSDK::FoundationService;
+
+            Client(Service& service, AZStd::string extensionId);
+
+            Service* m_service = nullptr;
+            AZStd::string m_extensionId;
+        };
+
         class Service
         {
         public:

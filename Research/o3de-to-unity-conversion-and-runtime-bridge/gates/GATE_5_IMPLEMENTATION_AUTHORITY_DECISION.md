@@ -4,11 +4,16 @@ Status: pending maintainer decision; implementation not authorized
 
 Design baseline: `eb840862c9d3e239dec91770495c7669c00d10df` (`main`), observed 22 July 2026
 
+Current-main reconciliation: `3fb95284f7cbc259a3c4ab0ba4469be0c9d7baaf`
+
 Proposed design:
 `../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN.md`
 
 Normative design addendum:
 `../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_DESIGN_DECISIONS.md`
+
+Current-main reconciliation record:
+`../../../docs/tainted-grail-sdk/CANONICAL_INTERCHANGE_GATE_5_CURRENT_MAIN_RECONCILIATION_2026-07-22.md`
 
 ## Decision state
 
@@ -49,10 +54,11 @@ The maintainer may set the decision to accepted only after confirming:
 - [ ] the canonical interchange research conclusion is merged;
 - [ ] repository drift is reconciled to the implementation base;
 - [ ] the Phase 9 entry prerequisite is explicitly accepted for this Gate 5 unit;
-- [ ] the proposed design and normative addendum are reviewed and accepted;
+- [ ] the proposed design, normative addendum, and current-main reconciliation are reviewed and accepted;
 - [ ] the exact implementation changed-file list is approved;
 - [ ] the all-false authority matrix is accepted;
-- [ ] required Linux and Windows canonical-byte evidence is accepted;
+- [ ] hosted static golden-fixture checks and exact-head compiled canonical-byte evidence in the approved O3DE
+      build environment are accepted;
 - [ ] exact-head O3DE configure/build and the dedicated compiled test target are mandatory;
 - [ ] public schema/example consistency validation is mandatory;
 - [ ] Gate 6 and every later gate remain closed.
@@ -85,14 +91,17 @@ An authorized implementation PR must provide:
 1. exact implementation base and changed-file inventory;
 2. DCO-signed commits;
 3. hosted non-compiled validation for the exact PR head;
-4. exact-head O3DE configure and Core compilation;
-5. dedicated canonical-interchange compiled test results;
-6. Linux and Windows golden canonical-byte equality;
+4. exact-head O3DE configure and Core compilation in the approved build environment;
+5. dedicated canonical-interchange compiled test results from that exact head;
+6. public golden canonical-byte fixtures verified by hosted static checks and reproduced by the compiled C++ tests;
 7. synthetic positive and negative fixture results;
 8. caller-input non-mutation proof;
 9. public schema/example consistency results;
 10. explicit statement that no Blender, Unity, Asset Processor, runtime, deployment, save, signing, publication, or
     compatibility operation was performed.
+
+A hosted Linux O3DE C++ build is not required unless an approved hosted Linux O3DE environment exists for the
+implementation head. Static Python fixture comparison must not be presented as compiled C++ evidence.
 
 ## Acceptance record
 

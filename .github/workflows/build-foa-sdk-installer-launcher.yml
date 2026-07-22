@@ -1,0 +1,45 @@
+name: FOA-SDK Installer Launcher Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'Installer/Launcher/Windows/**'
+      - 'Installer/SuiteWizard/QuickHost/**'
+      - '.github/workflows/build-foa-sdk-installer-launcher.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-launcher:
+    name: Build FOA-SDK-Installer.exe
+    runs-on: windows-latest
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build launcher with cmd entrypoint
+        shell: cmd
+        run: Installer\Launcher\Windows\build-foa-installer-launcher.cmd -Configuration Release -RuntimeIdentifier win-x64
+
+      - name: Verify launcher artifact exists
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'Installer\Launcher\Windows\artifacts\FOA-SDK-Installer.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            throw "FOA-SDK-Installer.exe was not produced at $exe"
+          }
+          Get-Item -LiteralPath $exe | Format-List FullName,Length,LastWriteTimeUtc
+
+      - name: Upload launcher artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FOA-SDK-Installer-win-x64
+          path: Installer/Launcher/Windows/artifacts/FOA-SDK-Installer.exe
+          if-no-files-found: error

@@ -5,13 +5,13 @@ on:
     paths:
       - ".github/workflows/semantic-hook-offline.yml"
       - "scripts/tainted_grail/**"
-      - "docs/tainted-grail-modding/hooks/BATCH_007.md"
+      - "docs/tainted-grail-modding/hooks/BATCH_008.md"
       - "docs/tainted-grail-modding/hooks/README.md"
   push:
     paths:
       - ".github/workflows/semantic-hook-offline.yml"
       - "scripts/tainted_grail/**"
-      - "docs/tainted-grail-modding/hooks/BATCH_007.md"
+      - "docs/tainted-grail-modding/hooks/BATCH_008.md"
       - "docs/tainted-grail-modding/hooks/README.md"
   workflow_dispatch:
 
@@ -42,5 +42,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Compile offline modules
         run: python -m compileall -q scripts/tainted_grail
+      - name: Enforce workflow authority boundary
+        run: python -m unittest discover -s scripts/tainted_grail -p 'test_ci_workflow_policy.py' -v
       - name: Run offline suite
         run: python -m unittest discover -s scripts/tainted_grail -p 'test_*.py' -v

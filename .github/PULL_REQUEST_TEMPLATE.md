@@ -30,7 +30,7 @@ Architecture notes:
 - [ ] Native references and GUIDs remain exact.
 - [ ] Display names are not used as identity keys.
 - [ ] Synthetic/custom records are pack-owned.
-- [ ] Source, evidence, claims, reviewed records, validation, and permission remain separate.
+- [ ] Source, candidate evidence, reviewed evidence, claims, validation, and permission remain separate.
 - [ ] Missing proof fails closed.
 
 Identity/evidence notes:
@@ -131,3 +131,15 @@ Not applicable / Evidence:
 - [ ] Static CI and exact-head host evidence belong to this head.
 - [ ] Documentation matches implementation.
 - [ ] All blocking threads are resolved before merge.
+
+## Mandatory merge obligations
+
+<!-- Draft pull requests may leave these unchecked. A ready pull request fails CI until every marker is present exactly once and checked. -->
+
+- [ ] Exact-head GitHub static validation passed and its run/artifact identity is recorded. <!-- merge-obligation:static -->
+- [ ] Reviewed-range `git diff --check <base> HEAD` passed for the final reviewed base and head. <!-- merge-obligation:reviewed-range -->
+- [ ] Applicable Windows/O3DE prerequisites, configure, and required target builds passed. <!-- merge-obligation:host-build -->
+- [ ] Compiled `TaintedGrailModdingSDK.Catalog.Tests` passed with zero matching tests treated as an error. <!-- merge-obligation:compiled-tests -->
+- [ ] The exact-head merge-ready validation receipt was finalized, verified, and summarized. <!-- merge-obligation:receipt -->
+- [ ] Windows UI evidence passed, or the permitted explicit risk acceptance includes a concrete rationale. <!-- merge-obligation:ui-evidence -->
+- [ ] Blocking review threads are resolved and required maintainer approval is recorded. <!-- merge-obligation:review -->

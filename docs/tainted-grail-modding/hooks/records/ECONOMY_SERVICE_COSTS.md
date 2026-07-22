@@ -6,6 +6,7 @@ All six records are postfixes on name-resolved getters. Each callback may emit a
 
 ```yaml
 hook_id: tg.hook.economy.gems-base-service-cost-getter
+title: Gems base Wealth service-cost getter
 status: candidate
 hook_class: method-patch
 domain: services-items-and-economy
@@ -26,6 +27,7 @@ limitations: [Generic target resolution and exact getter ownership are unresolve
 
 ```yaml
 hook_id: tg.hook.economy.gems-base-cobweb-service-cost-getter
+title: Gems base Cobweb service-cost getter
 status: candidate
 hook_class: method-patch
 domain: services-items-and-economy
@@ -46,6 +48,7 @@ limitations: [Generic target resolution and currency semantics are unresolved]
 
 ```yaml
 hook_id: tg.hook.economy.sharpening-service-cost-getter
+title: Sharpening Wealth service-cost getter
 status: candidate
 hook_class: method-patch
 domain: services-items-and-economy
@@ -66,6 +69,7 @@ limitations: [Generic target resolution and final transaction semantics are unre
 
 ```yaml
 hook_id: tg.hook.economy.sharpening-cobweb-service-cost-getter
+title: Sharpening Cobweb service-cost getter
 status: candidate
 hook_class: method-patch
 domain: services-items-and-economy
@@ -86,6 +90,7 @@ limitations: [Generic target resolution and currency semantics are unresolved]
 
 ```yaml
 hook_id: tg.hook.economy.weight-reduction-service-cost-getter
+title: Weight-reduction Wealth service-cost getter
 status: candidate
 hook_class: method-patch
 domain: services-items-and-economy
@@ -106,6 +111,7 @@ limitations: [Exact getter and transaction lifecycle are unresolved]
 
 ```yaml
 hook_id: tg.hook.economy.weight-reduction-cobweb-service-cost-getter
+title: Weight-reduction Cobweb service-cost getter
 status: candidate
 hook_class: method-patch
 domain: services-items-and-economy

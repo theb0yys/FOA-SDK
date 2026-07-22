@@ -5,13 +5,13 @@ on:
     paths:
       - ".github/workflows/semantic-hook-offline.yml"
       - "scripts/tainted_grail/**"
-      - "docs/tainted-grail-modding/hooks/BATCH_010.md"
+      - "docs/tainted-grail-modding/hooks/BATCH_011.md"
       - "docs/tainted-grail-modding/hooks/README.md"
   push:
     paths:
       - ".github/workflows/semantic-hook-offline.yml"
       - "scripts/tainted_grail/**"
-      - "docs/tainted-grail-modding/hooks/BATCH_010.md"
+      - "docs/tainted-grail-modding/hooks/BATCH_011.md"
       - "docs/tainted-grail-modding/hooks/README.md"
   workflow_dispatch:
 
@@ -48,5 +48,7 @@ jobs:
         run: python -m unittest discover -s scripts/tainted_grail -p 'test_ci_policy_receipt.py' -v
       - name: Verify cross-version policy receipt
         run: python -m unittest discover -s scripts/tainted_grail -p 'test_ci_cross_version_receipts.py' -v
+      - name: Verify workflow receipt migrations
+        run: python -m unittest discover -s scripts/tainted_grail -p 'test_ci_receipt_migration.py' -v
       - name: Run offline suite
         run: python -m unittest discover -s scripts/tainted_grail -p 'test_*.py' -v

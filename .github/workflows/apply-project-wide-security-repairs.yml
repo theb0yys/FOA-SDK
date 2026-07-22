@@ -36,8 +36,9 @@ jobs:
       - name: Apply reviewed repair bundle
         shell: bash
         run: |
-          set -o pipefail
-          python - <<'PY'
+          set +e
+          {
+            python - <<'PY'
           from pathlib import Path
 
           path = Path("Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py")
@@ -55,10 +56,13 @@ jobs:
               raise RuntimeError("Unable to locate the temporary Base85 carrier.")
           path.write_text("\n".join(lines) + "\n", encoding="utf-8")
           PY
-          python -m py_compile Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
-          python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py 2>&1 | tee project-wide-security-validation.log
-          git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
-          git rm .github/workflows/apply-project-wide-security-repairs.yml
+            python -m py_compile Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+            python Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+            git rm Gems/TaintedGrailModdingSDK/Tools/apply_project_wide_security_repairs.py
+            git rm .github/workflows/apply-project-wide-security-repairs.yml
+          } 2>&1 | tee project-wide-security-validation.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Compile Python repair surfaces
         shell: bash

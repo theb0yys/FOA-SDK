@@ -94,6 +94,7 @@ limitations:
 13. Compaction chains, reviewer quorums, backup limits, replay-window receipts and cross-version fixtures remain offline governance artifacts and cannot promote runtime compatibility.
 14. Archive manifests, cumulative quotas, dependency graphs, decision lifecycle records, replay sequences and receipt migrations remain offline provenance artifacts and cannot authorize runtime execution or promotion.
 15. Retention tombstones, quota releases, rollback plans, appeals, replay compactions and migration histories remain metadata-only offline proofs and cannot delete, execute, replay, unlock or promote anything.
+16. Tombstone supersessions, restoration reviews, reconciliation journals, rollback acknowledgements, appeal histories, replay-retention plans and migration matrices remain non-executing metadata and cannot restore, mutate, unlock, migrate or promote anything.
 
 ## Evidence boundary
 
@@ -231,6 +232,12 @@ Batch 011 preserves the complete no-runtime and no-promotion boundary and leaves
 [Semantic Hook Batch 012](BATCH_012.md) adds archive retention and metadata-only tombstones, quota release and ledger-compaction records, dependency-aware partial-rollback plans, quorum appeals, replay-sequence compaction proofs and chained workflow-receipt migration histories.
 
 Batch 012 preserves the complete no-runtime and no-promotion boundary and leaves every existing prohibition unchanged.
+
+### Batch 013
+
+[Semantic Hook Batch 013](BATCH_013.md) adds tombstone supersession and restoration-review records, quota reconciliation journals, rollback-plan acknowledgement receipts, appeal withdrawal and resolution histories, replay-compaction retention policies and workflow-migration compatibility matrices.
+
+Batch 013 preserves the complete no-runtime and no-promotion boundary and leaves every existing prohibition unchanged.
 
 ## Initial domain indexes
 

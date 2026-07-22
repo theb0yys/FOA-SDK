@@ -68,7 +68,20 @@ Unless explicitly marked "this commit", paths in this section were observed at t
 
 ## Sources not yet durable
 
-The supplied report still refers to official store/news material, Unity licensing terms, Addressables
-documentation, BepInEx release channels, and community reports about FoA Mono/IL2CPP branches only through
-opaque `turn...` citations. Until the exact direct URL, relevant version or revision, retrieval date, and
-scoped claim are added here, those claims remain `unverified` and cannot authorize design or implementation.
+The supplied report still refers to official store/news material, Unity licensing terms, Addressables documentation, BepInEx release channels, and community reports about FoA Mono/IL2CPP branches only through opaque `turn...` citations. Until the exact direct URL, relevant version or revision, retrieval date, and scoped claim are added here, those claims remain `unverified` and cannot authorize design or implementation.
+
+## Current reconciliation sources
+
+Observed 22 July 2026 against current `main` commit `8fb3f0a729e4be4e513ba896ba52708a73d03eae`.
+
+| ID | Durable source | Supports | Limitation |
+| --- | --- | --- | --- |
+| `SRC-REPO-019` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/README.md#L5-L56 | Current product identity, O3DE authoring/FoA runtime separation, product layout, and non-authority status | Product state may change after this commit |
+| `SRC-REPO-020` | https://github.com/theb0yys/FOA-SDK/compare/195f5c15f0c59d47bd54e661b37d7457af9d1d95...8fb3f0a729e4be4e513ba896ba52708a73d03eae | Exact baseline reconciliation; eight commits limited to Suite Wizard catalogue discovery, installer documentation, and tests | Does not prove later branch state |
+| `SRC-REPO-021` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/Plugins/README.md#L37-L85 | Authoring, integration, and runtime-adapter category ownership; Mono/IL2CPP package separation | Package declaration does not grant operational authority |
+| `SRC-REPO-022` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/Gems/TaintedGrailModdingSDK/Code/Source/FoARuntimeAdapterRoutes.cpp#L99-L183 | Exact Mono and IL2CPP route observations, provenance, evidence states, and blocked capabilities | Route observations do not select an active operator target or authorize execution |
+| `SRC-REPO-023` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/Research/o3de-to-unity-conversion-and-runtime-bridge/areas/06-runtime-target-profile/README.md | Correct separation of pinned route evidence from active operator-profile selection | This commit is research-only and grants no diagnostic authority |
+| `SRC-REPO-024` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/Research/o3de-to-unity-conversion-and-runtime-bridge/areas/07-foa-runtime-adapters/README.md | Runtime-adapter separation, re-entry order, and current blocked capabilities | No executable adapter package is approved |
+| `SRC-REPO-025` | https://github.com/theb0yys/FOA-SDK/blob/8fb3f0a729e4be4e513ba896ba52708a73d03eae/Research/o3de-to-unity-conversion-and-runtime-bridge/gates/IMPLEMENTATION_GATE_MAPPING.md#L13-L88 | Controlling gate order and rejected reorderings | Mapping does not satisfy any gate |
+
+The reconciled synthesis is `FOA_SDK_PORTING_METHODS_RESEARCH.md`. It is a research conclusion derived from registered sources and is not itself implementation authority.

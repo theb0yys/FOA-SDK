@@ -63,6 +63,10 @@ class CiRunnerPolicyTests(unittest.TestCase):
             "name: Tainted Grail SDK PR Static Validation\n"
             "on:\n"
             "  pull_request:\n"
+            "    paths:\n"
+            '      - ".github/**"\n'
+            '      - "docs/**"\n'
+            '      - "scripts/**"\n'
             "  pull_request_target:\n"
             "  push:\n"
             "  workflow_dispatch:\n"
@@ -89,10 +93,39 @@ class CiRunnerPolicyTests(unittest.TestCase):
             "    if: github.event_name != 'pull_request_target'\n"
             "    runs-on: ubuntu-latest\n"
             "    timeout-minutes: 45\n"
+            "    permissions:\n"
+            "      contents: read\n"
             "    steps:\n"
+            "      - uses: actions/checkout@v4\n"
+            "        with:\n"
+            "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+            "          persist-credentials: false\n"
+            "          fetch-depth: 0\n"
+            "      - run: |\n"
+            "          echo ${{ github.event.pull_request.base.sha }}\n"
+            "          echo ${{ github.event.before }}\n"
+            "          git diff --check base head > tg-sdk-reviewed-range.log\n"
+            "          echo head > tg-sdk-reviewed-range.txt\n"
             "      - run: python "
             "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py "
-            "--keep-going --static-only --skip-source-policy\n",
+            "--keep-going --static-only --skip-source-policy\n"
+            "  windows-prerequisites:\n"
+            "    name: Windows O3DE prerequisites\n"
+            "    if: github.event_name != 'pull_request_target'\n"
+            "    runs-on: windows-latest\n"
+            "    timeout-minutes: 30\n"
+            "    permissions:\n"
+            "      contents: read\n"
+            "    env:\n"
+            "      O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2\n"
+            "    steps:\n"
+            "      - uses: actions/checkout@v4\n"
+            "        with:\n"
+            "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+            "          persist-credentials: false\n"
+            "      - run: git sparse-checkout init --no-cone\n"
+            "      - run: python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites\n"
+            "      - run: echo passed > tg-sdk-windows-prerequisites.log\n",
             encoding="utf-8",
         )
 
@@ -120,7 +153,8 @@ class CiRunnerPolicyTests(unittest.TestCase):
         policy.write_text(
             "run_local_validation.py automatic pull-request static validation "
             "pull_request_target trusted base commit returns the pull request to draft "
-            "required status checks --static-only --ctest-build-dir compiled Catalog CTest "
+            "required status checks reviewed-range Windows prerequisite "
+            "--static-only --ctest-build-dir compiled Catalog CTest "
             "self-hosted runner registration token does not claim an O3DE build "
             "Pending is not passing\n",
             encoding="utf-8",
@@ -203,6 +237,62 @@ class CiRunnerPolicyTests(unittest.TestCase):
             )
             path.write_text(text, encoding="utf-8")
             with self.assertRaisesRegex(CiRunnerPolicyError, "Privileged PR-target job"):
+                validate_ci_runner_policy(repo)
+
+    def test_narrow_documentation_trigger_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            path = repo / AUTOMATIC_STATIC_WORKFLOW
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    '"docs/**"',
+                    '"docs/tainted-grail-sdk/**"',
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CiRunnerPolicyError, "docs/\\*\\*"):
+                validate_ci_runner_policy(repo)
+
+    def test_shallow_static_checkout_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            path = repo / AUTOMATIC_STATIC_WORKFLOW
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "          fetch-depth: 0\n",
+                    "          fetch-depth: 1\n",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CiRunnerPolicyError, "fetch-depth"):
+                validate_ci_runner_policy(repo)
+
+    def test_missing_reviewed_range_diff_check_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            path = repo / AUTOMATIC_STATIC_WORKFLOW
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "git diff --check",
+                    "git diff --stat",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CiRunnerPolicyError, "git diff --check"):
+                validate_ci_runner_policy(repo)
+
+    def test_windows_prerequisite_job_cannot_be_self_hosted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            path = repo / AUTOMATIC_STATIC_WORKFLOW
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "runs-on: windows-latest",
+                    "runs-on: self-hosted",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CiRunnerPolicyError, "windows-latest|self-hosted"):
                 validate_ci_runner_policy(repo)
 
 

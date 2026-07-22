@@ -2,8 +2,10 @@
 
 ## Validation layers
 
-FOA-SDK uses separate validation layers because a GitHub-hosted Linux job cannot
-prove a Windows O3DE build or editor pass.
+FOA-SDK separates hosted policy checks from host-heavy acceptance. GitHub-hosted
+Linux and Windows jobs can prove repository contracts, an exact reviewed range,
+and Windows tool prerequisites, but they do not prove a full O3DE build or Editor
+pass.
 
 ### Automatic pull-request obligation enforcement
 
@@ -11,25 +13,55 @@ The governed workflow has a narrow `pull_request_target` job for ready pull
 requests. It checks out only the trusted base commit identified by
 `github.event.pull_request.base.sha`; it never checks out or executes pull-request
 head code. The job reads the GitHub event payload and validates the pull-request
-body with the base branch copy of `validate_pr_obligations.py`.
+body with the base-branch copy of `validate_pr_obligations.py`.
 
 A ready pull request must contain every mandatory obligation exactly once, mark
 each one complete, and record the current 40-character PR head in its
 `merge-head` marker. A new commit makes that marker stale. Missing, duplicate,
-unchecked, malformed, or stale obligations cause the governor to use GitHub's
-API to return the pull request to draft and fail the check.
+unchecked, malformed, or stale obligations cause the governor to use GitHub's API
+to return the pull request to draft and fail the check.
 
 The privileged job has only `contents: read` and `pull-requests: write`. It does
-not run the static suite, install dependencies, invoke build tools, use LFS, or
-execute repository code from the proposed head. Repository rules must require
-both `Enforce ready-PR obligations` and the static validation job as required
-status checks on `main`; workflow source alone cannot prevent an administrator
-from bypassing repository rules.
+not run validation, install dependencies, invoke build tools, use LFS, or execute
+repository code from the proposed head.
+
+### Required `main` repository rules
+
+Workflow source cannot stop an administrator or an allowed bypass actor from
+merging around status checks. The `main` ruleset must therefore require:
+
+- changes through a pull request;
+- the branch to be up to date before merge;
+- at least one approving review from someone other than the author;
+- all review conversations resolved;
+- required checks named `Enforce ready-PR obligations`,
+  `Python, validators, and fixtures`, and `Windows O3DE prerequisites`;
+- force pushes and branch deletion blocked;
+- no general bypass actor. A documented emergency-only bypass identity may be
+  retained only with an auditable incident rationale.
+
+The ruleset is a repository setting, not a source file. A pull request must not
+claim this layer complete until an administrator verifies the live setting.
 
 ### Automatic pull-request static validation
 
-`.github/workflows/tainted-grail-sdk-pr-validation.yml` runs the read-only static
-job on relevant pull requests, pushes to `main`, and manual dispatch. It executes:
+`.github/workflows/tainted-grail-sdk-pr-validation.yml` runs on relevant pull
+requests, pushes to `main`, and manual dispatch. Its path filter covers the full
+`.github/**`, `docs/**`, and `scripts/**` trees in addition to product code,
+installer, plug-ins, research, project files, root Markdown, `.gitattributes`, and
+`o3de.lock.json`. Documentation-only changes therefore cannot silently bypass
+validation.
+
+The read-only Linux job checks out the exact pull-request head rather than the
+synthetic merge ref. With full history available, it resolves the event base and
+runs the reviewed-range command:
+
+```shell
+git diff --check <base-sha> <exact-head-sha>
+```
+
+The base/head/event tuple is retained in `tg-sdk-reviewed-range.txt`, together
+with the `git diff --check` log. The job then executes:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
@@ -43,13 +75,36 @@ This automatic pull-request static validation covers:
 - deterministic Tainted Framework and Developer Preview fixture generation and
   verification;
 - redacted diagnostics fixture collection and verification;
+- Suite Wizard graphical smoke under a virtual display;
+- exact reviewed-range whitespace validation.
 
-The workflow uses a GitHub-hosted `ubuntu-latest` runner with read-only repository
-permissions. It does not use secrets or a self-hosted runner. Because O3DE is a
-separate pinned checkout, this job explicitly uses `--skip-source-policy`; it does
-not claim pinned O3DE source-policy coverage. A passing static job does not claim an O3DE build,
-compiled C++ execution, Windows editor startup, pane coverage, packaging,
-deployment, signing, or FoA runtime behavior.
+The Linux job uses `ubuntu-latest`, read-only repository permissions, no secrets,
+and no self-hosted runner. Because O3DE is a separate pinned checkout, it uses
+`--skip-source-policy`; it does not claim pinned O3DE source-policy coverage. A
+passing static job does not claim an O3DE build, compiled C++ execution, Windows
+Editor startup, pane coverage, packaging, deployment, signing, or FoA runtime
+behavior.
+
+### Automatic Windows prerequisite validation
+
+A separate read-only `windows-latest` job checks out the same exact event head,
+clones only the pinned O3DE policy surface, verifies the exact O3DE commit, and
+runs:
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `
+  --engine-root <pinned-o3de-policy-root> `
+  --build-dir <external-empty-build-root>
+```
+
+This Windows prerequisite gate proves the hosted machine has the required
+Windows x64 host, Python, CMake, Git, Git LFS, Visual Studio C++ tools, valid
+FOA-SDK product root, exact O3DE identity and commit, and a safe external build
+location. Its log is retained as `tg-sdk-windows-prerequisites.log`.
+
+The prerequisite job deliberately uses a sparse O3DE policy checkout. It does not
+configure O3DE, build targets, run compiled Catalog tests, launch the Editor, or
+produce UI evidence. Those remain host-heavy gates.
 
 ### Manual host workflows
 
@@ -62,15 +117,15 @@ platform-specific tools, reviewed inputs, or release/operator decisions:
 - `Tainted Grail SDK Windows Installer`.
 
 Their source files retain `workflow_dispatch` only. They must not run untrusted
-pull-request code on a personal or privileged machine.
-
-The inherited full-engine `AR` workflow and generic upstream `Validation`
-workflow remain removed. They did not prove the FOA-SDK product slice.
+pull-request code on a personal or privileged machine. The inherited full-engine
+`AR` workflow and generic upstream `Validation` workflow remain removed because
+they did not prove the FOA-SDK product slice.
 
 ## Full local validation
 
-A full validation claim requires an already configured O3DE build and the
-compiled Catalog test target:
+A full validation claim requires a complete exact-commit O3DE checkout, an
+already configured external build directory, and the compiled Catalog test
+target:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
@@ -88,35 +143,32 @@ TaintedGrailModdingSDK.Catalog.Tests
 ```
 
 CTest is invoked with `--no-tests=error`; a missing or misnamed test target is a
-failure rather than a green zero-test run. The build directory must exist and
-contain both `CMakeCache.txt` and `CTestTestfile.cmake`.
+failure rather than a green zero-test run. The build directory must contain both
+`CMakeCache.txt` and `CTestTestfile.cmake` and must belong to the exact pinned
+engine and dedicated product project.
 
 Calling `run_local_validation.py` without either `--ctest-build-dir` or
-`--static-only` is a configuration failure. Full mode also rejects
-`--skip-source-policy`. This prevents an operator from accidentally reporting a
-non-compiled or non-source-policy run as full validation.
+`--static-only` is a configuration failure. Full mode rejects
+`--skip-source-policy`. `--keep-going` continues across static checks, fixtures,
+and compiled CTest so one invocation reports the complete failure inventory.
 
-`--keep-going` continues across all three stages—static checks, fixtures, and
-compiled CTest—so one invocation reports the complete failure inventory. Without
-`--keep-going`, later stages stop after the first failed stage.
-
-`--static-only` is intentionally narrower. GitHub uses it together with
-`--skip-source-policy`; a local exact-head run may omit that skip and therefore
-include pinned O3DE source policy. Static-only mode is never sufficient for
-exact-head merge acceptance.
+`--static-only` is intentionally narrower. Static-only mode is never sufficient
+for exact-head merge acceptance.
 
 ## Merge evidence
 
 Every pull request must distinguish these results:
 
-1. automatic PR static-validation workflow result;
-2. exact reviewed commit;
-3. full local or exact-head host configure/build result;
-4. compiled Catalog CTest result and build directory;
-5. Windows editor/UI evidence or the one permitted explicit risk acceptance.
+1. automatic exact-head static-validation result and artifact identity;
+2. hosted reviewed-range base/head evidence;
+3. hosted Windows prerequisite result and artifact identity;
+4. full exact-head O3DE configure and required target build result;
+5. compiled Catalog CTest result and configured build directory;
+6. Windows Editor/UI evidence or the one permitted explicit risk acceptance;
+7. live repository rules, resolved threads, and independent maintainer approval.
 
 Pending is not passing. Queued, waiting, skipped, approval-blocked, cancelled,
-missing, zero-test, or stale-head runs are not successful evidence.
+missing, zero-test, stale-head, or wrong-event runs are not successful evidence.
 
 ## Self-hosted runner boundary
 
@@ -131,7 +183,7 @@ A future self-hosted runner requires a separate reviewed design with, at minimum
 - no personal files, game saves, credentials, signing keys, or unrelated secrets;
 - no automatic execution for fork pull requests;
 - narrow runner labels and narrowly scoped workflows;
-- restricted repository permissions and environment approval where appropriate;
+- restricted repository permissions and environment approval;
 - clean teardown or re-imaging after jobs;
 - explicit operator ownership, patching, monitoring, and incident response.
 
@@ -142,10 +194,7 @@ GitHub-hosted job.
 
 A runner registration token is a secret even when it is short-lived. Never paste
 it into chat, issues, pull requests, screenshots, logs, source files, or retained
-shell history.
-
-Any registration token exposed in a screenshot or message must be treated as
-compromised: abandon it and generate a new token before configuring a runner.
+shell history. Any exposed token must be abandoned and regenerated.
 
 ## Exact-head validation receipt
 
@@ -179,35 +228,16 @@ The coordinator records five non-waivable automated gates:
 - O3DE build;
 - compiled Catalog CTest with `--no-tests=error`.
 
-The static runner is deliberately recorded separately from compiled CTest so the
-receipt proves both layers and cannot hide a missing test executable behind one
-combined command.
-
-To record a command manually, place the real executable and arguments after `--`.
-The tool runs that command from the exact clean repository head, captures stdout
-and stderr into exclusive bounded files, records observed exit status and UTC
-times, and rejects a dirty tree or changed head before and after execution.
-
-```shell
-python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py record \
-  --output ../tg-sdk-receipt \
-  --name local-validation \
-  -- python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
-     --keep-going --static-only
-```
+The static runner is recorded separately from compiled CTest so a receipt cannot
+hide a missing test executable behind one combined command. Commands are run from
+the clean exact head, with bounded exclusive logs, observed exit status and UTC
+times, and before/after head and cleanliness checks.
 
 `git-diff-check`, `local-validation`, `o3de-configure`, `o3de-build`, and
 `compiled-tests` must all have an executed, zero-exit result. They cannot be
 waived. A Windows UI pass may be recorded with `skip` only when it genuinely was
-not run, followed by a local maintainer declaration with `accept-risk`.
-
-```shell
-python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py skip \
-  --output ../tg-sdk-receipt --name windows-ui --reason "Exact reason"
-python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py accept-risk \
-  --output ../tg-sdk-receipt --gate windows-ui \
-  --maintainer-alias maintainer --rationale "Concrete local risk decision"
-```
+not run, followed by a local maintainer declaration with `accept-risk` and a
+concrete rationale.
 
 Finalize, verify, and summarize against the same clean exact head:
 
@@ -222,10 +252,7 @@ python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py summarize \
   --require-merge-ready
 ```
 
-`developer_preview_verification.py status` is a gating command: it returns
-non-zero unless the authoritative receipt, UI evidence, and exact reviewed range
-all verify.
-
-The receipt and captured logs must not be committed. Their hashes detect later
-modification but are not a signature or independently authenticated CI
-attestation; reviewers must treat them as exact-head, tester-supplied evidence.
+`developer_preview_verification.py status` returns non-zero unless the
+authoritative receipt, UI evidence, and exact reviewed range all verify. Receipt
+and captured logs must not be committed. Their hashes detect later modification
+but are not a signature or independently authenticated CI attestation.

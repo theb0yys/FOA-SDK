@@ -73,7 +73,11 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
             "pull_request_target:",
             "push:",
             "workflow_dispatch:",
+            '".github/**"',
+            '"docs/**"',
+            '"scripts/**"',
             "runs-on: ubuntu-latest",
+            "runs-on: windows-latest",
             "permissions:",
             "contents: read",
             "timeout-minutes:",
@@ -81,10 +85,18 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
             "Enforce ready-PR obligations",
             "github.event_name == 'pull_request_target'",
             "github.event.pull_request.base.sha",
+            "github.event.pull_request.head.sha",
+            "github.event.before",
             "pull-requests: write",
             "persist-credentials: false",
+            "fetch-depth: 0",
+            "git diff --check",
+            "tg-sdk-reviewed-range.txt",
             "convertPullRequestToDraft",
             "github.event_name != 'pull_request_target'",
+            "Windows O3DE prerequisites",
+            "developer_preview.py prerequisites",
+            "tg-sdk-windows-prerequisites.log",
         ),
         "Automatic TG SDK workflow",
     )
@@ -93,7 +105,6 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
         (
             "self-hosted",
             "--ctest-build-dir",
-            "windows-latest",
             "secrets.",
             "github.event.pull_request.head.repo",
             "github.event.pull_request.head.ref",
@@ -103,10 +114,17 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
 
     target_job_start = automatic.find("  enforce-obligations:")
     static_job_start = automatic.find("  static-validation:")
-    if target_job_start < 0 or static_job_start <= target_job_start:
+    windows_job_start = automatic.find("  windows-prerequisites:")
+    if (
+        target_job_start < 0
+        or static_job_start <= target_job_start
+        or windows_job_start <= static_job_start
+    ):
         raise CiRunnerPolicyError(
-            "Automatic TG SDK workflow does not keep target enforcement before the static job."
+            "Automatic TG SDK workflow does not keep target enforcement, static validation, "
+            "and Windows prerequisites in separate ordered jobs."
         )
+
     privileged_job = automatic[target_job_start:static_job_start]
     require_fragments(
         privileged_job,
@@ -128,8 +146,61 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
             "npm ",
             "make ",
             "lfs: true",
+            "windows-latest",
+            "github.event.pull_request.head.sha",
         ),
         "Privileged PR-target job",
+    )
+
+    static_job = automatic[static_job_start:windows_job_start]
+    require_fragments(
+        static_job,
+        (
+            "github.event.pull_request.head.sha",
+            "fetch-depth: 0",
+            "github.event.pull_request.base.sha",
+            "github.event.before",
+            "git diff --check",
+            "tg-sdk-reviewed-range.log",
+            "tg-sdk-reviewed-range.txt",
+        ),
+        "Read-only static validation job",
+    )
+    reject_fragments(
+        static_job,
+        (
+            "pull-requests: write",
+            "self-hosted",
+            "secrets.",
+        ),
+        "Read-only static validation job",
+    )
+
+    windows_job = automatic[windows_job_start:]
+    require_fragments(
+        windows_job,
+        (
+            "runs-on: windows-latest",
+            "contents: read",
+            "persist-credentials: false",
+            "github.event.pull_request.head.sha",
+            "O3DE_COMMIT:",
+            "sparse-checkout",
+            "developer_preview.py prerequisites",
+            "tg-sdk-windows-prerequisites.log",
+        ),
+        "Windows prerequisite job",
+    )
+    reject_fragments(
+        windows_job,
+        (
+            "pull-requests: write",
+            "self-hosted",
+            "secrets.",
+            "cmake --build",
+            "--ctest-build-dir",
+        ),
+        "Windows prerequisite job",
     )
 
     for relative_path in MANUAL_WORKFLOWS:
@@ -178,6 +249,8 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
         "trusted base commit",
         "pull request to draft",
         "status checks",
+        "reviewed-range",
+        "Windows prerequisite",
         "--static-only",
         "--ctest-build-dir",
         "compiled Catalog CTest",
@@ -201,8 +274,8 @@ def main() -> int:
         print(f"CI runner policy validation failed: {error}", file=sys.stderr)
         return 1
     print(
-        "CI runner policy validation passed: trusted-base PR governance, automatic "
-        "static coverage, and mandatory exact-head host coverage remain separate."
+        "CI runner policy validation passed: trusted-base PR governance, exact reviewed "
+        "ranges, hosted Windows prerequisites, and mandatory host coverage remain separate."
     )
     return 0
 

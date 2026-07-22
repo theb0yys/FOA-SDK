@@ -335,25 +335,35 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
                     result, element.m_elementId, "element.invalid",
                     "Road Atlas element identity, references, text, state, or authority is invalid.");
             }
-            if (!AreBoundedValues(
-                    element.m_connectedSegmentRefs,
-                    MaximumConnectedSegmentCount,
-                    1024)
-                || !AreBoundedValues(element.m_tags, MaximumTagCount, 256)
-                || HasDuplicates(element.m_connectedSegmentRefs)
-                || HasDuplicates(element.m_tags))
+
+            const bool connectedValuesBounded = AreBoundedValues(
+                element.m_connectedSegmentRefs,
+                MaximumConnectedSegmentCount,
+                1024);
+            const bool tagsBounded = AreBoundedValues(
+                element.m_tags,
+                MaximumTagCount,
+                256);
+            if (!connectedValuesBounded
+                || !tagsBounded
+                || (connectedValuesBounded
+                    && HasDuplicates(element.m_connectedSegmentRefs))
+                || (tagsBounded && HasDuplicates(element.m_tags)))
             {
                 AddIssue(
                     result, element.m_elementId, "element.duplicate-values",
                     "Road Atlas connected refs and tags must be unique and bounded.");
             }
-            for (const AZStd::string& segmentRef : element.m_connectedSegmentRefs)
+            if (connectedValuesBounded)
             {
-                if (!Contains(segmentRefs, segmentRef))
+                for (const AZStd::string& segmentRef : element.m_connectedSegmentRefs)
                 {
-                    AddIssue(
-                        result, element.m_elementId, "element.missing-segment",
-                        "Road Atlas connectivity references an unknown segment.");
+                    if (!Contains(segmentRefs, segmentRef))
+                    {
+                        AddIssue(
+                            result, element.m_elementId, "element.missing-segment",
+                            "Road Atlas connectivity references an unknown segment.");
+                    }
                 }
             }
             if (!element.m_fromElementRef.empty()
@@ -378,65 +388,71 @@ namespace TaintedGrailModdingSDK::RoadAtlasExtension
                     result, element.m_elementId, "segment.geometry-missing",
                     "Planning-approved segments require at least two exact geometry points.");
             }
-            if (element.m_geometry.size()
-                > MaximumGeometryPointCount - totalGeometryPoints)
+
+            const bool geometryWithinBound = element.m_geometry.size()
+                <= MaximumGeometryPointCount - totalGeometryPoints;
+            if (!geometryWithinBound)
             {
                 geometryCountExceeded = true;
             }
             else
             {
                 totalGeometryPoints += element.m_geometry.size();
-            }
-            for (const Coordinate& point : element.m_geometry)
-            {
-                if (!std::isfinite(point.m_x) || !std::isfinite(point.m_y)
-                    || !std::isfinite(point.m_z)
-                    || !IsBoundedText(point.m_pointRef, 512))
+                for (const Coordinate& point : element.m_geometry)
                 {
-                    AddIssue(
-                        result, element.m_elementId, "segment.geometry-invalid",
-                        "Road Atlas geometry points require finite coordinates and stable source refs.");
+                    if (!std::isfinite(point.m_x) || !std::isfinite(point.m_y)
+                        || !std::isfinite(point.m_z)
+                        || !IsBoundedText(point.m_pointRef, 512))
+                    {
+                        AddIssue(
+                            result, element.m_elementId, "segment.geometry-invalid",
+                            "Road Atlas geometry points require finite coordinates and stable source refs.");
+                    }
                 }
             }
 
+            const bool requirementsWithinBound = element.m_evidenceRequirements.size()
+                <= MaximumEvidenceRequirementCount;
             AZStd::vector<AZStd::string> requirementIds;
-            if (element.m_evidenceRequirements.size()
-                > MaximumEvidenceRequirementCount)
+            if (!requirementsWithinBound)
             {
                 AddIssue(
                     result, element.m_elementId, "evidence.requirement-count",
                     "Road Atlas evidence requirement count exceeds the contract bound.");
             }
-            for (const EvidenceRequirement& requirement : element.m_evidenceRequirements)
+            else
             {
-                requirementIds.push_back(requirement.m_requirementId);
-                if (!IsStableContractId(requirement.m_requirementId)
-                    || !IsValidEvidenceRequirementKind(requirement.m_kind)
-                    || !IsBoundedText(requirement.m_notes, 4096, true)
-                    || requirement.m_evidenceIds.size()
-                        > MaximumEvidenceIdsPerRequirement
-                    || (requirement.m_satisfied && requirement.m_evidenceIds.empty())
-                    || HasDuplicates(requirement.m_evidenceIds)
-                    || AZStd::any_of(
-                        requirement.m_evidenceIds.begin(),
-                        requirement.m_evidenceIds.end(),
-                        [](const AZStd::string& evidenceId)
-                        {
-                            return !IsStableContractId(evidenceId);
-                        }))
+                for (const EvidenceRequirement& requirement : element.m_evidenceRequirements)
+                {
+                    requirementIds.push_back(requirement.m_requirementId);
+                    if (!IsStableContractId(requirement.m_requirementId)
+                        || !IsValidEvidenceRequirementKind(requirement.m_kind)
+                        || !IsBoundedText(requirement.m_notes, 4096, true)
+                        || requirement.m_evidenceIds.size()
+                            > MaximumEvidenceIdsPerRequirement
+                        || (requirement.m_satisfied && requirement.m_evidenceIds.empty())
+                        || HasDuplicates(requirement.m_evidenceIds)
+                        || AZStd::any_of(
+                            requirement.m_evidenceIds.begin(),
+                            requirement.m_evidenceIds.end(),
+                            [](const AZStd::string& evidenceId)
+                            {
+                                return !IsStableContractId(evidenceId);
+                            }))
+                    {
+                        AddIssue(
+                            result, element.m_elementId, "evidence.invalid",
+                            "Road Atlas evidence requirements are incomplete, unbounded, or duplicated.");
+                    }
+                }
+                if (HasDuplicates(requirementIds)
+                    || (element.m_promotionState == PromotionState::ApprovedForPlanning
+                        && !RequirementsSatisfied(element)))
                 {
                     AddIssue(
-                        result, element.m_elementId, "evidence.invalid",
-                        "Road Atlas evidence requirements are incomplete, unbounded, or duplicated.");
+                        result, element.m_elementId, "evidence.requirements-unsatisfied",
+                        "Planning-approved elements require a non-empty set of unique, required, satisfied evidence requirements.");
                 }
-            }
-            if (HasDuplicates(requirementIds)
-                || (element.m_promotionState == PromotionState::ApprovedForPlanning
-                    && !RequirementsSatisfied(element)))
-            {
-                AddIssue(
-                    result, element.m_elementId, "evidence.requirements-unsatisfied",
-                    "Planning-approved elements require a non-empty set of unique, required, satisfied evidence requirements.");
             }
         }
         if (geometryCountExceeded || totalGeometryPoints > MaximumGeometryPointCount)

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <AssemblyName>FOA.SDK.RuntimeAdapter.IL2CPP</AssemblyName>
+    <RootNamespace>FOA.SDK.RuntimeAdapter.IL2CPP</RootNamespace>
+    <FoAGameRoot Condition="'$(FoAGameRoot)' == ''"></FoAGameRoot>
+    <BepInExCoreDir>$(FoAGameRoot)\BepInEx\core</BepInExCoreDir>
+    <FoAUnityLibsDir>$(FoAGameRoot)\BepInEx\unity-libs</FoAUnityLibsDir>
+    <FoAInteropDir>$(FoAGameRoot)\BepInEx\interop</FoAInteropDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx.Core"><HintPath>$(BepInExCoreDir)\BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity.Common"><HintPath>$(BepInExCoreDir)\BepInEx.Unity.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP"><HintPath>$(BepInExCoreDir)\BepInEx.Unity.IL2CPP.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(BepInExCoreDir)\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(FoAUnityLibsDir)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(FoAUnityLibsDir)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(FoAInteropDir)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="TG.Main"><HintPath>$(FoAInteropDir)\TG.Main.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="ValidateExactFoAIl2CppReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(FoAGameRoot)' == ''" Text="FoAGameRoot is required for the exact IL2CPP profile." />
+    <Error Condition="!Exists('$(BepInExCoreDir)\BepInEx.Core.dll')" Text="BepInEx.Core.dll is missing." />
+    <Error Condition="!Exists('$(BepInExCoreDir)\BepInEx.Unity.Common.dll')" Text="BepInEx.Unity.Common.dll is missing." />
+    <Error Condition="!Exists('$(BepInExCoreDir)\BepInEx.Unity.IL2CPP.dll')" Text="BepInEx.Unity.IL2CPP.dll is missing." />
+    <Error Condition="!Exists('$(BepInExCoreDir)\Il2CppInterop.Runtime.dll')" Text="Il2CppInterop.Runtime.dll is missing." />
+    <Error Condition="!Exists('$(FoAUnityLibsDir)\UnityEngine.dll')" Text="UnityEngine.dll is missing." />
+    <Error Condition="!Exists('$(FoAUnityLibsDir)\UnityEngine.CoreModule.dll')" Text="UnityEngine.CoreModule.dll is missing." />
+    <Error Condition="!Exists('$(FoAInteropDir)\Assembly-CSharp.dll')" Text="Generated interop Assembly-CSharp.dll is missing." />
+    <Error Condition="!Exists('$(FoAInteropDir)\TG.Main.dll')" Text="Generated interop TG.Main.dll is missing." />
+  </Target>
+</Project>

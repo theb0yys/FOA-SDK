@@ -4,7 +4,7 @@
 
 It does **not** copy files, start processes, request elevation, install, repair, upgrade, rollback, uninstall, launch FoA, execute runtime adapters, deploy content, mutate saves, sign artifacts, upload releases, mutate catalogues, or promote evidence.
 
-This unit owns only two deterministic authenticated artifacts:
+This unit owns only two authenticated artifacts:
 
 ```text
 PackageEngine/
@@ -17,39 +17,21 @@ PackageEngine/
 
 ## Required precondition
 
-Package-engine token issuance now requires one exact canonical document from:
+Token issuance requires one exact canonical document from `AdmissionBoundExecutionHandoff/`. A raw `ExecutionHandoff/` is not sufficient.
 
-```text
-AdmissionBoundExecutionHandoff/
-```
-
-Raw `ExecutionHandoff/` documents are not sufficient for token or session creation. The binding must already prove:
+The binding must already prove:
 
 - one inert execution handoff was validated;
 - one lifecycle admission receipt was validated;
-- operation, target reference and prior installation reference match;
+- operation, target reference and prior-installation reference match;
 - admission preceded the handoff request;
 - the binding was created inside the bounded admission window.
 
 ## Capability token
 
-A package-engine capability token is a canonical authenticated JSON document bound to one exact `admission_bound_handoff_sha256` and its embedded `handoff_sha256`.
+A package-engine capability token is a canonical authenticated JSON document bound to one exact admission-bound handoff, inert handoff, reviewed operation plan, authority proof, and trust-key identity.
 
-It contains:
-
-- `token_scope = package-engine-capability-token`;
-- `audience = foa-sdk.package-engine`;
-- the admission-bound handoff fingerprint;
-- the admission receipt, eligibility and registry snapshot fingerprints;
-- the complete embedded admission-bound handoff;
-- the complete embedded inert handoff;
-- the handoff operation and logical target;
-- the exact required capability names from the handoff;
-- the broker-reviewed grant set from the authenticated operation plan;
-- subject, nonce, issue time and expiry time;
-- authenticated `token_sha256` over every preceding field.
-
-The token is not a bearer secret. It serializes no credential, executable path, private filesystem path, installation directory, environment value, process argument vector, elevation command, or OS handle. It is review evidence that the next package-engine stage may accept the named capability set for one exact admitted handoff.
+The handoff-required capabilities must be a subset of the authenticated operation plan's complete capability allow-list. The token grants the signed plan capability set; a caller cannot append, replace, or manufacture capabilities because the operation plan and authority proof are revalidated and HMAC-bound.
 
 Token chronology fails closed:
 
@@ -61,58 +43,29 @@ Token lifetime is capped at one hour and must not outlive the authority proof.
 
 ## Package-engine session
 
-A package-engine session consumes a verified admission-bound handoff plus a verified token and emits a canonical authenticated session record.
-
-The session records:
-
-- `session_scope = package-engine-capability-session`;
-- `session_state = authenticated-admission-bound-capability-accepted-no-effects`;
-- exact admission-bound handoff, admission receipt, eligibility, snapshot, handoff, token, receipt, plan, view-model and confirmation hashes;
-- operation, logical target and prior-installation reference;
-- resolver-owned package order and payload summary;
-- accepted capabilities;
-- accepted actor and UTC time;
-- the complete embedded admission-bound handoff, inert handoff and token;
-- an exact all-false effect record;
-- an exact all-false authority record;
-- authenticated `session_sha256` over every preceding field.
-
-Session chronology fails closed:
+A package-engine session consumes a verified admission-bound handoff plus a verified token and emits a canonical authenticated session record. Session chronology fails closed:
 
 ```text
 token.issued_at_utc <= session.accepted_at_utc <= token.expires_at_utc
 ```
 
-## Persistence
+Caller-supplied session reference, actor, timestamp, admission binding, token, chronology, capability plan, and trust-key state are validated before the token's one-shot claim is consumed. A correctable preflight error therefore does not burn the token.
 
-The CLI provides only:
+The session embeds the exact authenticated chain needed by downstream gates and retains all-false effect and authority records. It records capability intake only.
 
-```text
-package_engine.py token
-package_engine.py session
-package_engine.py verify-token
-package_engine.py verify-session
-```
+## File intake and persistence
 
-`token` and `session` require `--admission-bound-handoff`; `--handoff` is no longer accepted for capability issuance.
+Token, session, admission-bound-handoff, operation-plan, and authority-proof file reads are bounded strict UTF-8 JSON operations. Token and session loaders reject:
 
-Published token and session files use canonical UTF-8 JSON, create-once publication, symbolic-link rejection, byte verification and idempotency for byte-identical existing files.
+- symbolic-link files or symbolic-link path components;
+- documents larger than the configured byte limit;
+- excessive JSON nesting or node counts;
+- invalid UTF-8 or JSON;
+- noncanonical token/session bytes;
+- stale, altered, incorrectly signed, or mismatched records.
+
+Published token and session files use full-write loops, fsync, deterministic temporary paths, atomic no-replace publication, exact readback verification, and byte-identical idempotency. A different existing file is never overwritten.
 
 ## Boundary
 
-This package engine slice establishes a capability-checked execution path **up to intake only**.
-
-The following remain separate units:
-
-1. package payload copier;
-2. process launcher;
-3. elevation helper;
-4. lifecycle executors for install, repair, upgrade, rollback and uninstall;
-5. runtime adapter launch or live-load execution;
-6. installation-result receipts.
-
-Each later unit must consume the exact `session_sha256`, receive its own explicit capability, and prove that external workspaces and user-authored content are preserved.
-
-## Trust-anchor hardening
-
-Package-engine tokens and sessions are Schema 2 authenticated records. A token consumes a trusted broker proof for one resolver-bound operation plan, and session acceptance atomically claims the token nonce.
+This package-engine slice establishes a capability-checked execution path **up to intake only**. Payload copying, process launch, elevation, lifecycle coordination, installation-state publication, runtime adapter execution, and installation-result receipts remain separate gates. Each downstream unit consumes the exact session fingerprint, verifies its own explicit capability and grant, and records its own bounded effect evidence.

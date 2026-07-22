@@ -19,6 +19,7 @@ from typing import Iterable
 ALLOWED_TOP_LEVEL_DIRECTORIES = {
     ".github",
     "Gems",
+    "Installer",
     "Plugins",
     "Research",
     "TaintedGrailModdingEditor",
@@ -43,6 +44,7 @@ ALLOWED_ROOT_FILES = {
     "o3de.lock.json",
 }
 ALLOWED_GEMS = {"ExternalToolchain", "TaintedGrailModdingSDK"}
+LEGACY_INSTALLER_PREFIX = "Gems/TaintedGrailModdingSDK/Installer/"
 ALLOWED_PLUGIN_CATEGORIES = {"Authoring", "Integrations", "RuntimeAdapters"}
 ALLOWED_PLUGIN_ROOT_FILES = {
     "Plugins/README.md",
@@ -55,6 +57,25 @@ PLUGIN_PACKAGE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9._-]{0,127}$")
 AUTOMATIC_STATIC_WORKFLOW = (
     ".github/workflows/tainted-grail-sdk-pr-validation.yml"
 )
+ALLOWED_INSTALLER_LANES = {
+    "Assets",
+    "Bootstrapper",
+    "Launcher",
+    "Packages",
+    "Packaging",
+    "Suites",
+    "SuiteWizard",
+    "Tests",
+}
+ALLOWED_INSTALLER_ROOT_FILES = {
+    "Installer/README.md",
+    "Installer/package.schema.json",
+    "Installer/suite.schema.json",
+}
+ALLOWED_INSTALLER_LANE_FILES = {
+    f"Installer/{lane}/README.md" for lane in ALLOWED_INSTALLER_LANES
+}
+INSTALLER_ITEM_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9._-]{0,127}$")
 ALLOWED_GITHUB_FILES = {
     ".github/CODEOWNERS",
     ".github/ISSUE_TEMPLATE/config.yml",
@@ -73,6 +94,22 @@ REQUIRED_PATHS = {
     AUTOMATIC_STATIC_WORKFLOW,
     "Gems/ExternalToolchain/gem.json",
     "Gems/TaintedGrailModdingSDK/gem.json",
+    "Installer/README.md",
+    "Installer/package.schema.json",
+    "Installer/suite.schema.json",
+    "Installer/Assets/README.md",
+    "Installer/Bootstrapper/README.md",
+    "Installer/Launcher/README.md",
+    "Installer/Launcher/Windows/InstalledEditorLauncher.cpp",
+    "Installer/Launcher/Windows/InstalledEditorLauncher.rc",
+    "Installer/Packages/README.md",
+    "Installer/Packaging/README.md",
+    "Installer/Packaging/Windows/.config/dotnet-tools.json",
+    "Installer/Packaging/Windows/CMakeLists.txt",
+    "Installer/Packaging/Windows/README.md",
+    "Installer/Suites/README.md",
+    "Installer/SuiteWizard/README.md",
+    "Installer/Tests/README.md",
     "Plugins/README.md",
     "Plugins/plugin.schema.json",
     "Plugins/Authoring/README.md",
@@ -139,10 +176,14 @@ def validate_paths(paths: Iterable[str]) -> None:
     unexpected_root_files: set[str] = set()
     unexpected_top_level_directories: set[str] = set()
     forbidden: set[str] = set()
+    legacy_installer_paths: set[str] = set()
     unexpected_gems: set[str] = set()
     unexpected_github: set[str] = set()
     unexpected_plugins: set[str] = set()
     plugin_packages: set[tuple[str, str]] = set()
+    unexpected_installer: set[str] = set()
+    installer_suites: set[str] = set()
+    installer_packages: set[str] = set()
 
     for path in tracked:
         parts = path.split("/")
@@ -161,8 +202,34 @@ def validate_paths(paths: Iterable[str]) -> None:
             unexpected_top_level_directories.add(top)
             continue
         if top == "Gems":
+            if path.startswith(LEGACY_INSTALLER_PREFIX):
+                legacy_installer_paths.add(path)
             if len(parts) < 2 or parts[1] not in ALLOWED_GEMS:
                 unexpected_gems.add(parts[1] if len(parts) > 1 else path)
+        elif top == "Installer":
+            if len(parts) == 2:
+                if path not in ALLOWED_INSTALLER_ROOT_FILES:
+                    unexpected_installer.add(path)
+                continue
+
+            lane = parts[1]
+            if lane not in ALLOWED_INSTALLER_LANES:
+                unexpected_installer.add(path)
+                continue
+            if len(parts) == 3:
+                if path not in ALLOWED_INSTALLER_LANE_FILES:
+                    unexpected_installer.add(path)
+                continue
+
+            if lane in {"Suites", "Packages"}:
+                item = parts[2]
+                if INSTALLER_ITEM_NAME.fullmatch(item) is None:
+                    unexpected_installer.add(path)
+                    continue
+                if lane == "Suites":
+                    installer_suites.add(item)
+                else:
+                    installer_packages.add(item)
         elif top == "Plugins":
             if len(parts) == 2:
                 if path not in ALLOWED_PLUGIN_ROOT_FILES:
@@ -193,10 +260,24 @@ def validate_paths(paths: Iterable[str]) -> None:
         for category, package in plugin_packages
         if f"Plugins/{category}/{package}/plugin.json" not in tracked
     )
+    missing_suite_manifests = sorted(
+        f"Installer/Suites/{suite}/suite.json"
+        for suite in installer_suites
+        if f"Installer/Suites/{suite}/suite.json" not in tracked
+    )
+    missing_package_manifests = sorted(
+        f"Installer/Packages/{package}/package.json"
+        for package in installer_packages
+        if f"Installer/Packages/{package}/package.json" not in tracked
+    )
 
     problems: list[str] = []
     if forbidden:
         problems.append("inherited O3DE paths: " + ", ".join(sorted(forbidden)[:20]))
+    if legacy_installer_paths:
+        problems.append(
+            "legacy Gem-owned installer paths: " + ", ".join(sorted(legacy_installer_paths)[:20])
+        )
     if unexpected_root_files:
         problems.append("unexpected root files: " + ", ".join(sorted(unexpected_root_files)))
     if unexpected_top_level_directories:
@@ -208,6 +289,16 @@ def validate_paths(paths: Iterable[str]) -> None:
         problems.append("unexpected root Gems: " + ", ".join(sorted(unexpected_gems)))
     if unexpected_github:
         problems.append("unexpected .github files: " + ", ".join(sorted(unexpected_github)))
+    if unexpected_installer:
+        problems.append("unexpected installer paths: " + ", ".join(sorted(unexpected_installer)))
+    if missing_suite_manifests:
+        problems.append(
+            "installer suites missing suite.json: " + ", ".join(missing_suite_manifests)
+        )
+    if missing_package_manifests:
+        problems.append(
+            "installer packages missing package.json: " + ", ".join(missing_package_manifests)
+        )
     if unexpected_plugins:
         problems.append("unexpected plug-in paths: " + ", ".join(sorted(unexpected_plugins)))
     if missing_plugin_manifests:
@@ -244,7 +335,7 @@ def main() -> int:
         return 1
     print(
         "FOA-SDK repository structure validation passed: tracked tree is product-only, "
-        "the automatic static workflow is required, and plug-in packages are governed."
+        "plug-in packages are governed, and installer source is isolated."
     )
     return 0
 

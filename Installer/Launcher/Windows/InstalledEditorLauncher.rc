@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #define TG_SDK_ICON 101
-TG_SDK_ICON ICON "../../../../../TaintedGrailModdingEditor/TaintedGrailModdingEditor.ico"
+TG_SDK_ICON ICON "../../../TaintedGrailModdingEditor/TaintedGrailModdingEditor.ico"

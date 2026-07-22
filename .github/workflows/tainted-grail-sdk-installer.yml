@@ -216,7 +216,7 @@ jobs:
         if: inputs.mode == 'package'
         shell: pwsh
         run: |
-          cmake -S Gems/TaintedGrailModdingSDK/Installer -B $env:SDK_PACKAGE_BUILD `
+          cmake -S Installer/Packaging/Windows -B $env:SDK_PACKAGE_BUILD `
             -DTG_INSTALLER_VERSION="${{ inputs.version }}" `
             -DTG_INSTALLER_PAYLOAD_ROOT="$env:SDK_STAGE"
           cpack --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `

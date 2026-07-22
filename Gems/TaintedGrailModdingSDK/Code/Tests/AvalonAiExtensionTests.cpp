@@ -149,4 +149,52 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(result.m_accepted);
         EXPECT_FALSE(result.m_plan.m_executionAllowed);
     }
+
+    TEST(AvalonAiExtensionTests, UnknownBlackboardScopeFailsClosed)
+    {
+        auto manifest = MakeAiPackage();
+        manifest.m_blackboardKeys[0].m_scope =
+            static_cast<AvalonAiExtension::BlackboardScope>(99);
+        const auto result = AvalonAiExtension::ValidateAndPlan(manifest);
+        EXPECT_FALSE(result.m_accepted);
+    }
+
+    TEST(AvalonAiExtensionTests, DistinctKeyIdsCannotAliasStorageIdentity)
+    {
+        auto manifest = MakeAiPackage();
+        auto alias = manifest.m_blackboardKeys[0];
+        alias.m_keyId = "blackboard-key.companion.distance-alias";
+        manifest.m_blackboardKeys.push_back(alias);
+        const auto result = AvalonAiExtension::ValidateAndPlan(manifest);
+        EXPECT_FALSE(result.m_accepted);
+        EXPECT_TRUE(AZStd::any_of(
+            result.m_issues.begin(), result.m_issues.end(),
+            [](const AvalonAiExtension::ValidationIssue& issue)
+            {
+                return issue.m_code == "blackboard-key.storage-alias";
+            }));
+    }
+
+    TEST(AvalonAiExtensionTests, NestedPlannerCollectionsAreBounded)
+    {
+        auto goal = MakeAiPackage();
+        goal.m_goals[0].m_conditions.resize(
+            257,
+            { "fact.player-visible", AvalonAiExtension::PlanningComparison::Equal, 1 });
+        EXPECT_FALSE(AvalonAiExtension::ValidateAndPlan(goal).m_accepted);
+
+        auto action = MakeAiPackage();
+        action.m_actions[0].m_effects.resize(
+            257,
+            { "fact.near-player", 1 });
+        EXPECT_FALSE(AvalonAiExtension::ValidateAndPlan(action).m_accepted);
+    }
+
+    TEST(AvalonAiExtensionTests, TopLevelRolesAndCapabilitiesAreBounded)
+    {
+        auto manifest = MakeAiPackage();
+        manifest.m_supportedActorRoles.resize(129, "role.companion");
+        const auto result = AvalonAiExtension::ValidateAndPlan(manifest);
+        EXPECT_FALSE(result.m_accepted);
+    }
 } // namespace TaintedGrailModdingSDK

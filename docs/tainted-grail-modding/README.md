@@ -37,16 +37,17 @@ captured: 2026-07-21
 licence: NOASSERTION at repository root
 ```
 
-Because the source repository has no root licence declaration at that commit, the migration begins by extracting structure, claims, provenance, and project-owned knowledge. It does not bulk-copy source files, binaries, game content, decompiled code, upstream assets, or generated live outputs.
+Because the source repository has no root licence declaration at that commit, the migration extracts structure, claims, provenance, and project-owned knowledge. It does not bulk-copy source files, binaries, game content, decompiled code, upstream assets, or generated live outputs.
 
-## Planned structure
+## Structure
 
 ```text
 docs/tainted-grail-modding/
 ├── README.md                    this hub and learning paths
 ├── INFORMATION_ARCHITECTURE.md  ownership, page types, metadata, and navigation rules
 ├── PORTING_PLAN.md              ordered migration and acceptance process
-├── SOURCE_MAP.md                exact upstream-to-SDK content map and status
+├── SOURCE_MAP.md                upstream-to-SDK content map and status
+├── FILE_INVENTORY.md            pinned path rules and named migration queues
 ├── RESEARCH_BACKLOG.md          unresolved questions and completion gates
 ├── getting-started/             environment, first mod, build, test, package
 ├── process/                     research, design, implementation, review, validation, release
@@ -56,17 +57,18 @@ docs/tainted-grail-modding/
 └── reference/                   glossary, identities, versions, compatibility, troubleshooting indexes
 ```
 
-Each folder starts as an index. Detailed pages are added only when their source, version scope, evidence state, ownership, and limitations are explicit.
+Detailed pages are added only when their source, version scope, evidence state, ownership, and limitations are explicit.
 
 ## Learning paths
 
 ### Make a first mod
 
 1. [Getting started](getting-started/README.md)
-2. [Mod-development process](process/README.md)
-3. [Runtime routes](runtime/README.md)
-4. [Hook catalogue](hooks/README.md)
-5. [Reference index](reference/README.md)
+2. [Verified runtime and loader profiles](runtime/VERIFIED_PROFILES.md)
+3. [Complete first-mod path](getting-started/FIRST_MOD_PATH.md)
+4. [Mod-development process](process/README.md)
+5. [Hook catalogue](hooks/README.md)
+6. [Reference index](reference/README.md)
 
 ### Research or extend a game system
 
@@ -79,9 +81,10 @@ Each folder starts as an index. Detailed pages are added only when their source,
 ### Port knowledge from the source repository
 
 1. [Information architecture](INFORMATION_ARCHITECTURE.md)
-2. [Source map](SOURCE_MAP.md)
-3. [Porting plan](PORTING_PLAN.md)
-4. [Research backlog](RESEARCH_BACKLOG.md)
+2. [File inventory](FILE_INVENTORY.md)
+3. [Source map](SOURCE_MAP.md)
+4. [Porting plan](PORTING_PLAN.md)
+5. [Research backlog](RESEARCH_BACKLOG.md)
 
 ## Non-negotiable rules
 
@@ -96,4 +99,21 @@ Each folder starts as an index. Detailed pages are added only when their source,
 
 ## Current state
 
-The root design, migration model, source map, hook-record contract, and initial research backlog are established here. The existing selective system ports remain authoritative for Tainted Framework, Tainted Interface, provider-neutral intake, Road Atlas, Avalon AI, and inert Mono/IL2CPP route contracts. The broader handbook content is not yet migrated.
+Completed in the current documentation branch:
+
+- root information architecture and ownership boundaries;
+- porting process and research backlog;
+- repository-wide file disposition rules covering the pinned source tree;
+- named migration queues for guides, templates, Harmony patches, reflection targets, services/events, release records, generated evidence, and blocked payloads;
+- exact pinned Mono and IL2CPP runtime/loader/framework observations with different evidence states;
+- a complete first-mod lifecycle from profile selection through build, load, configuration, removal, evidence, and package boundaries.
+
+Still pending:
+
+- clean-machine execution of a project-owned starter;
+- executable runtime-adapter qualification;
+- semantic extraction and verification of the named hook batches;
+- system-by-system references and examples;
+- troubleshooting, compatibility, packaging, release, support, and maintenance expansion.
+
+The existing selective system ports remain authoritative for Tainted Framework, Tainted Interface, provider-neutral intake, Road Atlas, Avalon AI, and inert Mono/IL2CPP route contracts.

@@ -1,34 +1,43 @@
 # Getting Started
 
-This lane will provide the shortest safe path from no local setup to a validated, removable first mod.
+This lane provides the shortest safe path from no local setup to a validated, removable first mod.
 
-## Planned read order
+## Read order
 
-1. Choose an exact game branch and runtime profile.
-2. Install and verify the matching loader without committing its binaries.
-3. Obtain FOA-SDK and its pinned external O3DE dependency when SDK authoring is needed.
-4. Create a project-owned mod workspace.
-5. Configure local assembly references through a private path property.
-6. Set plugin identity, version, dependencies, logging, and configuration.
-7. Build without copying proprietary dependencies into output.
-8. Produce a deterministic test package.
-9. Deploy to a controlled local target through the applicable reviewed route.
-10. Verify loader discovery and plugin startup in logs.
-11. Exercise one bounded behavior.
-12. Remove the mod and confirm cleanup.
+1. Read the exact pinned observations and route rules in [`../runtime/VERIFIED_PROFILES.md`](../runtime/VERIFIED_PROFILES.md).
+2. Complete the [first-mod path](FIRST_MOD_PATH.md).
+3. Use the [mod-development process](../process/README.md) for research, design, review, evidence, packaging and support.
+4. Add gameplay changes only through a promoted record from the [hook catalogue](../hooks/README.md).
 
-## Pages to produce
+## Complete first-mod path
 
-- supported profiles and prerequisites;
-- Mono first-mod tutorial;
-- IL2CPP first-mod tutorial after an executable route is actually qualified;
-- local reference configuration;
-- project identity and dependency conventions;
-- build and package layout;
-- controlled test deployment and removal;
-- first validation receipt;
-- first troubleshooting checklist.
+The current first-mod unit covers:
+
+1. selecting and recording an exact game/runtime/loader profile;
+2. keeping game, Unity and BepInEx dependencies local;
+3. creating unique assembly, namespace and plug-in identity;
+4. implementing a minimal load/log/config lifecycle without a gameplay patch;
+5. rebuilding after every identity, project, dependency or source change;
+6. controlled local deployment;
+7. loader and plug-in startup evidence;
+8. harmless configuration round-trip evidence;
+9. deterministic removal and cleanup;
+10. mod record, compatibility and provenance documentation;
+11. project-owned package contents;
+12. hook promotion requirements before gameplay mutation.
+
+## Remaining pages
+
+- project-owned downloadable starter source;
+- route-specific local-reference examples;
+- automated package-layout validation;
+- controlled deployment/removal tooling;
+- first validation-receipt schema and example;
+- focused troubleshooting decision tree;
+- IL2CPP executable tutorial after that route is independently qualified.
 
 ## Publication gate
 
-No first-mod tutorial may be marked reviewed until it has been completed from a clean workspace against the exact documented game, branch, runtime, loader, framework, and SDK profile. A contract-only or inert adapter route is described as such and does not receive an executable tutorial.
+The process contract and pinned profiles are documented, but the tutorial is not represented as a clean-machine executable acceptance result. A first-mod tutorial may be marked fully reviewed only after it has been completed from a clean workspace against the exact documented game, branch, runtime, loader, framework and SDK profile.
+
+A contract-only or inert adapter route is described as such and does not receive an executable tutorial.

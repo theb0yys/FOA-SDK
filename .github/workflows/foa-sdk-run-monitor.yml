@@ -16,7 +16,7 @@ jobs:
   report:
     runs-on: ubuntu-24.04
     steps:
-      - name: Persist installer run status and failure log
+      - name: Persist installer run status and decisive failure tail
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -29,7 +29,7 @@ jobs:
           failure_log=''
           if [[ -n "$latest_fix" ]]; then
             gh run view "$latest_fix" --repo "$REPOSITORY" --log-failed > failed.log 2>&1 || true
-            failure_log="$(tail -n 160 failed.log)"
+            failure_log="$(tail -n 35 failed.log)"
           fi
           jq -n \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -39,9 +39,8 @@ jobs:
             '{generated_at:$generated_at,fix_build_runs:$fix,canonical_installer_runs:$canonical,latest_fix_failure_log:$failure_log}' > status.json
           path='.github/foa-sdk-build-status.json'
           encoded="$(base64 -w0 status.json)"
-          existing="$(gh api "repos/$REPOSITORY/contents/$path" --jq .sha 2>/dev/null || true)"
+          existing="$(gh api "repos/$REPOSITORY/contents/$path" --jq .sha)"
           gh api "repos/$REPOSITORY/contents/$path" --method PUT \
-            -f message='Update installer build status and failure log' \
+            -f message='Update installer build status and decisive failure tail' \
             -f content="$encoded" \
             -f sha="$existing" >/dev/null
-          gh pr comment 180 --repo "$REPOSITORY" --body "Installer correction/build status and failed-step log were refreshed in \`$path\`."

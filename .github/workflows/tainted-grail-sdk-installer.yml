@@ -56,26 +56,30 @@ permissions:
 jobs:
   build-installer:
     name: Inventory or package prebuilt Windows SDK
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 360
     env:
       O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
-      O3DE_ROOT: ${{ runner.temp }}/o3de
-      FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build
-      SDK_VALIDATION_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-validation
-      SDK_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-engine
-      SDK_INSTALL: ${{ runner.temp }}/tg-sdk-install
-      SDK_INVENTORY: ${{ runner.temp }}/tg-sdk-installer-inventory.json
-      SDK_NOTICES: ${{ runner.temp }}/NOTICES.txt
-      SDK_PACKAGES: ${{ runner.temp }}/THIRD_PARTY_PACKAGES.json
-      SDK_STAGE: ${{ runner.temp }}/tg-sdk-stage
-      SDK_ARTIFACTS: ${{ runner.temp }}/tg-sdk-artifacts
-      SDK_PACKAGE_BUILD: ${{ runner.temp }}/tg-sdk-package-build
-      SDK_WIX: ${{ runner.temp }}/wix
-      WIX_EXTENSIONS: ${{ runner.temp }}/wix-extensions
-      SDK_BOOTSTRAPPER_BUILD: ${{ runner.temp }}/foa-sdk-installer-bootstrapper
 
     steps:
+      - name: Initialize external build roots
+        shell: pwsh
+        run: |
+          "O3DE_ROOT=$env:RUNNER_TEMP/o3de" >> $env:GITHUB_ENV
+          "FOA_BUILD_ROOT=$env:RUNNER_TEMP/foa-build" >> $env:GITHUB_ENV
+          "SDK_VALIDATION_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-validation" >> $env:GITHUB_ENV
+          "SDK_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-engine" >> $env:GITHUB_ENV
+          "SDK_INSTALL=$env:RUNNER_TEMP/tg-sdk-install" >> $env:GITHUB_ENV
+          "SDK_INVENTORY=$env:RUNNER_TEMP/tg-sdk-installer-inventory.json" >> $env:GITHUB_ENV
+          "SDK_NOTICES=$env:RUNNER_TEMP/NOTICES.txt" >> $env:GITHUB_ENV
+          "SDK_PACKAGES=$env:RUNNER_TEMP/THIRD_PARTY_PACKAGES.json" >> $env:GITHUB_ENV
+          "SDK_STAGE=$env:RUNNER_TEMP/tg-sdk-stage" >> $env:GITHUB_ENV
+          "SDK_ARTIFACTS=$env:RUNNER_TEMP/tg-sdk-artifacts" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_BUILD=$env:RUNNER_TEMP/tg-sdk-package-build" >> $env:GITHUB_ENV
+          "SDK_WIX=$env:RUNNER_TEMP/wix" >> $env:GITHUB_ENV
+          "WIX_EXTENSIONS=$env:RUNNER_TEMP/wix-extensions" >> $env:GITHUB_ENV
+          "SDK_BOOTSTRAPPER_BUILD=$env:RUNNER_TEMP/foa-sdk-installer-bootstrapper" >> $env:GITHUB_ENV
+
       - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
         with:

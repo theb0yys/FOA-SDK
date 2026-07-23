@@ -1,1 +1,1 @@
-Owner-directed FOA-SDK installer build trigger: 2026-07-23T05:12:00Z.
+Owner-directed FOA-SDK installer build trigger: canonical package requested.

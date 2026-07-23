@@ -110,9 +110,6 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& evidenceId,
             AZStd::string* error = nullptr);
 
-        bool RegisterExtension(
-            const ExtensionAPI::ExtensionDeclaration& declaration,
-            AZStd::string* error = nullptr);
         bool CreateExtensionClient(
             const AZStd::string& extensionId,
             ExtensionAPI::Client& client,
@@ -140,7 +137,7 @@ namespace TaintedGrailModdingSDK
 
         bool RegisterExtension(
             const ExtensionAPI::ExtensionDeclaration& declaration,
-            AZStd::string* error) override;
+            AZStd::string* error = nullptr) override;
         bool UnregisterExtension(
             const AZStd::string& extensionId,
             AZStd::string* error) override;

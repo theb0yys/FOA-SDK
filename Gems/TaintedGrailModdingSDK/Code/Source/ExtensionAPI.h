@@ -10,6 +10,7 @@
 #include "FoundationModels.h"
 
 #include <AzCore/std/containers/vector.h>
+#include <AzCore/std/sort.h>
 #include <AzCore/std/string/string.h>
 
 #include <cstddef>
@@ -128,7 +129,6 @@ namespace TaintedGrailModdingSDK
                 const WorkspaceModel& workspace,
                 const CatalogDatabase& catalog,
                 SourceEvidenceRegistry& sourceRegistry);
-
             const ExtensionDeclaration* FindExtension(
                 const AZStd::string& extensionId) const;
             bool Authorize(

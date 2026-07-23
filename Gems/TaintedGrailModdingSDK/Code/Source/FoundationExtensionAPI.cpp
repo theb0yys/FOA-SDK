@@ -11,13 +11,6 @@
 
 namespace TaintedGrailModdingSDK
 {
-    bool FoundationService::RegisterExtension(
-        const ExtensionAPI::ExtensionDeclaration& declaration,
-        AZStd::string* error)
-    {
-        return m_extensionApi.RegisterExtension(declaration, error);
-    }
-
     bool FoundationService::CreateExtensionClient(
         const AZStd::string& extensionId,
         ExtensionAPI::Client& client,

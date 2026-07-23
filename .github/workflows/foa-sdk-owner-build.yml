@@ -1,11 +1,6 @@
 name: Owner-directed FOA-SDK installer build
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/foa-sdk-owner-build.yml
   pull_request:
     branches:
       - main
@@ -23,12 +18,12 @@ permissions:
 jobs:
   build-installer:
     runs-on: ubuntu-24.04
-    timeout-minutes: 720
+    timeout-minutes: 360
     env:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
       TARGET_REF: main
-      SOURCE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+      SOURCE_SHA: ${{ github.event.pull_request.base.sha }}
       INSTALLER_VERSION: 0.1.0
       INSTALLER_CHANNEL: development
       OWNER_REVIEWER: theb0yys (process owner override)

@@ -114,7 +114,8 @@ jobs:
           cmake -S $env:O3DE_ROOT -B $env:SDK_VALIDATION_BUILD -G "Visual Studio 17 2022" -A x64 `
             -DLY_PROJECTS="$project" `
             -DLY_3RDPARTY_PATH="$packages" `
-            -DLY_DISABLE_TEST_MODULES=OFF
+            -DLY_DISABLE_TEST_MODULES=OFF `
+            -DO3DE_FETCHCONTENT_FORCE_GIT=ON
 
       - name: Build required compiled Catalog tests
         run: >-
@@ -139,6 +140,7 @@ jobs:
             -DLY_PROJECTS="$project" `
             -DLY_3RDPARTY_PATH="$packages" `
             -DLY_DISABLE_TEST_MODULES=ON `
+            -DO3DE_FETCHCONTENT_FORCE_GIT=ON `
             -DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK `
             -DCMAKE_INSTALL_PREFIX="$env:SDK_INSTALL"
 

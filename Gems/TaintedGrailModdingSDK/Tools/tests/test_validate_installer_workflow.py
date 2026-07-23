@@ -22,6 +22,7 @@ from validate_installer_workflow import (
     LEGACY_INSTALLER_ROOT,
     OBSOLETE_INSTALLER_ROOTS,
     REQUIRED_FILE_FRAGMENTS,
+    TEMPORARY_INVENTORY_WORKFLOW,
     WINDOWS_RUNNER,
     InstallerWorkflowValidationError,
     validate_installer_workflow,
@@ -124,6 +125,55 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 InstallerWorkflowValidationError,
                 WINDOWS_RUNNER,
+            ):
+                validate_installer_workflow(repo)
+
+    def test_git_fetchcontent_mode_is_required_for_validation_configure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / ".github/workflows/tainted-grail-sdk-installer.yml"
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8").replace(
+                    "-DO3DE_FETCHCONTENT_FORCE_GIT=ON",
+                    "-DO3DE_FETCHCONTENT_FORCE_GIT=OFF",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "O3DE_FETCHCONTENT_FORCE_GIT",
+            ):
+                validate_installer_workflow(repo)
+
+    def test_git_fetchcontent_mode_is_required_for_install_configure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / ".github/workflows/tainted-grail-sdk-installer.yml"
+            first = workflow.read_text(encoding="utf-8")
+            first_position = first.index("-DO3DE_FETCHCONTENT_FORCE_GIT=ON")
+            second_position = first.index("-DO3DE_FETCHCONTENT_FORCE_GIT=ON", first_position + 1)
+            workflow.write_text(
+                first[:second_position]
+                + "-DO3DE_FETCHCONTENT_FORCE_GIT=OFF"
+                + first[second_position + len("-DO3DE_FETCHCONTENT_FORCE_GIT=ON") :],
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "O3DE_FETCHCONTENT_FORCE_GIT",
+            ):
+                validate_installer_workflow(repo)
+
+    def test_temporary_inventory_workflow_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            temporary_workflow = repo / TEMPORARY_INVENTORY_WORKFLOW
+            temporary_workflow.parent.mkdir(parents=True, exist_ok=True)
+            temporary_workflow.write_text("name: temporary installer inventory\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "Temporary installer inventory workflow",
             ):
                 validate_installer_workflow(repo)
 

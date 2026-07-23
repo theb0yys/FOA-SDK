@@ -20,6 +20,7 @@ class InstallerWorkflowValidationError(RuntimeError):
 
 PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
 WINDOWS_RUNNER = "windows-2022"
+TEMPORARY_INVENTORY_WORKFLOW = ".github/workflows/foa-sdk-installer-inventory-pr.yml"
 LEGACY_INSTALLER_ROOT = "Gems/TaintedGrailModdingSDK/Installer"
 OBSOLETE_INSTALLER_ROOTS = (
     "Installer/Bootstrapper",
@@ -47,12 +48,12 @@ REQUIRED_FILE_FRAGMENTS = {
         "run_local_validation.py",
         "--engine-root",
         "--ctest-build-dir",
-        "-DLY_DISABLE_TEST_MODULES=OFF",
+        '-DLY_DISABLE_TEST_MODULES=OFF `\n            -DO3DE_FETCHCONTENT_FORCE_GIT=ON',
         "--target TaintedGrailModdingSDK.Catalog.Tests",
         "cmake -S $env:O3DE_ROOT",
         '"$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"',
         "-DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK",
-        "-DLY_DISABLE_TEST_MODULES=ON",
+        '-DLY_DISABLE_TEST_MODULES=ON `\n            -DO3DE_FETCHCONTENT_FORCE_GIT=ON `',
         "--target INSTALL",
         "developer_preview_installer.py inventory",
         "developer_preview_installer.py stage",
@@ -242,6 +243,12 @@ def validate_installer_workflow(repo_root: Path) -> None:
             raise InstallerWorkflowValidationError(
                 f"Installer workflow contains forbidden automatic/product-root behavior {fragment!r}."
             )
+
+    if (repo_root / TEMPORARY_INVENTORY_WORKFLOW).exists():
+        raise InstallerWorkflowValidationError(
+            "Temporary installer inventory workflow bypasses the canonical reviewed inventory/package pipeline: "
+            f"{TEMPORARY_INVENTORY_WORKFLOW}."
+        )
 
     if (repo_root / LEGACY_INSTALLER_ROOT).exists():
         raise InstallerWorkflowValidationError(

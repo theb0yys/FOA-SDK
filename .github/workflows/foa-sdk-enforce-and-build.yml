@@ -3,6 +3,16 @@ name: Enforce and build FOA-SDK installer
 on:
   push:
     branches: [main]
+    paths:
+      - .github/workflows/foa-sdk-enforce-and-build.yml
+      - .github/workflows/tainted-grail-sdk-installer.yml
+      - Gems/TaintedGrailModdingSDK/**
+      - Installer/**
+      - Project/**
+      - CMakeLists.txt
+      - cmake/**
+      - project.json
+      - o3de_manifest.json
   workflow_dispatch:
 
 permissions:
@@ -29,6 +39,12 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: true
+
+      - name: Record exact build start
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr comment 180 --repo "$REPOSITORY" --body "Installer orchestration started from exact main commit \`${{ github.sha }}\`."
 
       - name: Enforce bounded build regression
         shell: bash
@@ -121,7 +137,7 @@ jobs:
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
-          gh pr comment 180 --repo "$REPOSITORY" --body "Exact fixed main source \`$source_sha\` is pinned to \`$SOURCE_BRANCH\`. Dispatching the canonical inventory build."
+          gh pr comment 180 --repo "$REPOSITORY" --body "Exact fixed source \`$source_sha\` is pinned to \`$SOURCE_BRANCH\`. Dispatching the canonical inventory build."
 
       - name: Dispatch exact inventory build
         id: inventory_dispatch

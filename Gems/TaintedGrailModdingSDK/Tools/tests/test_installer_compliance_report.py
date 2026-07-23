@@ -51,6 +51,13 @@ class InstallerComplianceReportTests(unittest.TestCase):
         self.assertIn("Install / launcher / repair / uninstall result: **pending**", report)
         self.assertIn("No automated actor may invent or impersonate", report)
 
+    def test_post_build_evidence_does_not_mutate_the_reviewed_source(self) -> None:
+        report = REPORT.read_text(encoding="utf-8")
+        self.assertIn("Immutable completion evidence template", report)
+        self.assertIn("would create a new source commit and invalidate the reviewed inventory", report)
+        self.assertIn("durable PR #179 conversation", report)
+        self.assertNotIn("This section must be updated only after", report)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,27 +1,47 @@
 {
-  "generated_at": "2026-07-23T13:00:10Z",
+  "generated_at": "2026-07-23T13:59:19Z",
   "enforce_build_runs": [
     {
-      "conclusion": "",
+      "conclusion": "failure",
       "createdAt": "2026-07-23T12:59:19Z",
       "databaseId": 30009253091,
       "displayTitle": "Enforce bounded installer build and produce EXE",
       "event": "push",
       "headBranch": "main",
       "headSha": "42d388a4f2d91566221e96bc7c9a449878a15317",
-      "status": "in_progress"
+      "status": "completed"
     }
   ],
   "canonical_installer_runs": [
     {
       "conclusion": "",
+      "createdAt": "2026-07-23T13:45:49Z",
+      "databaseId": 30012650620,
+      "displayTitle": "FOA-SDK Windows Installer",
+      "event": "workflow_dispatch",
+      "headBranch": "main",
+      "headSha": "8a909892986637e2125f5f15c847432cac563e17",
+      "status": "pending"
+    },
+    {
+      "conclusion": "",
+      "createdAt": "2026-07-23T13:44:15Z",
+      "databaseId": 30012530233,
+      "displayTitle": "FOA-SDK Windows Installer",
+      "event": "workflow_dispatch",
+      "headBranch": "main",
+      "headSha": "8a909892986637e2125f5f15c847432cac563e17",
+      "status": "in_progress"
+    },
+    {
+      "conclusion": "failure",
       "createdAt": "2026-07-23T12:59:43Z",
       "databaseId": 30009282134,
       "displayTitle": "FOA-SDK Windows Installer",
       "event": "workflow_dispatch",
       "headBranch": "installer-build-source",
       "headSha": "a26138a148b3a4128705100b339da8cc8b7c26fb",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "conclusion": "failure",
@@ -192,27 +212,7 @@
       "headBranch": "main",
       "headSha": "0c910c6a1d655fa3a2d23a593522e5ba2b523a82",
       "status": "completed"
-    },
-    {
-      "conclusion": "failure",
-      "createdAt": "2026-07-22T22:49:30Z",
-      "databaseId": 29964168278,
-      "displayTitle": "Merge pull request #173 from theb0yys/agent/harden-installer-executio…",
-      "event": "push",
-      "headBranch": "main",
-      "headSha": "0c910c6a1d655fa3a2d23a593522e5ba2b523a82",
-      "status": "completed"
-    },
-    {
-      "conclusion": "failure",
-      "createdAt": "2026-07-22T22:47:56Z",
-      "databaseId": 29964083359,
-      "displayTitle": "Bind corrected manifest and package fingerprints",
-      "event": "push",
-      "headBranch": "agent/gate5-final-compiled-verification",
-      "headSha": "76eb7c4d5df6f551449a3a1ec75c78fa5c2d17ae",
-      "status": "completed"
     }
   ],
-  "latest_enforce_failure_log": "run 30009253091 is still in progress; logs will be available when it is complete"
+  "latest_canonical_failure_log": "run 30012650620 is still in progress; logs will be available when it is complete"
 }

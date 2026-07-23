@@ -20,23 +20,24 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
+      TARGET_REF: installer-build-source
       VERSION: 0.1.0
       CHANNEL: development
 
     steps:
-      - name: Resolve exact current main source
+      - name: Resolve exact clean source
         id: source
         shell: bash
         run: |
           set -euo pipefail
-          source_sha="$(gh api "repos/$REPOSITORY/commits/main" --jq .sha)"
+          source_sha="$(gh api "repos/$REPOSITORY/commits/$TARGET_REF" --jq .sha)"
           test -n "$source_sha"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
 
       - name: Record orchestration start
         shell: bash
         run: |
-          gh pr comment 180 --repo "$REPOSITORY" --body "Owner-directed canonical installer orchestration started for exact source commit \`${{ steps.source.outputs.sha }}\`."
+          gh pr comment 180 --repo "$REPOSITORY" --body "Owner-directed canonical installer orchestration started for clean source \`$TARGET_REF\` at \`${{ steps.source.outputs.sha }}\`."
 
       - name: Dispatch inventory
         id: dispatch_inventory
@@ -46,7 +47,7 @@ jobs:
           dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           gh workflow run tainted-grail-sdk-installer.yml \
             --repo "$REPOSITORY" \
-            --ref main \
+            --ref "$TARGET_REF" \
             -f mode=inventory \
             -f version="$VERSION" \
             -f channel="$CHANNEL"
@@ -63,7 +64,7 @@ jobs:
             run_id="$(gh run list \
               --repo "$REPOSITORY" \
               --workflow tainted-grail-sdk-installer.yml \
-              --branch main \
+              --branch "$TARGET_REF" \
               --event workflow_dispatch \
               --limit 30 \
               --json databaseId,headSha,createdAt \
@@ -92,7 +93,7 @@ jobs:
           reviewed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           gh workflow run tainted-grail-sdk-installer.yml \
             --repo "$REPOSITORY" \
-            --ref main \
+            --ref "$TARGET_REF" \
             -f mode=package \
             -f version="$VERSION" \
             -f channel="$CHANNEL" \
@@ -114,7 +115,7 @@ jobs:
             run_id="$(gh run list \
               --repo "$REPOSITORY" \
               --workflow tainted-grail-sdk-installer.yml \
-              --branch main \
+              --branch "$TARGET_REF" \
               --event workflow_dispatch \
               --limit 30 \
               --json databaseId,headSha,createdAt \

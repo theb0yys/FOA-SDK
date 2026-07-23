@@ -1,1 +1,1 @@
-Owner-directed FOA-SDK installer build trigger: canonical package requested.
+Owner-directed FOA-SDK installer build trigger: exact current main source.

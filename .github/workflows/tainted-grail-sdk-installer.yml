@@ -275,6 +275,13 @@ jobs:
           Set-Content -LiteralPath $wizardChecksum -Encoding utf8 -NoNewline `
             -Value "$wizardHash  FOA-SDK-Installer.exe`n"
 
+      - name: Verify retained installer artifacts and checksums
+        if: inputs.mode == 'package'
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/verify_installer_artifacts.py
+          --artifact-root "${{ env.SDK_ARTIFACTS }}"
+          --version "${{ inputs.version }}"
+
       - name: Smoke install, launch contract, repair, and uninstall
         if: inputs.mode == 'package'
         shell: pwsh

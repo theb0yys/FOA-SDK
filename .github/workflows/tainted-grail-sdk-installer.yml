@@ -121,7 +121,7 @@ jobs:
       - name: Build required compiled Catalog tests
         run: >-
           cmake --build $env:SDK_VALIDATION_BUILD --config profile
-          --target TaintedGrailModdingSDK.Catalog.Tests -- /m
+          --target TaintedGrailModdingSDK.Catalog.Tests --parallel 2
 
       - name: Run authoritative repository and compiled-test validation
         env:
@@ -146,7 +146,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$env:SDK_INSTALL"
 
       - name: Build canonical O3DE INSTALL target
-        run: cmake --build $env:SDK_BUILD --config profile --target INSTALL -- /m
+        run: cmake --build $env:SDK_BUILD --config profile --target INSTALL --parallel 2
 
       - name: Generate notices and third-party package inventory
         run: >-

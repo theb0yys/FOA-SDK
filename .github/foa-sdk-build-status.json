@@ -1,28 +1,28 @@
 {
-  "generated_at": "2026-07-23T12:54:24Z",
-  "fix_build_runs": [
+  "generated_at": "2026-07-23T12:59:52Z",
+  "enforce_build_runs": [
     {
-      "conclusion": "failure",
-      "createdAt": "2026-07-23T12:53:05Z",
-      "databaseId": 30008818177,
-      "displayTitle": "Fix installer correction regression insertion",
+      "conclusion": "",
+      "createdAt": "2026-07-23T12:59:19Z",
+      "databaseId": 30009253091,
+      "displayTitle": "Enforce bounded installer build and produce EXE",
       "event": "push",
       "headBranch": "main",
-      "headSha": "3f79816e9e41fed26e8eab8d535c177435d1afc8",
-      "status": "completed"
-    },
-    {
-      "conclusion": "failure",
-      "createdAt": "2026-07-23T12:48:00Z",
-      "databaseId": 30008459593,
-      "displayTitle": "Fix canonical installer build and produce EXE",
-      "event": "push",
-      "headBranch": "main",
-      "headSha": "ed0f766d7189271a874b443c824d342e41b912f2",
-      "status": "completed"
+      "headSha": "42d388a4f2d91566221e96bc7c9a449878a15317",
+      "status": "in_progress"
     }
   ],
   "canonical_installer_runs": [
+    {
+      "conclusion": "",
+      "createdAt": "2026-07-23T12:59:43Z",
+      "databaseId": 30009282134,
+      "displayTitle": "FOA-SDK Windows Installer",
+      "event": "workflow_dispatch",
+      "headBranch": "installer-build-source",
+      "headSha": "a26138a148b3a4128705100b339da8cc8b7c26fb",
+      "status": "in_progress"
+    },
     {
       "conclusion": "failure",
       "createdAt": "2026-07-23T05:33:48Z",
@@ -212,17 +212,7 @@
       "headBranch": "agent/gate5-final-compiled-verification",
       "headSha": "76eb7c4d5df6f551449a3a1ec75c78fa5c2d17ae",
       "status": "completed"
-    },
-    {
-      "conclusion": "failure",
-      "createdAt": "2026-07-22T22:47:15Z",
-      "databaseId": 29964044777,
-      "displayTitle": "Merge pull request #173 from theb0yys/agent/harden-installer-executio…",
-      "event": "push",
-      "headBranch": "main",
-      "headSha": "0c910c6a1d655fa3a2d23a593522e5ba2b523a82",
-      "status": "completed"
     }
   ],
-  "latest_fix_failure_log": "fix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1388721Z ^[[36;1m^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1388961Z ^[[36;1mpython -m unittest discover \\^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1389544Z ^[[36;1m  -s Gems/TaintedGrailModdingSDK/Tools/tests \\^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1389951Z ^[[36;1m  -p test_validate_installer_workflow.py^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1390439Z ^[[36;1mpython Gems/TaintedGrailModdingSDK/Tools/validate_installer_workflow.py .^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1456396Z ^[[36;1m^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1456922Z ^[[36;1mgit config user.name github-actions[bot]^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1458022Z ^[[36;1mgit config user.email 41898282+github-actions[bot]@users.noreply.github.com^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1459067Z ^[[36;1mgit add .github/workflows/tainted-grail-sdk-installer.yml \\^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1460364Z ^[[36;1m  Gems/TaintedGrailModdingSDK/Tools/validate_installer_workflow.py \\^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1461617Z ^[[36;1m  Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_installer_workflow.py^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1462561Z ^[[36;1mgit diff --cached --check^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1463299Z ^[[36;1mgit commit -m \"Bound canonical installer build parallelism\"^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1464090Z ^[[36;1mgit push origin HEAD:${SOURCE_BRANCH}^[[0m\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1549644Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1550308Z env:\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1553418Z   GH_TOKEN: ***\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1553694Z   REPOSITORY: theb0yys/FOA-SDK\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1553993Z   SOURCE_BRANCH: installer-build-source\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1554296Z   VERSION: 0.1.0\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1554539Z   CHANNEL: development\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1554865Z   EVIDENCE: https://github.com/theb0yys/FOA-SDK/pull/180\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.1555247Z ##[endgroup]\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.3754738Z ..................\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.3755253Z ----------------------------------------------------------------------\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.3755749Z Ran 18 tests in 0.055s\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.3755926Z \nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.3756022Z OK\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.4101988Z External-engine MSI and executable installer-wizard validation passed.\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.5644143Z [installer-build-source 346d4ac79b] Bound canonical installer build parallelism\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:29.5644785Z  3 files changed, 17 insertions(+), 2 deletions(-)\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:30.7158847Z To https://github.com/theb0yys/FOA-SDK\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:30.7160277Z  ! [remote rejected]       HEAD -> installer-build-source (refusing to allow a GitHub App to create or update workflow `.github/workflows/tainted-grail-sdk-installer.yml` without `workflows` permission)\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:30.7161988Z error: failed to push some refs to 'https://github.com/theb0yys/FOA-SDK'\nfix-build-package\tCorrect bounded Windows builds and enforcement\t2026-07-23T12:53:30.7192130Z ##[error]Process completed with exit code 1."
+  "latest_enforce_failure_log": "run 30009253091 is still in progress; logs will be available when it is complete"
 }

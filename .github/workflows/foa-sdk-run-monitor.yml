@@ -23,5 +23,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          runs="$(gh run list --repo "$REPOSITORY" --workflow tainted-grail-sdk-installer.yml --limit 15 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
+          runs="$(gh run list --repo "$REPOSITORY" --workflow tainted-grail-sdk-installer.yml --limit 20 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
           gh pr comment 180 --repo "$REPOSITORY" --body "Canonical installer run monitor:\n\n\`\`\`json\n$runs\n\`\`\`"

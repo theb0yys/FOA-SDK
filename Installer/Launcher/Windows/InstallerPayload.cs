@@ -136,17 +136,26 @@ internal sealed class InstallerPayload : IDisposable
 
     private static string ParseChecksum(string text, string? expectedFileName)
     {
-        string[] parts = text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length is < 1 or > 2
+        if (!text.EndsWith("\n", StringComparison.Ordinal) || text.Contains('\r'))
+        {
+            throw new InvalidOperationException(
+                "The MSI checksum sidecar must contain one canonical LF-terminated SHA-256 record.");
+        }
+
+        string[] parts = text[..^1].Split("  ", StringSplitOptions.None);
+        if (parts.Length != 2
             || parts[0].Length != 64
             || parts[0].Any(character => !Uri.IsHexDigit(character))
-            || parts[0] != parts[0].ToLowerInvariant())
+            || parts[0] != parts[0].ToLowerInvariant()
+            || string.IsNullOrWhiteSpace(parts[1])
+            || !string.Equals(Path.GetFileName(parts[1]), parts[1], StringComparison.Ordinal)
+            || !string.Equals(Path.GetExtension(parts[1]), ".msi", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("The MSI checksum sidecar is not a canonical lowercase SHA-256 record.");
+            throw new InvalidOperationException(
+                "The MSI checksum sidecar must be '<lowercase sha256>  <installer.msi>' followed by one LF.");
         }
         if (expectedFileName is not null
-            && parts.Length == 2
-            && !string.Equals(Path.GetFileName(parts[1]), expectedFileName, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(parts[1], expectedFileName, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("The MSI checksum sidecar names a different installer package.");
         }

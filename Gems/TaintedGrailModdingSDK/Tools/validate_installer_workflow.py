@@ -20,6 +20,7 @@ class InstallerWorkflowValidationError(RuntimeError):
 
 PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
 WINDOWS_RUNNER = "windows-2022"
+CANONICAL_INSTALLER_WORKFLOW = ".github/workflows/tainted-grail-sdk-installer.yml"
 TEMPORARY_INVENTORY_WORKFLOW = ".github/workflows/foa-sdk-installer-inventory-pr.yml"
 LEGACY_INSTALLER_ROOT = "Gems/TaintedGrailModdingSDK/Installer"
 OBSOLETE_INSTALLER_ROOTS = (
@@ -28,9 +29,16 @@ OBSOLETE_INSTALLER_ROOTS = (
     "Installer/Suites",
     "Installer/SuiteWizard",
 )
+ALTERNATE_WORKFLOW_SIGNATURES = (
+    ("developer_preview_installer.py inventory",),
+    ("developer_preview_installer.py stage",),
+    ("cpack --config", "-G WIX"),
+    ("dotnet publish", "FOA-SDK-Installer.exe"),
+    ("--target INSTALL", "O3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK"),
+)
 
 REQUIRED_FILE_FRAGMENTS = {
-    ".github/workflows/tainted-grail-sdk-installer.yml": (
+    CANONICAL_INSTALLER_WORKFLOW: (
         "Automatic triggers are intentionally suspended",
         "workflow_dispatch:",
         "mode:",
@@ -44,6 +52,8 @@ REQUIRED_FILE_FRAGMENTS = {
         '"FOA_BUILD_ROOT=$env:RUNNER_TEMP/foa-build" >> $env:GITHUB_ENV',
         '"SDK_VALIDATION_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-validation"'
         " >> $env:GITHUB_ENV",
+        '"SDK_PACKAGE_OUTPUT=$env:RUNNER_TEMP/tg-sdk-package-output" >> $env:GITHUB_ENV',
+        '"WIX_EXTENSIONS=$env:RUNNER_TEMP/wix-extensions" >> $env:GITHUB_ENV',
         "git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT",
         "run_local_validation.py",
         "--engine-root",
@@ -61,8 +71,12 @@ REQUIRED_FILE_FRAGMENTS = {
         "developer_preview_installer.py archive",
         "developer_preview_installer.py verify-archive",
         "dotnet tool install wix --version 4.0.4",
+        "extension add --global WixToolset.UI.wixext/4.0.4",
         "cmake -S Installer/Packaging/Windows",
         "cpack --config",
+        "-G WIX -B $env:SDK_PACKAGE_OUTPUT",
+        "Get-ChildItem -LiteralPath $env:SDK_PACKAGE_OUTPUT -Filter *.msi",
+        "Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)",
         "Installer/Launcher/Windows/FOAInstallerLauncher.csproj",
         "InstallerMsiPath",
         "InstallerMsiChecksumPath",
@@ -71,14 +85,18 @@ REQUIRED_FILE_FRAGMENTS = {
         "FOA-SDK-Installer.exe",
         "FOA-SDK-Installer.exe.sha256",
         "Get-FileHash",
+        "verify_installer_artifacts.py",
         "--self-test",
         "--smoke-test",
         '"--operation", "install"',
         '"--operation", "repair"',
         '"--operation", "uninstall"',
         "Start-Process -FilePath $wizard -Wait -PassThru",
-        "MSI Start Menu entry was not created",
-        "MSI uninstall left the product launcher installed",
+        "Installed MSI manifest differs from the exact reviewed staging manifest",
+        "CreateShortcut($startMenuEntry)",
+        "MSI Start Menu entry targets",
+        "MSI repair did not restore the reviewed product-owned launcher bytes",
+        "MSI uninstall left the product manifest installed",
         "external-workspace",
         "actions/upload-artifact@v4",
         "unsigned development installer artifacts",
@@ -113,6 +131,13 @@ REQUIRED_FILE_FRAGMENTS = {
         "verify_archive",
         'subparsers.add_parser("inventory"',
         'subparsers.add_parser("stage"',
+    ),
+    "Gems/TaintedGrailModdingSDK/Tools/verify_installer_artifacts.py": (
+        "expected_names",
+        "Retained installer artifact set mismatch",
+        "verify_checksum_pair",
+        "installer.verify_archive",
+        'root / "FOA-SDK-Installer.exe"',
     ),
     "Installer/Packaging/Windows/CMakeLists.txt": (
         "install(DIRECTORY",
@@ -154,6 +179,9 @@ REQUIRED_FILE_FRAGMENTS = {
         "FOA.SDK.Payload.msi",
         "InstallerMsiChecksumPath",
     ),
+    "Installer/Launcher/Windows/app.manifest": (
+        'requestedExecutionLevel level="asInvoker"',
+    ),
     "Installer/Launcher/Windows/Program.cs": (
         "InstallerPayload.Resolve",
         "InstallerWizardForm",
@@ -165,6 +193,11 @@ REQUIRED_FILE_FRAGMENTS = {
         "SHA256.HashData",
         "FileAttributes.ReparsePoint",
         "FileShare.Read",
+        'text.EndsWith("\\n", StringComparison.Ordinal)',
+        "text.Contains('\\r')",
+        'Split("  ", StringSplitOptions.None)',
+        "parts.Length != 2",
+        'Path.GetExtension(parts[1]), ".msi"',
         "return new InstallerPayload(captured, expected, temporaryRoot)",
     ),
     "Installer/Launcher/Windows/WindowsInstallerRunner.cs": (
@@ -212,6 +245,33 @@ def read_text(path: Path) -> str:
         raise InstallerWorkflowValidationError(f"Required installer file is missing: {path}") from exc
 
 
+def validate_no_alternate_installer_workflows(repo_root: Path) -> None:
+    workflows_root = repo_root / ".github/workflows"
+    try:
+        workflows = sorted(
+            path
+            for path in workflows_root.iterdir()
+            if path.is_file() and path.suffix.casefold() in {".yml", ".yaml"}
+        )
+    except OSError as exc:
+        raise InstallerWorkflowValidationError(
+            f"Unable to enumerate repository workflows: {workflows_root}"
+        ) from exc
+
+    canonical = (repo_root / CANONICAL_INSTALLER_WORKFLOW).resolve(strict=False)
+    for workflow_path in workflows:
+        if workflow_path.resolve(strict=False) == canonical:
+            continue
+        text = read_text(workflow_path)
+        for signature in ALTERNATE_WORKFLOW_SIGNATURES:
+            if all(fragment in text for fragment in signature):
+                relative = workflow_path.relative_to(repo_root).as_posix()
+                raise InstallerWorkflowValidationError(
+                    "Alternate workflow can execute the reviewed installer pipeline outside the canonical "
+                    f"inventory/review/package route: {relative}; signature={signature!r}."
+                )
+
+
 def validate_installer_workflow(repo_root: Path) -> None:
     for relative_path, fragments in REQUIRED_FILE_FRAGMENTS.items():
         text = read_text(repo_root / relative_path)
@@ -221,7 +281,7 @@ def validate_installer_workflow(repo_root: Path) -> None:
                     f"{relative_path} is missing required installer contract fragment {fragment!r}."
                 )
 
-    workflow = read_text(repo_root / ".github/workflows/tainted-grail-sdk-installer.yml")
+    workflow = read_text(repo_root / CANONICAL_INSTALLER_WORKFLOW)
     forbidden = (
         "pull_request:",
         "push:",
@@ -237,12 +297,15 @@ def validate_installer_workflow(repo_root: Path) -> None:
         "review evidence only",
         "${{ runner.temp }}",
         "runs-on: windows-latest",
+        "-G WIX -B $env:SDK_ARTIFACTS",
     )
     for fragment in forbidden:
         if fragment in workflow:
             raise InstallerWorkflowValidationError(
                 f"Installer workflow contains forbidden automatic/product-root behavior {fragment!r}."
             )
+
+    validate_no_alternate_installer_workflows(repo_root)
 
     if (repo_root / TEMPORARY_INVENTORY_WORKFLOW).exists():
         raise InstallerWorkflowValidationError(

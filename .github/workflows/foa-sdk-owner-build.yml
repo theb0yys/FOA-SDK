@@ -6,6 +6,13 @@ on:
       - main
     paths:
       - .github/workflows/foa-sdk-owner-build.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   actions: write
@@ -21,6 +28,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
       TARGET_REF: main
+      SOURCE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
       INSTALLER_VERSION: 0.1.0
       INSTALLER_CHANNEL: development
       OWNER_REVIEWER: theb0yys (process owner override)
@@ -52,7 +60,7 @@ jobs:
               --event workflow_dispatch \
               --limit 20 \
               --json databaseId,headSha,createdAt \
-              --jq '[.[] | select(.headSha == env.GITHUB_SHA)] | sort_by(.createdAt) | last | .databaseId // empty')"
+              --jq '[.[] | select(.headSha == env.SOURCE_SHA)] | sort_by(.createdAt) | last | .databaseId // empty')"
             if [[ -n "$inventory_run" ]]; then
               break
             fi
@@ -121,7 +129,7 @@ PY
               --event workflow_dispatch \
               --limit 20 \
               --json databaseId,headSha,createdAt \
-              --jq "[.[] | select(.headSha == env.GITHUB_SHA and .databaseId != $inventory_run)] | sort_by(.createdAt) | last | .databaseId // empty")"
+              --jq "[.[] | select(.headSha == env.SOURCE_SHA and .databaseId != $inventory_run)] | sort_by(.createdAt) | last | .databaseId // empty")"
             if [[ -n "$package_run" ]]; then
               break
             fi
@@ -155,4 +163,4 @@ PY
         shell: bash
         run: |
           set -euo pipefail
-          gh pr comment 179 --repo "$REPOSITORY" --body "Owner-directed installer build completed.\n\n- Source commit: \`$GITHUB_SHA\`\n- Inventory run: \`${{ steps.inventory.outputs.run_id }}\`\n- Inventory SHA-256: \`${{ steps.fingerprint.outputs.sha256 }}\`\n- Package run: \`${{ steps.package.outputs.run_id }}\`\n- FOA-SDK-Installer.exe SHA-256: \`${{ steps.final.outputs.exe_sha256 }}\`\n- Canonical package lifecycle smoke: passed\n\nThe executable is retained in artifact \`foa-sdk-unsigned-installer-$INSTALLER_VERSION-${{ steps.package.outputs.run_id }}\`."
+          gh pr comment 179 --repo "$REPOSITORY" --body "Owner-directed installer build completed.\n\n- Source commit: \`$SOURCE_SHA\`\n- Inventory run: \`${{ steps.inventory.outputs.run_id }}\`\n- Inventory SHA-256: \`${{ steps.fingerprint.outputs.sha256 }}\`\n- Package run: \`${{ steps.package.outputs.run_id }}\`\n- FOA-SDK-Installer.exe SHA-256: \`${{ steps.final.outputs.exe_sha256 }}\`\n- Canonical package lifecycle smoke: passed\n\nThe executable is retained in artifact \`foa-sdk-unsigned-installer-$INSTALLER_VERSION-${{ steps.package.outputs.run_id }}\`."

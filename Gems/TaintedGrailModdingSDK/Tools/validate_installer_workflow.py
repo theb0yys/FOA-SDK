@@ -60,6 +60,8 @@ REQUIRED_FILE_FRAGMENTS = {
         "--ctest-build-dir",
         '-DLY_DISABLE_TEST_MODULES=OFF `\n            -DO3DE_FETCHCONTENT_FORCE_GIT=ON',
         "--target TaintedGrailModdingSDK.Catalog.Tests",
+        "--target TaintedGrailModdingSDK.Catalog.Tests --parallel 2",
+        "--target INSTALL --parallel 2",
         "cmake -S $env:O3DE_ROOT",
         '"$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"',
         "-DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK",
@@ -298,6 +300,7 @@ def validate_installer_workflow(repo_root: Path) -> None:
         "${{ runner.temp }}",
         "runs-on: windows-latest",
         "-G WIX -B $env:SDK_ARTIFACTS",
+        "-- /m",
     )
     for fragment in forbidden:
         if fragment in workflow:

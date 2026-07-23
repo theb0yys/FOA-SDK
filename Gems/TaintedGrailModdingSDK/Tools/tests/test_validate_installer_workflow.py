@@ -166,6 +166,18 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             ):
                 validate_installer_workflow(repo)
 
+    def test_unbounded_visual_studio_parallelism_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / CANONICAL_INSTALLER_WORKFLOW
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8")
+                + "cmake --build build --config profile --target INSTALL -- /m\\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(InstallerWorkflowValidationError, "-- /m"):
+                validate_installer_workflow(repo)
+
     def test_wix_extension_cache_must_be_isolated(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))

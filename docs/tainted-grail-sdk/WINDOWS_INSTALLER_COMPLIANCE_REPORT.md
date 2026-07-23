@@ -73,7 +73,7 @@ following approved process must complete without substitution:
 3. record the exact inventory SHA-256, named human reviewer, UTC review time, and durable evidence reference;
 4. run canonical workflow `mode=package` on the same exact commit with those values;
 5. require final artifact-set verification and install/manifest/shortcut/repair/uninstall smoke to pass;
-6. retain and record the unsigned artifact ID, workflow run ID, EXE SHA-256, MSI SHA-256, ZIP SHA-256, and exact source commit here.
+6. retain the unsigned artifact and record its run, artifact ID, digests, exact source commit, review metadata, and lifecycle result in the durable PR #179 conversation without changing the reviewed source commit.
 
 No automated actor may invent or impersonate step 2 or its review metadata.
 
@@ -83,9 +83,12 @@ The approved design explicitly leaves actual older-to-newer MSI smoke as a relea
 gate until two independently reviewed versions exist. Stable identity is implemented,
 but upgrade execution must not be claimed from structure alone.
 
-## Completion record
+## Immutable completion evidence template
 
-This section must be updated only after the exact reviewed package run succeeds.
+The exact reviewed source must not be changed merely to fill in post-build evidence:
+doing so would create a new source commit and invalidate the reviewed inventory. After
+the package run succeeds, the following completed record belongs in the durable PR #179
+conversation, anchored to the exact reviewed source commit:
 
 - Final source commit: **pending**
 - Inventory workflow run: **pending**

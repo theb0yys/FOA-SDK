@@ -78,19 +78,20 @@ jobs:
 
           tests = test_path.read_text(encoding='utf-8')
           test_anchor = '    def test_wix_extension_cache_must_be_isolated(self) -> None:\n'
-          new_test = '''    def test_unbounded_visual_studio_parallelism_is_rejected(self) -> None:
-              with tempfile.TemporaryDirectory() as temporary:
-                  repo = self.make_repo(Path(temporary))
-                  workflow = repo / CANONICAL_INSTALLER_WORKFLOW
-                  workflow.write_text(
-                      workflow.read_text(encoding="utf-8")
-                      + "cmake --build build --config profile --target INSTALL -- /m\\n",
-                      encoding="utf-8",
-                  )
-                  with self.assertRaisesRegex(InstallerWorkflowValidationError, "-- /m"):
-                      validate_installer_workflow(repo)
-
-          '''
+          new_test = (
+              '    def test_unbounded_visual_studio_parallelism_is_rejected(self) -> None:\n'
+              '        with tempfile.TemporaryDirectory() as temporary:\n'
+              '            repo = self.make_repo(Path(temporary))\n'
+              '            workflow = repo / CANONICAL_INSTALLER_WORKFLOW\n'
+              '            workflow.write_text(\n'
+              '                workflow.read_text(encoding="utf-8")\n'
+              '                + "cmake --build build --config profile --target INSTALL -- /m\\\\n",\n'
+              '                encoding="utf-8",\n'
+              '            )\n'
+              '            with self.assertRaisesRegex(InstallerWorkflowValidationError, "-- /m"):\n'
+              '                validate_installer_workflow(repo)\n'
+              '\n'
+          )
           if test_anchor not in tests:
               raise SystemExit('Validator test insertion anchor is missing')
           tests = tests.replace(test_anchor, new_test + test_anchor, 1)

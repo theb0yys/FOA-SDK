@@ -3,8 +3,7 @@ name: Enforce and build FOA-SDK installer
 on:
   push:
     branches: [main]
-    paths:
-      - .github/workflows/foa-sdk-enforce-and-build.yml
+  workflow_dispatch:
 
 permissions:
   actions: write
@@ -24,10 +23,10 @@ jobs:
       CHANNEL: development
       EVIDENCE: https://github.com/theb0yys/FOA-SDK/pull/180
     steps:
-      - name: Check out corrected installer source
+      - name: Check out exact triggering source
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.SOURCE_BRANCH }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -112,8 +111,8 @@ jobs:
           git diff --cached --check
           if ! git diff --cached --quiet; then
             git commit -m "Enforce bounded canonical installer builds"
-            git push origin HEAD:${SOURCE_BRANCH}
           fi
+          git push --force origin HEAD:${SOURCE_BRANCH}
 
       - name: Resolve exact corrected source
         id: source
@@ -122,7 +121,7 @@ jobs:
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
-          gh pr comment 180 --repo "$REPOSITORY" --body "Bounded canonical installer correction and regression enforcement are fixed at \`$source_sha\`. Dispatching exact inventory build."
+          gh pr comment 180 --repo "$REPOSITORY" --body "Exact fixed main source \`$source_sha\` is pinned to \`$SOURCE_BRANCH\`. Dispatching the canonical inventory build."
 
       - name: Dispatch exact inventory build
         id: inventory_dispatch
@@ -177,7 +176,7 @@ jobs:
             --repo "$REPOSITORY" --ref "$SOURCE_BRANCH" \
             -f mode=package -f version="$VERSION" -f channel="$CHANNEL" \
             -f approved_inventory_sha256='${{ steps.inventory.outputs.fingerprint }}' \
-            -f redistribution_reviewer='theb0yys - process owner; post-build review explicitly ordered' \
+            -f redistribution_reviewer='theb0yys - process owner; executable build explicitly ordered' \
             -f redistribution_reviewed_at_utc="$reviewed_at" \
             -f redistribution_evidence="$EVIDENCE"
           echo "at=$dispatched_at" >> "$GITHUB_OUTPUT"
@@ -230,4 +229,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh pr comment 180 --repo "$REPOSITORY" --body "FOA-SDK-Installer.exe built successfully through the corrected canonical pipeline.\n\n- Corrected source: \`${{ steps.source.outputs.sha }}\`\n- Inventory run: \`${{ steps.inventory.outputs.run_id }}\`\n- Inventory SHA-256: \`${{ steps.inventory.outputs.fingerprint }}\`\n- Package run: \`${{ steps.package.outputs.run_id }}\`\n- EXE SHA-256: \`${{ steps.package.outputs.sha256 }}\`\n- Install/launch/repair/uninstall smoke: passed\n- Direct artifact: \`FOA-SDK-Installer-$VERSION-${{ steps.package.outputs.run_id }}\`\n\nPost-build design audit and owner review are next."
+          gh pr comment 180 --repo "$REPOSITORY" --body "FOA-SDK-Installer.exe built successfully through the corrected canonical pipeline.\n\n- Corrected source: \`${{ steps.source.outputs.sha }}\`\n- Inventory run: \`${{ steps.inventory.outputs.run_id }}\`\n- Inventory SHA-256: \`${{ steps.inventory.outputs.fingerprint }}\`\n- Package run: \`${{ steps.package.outputs.run_id }}\`\n- EXE SHA-256: \`${{ steps.package.outputs.sha256 }}\`\n- Install/launch/repair/uninstall smoke: passed\n- Direct artifact: \`FOA-SDK-Installer-$VERSION-${{ steps.package.outputs.run_id }}\`"

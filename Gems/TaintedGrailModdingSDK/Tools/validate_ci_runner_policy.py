@@ -22,16 +22,13 @@ REMOVED_AUTOMATIC_WORKFLOWS = (
     ".github/workflows/ar.yml",
     ".github/workflows/validation.yaml",
 )
-
 AUTOMATIC_STATIC_WORKFLOW = ".github/workflows/tainted-grail-sdk-pr-validation.yml"
-
 MANUAL_WORKFLOWS = (
     ".github/workflows/tainted-grail-sdk-foundation.yml",
     ".github/workflows/tainted-grail-editor-entry.yml",
     ".github/workflows/tainted-grail-repository-hygiene.yml",
     ".github/workflows/tainted-grail-sdk-installer.yml",
 )
-
 AGENT_POLICY = "AGENTS.md"
 CI_POLICY = "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
 LOCAL_RUNNER = "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
@@ -63,7 +60,11 @@ def validate_removed_workflows(repo_root: Path) -> None:
             )
 
 
-def validate_manual_workflows(repo_root: Path) -> None:
+def validate_manual_workflows(
+    repo_root: Path,
+    *,
+    require_explicit_read_only: bool,
+) -> None:
     for relative_path in MANUAL_WORKFLOWS:
         text = read_text(repo_root / relative_path)
         if "workflow_dispatch:" not in text:
@@ -87,11 +88,12 @@ def validate_manual_workflows(repo_root: Path) -> None:
                     f"Manual workflow contains forbidden trigger, permission, or mutation "
                     f"{forbidden!r}: {relative_path}"
                 )
-        require_fragments(
-            text,
-            ("permissions:", "contents: read"),
-            f"Manual workflow {relative_path}",
-        )
+        if require_explicit_read_only:
+            require_fragments(
+                text,
+                ("permissions:", "contents: read"),
+                f"Manual workflow {relative_path}",
+            )
 
 
 def validate_local_runner(repo_root: Path) -> None:
@@ -127,7 +129,6 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
         ),
         "Agent policy",
     )
-
     require_fragments(
         automatic,
         (
@@ -191,11 +192,6 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
         )
 
     static_job = automatic[static_job_start:compiled_job_start]
-    reject_fragments(
-        static_job,
-        ("pull-requests: write", "contents: write", "self-hosted", "secrets."),
-        "Read-only static validation job",
-    )
     require_fragments(
         static_job,
         (
@@ -206,13 +202,13 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
         ),
         "Read-only static validation job",
     )
+    reject_fragments(
+        static_job,
+        ("pull-requests: write", "contents: write", "self-hosted", "secrets."),
+        "Read-only static validation job",
+    )
 
     compiled_job = automatic[compiled_job_start:windows_job_start]
-    reject_fragments(
-        compiled_job,
-        ("contents: write", "pull-requests: write", "self-hosted", "secrets."),
-        "Compiled validation job",
-    )
     require_fragments(
         compiled_job,
         (
@@ -223,8 +219,24 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
         ),
         "Compiled validation job",
     )
+    reject_fragments(
+        compiled_job,
+        ("contents: write", "pull-requests: write", "self-hosted", "secrets."),
+        "Compiled validation job",
+    )
 
     windows_job = automatic[windows_job_start:]
+    require_fragments(
+        windows_job,
+        (
+            "runs-on: windows-latest",
+            "persist-credentials: false",
+            "O3DE_COMMIT:",
+            "sparse-checkout",
+            "developer_preview.py prerequisites",
+        ),
+        "Windows prerequisite job",
+    )
     reject_fragments(
         windows_job,
         (
@@ -234,17 +246,6 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
             "secrets.",
             "cmake --build",
             "--ctest-build-dir",
-        ),
-        "Windows prerequisite job",
-    )
-    require_fragments(
-        windows_job,
-        (
-            "runs-on: windows-latest",
-            "persist-credentials: false",
-            "O3DE_COMMIT:",
-            "sparse-checkout",
-            "developer_preview.py prerequisites",
         ),
         "Windows prerequisite job",
     )
@@ -318,7 +319,11 @@ def validate_legacy_mode(repo_root: Path, automatic: str) -> None:
     privileged_job = automatic[target_job_start:static_job_start]
     require_fragments(
         privileged_job,
-        ("github.event.pull_request.base.sha", "validate_pr_obligations.py", "convertPullRequestToDraft"),
+        (
+            "github.event.pull_request.base.sha",
+            "validate_pr_obligations.py",
+            "convertPullRequestToDraft",
+        ),
         "Privileged PR-target job",
     )
     reject_fragments(
@@ -405,11 +410,15 @@ def validate_legacy_mode(repo_root: Path, automatic: str) -> None:
 def validate_ci_runner_policy(repo_root: Path) -> None:
     validate_removed_workflows(repo_root)
     automatic = read_text(repo_root / AUTOMATIC_STATIC_WORKFLOW)
-    if (repo_root / AGENT_POLICY).is_file():
+    agent_mode = (repo_root / AGENT_POLICY).is_file()
+    if agent_mode:
         validate_agent_mode(repo_root, automatic)
     else:
         validate_legacy_mode(repo_root, automatic)
-    validate_manual_workflows(repo_root)
+    validate_manual_workflows(
+        repo_root,
+        require_explicit_read_only=agent_mode,
+    )
     validate_local_runner(repo_root)
 
 

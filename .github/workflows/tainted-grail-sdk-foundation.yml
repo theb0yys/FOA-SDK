@@ -15,8 +15,6 @@ permissions:
 
 env:
   O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
-  O3DE_ROOT: ${{ runner.temp }}/o3de
-  FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build
 
 jobs:
   validate-foundation:
@@ -25,6 +23,12 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Initialize external build roots
+        shell: bash
+        run: |
+          echo "O3DE_ROOT=$RUNNER_TEMP/o3de" >> "$GITHUB_ENV"
+          echo "FOA_BUILD_ROOT=$RUNNER_TEMP/foa-build" >> "$GITHUB_ENV"
+
       - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
         with:

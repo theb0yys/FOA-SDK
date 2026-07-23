@@ -80,6 +80,21 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             ):
                 validate_installer_workflow(repo)
 
+    def test_runner_context_outside_steps_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / ".github/workflows/tainted-grail-sdk-installer.yml"
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8")
+                + "SDK_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-engine\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "runner.temp",
+            ):
+                validate_installer_workflow(repo)
+
     def test_legacy_installer_root_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))

@@ -37,9 +37,10 @@ REQUIRED_FILE_FRAGMENTS = {
         "redistribution_reviewed_at_utc:",
         "redistribution_evidence:",
         PINNED_O3DE_COMMIT,
-        "O3DE_ROOT: ${{ runner.temp }}/o3de",
-        "FOA_BUILD_ROOT: ${{ runner.temp }}/foa-build",
-        "SDK_VALIDATION_BUILD: ${{ runner.temp }}/foa-build/tg-sdk-installer-validation",
+        '"O3DE_ROOT=$env:RUNNER_TEMP/o3de" >> $env:GITHUB_ENV',
+        '"FOA_BUILD_ROOT=$env:RUNNER_TEMP/foa-build" >> $env:GITHUB_ENV',
+        '"SDK_VALIDATION_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-validation"'
+        " >> $env:GITHUB_ENV",
         "git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT",
         "run_local_validation.py",
         "--engine-root",
@@ -231,6 +232,7 @@ def validate_installer_workflow(repo_root: Path) -> None:
         "suite_wizard_receipt_host.py",
         "FOA_SDK_PYTHON",
         "review evidence only",
+        "${{ runner.temp }}",
     )
     for fragment in forbidden:
         if fragment in workflow:

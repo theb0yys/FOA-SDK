@@ -128,7 +128,7 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             ):
                 validate_installer_workflow(repo)
 
-    def test_git_fetchcontent_mode_is_required_for_both_o3de_configures(self) -> None:
+    def test_git_fetchcontent_mode_is_required_for_validation_configure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
             workflow = repo / ".github/workflows/tainted-grail-sdk-installer.yml"
@@ -138,6 +138,25 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
                     "-DO3DE_FETCHCONTENT_FORCE_GIT=OFF",
                     1,
                 ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "O3DE_FETCHCONTENT_FORCE_GIT",
+            ):
+                validate_installer_workflow(repo)
+
+    def test_git_fetchcontent_mode_is_required_for_install_configure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / ".github/workflows/tainted-grail-sdk-installer.yml"
+            first = workflow.read_text(encoding="utf-8")
+            first_position = first.index("-DO3DE_FETCHCONTENT_FORCE_GIT=ON")
+            second_position = first.index("-DO3DE_FETCHCONTENT_FORCE_GIT=ON", first_position + 1)
+            workflow.write_text(
+                first[:second_position]
+                + "-DO3DE_FETCHCONTENT_FORCE_GIT=OFF"
+                + first[second_position + len("-DO3DE_FETCHCONTENT_FORCE_GIT=ON") :],
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(

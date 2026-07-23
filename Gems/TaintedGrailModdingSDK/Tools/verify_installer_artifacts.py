@@ -115,13 +115,39 @@ def artifact_paths(root: Path, version: str) -> tuple[Path, Path, Path]:
 
 def verify_artifact_set(root: Path, version: str) -> dict[str, str]:
     try:
+        if root.is_symlink() or is_reparse_point(root):
+            raise ArtifactVerificationError(
+                f"Artifact root must not be a symlink, junction, or reparse point: {root}"
+            )
         resolved = root.resolve(strict=True)
     except OSError as exc:
         raise ArtifactVerificationError(f"Artifact root is missing or inaccessible: {root}: {exc}") from exc
-    if not resolved.is_dir() or resolved.is_symlink() or is_reparse_point(resolved):
+    if not resolved.is_dir():
         raise ArtifactVerificationError(f"Artifact root must be a regular directory: {resolved}")
 
     wizard, msi, portable_zip = artifact_paths(resolved, version)
+    expected_names = {
+        wizard.name,
+        f"{wizard.name}.sha256",
+        msi.name,
+        f"{msi.name}.sha256",
+        portable_zip.name,
+        f"{portable_zip.name}.sha256",
+    }
+    try:
+        entries = list(resolved.iterdir())
+    except OSError as exc:
+        raise ArtifactVerificationError(f"Unable to enumerate artifact root {resolved}: {exc}") from exc
+    actual_names = {entry.name for entry in entries}
+    if actual_names != expected_names:
+        extra = sorted(actual_names - expected_names)
+        missing = sorted(expected_names - actual_names)
+        raise ArtifactVerificationError(
+            f"Retained installer artifact set mismatch; extra={extra}, missing={missing}."
+        )
+    for entry in entries:
+        require_regular_file(entry, f"Retained installer artifact {entry.name}")
+
     verified = {
         wizard.name: verify_checksum_pair(wizard),
         msi.name: verify_checksum_pair(msi),

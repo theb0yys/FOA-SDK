@@ -116,13 +116,14 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
     require_fragments(
         agent_policy,
         (
-            "Mandatory GitHub Agent Restrictions",
-            "The designated working branch is `main`",
-            "normal commits directly to `main`",
-            "must never create, rename, switch, or delete any branch",
-            "must never create, edit, close, reopen, label, assign, or comment on any issue",
-            "must never create, edit, close, reopen, merge, approve, review, or comment on any pull request",
-            "must never trigger, cancel, rerun, approve, or otherwise modify GitHub Actions",
+            "Mandatory GitHub Agent Policy",
+            "The designated branch is `main`",
+            "commits directly to `main`",
+            "create, rename, delete, or switch branches",
+            "open, update, close, merge, or otherwise modify pull requests",
+            "create, update, close, label, assign, lock, or comment on issues",
+            "trigger, cancel, approve, or rerun workflows or jobs",
+            "committing the user-requested file changes directly to the designated branch",
         ),
         "Agent policy",
     )
@@ -183,9 +184,7 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
     static_job_start = automatic.find("  static-validation:")
     compiled_job_start = automatic.find("  canonical-interchange-compiled:")
     windows_job_start = automatic.find("  windows-prerequisites:")
-    if not (
-        0 <= static_job_start < compiled_job_start < windows_job_start
-    ):
+    if not (0 <= static_job_start < compiled_job_start < windows_job_start):
         raise CiRunnerPolicyError(
             "Read-only TG SDK workflow must keep static, compiled, and Windows "
             "prerequisite gates in separate ordered jobs."

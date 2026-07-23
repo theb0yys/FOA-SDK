@@ -16,7 +16,7 @@ jobs:
   report:
     runs-on: ubuntu-24.04
     steps:
-      - name: Persist installer run status
+      - name: Persist installer run status and failure log
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -25,22 +25,23 @@ jobs:
           set -euo pipefail
           fix_runs="$(gh run list --repo "$REPOSITORY" --workflow foa-sdk-fix-and-build.yml --limit 10 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
           canonical_runs="$(gh run list --repo "$REPOSITORY" --workflow tainted-grail-sdk-installer.yml --limit 20 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
+          latest_fix="$(printf '%s' "$fix_runs" | jq -r '.[0].databaseId // empty')"
+          failure_log=''
+          if [[ -n "$latest_fix" ]]; then
+            gh run view "$latest_fix" --repo "$REPOSITORY" --log-failed > failed.log 2>&1 || true
+            failure_log="$(tail -n 160 failed.log)"
+          fi
           jq -n \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg failure_log "$failure_log" \
             --argjson fix "$fix_runs" \
             --argjson canonical "$canonical_runs" \
-            '{generated_at:$generated_at,fix_build_runs:$fix,canonical_installer_runs:$canonical}' > status.json
+            '{generated_at:$generated_at,fix_build_runs:$fix,canonical_installer_runs:$canonical,latest_fix_failure_log:$failure_log}' > status.json
           path='.github/foa-sdk-build-status.json'
           encoded="$(base64 -w0 status.json)"
           existing="$(gh api "repos/$REPOSITORY/contents/$path" --jq .sha 2>/dev/null || true)"
-          if [[ -n "$existing" ]]; then
-            gh api "repos/$REPOSITORY/contents/$path" --method PUT \
-              -f message='Update installer build status' \
-              -f content="$encoded" \
-              -f sha="$existing" >/dev/null
-          else
-            gh api "repos/$REPOSITORY/contents/$path" --method PUT \
-              -f message='Record installer build status' \
-              -f content="$encoded" >/dev/null
-          fi
-          gh pr comment 180 --repo "$REPOSITORY" --body "Installer correction/build status was refreshed in \`$path\`."
+          gh api "repos/$REPOSITORY/contents/$path" --method PUT \
+            -f message='Update installer build status and failure log' \
+            -f content="$encoded" \
+            -f sha="$existing" >/dev/null
+          gh pr comment 180 --repo "$REPOSITORY" --body "Installer correction/build status and failed-step log were refreshed in \`$path\`."

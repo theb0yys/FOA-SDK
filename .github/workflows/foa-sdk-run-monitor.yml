@@ -16,7 +16,7 @@ jobs:
   report:
     runs-on: ubuntu-24.04
     steps:
-      - name: Persist installer run status and decisive failure tail
+      - name: Persist canonical installer failure tail
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -25,22 +25,22 @@ jobs:
           set -euo pipefail
           enforce_runs="$(gh run list --repo "$REPOSITORY" --workflow foa-sdk-enforce-and-build.yml --limit 10 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
           canonical_runs="$(gh run list --repo "$REPOSITORY" --workflow tainted-grail-sdk-installer.yml --limit 20 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
-          latest="$(printf '%s' "$enforce_runs" | jq -r '.[0].databaseId // empty')"
+          latest_canonical="$(printf '%s' "$canonical_runs" | jq -r '.[0].databaseId // empty')"
           failure_log=''
-          if [[ -n "$latest" ]]; then
-            gh run view "$latest" --repo "$REPOSITORY" --log-failed > failed.log 2>&1 || true
-            failure_log="$(tail -n 45 failed.log)"
+          if [[ -n "$latest_canonical" ]]; then
+            gh run view "$latest_canonical" --repo "$REPOSITORY" --log-failed > failed.log 2>&1 || true
+            failure_log="$(tail -n 100 failed.log)"
           fi
           jq -n \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg failure_log "$failure_log" \
             --argjson enforce "$enforce_runs" \
             --argjson canonical "$canonical_runs" \
-            '{generated_at:$generated_at,enforce_build_runs:$enforce,canonical_installer_runs:$canonical,latest_enforce_failure_log:$failure_log}' > status.json
+            '{generated_at:$generated_at,enforce_build_runs:$enforce,canonical_installer_runs:$canonical,latest_canonical_failure_log:$failure_log}' > status.json
           path='.github/foa-sdk-build-status.json'
           encoded="$(base64 -w0 status.json)"
           existing="$(gh api "repos/$REPOSITORY/contents/$path" --jq .sha)"
           gh api "repos/$REPOSITORY/contents/$path" --method PUT \
-            -f message='Update enforced installer build status' \
+            -f message='Update canonical installer failure tail' \
             -f content="$encoded" \
             -f sha="$existing" >/dev/null

@@ -23,25 +23,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          fix_runs="$(gh run list --repo "$REPOSITORY" --workflow foa-sdk-fix-and-build.yml --limit 10 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
+          enforce_runs="$(gh run list --repo "$REPOSITORY" --workflow foa-sdk-enforce-and-build.yml --limit 10 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
           canonical_runs="$(gh run list --repo "$REPOSITORY" --workflow tainted-grail-sdk-installer.yml --limit 20 --json databaseId,status,conclusion,headSha,headBranch,createdAt,event,displayTitle)"
-          latest_fix="$(printf '%s' "$fix_runs" | jq -r '.[0].databaseId // empty')"
+          latest="$(printf '%s' "$enforce_runs" | jq -r '.[0].databaseId // empty')"
           failure_log=''
-          if [[ -n "$latest_fix" ]]; then
-            gh run view "$latest_fix" --repo "$REPOSITORY" --log-failed > failed.log 2>&1 || true
-            failure_log="$(tail -n 35 failed.log)"
+          if [[ -n "$latest" ]]; then
+            gh run view "$latest" --repo "$REPOSITORY" --log-failed > failed.log 2>&1 || true
+            failure_log="$(tail -n 45 failed.log)"
           fi
           jq -n \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg failure_log "$failure_log" \
-            --argjson fix "$fix_runs" \
+            --argjson enforce "$enforce_runs" \
             --argjson canonical "$canonical_runs" \
-            '{generated_at:$generated_at,fix_build_runs:$fix,canonical_installer_runs:$canonical,latest_fix_failure_log:$failure_log}' > status.json
+            '{generated_at:$generated_at,enforce_build_runs:$enforce,canonical_installer_runs:$canonical,latest_enforce_failure_log:$failure_log}' > status.json
           path='.github/foa-sdk-build-status.json'
           encoded="$(base64 -w0 status.json)"
           existing="$(gh api "repos/$REPOSITORY/contents/$path" --jq .sha)"
           gh api "repos/$REPOSITORY/contents/$path" --method PUT \
-            -f message='Update installer build status and decisive failure tail' \
+            -f message='Update enforced installer build status' \
             -f content="$encoded" \
             -f sha="$existing" >/dev/null
-          # status refresh 3

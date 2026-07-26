@@ -56,8 +56,9 @@ a failure.
 
 ### Automatic Windows prerequisite validation
 
-A read-only `windows-latest` job checks out the exact event commit, clones only the
-pinned O3DE policy surface, verifies the exact O3DE commit, and runs:
+A read-only job on the pinned `windows-2022` image checks out the exact event
+commit, clones only the pinned O3DE policy surface, verifies the exact O3DE
+commit, and runs:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `

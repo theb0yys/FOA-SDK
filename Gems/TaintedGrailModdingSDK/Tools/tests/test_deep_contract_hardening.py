@@ -29,15 +29,18 @@ class DeepContractHardeningTests(unittest.TestCase):
         for fragment in fragments:
             self.assertIn(fragment, text)
 
-    def test_pr_governor_and_head_validation_use_distinct_concurrency_lanes(self) -> None:
+    def test_head_validation_is_read_only_and_has_no_privileged_governor(self) -> None:
         workflow = read(WORKFLOW)
         self.assertIn(
-            "${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}",
+            "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}",
             workflow,
         )
-        self.assertIn("pull_request_target:", workflow)
+        self.assertIn("pull_request:", workflow)
         self.assertIn("github.event.pull_request.base.sha", workflow)
-        self.assertIn("github.event_name != 'pull_request_target'", workflow)
+        self.assertIn("github.event.pull_request.head.sha || github.sha", workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertNotIn("pull_request_target:", workflow)
+        self.assertNotIn("pull-requests: write", workflow)
 
     def test_serializer_is_byte_safe_locale_independent_and_compiled(self) -> None:
         source = read(SOURCE / "DeterministicContractJson.h")

@@ -42,6 +42,13 @@ class AgentCiPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(CiRunnerPolicyError, "pull_request_target"):
             validate_agent_mode(self.repo_root, self.workflow + "\npull_request_target:\n")
 
+    def test_mutable_windows_runner_alias_is_rejected(self) -> None:
+        prefix, separator, windows_job = self.workflow.rpartition("runs-on: windows-2022")
+        self.assertTrue(separator)
+        mutated = prefix + "runs-on: windows-latest" + windows_job
+        with self.assertRaisesRegex(CiRunnerPolicyError, "windows-2022|windows-latest"):
+            validate_agent_mode(self.repo_root, mutated)
+
     def test_removed_automatic_workflows_remain_absent(self) -> None:
         for relative_path in REMOVED_AUTOMATIC_WORKFLOWS:
             self.assertFalse((self.repo_root / relative_path).exists(), relative_path)

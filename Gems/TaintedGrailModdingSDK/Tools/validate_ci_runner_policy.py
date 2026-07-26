@@ -145,7 +145,6 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
             "windows-prerequisites:",
             "runs-on: ubuntu-latest",
             "runs-on: windows-2022",
-            "runs-on: windows-latest",
             "github.event.pull_request.head.sha || github.sha",
             "persist-credentials: false",
             "fetch-depth: 0",
@@ -229,7 +228,7 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
     require_fragments(
         windows_job,
         (
-            "runs-on: windows-latest",
+            "runs-on: windows-2022",
             "persist-credentials: false",
             "O3DE_COMMIT:",
             "sparse-checkout",
@@ -242,6 +241,7 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
         (
             "contents: write",
             "pull-requests: write",
+            "runs-on: windows-latest",
             "self-hosted",
             "secrets.",
             "cmake --build",
@@ -250,7 +250,7 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
         "Windows prerequisite job",
     )
 
-    policy = read_text(repo_root / CI_POLICY)
+    policy = " ".join(read_text(repo_root / CI_POLICY).split())
     require_fragments(
         policy,
         (
@@ -258,6 +258,7 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
             "normal file commits directly to",
             "Automated validation is read-only",
             "no `pull_request_target` trigger",
+            "pinned `windows-2022`",
             "must not push commits, move refs, create branches, post comments",
             "--parallel 2",
             "--static-only",

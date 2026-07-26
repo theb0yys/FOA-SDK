@@ -60,6 +60,8 @@ jobs:
     timeout-minutes: 360
     env:
       O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+      SDK_PACKAGE_CMAKE_VERSION: 4.3.4
+      SDK_PACKAGE_CMAKE_SHA256: 86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1
 
     steps:
       - name: Initialize external build roots
@@ -77,6 +79,7 @@ jobs:
           "SDK_ARTIFACTS=$env:RUNNER_TEMP/tg-sdk-artifacts" >> $env:GITHUB_ENV
           "SDK_PACKAGE_BUILD=$env:RUNNER_TEMP/tg-sdk-package-build" >> $env:GITHUB_ENV
           "SDK_PACKAGE_OUTPUT=$env:RUNNER_TEMP/tg-sdk-package-output" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_CMAKE_ROOT=$env:RUNNER_TEMP/cmake-4.3.4" >> $env:GITHUB_ENV
           "SDK_WIX=$env:RUNNER_TEMP/wix" >> $env:GITHUB_ENV
           "WIX_EXTENSIONS=$env:RUNNER_TEMP/wix-extensions" >> $env:GITHUB_ENV
           "SDK_BOOTSTRAPPER_BUILD=$env:RUNNER_TEMP/foa-sdk-installer-bootstrapper" >> $env:GITHUB_ENV
@@ -238,15 +241,52 @@ jobs:
           & "$env:SDK_WIX/wix.exe" extension add --global WixToolset.UI.wixext/4.0.4
           "WIX=$env:SDK_WIX" >> $env:GITHUB_ENV
 
+      - name: Install hash-pinned build-only CMake and CPack toolchain
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          $archiveName = "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64.zip"
+          $archive = Join-Path $env:RUNNER_TEMP $archiveName
+          $uri = "https://cmake.org/files/v4.3/$archiveName"
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+          $actualHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256) {
+            throw "CMake packaging toolchain hash mismatch: expected $env:SDK_PACKAGE_CMAKE_SHA256; actual $actualHash"
+          }
+          New-Item -ItemType Directory -Path $env:SDK_PACKAGE_CMAKE_ROOT | Out-Null
+          Expand-Archive -LiteralPath $archive -DestinationPath $env:SDK_PACKAGE_CMAKE_ROOT
+          $toolRoot = Join-Path $env:SDK_PACKAGE_CMAKE_ROOT `
+            "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64"
+          $packageCmake = Join-Path $toolRoot "bin/cmake.exe"
+          $packageCpack = Join-Path $toolRoot "bin/cpack.exe"
+          foreach ($tool in @($packageCmake, $packageCpack)) {
+            if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) {
+              throw "Pinned packaging tool is missing: $tool"
+            }
+            if ((Get-Item -LiteralPath $tool).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+              throw "Pinned packaging tool must not be a reparse point: $tool"
+            }
+          }
+          $cmakeVersion = (& $packageCmake --version | Select-Object -First 1)
+          $cpackVersion = (& $packageCpack --version | Select-Object -First 1)
+          if ($cmakeVersion -cne "cmake version $env:SDK_PACKAGE_CMAKE_VERSION") {
+            throw "Unexpected packaging CMake version: $cmakeVersion"
+          }
+          if ($cpackVersion -cne "cpack version $env:SDK_PACKAGE_CMAKE_VERSION") {
+            throw "Unexpected packaging CPack version: $cpackVersion"
+          }
+          "SDK_PACKAGE_CMAKE=$packageCmake" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_CPACK=$packageCpack" >> $env:GITHUB_ENV
+
       - name: Build standard MSI from the same staged payload
         if: inputs.mode == 'package'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path $env:SDK_PACKAGE_OUTPUT | Out-Null
-          cmake -S Installer/Packaging/Windows -B $env:SDK_PACKAGE_BUILD `
+          & $env:SDK_PACKAGE_CMAKE -S Installer/Packaging/Windows -B $env:SDK_PACKAGE_BUILD `
             -DTG_INSTALLER_VERSION="${{ inputs.version }}" `
             -DTG_INSTALLER_PAYLOAD_ROOT="$env:SDK_STAGE"
-          cpack --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `
+          & $env:SDK_PACKAGE_CPACK --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `
             -G WIX -B $env:SDK_PACKAGE_OUTPUT
           $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_PACKAGE_OUTPUT -Filter *.msi -File -ErrorAction Stop)
           if ($msiFiles.Count -ne 1) { throw "Expected exactly one generated MSI; found $($msiFiles.Count)." }

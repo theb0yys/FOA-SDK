@@ -51,6 +51,8 @@ class CiRunnerPolicyTests(unittest.TestCase):
                 "# Automatic triggers are intentionally suspended\n"
                 "on:\n"
                 "  workflow_dispatch:\n"
+                "permissions:\n"
+                "  contents: read\n"
                 "jobs:\n"
                 "  validate:\n"
                 "    runs-on: ubuntu-latest\n",
@@ -60,41 +62,22 @@ class CiRunnerPolicyTests(unittest.TestCase):
         automatic = repo / AUTOMATIC_STATIC_WORKFLOW
         automatic.parent.mkdir(parents=True, exist_ok=True)
         automatic.write_text(
-            "name: Tainted Grail SDK PR Static Validation\n"
+            "name: Tainted Grail SDK Read-Only Validation\n"
             "on:\n"
             "  pull_request:\n"
             "    paths:\n"
             '      - ".github/**"\n'
             '      - "docs/**"\n'
             '      - "scripts/**"\n'
-            "  pull_request_target:\n"
             "  push:\n"
+            "    branches: [main]\n"
             "  workflow_dispatch:\n"
             "permissions:\n"
             "  contents: read\n"
             "jobs:\n"
-            "  enforce-obligations:\n"
-            "    name: Enforce ready-PR obligations\n"
-            "    if: github.event_name == 'pull_request_target'\n"
-            "    runs-on: ubuntu-latest\n"
-            "    timeout-minutes: 5\n"
-            "    permissions:\n"
-            "      contents: read\n"
-            "      pull-requests: write\n"
-            "    steps:\n"
-            "      - uses: actions/checkout@v4\n"
-            "        with:\n"
-            "          ref: ${{ github.event.pull_request.base.sha }}\n"
-            "          persist-credentials: false\n"
-            "          fetch-depth: 1\n"
-            "      - run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligations.py\n"
-            "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n"
             "  static-validation:\n"
-            "    if: github.event_name != 'pull_request_target'\n"
             "    runs-on: ubuntu-latest\n"
             "    timeout-minutes: 45\n"
-            "    permissions:\n"
-            "      contents: read\n"
             "    steps:\n"
             "      - uses: actions/checkout@v4\n"
             "        with:\n"
@@ -109,13 +92,19 @@ class CiRunnerPolicyTests(unittest.TestCase):
             "      - run: python "
             "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py "
             "--keep-going --static-only --skip-source-policy\n"
+            "  canonical-interchange-compiled:\n"
+            "    runs-on: windows-2022\n"
+            "    steps:\n"
+            "      - uses: actions/checkout@v4\n"
+            "        with:\n"
+            "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+            "          persist-credentials: false\n"
+            "      - run: cmake --build build --target \"$env:TEST_TARGET\" --parallel 2\n"
+            "      - run: ctest --no-tests=error\n"
             "  windows-prerequisites:\n"
             "    name: Windows O3DE prerequisites\n"
-            "    if: github.event_name != 'pull_request_target'\n"
-            "    runs-on: windows-latest\n"
+            "    runs-on: windows-2022\n"
             "    timeout-minutes: 30\n"
-            "    permissions:\n"
-            "      contents: read\n"
             "    env:\n"
             "      O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2\n"
             "    steps:\n"
@@ -124,8 +113,7 @@ class CiRunnerPolicyTests(unittest.TestCase):
             "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
             "          persist-credentials: false\n"
             "      - run: git sparse-checkout init --no-cone\n"
-            "      - run: python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites\n"
-            "      - run: echo passed > tg-sdk-windows-prerequisites.log\n",
+            "      - run: python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites\n",
             encoding="utf-8",
         )
 
@@ -151,12 +139,13 @@ class CiRunnerPolicyTests(unittest.TestCase):
         policy = repo / "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
         policy.parent.mkdir(parents=True, exist_ok=True)
         policy.write_text(
-            "run_local_validation.py automatic pull-request static validation "
-            "pull_request_target trusted base commit returns the pull request to draft "
-            "required status checks reviewed-range Windows prerequisite "
-            "--static-only --ctest-build-dir compiled Catalog CTest "
-            "self-hosted runner registration token does not claim an O3DE build "
-            "Pending is not passing\n",
+            "Binding automation boundary normal file commits directly to main. "
+            "Automated validation is read-only and has no `pull_request_target` trigger. "
+            "The pinned `windows-2022` jobs must not push commits, move refs, create "
+            "branches, post comments. Commands use --parallel 2, --static-only, "
+            "--ctest-build-dir, and --no-tests=error. Pending is not passing; "
+            "self-declared metadata are not proof. A self-hosted runner registration "
+            "token is a secret.\n",
             encoding="utf-8",
         )
         return repo
@@ -226,17 +215,15 @@ class CiRunnerPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(CiRunnerPolicyError, "registration token"):
                 validate_ci_runner_policy(repo)
 
-    def test_privileged_job_cannot_run_head_validation(self) -> None:
+    def test_pull_request_target_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
             path = repo / AUTOMATIC_STATIC_WORKFLOW
-            text = path.read_text(encoding="utf-8").replace(
-                "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n",
-                "      - run: python run_local_validation.py\n"
-                "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n",
+            path.write_text(
+                path.read_text(encoding="utf-8") + "pull_request_target:\n",
+                encoding="utf-8",
             )
-            path.write_text(text, encoding="utf-8")
-            with self.assertRaisesRegex(CiRunnerPolicyError, "Privileged PR-target job"):
+            with self.assertRaisesRegex(CiRunnerPolicyError, "pull_request_target"):
                 validate_ci_runner_policy(repo)
 
     def test_narrow_documentation_trigger_is_rejected(self) -> None:
@@ -287,12 +274,12 @@ class CiRunnerPolicyTests(unittest.TestCase):
             path = repo / AUTOMATIC_STATIC_WORKFLOW
             path.write_text(
                 path.read_text(encoding="utf-8").replace(
-                    "runs-on: windows-latest",
+                    "runs-on: windows-2022",
                     "runs-on: self-hosted",
                 ),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(CiRunnerPolicyError, "windows-latest|self-hosted"):
+            with self.assertRaisesRegex(CiRunnerPolicyError, "windows-2022|self-hosted"):
                 validate_ci_runner_policy(repo)
 
 

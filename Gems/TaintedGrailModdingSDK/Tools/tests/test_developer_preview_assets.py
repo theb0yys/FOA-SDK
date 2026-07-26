@@ -80,7 +80,8 @@ class DeveloperPreviewAssetTests(unittest.TestCase):
             executor = mock.Mock(return_value=0)
             command = assets.prepare_assets(
                 editor=editor,
-                repo_root=engine,
+                product_root=root,
+                engine_root=engine,
                 workspace=self.paths(root),
                 dry_run=True,
                 executor=executor,
@@ -108,12 +109,13 @@ class DeveloperPreviewAssetTests(unittest.TestCase):
             ) as verify:
                 assets.prepare_assets(
                     editor=editor,
-                    repo_root=engine,
+                    product_root=root,
+                    engine_root=engine,
                     workspace=workspace,
                     dry_run=False,
                     executor=executor,
                 )
-            verify.assert_called_once_with(engine)
+            verify.assert_called_once_with(root)
             self.assertEqual(calls[0][1], editor.parent)
             self.assertEqual(
                 (workspace.launcher_log / assets.STDOUT_FILENAME).read_text(),
@@ -132,7 +134,8 @@ class DeveloperPreviewAssetTests(unittest.TestCase):
             ), self.assertRaisesRegex(assets.AssetPreparationError, "exit code 9"):
                 assets.prepare_assets(
                     editor=editor,
-                    repo_root=engine,
+                    product_root=root,
+                    engine_root=engine,
                     workspace=workspace,
                     dry_run=False,
                     executor=lambda *_: 9,
@@ -145,7 +148,8 @@ class DeveloperPreviewAssetTests(unittest.TestCase):
             with self.assertRaisesRegex(assets.AssetPreparationError, "not built"):
                 assets.prepare_assets(
                     editor=editor,
-                    repo_root=engine,
+                    product_root=root,
+                    engine_root=engine,
                     workspace=self.paths(root),
                     dry_run=False,
                 )

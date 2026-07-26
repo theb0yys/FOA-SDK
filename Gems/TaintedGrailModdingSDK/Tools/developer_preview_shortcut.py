@@ -181,7 +181,8 @@ def create_shortcut(
         )
         developer_preview_assets.prepare_assets(
             editor=paths.editor,
-            repo_root=repo_root,
+            product_root=repo_root,
+            engine_root=paths.engine,
             workspace=workspace,
             dry_run=dry_run,
         )

@@ -28,6 +28,8 @@ runtime behavior, or deployment safety.
 requests, pushes to `main`, and manual dispatch. Pull requests remain available for
 human contributors, but the workflow never modifies their state. It has no
 `pull_request_target` trigger, no write permission, and no GitHub API mutation.
+This is the automatic pull-request static validation boundary; its additional
+compiled and Windows-prerequisite jobs remain read-only.
 
 The path filter covers `.github/**`, `docs/**`, `scripts/**`, product code,
 installer code, plug-ins, research, project files, root Markdown,
@@ -56,8 +58,9 @@ a failure.
 
 ### Automatic Windows prerequisite validation
 
-A read-only `windows-latest` job checks out the exact event commit, clones only the
-pinned O3DE policy surface, verifies the exact O3DE commit, and runs:
+A read-only job on the pinned `windows-2022` image checks out the exact event
+commit, clones only the pinned O3DE policy surface, verifies the exact O3DE
+commit, and runs:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `
@@ -151,9 +154,9 @@ requests, screenshots, logs, source files, or retained shell history.
 
 ## Exact-head validation receipt
 
-Create receipts outside the repository from a clean exact commit. The tool derives
-the source commit from `git rev-parse HEAD`; callers do not supply a claimed commit,
-status, exit code, or timestamp.
+Create receipts outside the repository from a clean exact commit. The tool
+derives the 40-character source commit from `git rev-parse HEAD`; callers do not
+supply a claimed commit, status, exit code, or timestamp.
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py init \
@@ -163,8 +166,29 @@ python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py init \
   --configuration profile
 ```
 
-Record each gate through `validation_receipt.py record`, then finalize and verify
-against the same exact commit:
+Record each automated gate through `validation_receipt.py record -- <command>`.
+The receipt tool runs that command and derives its exit status, timestamps, and
+bounded log evidence rather than trusting caller-supplied results. Reviewed-range
+whitespace, local validation, O3DE configure, O3DE build, and compiled Catalog
+CTest must all have an executed, zero-exit result.
+
+Only the Windows UI gate can be recorded as not run and then accepted by a named
+maintainer with a concrete rationale:
+
+```shell
+python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py skip \
+  --output ../tg-sdk-receipt --name windows-ui \
+  --reason "Exact UI evidence could not be captured on this host"
+python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py accept-risk \
+  --output ../tg-sdk-receipt --gate windows-ui \
+  --maintainer-alias maintainer \
+  --rationale "Concrete commit-bound reason and residual risk"
+```
+
+No automated gate can be waived. A Windows UI pass must not be invented; risk
+acceptance records only that the UI gate did not run.
+
+Finalize, verify, and summarize against the same exact commit:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py finalize \
@@ -172,10 +196,13 @@ python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py finalize \
 python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py verify \
   --output ../tg-sdk-receipt --expected-commit <40-character-head> \
   --require-merge-ready
+python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py summarize \
+  --output ../tg-sdk-receipt --expected-commit <40-character-head> \
+  --require-merge-ready
 ```
 
 The non-waivable automated gates are reviewed-range whitespace, local static
 validation, O3DE configure, O3DE build, and compiled tests. A Windows UI gate may be
 recorded as not run only with an explicit, concrete, commit-bound human risk
-acceptance. Receipts and logs stay outside the repository; hashes detect later
-modification but are not signatures or independent authorization.
+acceptance. Receipts and logs must not be committed. A receipt hash detects
+later modification but is not a signature or independent authorization.

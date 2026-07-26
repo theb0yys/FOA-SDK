@@ -503,6 +503,7 @@ namespace TaintedGrailModdingSDK
             MakeTroop(TroopBetaId, TroopBetaEvidence);
         unresolved.m_troopKind = "reinforcement";
         unresolved.m_leaderActorSubjectRef = UnresolvedActorSubject;
+        unresolved.m_evidenceIds.push_back(UnresolvedActorEvidence);
         ASSERT_TRUE(catalog.UpsertPopulationTroopProfile(unresolved, &error))
             << error.c_str();
 
@@ -513,6 +514,7 @@ namespace TaintedGrailModdingSDK
             ActorAlphaSubject,
             AlphaLeaderEvidence,
             "leader");
+        resolvedMember.m_required = true;
         ASSERT_TRUE(catalog.UpsertPopulationTroopMember(
             resolvedMember,
             &error)) << error.c_str();
@@ -524,6 +526,8 @@ namespace TaintedGrailModdingSDK
             UnresolvedActorSubject,
             BetaLeaderEvidence,
             "leader");
+        unresolvedMember.m_required = true;
+        unresolvedMember.m_evidenceIds.push_back(UnresolvedActorEvidence);
         ASSERT_TRUE(catalog.UpsertPopulationTroopMember(
             unresolvedMember,
             &error)) << error.c_str();
@@ -634,6 +638,7 @@ namespace TaintedGrailModdingSDK
             ActorAlphaSubject,
             AlphaLeaderEvidence);
         zeroMinimum.m_minimumCount = 0;
+        zeroMinimum.m_required = true;
         ExpectMemberRejected(catalog, zeroMinimum);
 
         PopulationTroopMember invertedRange = zeroMinimum;
@@ -922,6 +927,7 @@ namespace TaintedGrailModdingSDK
             MakeTroop(TroopAlphaId, TroopAlphaEvidence);
         leaderGapTroop.m_leaderActorRecordId = ActorBetaId;
         leaderGapTroop.m_leaderActorSubjectRef = ActorBetaSubject;
+        leaderGapTroop.m_evidenceIds.push_back(ActorBetaEvidence);
         ASSERT_TRUE(leaderGapCatalog.UpsertPopulationTroopProfile(
             leaderGapTroop,
             &error)) << error.c_str();
@@ -940,7 +946,7 @@ namespace TaintedGrailModdingSDK
             *profile,
             registry,
             &error));
-        EXPECT_NE(error.find("matching leader"), AZStd::string::npos);
+        EXPECT_NE(error.find("exactly one matching"), AZStd::string::npos);
     }
 
     TEST(PopulationCatalogTests, PopulationUpsertsDoNotGrantGovernanceOrActionAuthority)

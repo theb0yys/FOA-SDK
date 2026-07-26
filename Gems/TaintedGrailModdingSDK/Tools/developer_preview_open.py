@@ -25,8 +25,9 @@ TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-import developer_preview_launch
+import developer_preview
 import developer_preview_assets
+import developer_preview_launch
 import developer_preview_workspace
 import validate_developer_preview_project
 
@@ -48,6 +49,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Configured Developer Preview build directory.",
     )
     parser.add_argument(
+        "--engine-root",
+        type=Path,
+        help="Exact pinned external O3DE checkout.",
+    )
+    parser.add_argument(
         "--log-dir",
         type=Path,
         help=(
@@ -67,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
 def launch_arguments(
     args: argparse.Namespace,
     repo_root: Path,
+    engine_root: Path,
     workspace: developer_preview_workspace.PreviewWorkspacePaths,
 ) -> list[str]:
     log_dir = bounded_launcher_path(
@@ -81,7 +88,7 @@ def launch_arguments(
         "--project",
         str(workspace.project),
         "--engine",
-        str(repo_root),
+        str(engine_root),
         "--project-cache",
         str(workspace.cache),
         "--project-user",
@@ -163,11 +170,30 @@ def resolve_preflight_editor(args: argparse.Namespace, repo_root: Path) -> Path:
     return editor
 
 
+def resolve_engine_root(args: argparse.Namespace, product_root: Path) -> Path:
+    lock = developer_preview.load_engine_lock(product_root)
+    engine_root = (
+        developer_preview.resolve_path(args.engine_root, Path.cwd())
+        if args.engine_root is not None
+        else developer_preview.default_engine_root(product_root, lock)
+    )
+    developer_preview.validate_engine_root(engine_root, lock)
+    developer_preview.validate_engine_pin(engine_root, lock)
+    if engine_root == product_root or developer_preview.is_relative_to(
+        engine_root, product_root
+    ) or developer_preview.is_relative_to(product_root, engine_root):
+        raise RuntimeError(
+            "FOA-SDK product_root and O3DE engine_root must be separate checkouts."
+        )
+    return engine_root
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     repo_root = repository_root_from_script()
     try:
         validate_developer_preview_project.validate_preview_project(repo_root)
+        engine_root = resolve_engine_root(args, repo_root)
         workspace = developer_preview_workspace.materialize_preview_workspace(
             repo_root,
             dry_run=args.dry_run,
@@ -175,13 +201,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         editor = resolve_preflight_editor(args, repo_root)
         developer_preview_assets.prepare_assets(
             editor=editor,
-            repo_root=repo_root,
+            product_root=repo_root,
+            engine_root=engine_root,
             workspace=workspace,
             dry_run=args.dry_run,
         )
-        arguments = launch_arguments(args, repo_root, workspace)
+        arguments = launch_arguments(args, repo_root, engine_root, workspace)
     except (
         OSError,
+        RuntimeError,
         developer_preview_assets.AssetPreparationError,
         developer_preview_workspace.WorkspaceError,
         validate_developer_preview_project.PreviewProjectContractError,

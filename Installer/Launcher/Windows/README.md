@@ -48,7 +48,8 @@ Verbose MSI logs are written beneath `%LOCALAPPDATA%\FOA-SDK\Installer\Logs`. A 
 
 ## Security and trust boundary
 
-- Embedded and external MSI bytes are captured and SHA-256 verified before `msiexec.exe` starts.
+- Embedded and external MSI bytes are captured and SHA-256 verified before the absolute
+  `%SystemRoot%\System32\msiexec.exe` path starts; `PATH` lookup is not used.
 - External MSI paths must be regular `.msi` files, not symbolic links or reparse points.
 - The install path must be absolute, must not be a filesystem root, and must not traverse an existing reparse-point directory.
 - Process arguments use `ProcessStartInfo.ArgumentList`, not a concatenated command line.

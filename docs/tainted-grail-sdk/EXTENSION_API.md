@@ -16,7 +16,7 @@ TaintedGrailModdingSDK::ExtensionRequestBus::BroadcastResult(
     error);
 ```
 
-The Foundation system component owns the single bus handler and registry lifetime. In-tree SDK code may still use `FoundationService::Get().GetExtensionAPI()` directly, but optional Gems do not link to or construct the Foundation singleton.
+The Foundation system component owns the single bus handler and registry lifetime. Trusted in-tree host code uses the bounded `FoundationService` registration and client-creation methods; the mutable `ExtensionAPI::Service` is not exposed. Optional Gems use the request bus and do not link to or construct the Foundation singleton.
 
 The service owns no game runtime hooks and exposes no `CatalogDatabase&`, `SourceEvidenceRegistry&`, mutable `GameProfile`, workspace path, install path, plugin path, diagnostics path, or extracted-data path.
 

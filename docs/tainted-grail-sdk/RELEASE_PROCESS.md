@@ -4,7 +4,11 @@
 
 The project is pre-alpha and has not published a supported binary release. This process defines the controls required before tags and packages are produced.
 
-Automatic GitHub Actions triggers are currently suspended because exact-head jobs could not acquire GitHub-hosted runners. Development uses the documented local validation gate, but **no public release may proceed until automatic hosted CI is safely restored and passes on the exact release commit**.
+Read-only static, canonical-interchange, and Windows-prerequisite checks run
+automatically on their documented hosted-runner events. Host-heavy exact-head,
+installer, and Windows Editor gates remain separately controlled. **No public
+release may proceed unless every required automatic and manual gate actually
+passes on the exact release commit.**
 
 ## Release principles
 
@@ -40,11 +44,12 @@ Record:
 
 ### Code, local validation, and CI
 
-- release commit is on `main` and `foa-development` is synchronized;
+- release commit is on `main`; any human development branch intended for
+  continued work is synchronized;
 - `run_local_validation.py --keep-going` passes on the exact release commit;
 - the complete command, tester, timestamp, exit result, and skipped checks are recorded;
 - supported host builds and compiled tests pass on the exact release commit;
-- automatic GitHub-hosted CI has been restored under the reviewed runner policy;
+- automatic GitHub-hosted CI remains read-only under the reviewed runner policy;
 - every required automatic check starts, completes successfully, and points to the exact release commit;
 - no unavailable, queued, skipped, approval-blocked, or stale workflow is configured as release proof;
 - warnings and flaky failures are understood and documented.
@@ -77,7 +82,12 @@ Record:
 
 Developer Preview and later Windows claims require completed **Windows manual UI evidence** for the **exact reviewed `main` commit**.
 
-Confirm every checklist item passed; Editor launch and activation log are confirmed; all twenty-two TG SDK panes are present; required screenshots are present; screenshot hashes, dimensions, and sizes verify; the tester completed the privacy attestation and runtime-boundary attestation; no game files, saves, credentials, runner tokens, or private paths are visible; and the verifier passed for the exact commit.
+Confirm every checklist item passed; Editor launch and activation log are
+confirmed; all twenty-six TG SDK panes are present; required screenshots are
+present; screenshot hashes, dimensions, and sizes verify; the tester completed
+the privacy attestation and runtime-boundary attestation; no game files, saves,
+credentials, runner tokens, or private paths are visible; and the verifier
+passed for the exact commit.
 
 Screenshots and evidence are review material and **must not be committed**.
 

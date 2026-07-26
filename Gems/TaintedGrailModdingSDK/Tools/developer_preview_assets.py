@@ -50,7 +50,7 @@ def resolve_asset_processor_batch(editor: Path, *, require_exists: bool) -> Path
 
 def asset_processor_command(
     batch: Path,
-    repo_root: Path,
+    engine_root: Path,
     workspace: developer_preview_workspace.PreviewWorkspacePaths,
 ) -> tuple[str, ...]:
     return (
@@ -58,7 +58,7 @@ def asset_processor_command(
         "--project-path",
         str(workspace.project),
         "--engine-path",
-        str(repo_root),
+        str(engine_root),
         "--project-cache-path",
         str(workspace.cache),
         "--project-user-path",
@@ -89,7 +89,8 @@ def default_executor(
 def prepare_assets(
     *,
     editor: Path,
-    repo_root: Path,
+    product_root: Path,
+    engine_root: Path,
     workspace: developer_preview_workspace.PreviewWorkspacePaths,
     dry_run: bool,
     executor: ProcessExecutor = default_executor,
@@ -97,14 +98,14 @@ def prepare_assets(
     """Process the local project assets synchronously before Editor startup."""
 
     batch = resolve_asset_processor_batch(editor, require_exists=not dry_run)
-    command = asset_processor_command(batch, repo_root, workspace)
+    command = asset_processor_command(batch, engine_root, workspace)
     print(f"Preparing the bounded Developer Preview asset cache:\n+ {command_text(command)}")
     if dry_run:
         return command
 
-    if not (repo_root / "engine.json").is_file():
-        raise AssetPreparationError(f"The O3DE engine path is invalid: {repo_root}")
-    verified_workspace = developer_preview_workspace.verify_preview_workspace(repo_root)
+    if not (engine_root / "engine.json").is_file():
+        raise AssetPreparationError(f"The O3DE engine path is invalid: {engine_root}")
+    verified_workspace = developer_preview_workspace.verify_preview_workspace(product_root)
     if verified_workspace != workspace:
         raise AssetPreparationError(
             "Asset preparation paths do not match the verified bounded Developer Preview workspace."

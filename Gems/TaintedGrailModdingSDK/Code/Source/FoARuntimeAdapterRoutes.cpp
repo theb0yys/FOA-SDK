@@ -137,7 +137,14 @@ namespace TaintedGrailModdingSDK::FoARuntimeAdapterRoutes
 
         bool IsCapabilityId(const AZStd::string& capability)
         {
-            return IsStableContractId(capability) && capability.size() <= 128;
+            const bool researchedRouteVocabulary =
+                capability == "game-api-access"
+                || capability == "runtime-mutation"
+                || capability == "save-access"
+                || capability == "feature-tested-gameplay";
+            return capability.size() <= 128
+                && (researchedRouteVocabulary
+                    || IsStableContractId(capability));
         }
 
         AZStd::vector<RouteDescriptor> BuildRoutes()

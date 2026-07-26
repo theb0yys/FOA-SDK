@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
+#
 # Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+
 """Require the complete Core-only Gate 5 canonical-interchange acceptance target."""
 from __future__ import annotations
 
@@ -109,15 +114,26 @@ def validate(repo_root: Path) -> None:
         (
             "canonical-interchange-compiled:",
             "github.event.pull_request.head.sha",
+            "persist-credentials: false",
+            "runs-on: windows-2022",
             "68683f23fb747380d3efa2424bd5f30242e9c5a2",
             "-DO3DE_FETCHCONTENT_FORCE_GIT=ON",
             "TaintedGrailModdingSDK.CanonicalInterchange.Tests",
+            "--parallel 2",
             "--no-tests=error",
-            "gate5-canonical-interchange-compiled-${{ github.run_id }}",
-            "operational_authority = $false",
         ),
         "Governed compiled-test workflow",
     )
+    for forbidden in (
+        "pull_request_target:",
+        "contents: write",
+        "pull-requests: write",
+        "operational_authority = $false",
+    ):
+        if forbidden in workflow:
+            raise CanonicalInterchangeCompiledTestError(
+                f"Governed compiled-test workflow retains forbidden privileged behavior {forbidden!r}."
+            )
 
 
 def main() -> int:

@@ -319,10 +319,10 @@ namespace TaintedGrailModdingSDK
             "evidence.population.contract-guard-member");
         AZStd::string error;
 
-        EXPECT_TRUE(catalog.ValidatePopulationTroopMember(optional, &error))
+        EXPECT_TRUE(catalog.UpsertPopulationTroopMember(optional, &error))
             << error.c_str();
         optional.m_required = true;
-        EXPECT_FALSE(catalog.ValidatePopulationTroopMember(optional, &error));
+        EXPECT_FALSE(catalog.UpsertPopulationTroopMember(optional, &error));
         EXPECT_NE(error.find("positive minimum for required rows"), AZStd::string::npos);
     }
 

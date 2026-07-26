@@ -253,8 +253,10 @@ A change is done only when:
 - self-review is complete;
 - focused validation passes;
 - applicable tests and builds pass;
-- review threads are resolved;
+- applicable review threads are resolved;
 - documentation and changelog are updated;
 - migration and compatibility effects are handled;
-- maintainer approval is recorded;
-- the change is merged into `main` and `foa-development` is synchronized.
+- maintainer approval is recorded where required;
+- the change is present on `main`; human-contributor work is merged and
+  `foa-development` is synchronized, while automated-agent work follows the
+  direct-to-`main` `AGENTS.md` contract.

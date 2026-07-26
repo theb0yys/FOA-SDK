@@ -73,7 +73,10 @@ class WindowsInstallerWizardTests(unittest.TestCase):
 
     def test_runner_uses_argument_list_for_install_repair_and_uninstall(self) -> None:
         runner = RUNNER.read_text(encoding="utf-8")
-        self.assertIn('FileName = "msiexec.exe"', runner)
+        self.assertIn('Path.Combine(systemDirectory, "msiexec.exe")', runner)
+        self.assertIn("FileName = windowsInstallerPath", runner)
+        self.assertIn("!Path.IsPathFullyQualified(systemDirectory)", runner)
+        self.assertNotIn('FileName = "msiexec.exe"', runner)
         self.assertIn("startInfo.ArgumentList.Add", runner)
         self.assertIn('InstallerOperation.InstallOrUpgrade => "/i"', runner)
         self.assertIn('InstallerOperation.Repair => "/fa"', runner)

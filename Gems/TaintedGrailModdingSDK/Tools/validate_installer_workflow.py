@@ -20,6 +20,8 @@ class InstallerWorkflowValidationError(RuntimeError):
 
 PINNED_O3DE_COMMIT = "68683f23fb747380d3efa2424bd5f30242e9c5a2"
 WINDOWS_RUNNER = "windows-2022"
+PACKAGE_CMAKE_VERSION = "4.3.4"
+PACKAGE_CMAKE_SHA256 = "86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1"
 CANONICAL_INSTALLER_WORKFLOW = ".github/workflows/tainted-grail-sdk-installer.yml"
 TEMPORARY_INVENTORY_WORKFLOW = ".github/workflows/foa-sdk-installer-inventory-pr.yml"
 LEGACY_INSTALLER_ROOT = "Gems/TaintedGrailModdingSDK/Installer"
@@ -33,6 +35,7 @@ ALTERNATE_WORKFLOW_SIGNATURES = (
     ("developer_preview_installer.py inventory",),
     ("developer_preview_installer.py stage",),
     ("cpack --config", "-G WIX"),
+    ("SDK_PACKAGE_CPACK --config", "-G WIX"),
     ("dotnet publish", "FOA-SDK-Installer.exe"),
     ("--target INSTALL", "O3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK"),
 )
@@ -48,11 +51,14 @@ REQUIRED_FILE_FRAGMENTS = {
         "redistribution_evidence:",
         PINNED_O3DE_COMMIT,
         f"runs-on: {WINDOWS_RUNNER}",
+        f"SDK_PACKAGE_CMAKE_VERSION: {PACKAGE_CMAKE_VERSION}",
+        f"SDK_PACKAGE_CMAKE_SHA256: {PACKAGE_CMAKE_SHA256}",
         '"O3DE_ROOT=$env:RUNNER_TEMP/o3de" >> $env:GITHUB_ENV',
         '"FOA_BUILD_ROOT=$env:RUNNER_TEMP/foa-build" >> $env:GITHUB_ENV',
         '"SDK_VALIDATION_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-validation"'
         " >> $env:GITHUB_ENV",
         '"SDK_PACKAGE_OUTPUT=$env:RUNNER_TEMP/tg-sdk-package-output" >> $env:GITHUB_ENV',
+        '"SDK_PACKAGE_CMAKE_ROOT=$env:RUNNER_TEMP/cmake-4.3.4" >> $env:GITHUB_ENV',
         '"WIX_EXTENSIONS=$env:RUNNER_TEMP/wix-extensions" >> $env:GITHUB_ENV',
         "git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT",
         "run_local_validation.py",
@@ -72,8 +78,16 @@ REQUIRED_FILE_FRAGMENTS = {
         "developer_preview_installer.py verify-archive",
         "dotnet tool install wix --version 4.0.4",
         "extension add --global WixToolset.UI.wixext/4.0.4",
-        "cmake -S Installer/Packaging/Windows",
-        "cpack --config",
+        "https://cmake.org/files/v4.3/$archiveName",
+        "Get-FileHash -LiteralPath $archive -Algorithm SHA256",
+        "$actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256",
+        '"cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64"',
+        '"bin/cmake.exe"',
+        '"bin/cpack.exe"',
+        '"cmake version $env:SDK_PACKAGE_CMAKE_VERSION"',
+        '"cpack version $env:SDK_PACKAGE_CMAKE_VERSION"',
+        "& $env:SDK_PACKAGE_CMAKE -S Installer/Packaging/Windows",
+        "& $env:SDK_PACKAGE_CPACK --config",
         "-G WIX -B $env:SDK_PACKAGE_OUTPUT",
         "Get-ChildItem -LiteralPath $env:SDK_PACKAGE_OUTPUT -Filter *.msi",
         "Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)",
@@ -201,7 +215,9 @@ REQUIRED_FILE_FRAGMENTS = {
         "return new InstallerPayload(captured, expected, temporaryRoot)",
     ),
     "Installer/Launcher/Windows/WindowsInstallerRunner.cs": (
-        'FileName = "msiexec.exe"',
+        'Path.Combine(systemDirectory, "msiexec.exe")',
+        "FileAttributes.ReparsePoint",
+        "FileName = windowsInstallerPath",
         "ArgumentList.Add",
         'InstallerOperation.InstallOrUpgrade => "/i"',
         'InstallerOperation.Repair => "/fa"',
@@ -297,6 +313,8 @@ def validate_installer_workflow(repo_root: Path) -> None:
         "review evidence only",
         "${{ runner.temp }}",
         "runs-on: windows-latest",
+        "cmake -S Installer/Packaging/Windows",
+        "cpack --config",
         "-G WIX -B $env:SDK_ARTIFACTS",
     )
     for fragment in forbidden:

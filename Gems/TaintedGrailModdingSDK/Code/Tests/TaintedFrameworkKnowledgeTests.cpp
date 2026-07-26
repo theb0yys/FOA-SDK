@@ -131,12 +131,9 @@ namespace TaintedGrailModdingSDK
         FoundationService foundation(FoundationWorkspaceLoadDependencies{});
         foundation.SetWorkspace(MakeWorkspace());
         AZStd::string error;
-        ASSERT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
-            foundation.GetExtensionAPI(),
-            &error)) << error.c_str();
+        foundation.Initialize();
 
-        const auto declarations =
-            foundation.GetExtensionAPI().GetRegisteredExtensions();
+        const auto declarations = foundation.GetRegisteredExtensions();
         ASSERT_EQ(declarations.size(), 1);
         EXPECT_EQ(
             declarations[0].m_extensionId,
@@ -150,12 +147,10 @@ namespace TaintedGrailModdingSDK
             AZStd::vector<AZStd::string>({ "1.23.401" }));
         EXPECT_EQ(declarations[0].m_capabilities.size(), 3);
 
-        EXPECT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
-            foundation.GetExtensionAPI(),
-            &error));
-        EXPECT_FALSE(foundation.GetExtensionAPI().RegisterExtension(
-            declarations[0],
-            &error));
+        foundation.Initialize();
+        EXPECT_EQ(foundation.GetRegisteredExtensions().size(), 1);
+        EXPECT_FALSE(foundation.RegisterExtension(declarations[0], &error));
+        foundation.Shutdown();
     }
 
     TEST(
@@ -164,22 +159,26 @@ namespace TaintedGrailModdingSDK
     {
         FoundationService foundation(FoundationWorkspaceLoadDependencies{});
         foundation.SetWorkspace(MakeWorkspace());
+        foundation.Initialize();
         AZStd::string error;
         ASSERT_TRUE(foundation.RegisterSource(MakeSource(), &error))
             << error.c_str();
-        ASSERT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
-            foundation.GetExtensionAPI(),
-            &error)) << error.c_str();
+        ExtensionAPI::Client client;
+        ASSERT_TRUE(foundation.CreateExtensionClient(
+            "extension.tainted-framework", client, &error)) << error.c_str();
 
         const EvidenceRecord evidence = MakeEvidence();
-        ASSERT_TRUE(foundation.GetExtensionAPI().SubmitCandidateEvidence(
-            "extension.tainted-framework",
-            evidence,
-            &error)) << error.c_str();
-        EXPECT_NE(
+        ASSERT_TRUE(client.SubmitCandidateEvidence(evidence, &error))
+            << error.c_str();
+        EXPECT_EQ(
             foundation.GetSourceRegistry().FindEvidence(evidence.m_evidenceId),
             nullptr);
+        EXPECT_NE(
+            foundation.GetSourceRegistry().FindCandidateEvidence(
+                evidence.m_evidenceId),
+            nullptr);
         EXPECT_TRUE(foundation.GetCatalog().GetRecords().empty());
+        foundation.Shutdown();
     }
 
     TEST(
@@ -188,15 +187,14 @@ namespace TaintedGrailModdingSDK
     {
         FoundationService foundation(FoundationWorkspaceLoadDependencies{});
         foundation.SetWorkspace(MakeWorkspace("IL2CPP"));
+        foundation.Initialize();
         AZStd::string error;
-        ASSERT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
-            foundation.GetExtensionAPI(),
-            &error));
+        ExtensionAPI::Client client;
+        ASSERT_TRUE(foundation.CreateExtensionClient(
+            "extension.tainted-framework", client, &error));
 
         ExtensionAPI::ProfileView profile;
-        EXPECT_FALSE(foundation.GetExtensionAPI().GetActiveProfile(
-            "extension.tainted-framework",
-            profile,
-            &error));
+        EXPECT_FALSE(client.GetActiveProfile(profile, &error));
+        foundation.Shutdown();
     }
 } // namespace TaintedGrailModdingSDK

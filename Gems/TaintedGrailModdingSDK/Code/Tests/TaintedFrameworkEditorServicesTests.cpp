@@ -25,10 +25,14 @@ namespace TaintedGrailModdingSDK
             GameProfile profile;
             profile.m_profileId = "profile.foa.tainted-framework.editor-services";
             profile.m_displayName = "Tainted Framework editor-service fixture";
+            profile.m_installPath = "Game";
             profile.m_gameVersion = AZStd::move(gameVersion);
             profile.m_branch = AZStd::move(branch);
             profile.m_runtimeTarget = AZStd::move(runtime);
+            profile.m_unityVersion = "6000.0.64f1";
             profile.m_bepInExVersion = AZStd::move(bepInExVersion);
+            profile.m_managedAssembliesPath = "Game/Managed";
+            profile.m_pluginPath = "Game/BepInEx/plugins";
 
             WorkspaceModel workspace;
             workspace.m_workspaceId = "workspace.tainted-framework.editor-services";
@@ -158,16 +162,14 @@ namespace TaintedGrailModdingSDK
     {
         FoundationService foundation(FoundationWorkspaceLoadDependencies{});
         foundation.SetWorkspace(MakeWorkspace());
+        foundation.Initialize();
         AZStd::string error;
-        ASSERT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
-            foundation.GetExtensionAPI(),
-            &error)) << error.c_str();
+        ExtensionAPI::Client client;
+        ASSERT_TRUE(foundation.CreateExtensionClient(
+            "extension.tainted-framework", client, &error)) << error.c_str();
 
         ExtensionAPI::ProfileView profile;
-        ASSERT_TRUE(foundation.GetExtensionAPI().GetActiveProfile(
-            "extension.tainted-framework",
-            profile,
-            &error)) << error.c_str();
+        ASSERT_TRUE(client.GetActiveProfile(profile, &error)) << error.c_str();
 
         const auto plan = foundation.GetTaintedFrameworkEditorServices()
                               .BuildActivationPlan(profile);
@@ -175,6 +177,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(plan.m_compatibility.m_bepInExVersion, "5.4.23.3");
         EXPECT_TRUE(plan.m_candidateEvidenceSubmissionEligible);
         EXPECT_FALSE(plan.m_runtimeInvocationAllowed);
+        foundation.Shutdown();
     }
 
     TEST(TaintedFrameworkEditorServicesTests, SanitizedProfileBepInExDriftFailsClosed)
@@ -182,16 +185,14 @@ namespace TaintedGrailModdingSDK
         FoundationService foundation(FoundationWorkspaceLoadDependencies{});
         foundation.SetWorkspace(MakeWorkspace(
             "1.23.401", "Mono", "Mono", "5.4.24.0"));
+        foundation.Initialize();
         AZStd::string error;
-        ASSERT_TRUE(TaintedFrameworkKnowledge::RegisterExtensionConsumer(
-            foundation.GetExtensionAPI(),
-            &error)) << error.c_str();
+        ExtensionAPI::Client client;
+        ASSERT_TRUE(foundation.CreateExtensionClient(
+            "extension.tainted-framework", client, &error)) << error.c_str();
 
         ExtensionAPI::ProfileView profile;
-        ASSERT_TRUE(foundation.GetExtensionAPI().GetActiveProfile(
-            "extension.tainted-framework",
-            profile,
-            &error)) << error.c_str();
+        ASSERT_TRUE(client.GetActiveProfile(profile, &error)) << error.c_str();
 
         const auto plan = foundation.GetTaintedFrameworkEditorServices()
                               .BuildActivationPlan(profile);
@@ -201,6 +202,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(
             plan.m_compatibility.m_blockers[0],
             "exact_bepinex_version_not_evidence_backed");
+        foundation.Shutdown();
     }
 
     TEST(TaintedFrameworkEditorServicesTests, FoundationOwnsPersistentService)

@@ -28,6 +28,7 @@ USER_DIRECTORY = PROJECT_DIRECTORY / "user"
 LOG_DIRECTORY = USER_DIRECTORY / "log"
 LAUNCHER_LOG_DIRECTORY = Path("launcher")
 MANIFEST_NAME = ".tg-preview-materialization.json"
+PROJECT_MANIFEST = Path("project.json")
 
 MANAGED_PROJECT_FILES = (
     Path("CMakeLists.txt"),
@@ -36,7 +37,7 @@ MANAGED_PROJECT_FILES = (
     Path("TaintedGrailModdingEditor.ico"),
     Path("cmake/EngineFinder.cmake"),
     Path("preview.png"),
-    Path("project.json"),
+    PROJECT_MANIFEST,
 )
 PRESERVED_PROJECT_FILES = (PREVIEW_STARTUP_LEVEL,)
 
@@ -142,6 +143,71 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def materialized_project_manifest(
+    repo_root: Path,
+    source_project: Path,
+    source: Path,
+) -> bytes:
+    try:
+        document = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceError(f"Managed Developer Preview project manifest is invalid: {source}: {exc}") from exc
+    if not isinstance(document, dict):
+        raise WorkspaceError(f"Managed Developer Preview project manifest must be an object: {source}")
+    external = document.get("external_subdirectories")
+    if not isinstance(external, list) or not external or any(
+        not isinstance(value, str) or not value.strip() for value in external
+    ):
+        raise WorkspaceError(
+            "Managed Developer Preview project manifest external_subdirectories "
+            "must be a non-empty string array."
+        )
+
+    rebound: list[str] = []
+    for value in external:
+        relative = Path(value)
+        if relative.is_absolute():
+            raise WorkspaceError(
+                "Tracked Developer Preview external_subdirectories must remain "
+                f"project-relative: {value}"
+            )
+        candidate = source_project / relative
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError as exc:
+            raise WorkspaceError(
+                f"Developer Preview external subdirectory is unavailable: {candidate}: {exc}"
+            ) from exc
+        if not _is_contained(repo_root, resolved) or not resolved.is_dir():
+            raise WorkspaceError(
+                "Developer Preview external subdirectory must resolve to a "
+                f"product-owned directory: {candidate}"
+            )
+        rebound.append(resolved.as_posix())
+
+    result = dict(document)
+    result["external_subdirectories"] = rebound
+    return (json.dumps(result, indent=4, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def managed_payload(
+    repo_root: Path,
+    source_project: Path,
+    relative: Path,
+    source: Path,
+) -> bytes:
+    if relative == PROJECT_MANIFEST:
+        return materialized_project_manifest(repo_root, source_project, source)
+    try:
+        return source.read_bytes()
+    except OSError as exc:
+        raise WorkspaceError(f"Unable to read managed Developer Preview source {source}: {exc}") from exc
+
+
 def _load_manifest(path: Path) -> dict[str, object] | None:
     if not path.exists():
         return None
@@ -177,6 +243,25 @@ def _atomic_copy(source: Path, destination: Path) -> None:
             output.flush()
             os.fsync(output.fileno())
         os.replace(temporary, destination)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def _atomic_write_bytes(path: Path, value: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=path.parent,
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()
@@ -239,20 +324,21 @@ def materialize_preview_workspace(
         source = sources[key]
         destination = paths.project / relative
         _require_safe_destination(paths, destination)
-        source_hash = sha256_file(source)
+        expected = managed_payload(repo, source_project, relative, source)
+        expected_hash = sha256_bytes(expected)
         if destination.exists():
             if destination.is_symlink() or not destination.is_file():
                 raise WorkspaceError(f"Managed Developer Preview destination is unsafe: {destination}")
             destination_hash = sha256_file(destination)
             previous_hash = previous_hashes.get(key)
-            if destination_hash != source_hash and destination_hash != previous_hash:
+            if destination_hash != expected_hash and destination_hash != previous_hash:
                 raise WorkspaceError(
                     "Managed Developer Preview file was modified outside the materializer; "
                     f"refusing to overwrite it: {destination}"
                 )
-        if not destination.exists() or sha256_file(destination) != source_hash:
-            _atomic_copy(source, destination)
-        current_hashes[key] = source_hash
+        if not destination.exists() or sha256_file(destination) != expected_hash:
+            _atomic_write_bytes(destination, expected)
+        current_hashes[key] = expected_hash
 
     for relative in PRESERVED_PROJECT_FILES:
         key = relative.as_posix()
@@ -307,7 +393,7 @@ def verify_preview_workspace(
         _require_safe_destination(paths, destination)
         if destination.is_symlink() or not destination.is_file():
             raise WorkspaceError(f"Managed Developer Preview file is missing or unsafe: {destination}")
-        expected_hash = sha256_file(source)
+        expected_hash = sha256_bytes(managed_payload(repo, source_project, relative, source))
         if managed_hashes.get(key) != expected_hash or sha256_file(destination) != expected_hash:
             raise WorkspaceError(f"Managed Developer Preview file is stale or modified: {destination}")
     if paths.startup_level.is_symlink() or not paths.startup_level.is_file():

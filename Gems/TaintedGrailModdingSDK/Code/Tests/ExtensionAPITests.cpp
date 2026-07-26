@@ -243,27 +243,29 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(ExtensionAPITests, UnregisterRevokesOperationsAndClearResetsRegistry)
     {
-        ExtensionAPI::Service& api = m_foundation.GetExtensionAPI();
         AZStd::string error;
-        ASSERT_TRUE(api.RegisterExtension(
+        ASSERT_TRUE(m_foundation.RegisterExtension(
             MakeDeclaration(
                 "extension.lifecycle",
                 { ExtensionAPI::Capability::ReadActiveProfile }),
             &error));
-        EXPECT_TRUE(api.IsExtensionRegistered("extension.lifecycle"));
-        EXPECT_TRUE(api.UnregisterExtension("extension.lifecycle", &error));
-        EXPECT_FALSE(api.IsExtensionRegistered("extension.lifecycle"));
+        ExtensionAPI::Client client;
+        ASSERT_TRUE(m_foundation.CreateExtensionClient(
+            "extension.lifecycle", client, &error));
+        EXPECT_TRUE(m_foundation.IsExtensionRegistered("extension.lifecycle"));
+        EXPECT_TRUE(m_foundation.UnregisterExtension("extension.lifecycle", &error));
+        EXPECT_FALSE(m_foundation.IsExtensionRegistered("extension.lifecycle"));
 
         ExtensionAPI::ProfileView profile;
-        EXPECT_FALSE(api.GetActiveProfile("extension.lifecycle", profile, &error));
-        EXPECT_FALSE(api.UnregisterExtension("extension.lifecycle", &error));
+        EXPECT_FALSE(client.GetActiveProfile(profile, &error));
+        EXPECT_FALSE(m_foundation.UnregisterExtension("extension.lifecycle", &error));
 
-        ASSERT_TRUE(api.RegisterExtension(
+        ASSERT_TRUE(m_foundation.RegisterExtension(
             MakeDeclaration(
                 "extension.lifecycle",
                 { ExtensionAPI::Capability::ReadActiveProfile }),
             &error));
-        api.Clear();
-        EXPECT_TRUE(api.GetRegisteredExtensions().empty());
+        m_foundation.Shutdown();
+        EXPECT_TRUE(m_foundation.GetRegisteredExtensions().empty());
     }
 } // namespace TaintedGrailModdingSDK

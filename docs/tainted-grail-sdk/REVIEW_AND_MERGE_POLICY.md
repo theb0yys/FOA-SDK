@@ -46,25 +46,30 @@ For a fast pre-commit/static pass:
 ```shell
 git diff --cached --check
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
-  --keep-going --static-only
+  --keep-going --static-only --skip-source-policy
 git commit -s -m "Describe the change"
 ```
+
+The quick static-only command deliberately omits external O3DE source-policy
+validation.
 
 A full validation claim requires:
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
   --keep-going \
+  --engine-root ../o3de \
   --ctest-build-dir ../foa-build/tg-sdk-developer-preview-0-windows-profile
 ```
 
-The static-only command must never be described as a compiled or exact-head pass.
+The static-only command must never be described as a source-policy, compiled, or
+exact-head pass.
 
 ## Gate 3 — Pull-request review before merge
 
-Every normal change to `main` uses a pull request from
-`FOA-plug-in-development` or another focused development branch based on the
-current `main` head.
+Every human-contributor change to `main` uses a pull request from the existing
+`foa-development` branch or an explicitly maintainer-authorised focused branch
+based on the current `main` head.
 
 The pull request must include:
 
@@ -76,9 +81,19 @@ The pull request must include:
 - rollback or revert plan;
 - updated documentation.
 
+## Automated-agent path
+
+`AGENTS.md` is the binding authority for repository agents. Agents commit only
+the user-requested, researched, validated, DCO-signed file changes directly to
+`main`. They do not create, switch, rename, or delete branches; create or modify
+pull requests, issues, reviews, or comments; or trigger and control workflows.
+This exception changes the Git transport path, not the design, self-review,
+testing, documentation, or honesty gates.
+
 ## Required merge conditions
 
-A pull request may merge only when all of the following are true:
+A human-contributor pull request may merge only when all of the following are
+true:
 
 - it is marked ready for review;
 - all commits satisfy DCO requirements;
@@ -148,7 +163,7 @@ Authors must:
 - add regression tests for repaired defects;
 - avoid suppressions or broad exceptions used only to obtain a green result;
 - request re-review after material changes;
-- update the PR description when scope or evidence changes;
+- update the PR description when a human-contributor review scope or evidence changes;
 - never present a syntax-only, static-only, queued, absent, or zero-test result as
   a successful full repository build.
 
@@ -168,20 +183,22 @@ normal review and validation completed immediately afterward.
 
 ## Merge method
 
-Use a normal merge commit unless squash or rebase has a documented reason. The
-selected method must preserve DCO and useful attribution.
+For human-contributor pull requests, use a normal merge commit unless squash or
+rebase has a documented reason. The selected method must preserve DCO and useful
+attribution.
 
 ## After merge
 
 1. Confirm `main` points to the accepted merge commit.
-2. Synchronize `FOA-plug-in-development` to that commit.
+2. Synchronize `foa-development` to that commit.
 3. Confirm the push-to-main static workflow ran for the merge commit.
 4. Record post-merge exact-head validation only when it actually ran.
 5. Revert promptly if the merged result violates an accepted gate.
 
 ## Prohibited merge behavior
 
-- direct push to `main` for normal development;
+- direct human push to `main`, or automated direct commits outside the exact
+  `AGENTS.md` scope;
 - merge while an enabled required check is pending or failing;
 - merge without an executed compiled test target;
 - merge with a missing or stale exact-head receipt;

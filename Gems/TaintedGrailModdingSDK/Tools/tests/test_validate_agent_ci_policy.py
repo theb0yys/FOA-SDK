@@ -20,8 +20,8 @@ from validate_ci_runner_policy import (  # noqa: E402
     AUTOMATIC_STATIC_WORKFLOW,
     CiRunnerPolicyError,
     REMOVED_AUTOMATIC_WORKFLOWS,
-    validate_agent_mode,
     validate_ci_runner_policy,
+    validate_read_only_mode,
 )
 
 
@@ -31,16 +31,23 @@ class AgentCiPolicyTests(unittest.TestCase):
         cls.repo_root = Path(__file__).resolve().parents[4]
         cls.workflow = (cls.repo_root / AUTOMATIC_STATIC_WORKFLOW).read_text(encoding="utf-8")
 
-    def test_real_repository_agent_policy_passes(self) -> None:
+    def test_real_repository_read_only_policy_passes(self) -> None:
         validate_ci_runner_policy(self.repo_root)
 
     def test_pull_request_write_permission_is_rejected(self) -> None:
         with self.assertRaisesRegex(CiRunnerPolicyError, "pull-requests: write"):
-            validate_agent_mode(self.repo_root, self.workflow + "\npull-requests: write\n")
+            validate_read_only_mode(self.repo_root, self.workflow + "\npull-requests: write\n")
 
     def test_pull_request_target_is_rejected(self) -> None:
         with self.assertRaisesRegex(CiRunnerPolicyError, "pull_request_target"):
-            validate_agent_mode(self.repo_root, self.workflow + "\npull_request_target:\n")
+            validate_read_only_mode(self.repo_root, self.workflow + "\npull_request_target:\n")
+
+    def test_mutable_windows_runner_alias_is_rejected(self) -> None:
+        prefix, separator, windows_job = self.workflow.rpartition("runs-on: windows-2022")
+        self.assertTrue(separator)
+        mutated = prefix + "runs-on: windows-latest" + windows_job
+        with self.assertRaisesRegex(CiRunnerPolicyError, "windows-2022|windows-latest"):
+            validate_read_only_mode(self.repo_root, mutated)
 
     def test_removed_automatic_workflows_remain_absent(self) -> None:
         for relative_path in REMOVED_AUTOMATIC_WORKFLOWS:

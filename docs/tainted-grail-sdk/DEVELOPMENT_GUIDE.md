@@ -6,12 +6,16 @@ This guide covers local development for the `TaintedGrailModdingSDK` Gem. It sup
 
 ## Repository model
 
-Long-lived branches:
+Human-contributor branches:
 
 - `main` — reviewed integration state;
 - `foa-development` — active development.
 
-Work directly on `foa-development`. Do not commit directly to `main`. Significant changes require design review before implementation.
+Human contributors work directly on `foa-development` and do not commit directly
+to `main`. Automated agents follow the binding `AGENTS.md` path instead: focused,
+validated, DCO-signed file commits directly to `main`, with no branch,
+pull-request, issue, review, comment, workflow, or repository-setting mutation.
+Significant changes require design review before implementation.
 
 ## Prerequisites
 
@@ -275,7 +279,7 @@ Review the full diff, then create a DCO-signed commit:
 git commit -s -m "Add concise imperative summary"
 ```
 
-## Pull-request workflow
+## Human pull-request workflow
 
 1. Synchronize `foa-development` to the accepted `main` merge commit.
 2. Obtain design review for significant changes.
@@ -288,6 +292,11 @@ git commit -s -m "Add concise imperative summary"
 9. Obtain maintainer approval.
 10. Merge through GitHub only after required checks pass.
 11. Synchronize `foa-development` to the new merge commit before new work.
+
+Automated-agent work does not create or modify a pull request. Before each
+direct-to-`main` commit, the agent verifies the branch, reads the applicable
+research, reviews the complete diff, runs the required gates, and records DCO
+sign-off.
 
 ## Debugging
 

@@ -132,7 +132,11 @@ python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
   --ctest-build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
 ```
 
-The local gate does not claim a hosted CI result. Repository Actions remain manual-only until the reviewed runner policy is restored.
+The local gate does not claim a hosted CI result. Read-only static,
+canonical-interchange, and Windows-prerequisite jobs run automatically on their
+documented pull-request and `main` push events. Host-heavy exact-head,
+installer, and Editor evidence workflows remain manual and require their own
+recorded results.
 
 ## Architecture boundary
 
@@ -165,7 +169,11 @@ Start with:
 ## Branch and review model
 
 - `main` is reviewed integrated product state.
-- Development occurs on short-lived branches and enters `main` through pull requests.
+- Human contributions use the existing `foa-development` branch and enter
+  `main` through pull requests.
+- Repository agents follow the binding `AGENTS.md` exception: focused,
+  DCO-signed file changes are committed directly to `main`, and agents do not
+  create or control branches, pull requests, issues, reviews, or workflows.
 - Significant changes require design review, focused validation, exact-head evidence where applicable, and maintainer approval.
 - Direct runtime authority, automatic evidence promotion, and unreviewed generated artifacts are prohibited.
 

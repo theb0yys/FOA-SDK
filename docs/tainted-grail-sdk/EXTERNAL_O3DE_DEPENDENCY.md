@@ -69,6 +69,12 @@ The external engine does not own the FOA Gems. Therefore `TaintedGrailModdingEdi
 
 The same project manifest enables both Gem names exactly once. This allows the pinned engine to discover product-owned Gem descriptors without adding FOA paths to upstream `engine.json` or relying on a user-global O3DE manifest.
 
+When the supported opener materializes the project beneath `LOCALAPPDATA`, it
+rewrites only that per-user copy of `external_subdirectories` to the canonical
+absolute product-owned directories. The tracked manifest remains portable and
+project-relative. Materialization rejects missing paths and paths outside the
+reviewed product checkout.
+
 The standalone project `EngineFinder.cmake` resolves the external engine, reads the lock, and independently rejects a checkout at any other Git commit.
 
 ## Product-owned plug-in packages

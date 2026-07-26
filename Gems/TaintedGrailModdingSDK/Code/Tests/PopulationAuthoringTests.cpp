@@ -570,6 +570,14 @@ namespace TaintedGrailModdingSDK
                     profile,
                     "population.evidence.troop",
                     "FoA/Troops/PreviewPatrol"),
+                MakeEvidence(
+                    profile,
+                    "population.evidence.member.patrol-leader",
+                    "population-troop-member:population.member.patrol-leader"),
+                MakeEvidence(
+                    profile,
+                    "population.evidence.member.patrol-guard",
+                    "population-troop-member:population.member.patrol-guard"),
             },
             error)) << error.c_str();
         for (const auto& record : {
@@ -608,14 +616,14 @@ namespace TaintedGrailModdingSDK
             "population.actor.preview-leader",
             "FoA/Actors/PreviewLeader",
             "leader",
-            "population.evidence.actor-leader");
+            "population.evidence.member.patrol-leader");
         PopulationTroopMember guard = MakeMember(
             "population.member.patrol-guard",
             "population.troop.preview-patrol",
             "population.actor.preview-guard",
             "FoA/Actors/PreviewGuard",
             "melee",
-            "population.evidence.actor-guard");
+            "population.evidence.member.patrol-guard");
         PopulationTroopDefinition definition = MakeTroopDefinition(
             "population.troop.preview-patrol",
             "population.evidence.troop",
@@ -699,6 +707,10 @@ namespace TaintedGrailModdingSDK
                     profile,
                     "population.evidence.troop-two",
                     "FoA/Troops/PatrolTwo"),
+                MakeEvidence(
+                    profile,
+                    "population.evidence.member.patrol-leader",
+                    "population-troop-member:population.member.patrol-leader"),
             },
             error)) << error.c_str();
         ASSERT_TRUE(PromoteSyntheticRecord(
@@ -734,7 +746,7 @@ namespace TaintedGrailModdingSDK
             "population.actor.leader",
             "FoA/Actors/Leader",
             "leader",
-            "population.evidence.actor");
+            "population.evidence.member.patrol-leader");
         PopulationTroopDefinition definition = MakeTroopDefinition(
             "population.troop.patrol",
             "population.evidence.troop",
@@ -815,6 +827,14 @@ namespace TaintedGrailModdingSDK
                     profile,
                     "population.evidence.troop-two",
                     "FoA/Troops/Two"),
+                MakeEvidence(
+                    profile,
+                    "population.evidence.member.shared-link",
+                    "population-troop-member:population.member.shared-link"),
+                MakeEvidence(
+                    profile,
+                    "population.evidence.member.two-leader",
+                    "population-troop-member:population.member.two-leader"),
             },
             error)) << error.c_str();
         ASSERT_TRUE(PromoteSyntheticRecord(
@@ -850,7 +870,7 @@ namespace TaintedGrailModdingSDK
             "population.actor.leader",
             "FoA/Actors/Leader",
             "leader",
-            "population.evidence.actor");
+            "population.evidence.member.shared-link");
         PopulationTroopDefinition one = MakeTroopDefinition(
             "population.troop.one",
             "population.evidence.troop-one",
@@ -871,7 +891,7 @@ namespace TaintedGrailModdingSDK
                 "population.actor.leader",
                 "FoA/Actors/Leader",
                 "leader",
-                "population.evidence.actor"));
+                "population.evidence.member.two-leader"));
         FoundationChangeCounter counter;
 
         PopulationTroopDefinition empty = two;
@@ -987,7 +1007,7 @@ namespace TaintedGrailModdingSDK
         {
             FoundationChangeCounter counter;
             EXPECT_FALSE(service.UpsertPopulationActorProfile(actor, &error));
-            EXPECT_NE(error.find("allowed exact subject"), AZStd::string::npos);
+            EXPECT_NE(error.find("unrelated subject"), AZStd::string::npos);
             actor.m_evidenceIds = {
                 "population.evidence.actor",
                 "population.evidence.actor",
@@ -1042,8 +1062,11 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(PopulationAuthoringTests, WrongProfileSourceAndCrossPackReferencesAreHandledExplicitly)
     {
-        const AZStd::string root = "Workspace";
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const AZStd::string root = ToAzString(temporary.path());
         const WorkspaceModel workspace = MakeWorkspace(root);
+        ASSERT_TRUE(PrepareWorkspaceStorage(root));
         const GameProfile& activeProfile = workspace.m_gameProfiles.front();
         const GameProfile foreignProfile = MakeProfile(
             "population.profile.foreign",
@@ -1083,7 +1106,7 @@ namespace TaintedGrailModdingSDK
             catalog);
         EXPECT_FALSE(wrongProfile.IsSuccess());
         EXPECT_NE(
-            wrongProfile.GetError().find("active profile"),
+            wrongProfile.GetError().find("different profile"),
             AZStd::string::npos);
         EXPECT_TRUE(catalog.GetPopulationActorProfiles().empty());
 

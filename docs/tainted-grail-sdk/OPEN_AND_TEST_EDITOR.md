@@ -95,7 +95,9 @@ build/Tainted Grail Modding Editor.shortcut.json
 The project is materialized beneath
 `%LOCALAPPDATA%\O3DE\TGEditor`. Repository-owned
 bootstrap files are managed there, while additional user-authored levels are
-preserved. O3DE's conventional `Cache` and `user/log` paths remain inside that
+preserved. The per-user `project.json` rebinds its external Gem directories to
+the canonical reviewed product checkout; the tracked portable manifest remains
+unchanged. O3DE's conventional `Cache` and `user/log` paths remain inside that
 materialized project, while wrapper logs are a sibling beneath the same bounded
 root. No Defender exclusion or administrator permission is required.
 Asset-preparation stdout and stderr remain beneath the same root in `launcher`.
@@ -114,7 +116,7 @@ The shortcut has the project-owned icon and launches the source-built
 
 ```text
 --project-path %LOCALAPPDATA%\O3DE\TGEditor\project
---engine-path <repository>
+--engine-path <pinned external O3DE checkout>
 --project-cache-path %LOCALAPPDATA%\O3DE\TGEditor\project\Cache
 --project-user-path %LOCALAPPDATA%\O3DE\TGEditor\project\user
 --project-log-path %LOCALAPPDATA%\O3DE\TGEditor\project\user\log
@@ -183,7 +185,9 @@ the bounded `pc` asset cache to finish, and uses the same canonical default
 level and restricted launcher:
 
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
+  --engine-root <pinned external O3DE checkout> `
+  --build-dir <external Developer Preview build directory>
 ```
 
 Use this when collecting wrapper-owned stdout, stderr, and launch-result data.
@@ -198,9 +202,10 @@ bootstrap files update only when their prior hashes prove they were not edited
 outside the materializer; conflicts fail closed instead of overwriting work.
 
 The Editor and Asset Processor write only beneath the per-user root during the
-supported workflow. The repository checkout remains the reviewed source and
-engine root; users do not need to weaken Controlled Folder Access, add security
-exceptions, or run the Editor as administrator.
+supported workflow. The FOA-SDK repository remains the reviewed product source
+and the exact checkout recorded in `o3de.lock.json` remains the engine root.
+Users do not need to weaken Controlled Folder Access, add security exceptions,
+or run the Editor as administrator.
 
 ## 6. Open the TG SDK panes
 

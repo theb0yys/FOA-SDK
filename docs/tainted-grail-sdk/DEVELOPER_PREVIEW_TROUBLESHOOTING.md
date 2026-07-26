@@ -104,7 +104,9 @@ icons, opener, and clickable-entry integration.
 Use the command-line fallback to capture wrapper logs:
 
 ```powershell
-python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
+  --engine-root <pinned external O3DE checkout> `
+  --build-dir <external Developer Preview build directory>
 ```
 
 Review:

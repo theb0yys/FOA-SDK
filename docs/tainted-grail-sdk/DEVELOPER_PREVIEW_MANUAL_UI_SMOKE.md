@@ -36,6 +36,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
   --output build/tg-sdk-developer-preview-0-fixture
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
+  --engine-root <pinned external O3DE checkout> `
   --build-dir build/tg-sdk-developer-preview-0-windows-profile
 ```
 

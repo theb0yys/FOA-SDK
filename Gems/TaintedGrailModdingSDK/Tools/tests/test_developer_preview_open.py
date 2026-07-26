@@ -47,7 +47,12 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             dry_run=True,
         )
         workspace = self.workspace()
-        values = open_preview.launch_arguments(args, Path("C:/repo"), workspace)
+        values = open_preview.launch_arguments(
+            args,
+            Path("C:/product"),
+            Path("C:/engine"),
+            workspace,
+        )
         project_index = values.index("--project") + 1
         self.assertEqual(Path(values[project_index]), workspace.project)
         level_index = values.index("--level") + 1
@@ -58,7 +63,7 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
         self.assertEqual(Path(values[values.index("--project-cache") + 1]), workspace.cache)
         self.assertEqual(Path(values[values.index("--project-user") + 1]), workspace.user)
         self.assertEqual(Path(values[values.index("--project-log") + 1]), workspace.log)
-        self.assertEqual(Path(values[values.index("--engine") + 1]), Path("C:/repo"))
+        self.assertEqual(Path(values[values.index("--engine") + 1]), Path("C:/engine"))
         self.assertIn("--build-dir", values)
         self.assertIn("--dry-run", values)
 
@@ -70,7 +75,12 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             result=Path("build/result.json"),
             dry_run=False,
         )
-        values = open_preview.launch_arguments(args, Path("C:/repo"), self.workspace())
+        values = open_preview.launch_arguments(
+            args,
+            Path("C:/product"),
+            Path("C:/engine"),
+            self.workspace(),
+        )
         self.assertIn("--editor", values)
         self.assertNotIn("--build-dir", values)
         self.assertIn("--result", values)
@@ -88,13 +98,22 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             open_preview.developer_preview_workspace.WorkspaceError,
             "must remain inside",
         ):
-            open_preview.launch_arguments(args, Path("C:/repo"), self.workspace())
+            open_preview.launch_arguments(
+                args,
+                Path("C:/product"),
+                Path("C:/engine"),
+                self.workspace(),
+            )
 
     def test_main_validates_project_then_delegates(self) -> None:
         with mock.patch.object(
             open_preview.validate_developer_preview_project,
             "validate_preview_project",
         ) as validate, mock.patch.object(
+            open_preview,
+            "resolve_engine_root",
+            return_value=Path("C:/engine"),
+        ) as resolve_engine, mock.patch.object(
             open_preview.developer_preview_workspace,
             "materialize_preview_workspace",
             return_value=self.workspace(),
@@ -109,11 +128,46 @@ class DeveloperPreviewOpenTests(unittest.TestCase):
             code = open_preview.main(["--dry-run"])
         self.assertEqual(code, 17)
         validate.assert_called_once()
+        resolve_engine.assert_called_once()
         materialize.assert_called_once()
         prepare.assert_called_once()
+        self.assertEqual(
+            prepare.call_args.kwargs["product_root"],
+            open_preview.repository_root_from_script(),
+        )
+        self.assertEqual(prepare.call_args.kwargs["engine_root"], Path("C:/engine"))
         delegated = launch.call_args.args[0]
+        self.assertEqual(
+            Path(delegated[delegated.index("--engine") + 1]),
+            Path("C:/engine"),
+        )
         self.assertIn("--project", delegated)
         self.assertIn("--dry-run", delegated)
+
+    def test_main_fails_before_workspace_for_invalid_engine(self) -> None:
+        with mock.patch.object(
+            open_preview.validate_developer_preview_project,
+            "validate_preview_project",
+        ) as validate, mock.patch.object(
+            open_preview,
+            "resolve_engine_root",
+            side_effect=RuntimeError("engine mismatch"),
+        ), mock.patch.object(
+            open_preview.developer_preview_workspace,
+            "materialize_preview_workspace",
+        ) as materialize, mock.patch.object(
+            open_preview.developer_preview_assets,
+            "prepare_assets",
+        ) as prepare, mock.patch.object(
+            open_preview.developer_preview_launch,
+            "main",
+        ) as launch:
+            code = open_preview.main(["--dry-run"])
+        self.assertEqual(code, 2)
+        validate.assert_called_once()
+        materialize.assert_not_called()
+        prepare.assert_not_called()
+        launch.assert_not_called()
 
     def test_main_fails_before_launch_for_invalid_project(self) -> None:
         with mock.patch.object(

@@ -147,10 +147,17 @@ must remain outside the install directory.
 
 ## Toolchain and supply-chain boundary
 
-CMake/CPack is the package generator. WiX `4.0.4` and its matching UI extension
-are pinned build-only tools. They are restored into isolated build caches and
-are not placed in the user payload. The workflow records O3DE package licences
-through the repository's license scanner before inventory review.
+CMake/CPack `4.3.4` is the package generator because that version supplies the
+supported per-user WiX 4 contract used by this design. The packaging workflow
+downloads the official Windows x64 ZIP from `cmake.org`, verifies the exact
+SHA-256
+`86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1`,
+and invokes the verified `cmake.exe` and `cpack.exe` by absolute path only for
+MSI packaging. The O3DE configure/build continues to use its compatible runner
+toolchain. WiX `4.0.4` and its matching UI extension are also pinned build-only
+tools. These tools are restored into isolated build caches and are not placed in
+the user payload. The workflow records O3DE package licences through the
+repository's license scanner before inventory review.
 
 This design does not declare every generated binary redistributable. Exact
 inventory and notice review is mandatory for every package build. Public release

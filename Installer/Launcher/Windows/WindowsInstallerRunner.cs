@@ -12,6 +12,7 @@ internal static class WindowsInstallerRunner
     public static async Task<InstallerRunResult> RunAsync(InstallerPayload payload, InstallerOptions options)
     {
         ValidateInstallRoot(options.InstallRoot);
+        string windowsInstallerPath = ResolveWindowsInstallerPath();
         string logDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "FOA-SDK",
@@ -24,7 +25,7 @@ internal static class WindowsInstallerRunner
 
         ProcessStartInfo startInfo = new()
         {
-            FileName = "msiexec.exe",
+            FileName = windowsInstallerPath,
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = payload.MsiFile.DirectoryName ?? AppContext.BaseDirectory,
@@ -63,6 +64,30 @@ internal static class WindowsInstallerRunner
                 : $"{operation} completed successfully."
             : $"{operation} failed with Windows Installer exit code {exitCode}.";
         return new InstallerRunResult(succeeded, exitCode, rebootRequired, message, logPath);
+    }
+
+    private static string ResolveWindowsInstallerPath()
+    {
+        string systemDirectory = Environment.SystemDirectory;
+        if (string.IsNullOrWhiteSpace(systemDirectory)
+            || !Path.IsPathFullyQualified(systemDirectory))
+        {
+            throw new InvalidOperationException(
+                "Windows did not provide a valid absolute system directory.");
+        }
+
+        FileInfo windowsInstaller = new(Path.Combine(systemDirectory, "msiexec.exe"));
+        if (!windowsInstaller.Exists)
+        {
+            throw new InvalidOperationException(
+                $"Windows Installer is missing from the system directory: {windowsInstaller.FullName}");
+        }
+        if ((windowsInstaller.Attributes & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new InvalidOperationException(
+                $"Windows Installer must not be a reparse point: {windowsInstaller.FullName}");
+        }
+        return windowsInstaller.FullName;
     }
 
     private static void ValidateInstallRoot(string installRoot)

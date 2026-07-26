@@ -22,6 +22,8 @@ from validate_installer_workflow import (
     CANONICAL_INSTALLER_WORKFLOW,
     LEGACY_INSTALLER_ROOT,
     OBSOLETE_INSTALLER_ROOTS,
+    PACKAGE_CMAKE_SHA256,
+    PACKAGE_CMAKE_VERSION,
     REQUIRED_FILE_FRAGMENTS,
     TEMPORARY_INVENTORY_WORKFLOW,
     WINDOWS_RUNNER,
@@ -126,6 +128,40 @@ class InstallerWorkflowValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 InstallerWorkflowValidationError,
                 WINDOWS_RUNNER,
+            ):
+                validate_installer_workflow(repo)
+
+    def test_packaging_cmake_version_pin_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / CANONICAL_INSTALLER_WORKFLOW
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8").replace(
+                    f"SDK_PACKAGE_CMAKE_VERSION: {PACKAGE_CMAKE_VERSION}",
+                    "SDK_PACKAGE_CMAKE_VERSION: 4.4.0",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "SDK_PACKAGE_CMAKE_VERSION",
+            ):
+                validate_installer_workflow(repo)
+
+    def test_packaging_cmake_archive_hash_pin_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / CANONICAL_INSTALLER_WORKFLOW
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8").replace(
+                    f"SDK_PACKAGE_CMAKE_SHA256: {PACKAGE_CMAKE_SHA256}",
+                    f"SDK_PACKAGE_CMAKE_SHA256: {'0' * 64}",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                InstallerWorkflowValidationError,
+                "SDK_PACKAGE_CMAKE_SHA256",
             ):
                 validate_installer_workflow(repo)
 

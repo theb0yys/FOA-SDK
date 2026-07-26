@@ -118,6 +118,8 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Upload inventory for redistribution review",
             "Bind package mode to exact redistribution review",
             "Stage reviewed payload and create portable ZIP",
+            "Install pinned build-only WiX toolchain",
+            "Install hash-pinned build-only CMake and CPack toolchain",
             "Build standard MSI from the same staged payload",
             "Build self-contained installer wizard with the reviewed MSI",
             "Verify retained installer artifacts and checksums",
@@ -156,6 +158,21 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)",
             workflow,
         )
+
+    def test_packaging_uses_exact_hash_pinned_cmake_4_3_toolchain(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("SDK_PACKAGE_CMAKE_VERSION: 4.3.4", workflow)
+        self.assertIn(
+            "SDK_PACKAGE_CMAKE_SHA256: "
+            "86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1",
+            workflow,
+        )
+        self.assertIn("https://cmake.org/files/v4.3/$archiveName", workflow)
+        self.assertIn("$actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256", workflow)
+        self.assertIn("& $env:SDK_PACKAGE_CMAKE -S Installer/Packaging/Windows", workflow)
+        self.assertIn("& $env:SDK_PACKAGE_CPACK --config", workflow)
+        self.assertNotIn("\n          cmake -S Installer/Packaging/Windows", workflow)
+        self.assertNotIn("\n          cpack --config", workflow)
 
     def test_lifecycle_smoke_proves_manifest_shortcut_repair_and_uninstall(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")

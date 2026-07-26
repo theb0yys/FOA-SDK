@@ -27,37 +27,41 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
             "on:\n"
             "  pull_request:\n"
             "    types: [ready_for_review]\n"
-            "  pull_request_target:\n"
-            "    types: [auto_merge_enabled]\n"
+            "  push:\n"
+            "    branches: [main]\n"
+            "  workflow_dispatch:\n"
+            "permissions:\n"
+            "  contents: read\n"
             "jobs:\n"
-            "  enforce-obligations:\n"
-            "    name: Enforce ready-PR obligations\n"
-            "    if: github.event_name == 'pull_request_target'\n"
-            "    permissions:\n"
-            "      pull-requests: write\n"
-            "    steps:\n"
-            "      - uses: actions/checkout@v4\n"
-            "        with:\n"
-            "          ref: ${{ github.event.pull_request.base.sha }}\n"
-            "          persist-credentials: false\n"
-            "      - run: python validate_pr_obligations.py\n"
-            "      - run: echo convertPullRequestToDraft PULL_REQUEST_NODE_ID\n"
             "  static-validation:\n"
-            "    if: github.event_name != 'pull_request_target'\n"
+            "    runs-on: ubuntu-latest\n"
             "    steps:\n"
-            "      - name: Validate mandatory merge obligations\n"
-            "        run: python validate_pr_obligations.py --event \"$GITHUB_EVENT_PATH\"\n"
             "      - uses: actions/checkout@v4\n"
             "        with:\n"
-            "          ref: ${{ github.event.pull_request.head.sha }}\n"
+            "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+            "          persist-credentials: false\n"
+            "          fetch-depth: 0\n"
+            "      - name: Validate pull-request declarations\n"
+            "        run: python validate_pr_obligations.py --event \"$GITHUB_EVENT_PATH\"\n"
             "      - run: echo ${{ github.event.pull_request.base.sha }}\n"
             "      - run: git diff --check base head\n"
-            "  windows-prerequisites:\n"
-            "    name: Windows O3DE prerequisites\n"
+            "  canonical-interchange-compiled:\n"
+            "    runs-on: windows-2022\n"
             "    steps:\n"
             "      - uses: actions/checkout@v4\n"
             "        with:\n"
-            "          ref: ${{ github.event.pull_request.head.sha }}\n",
+            "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+            "          persist-credentials: false\n"
+            "      - run: ctest --no-tests=error\n"
+            "  windows-prerequisites:\n"
+            "    name: Windows O3DE prerequisites\n"
+            "    runs-on: windows-2022\n"
+            "    steps:\n"
+            "      - uses: actions/checkout@v4\n"
+            "        with:\n"
+            "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+            "          persist-credentials: false\n"
+            "      - run: python developer_preview.py prerequisites\n",
             encoding="utf-8",
         )
 
@@ -91,29 +95,41 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
         )
         return root
 
-    def test_base_bound_governor_and_exact_head_checks_pass(self) -> None:
+    def test_read_only_exact_head_policy_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             policy.validate(self.make_repo(Path(temporary)))
 
-    def test_privileged_governor_cannot_checkout_pr_head(self) -> None:
+    def test_pull_request_target_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
             workflow = repo / policy.WORKFLOW
             workflow.write_text(
-                workflow.read_text(encoding="utf-8").replace(
-                    "github.event.pull_request.base.sha",
-                    "github.event.pull_request.head.sha",
-                    1,
-                ),
+                workflow.read_text(encoding="utf-8")
+                + "pull_request_target:\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(
                 policy.PullRequestObligationPolicyError,
-                "Privileged PR-target job",
+                "pull_request_target",
             ):
                 policy.validate(repo)
 
-    def test_read_only_jobs_require_exact_head_and_reviewed_range(self) -> None:
+    def test_write_permission_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            workflow = repo / policy.WORKFLOW
+            workflow.write_text(
+                workflow.read_text(encoding="utf-8")
+                + "pull-requests: write\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                policy.PullRequestObligationPolicyError,
+                "pull-requests: write",
+            ):
+                policy.validate(repo)
+
+    def test_static_job_requires_reviewed_range(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
             workflow = repo / policy.WORKFLOW
@@ -126,7 +142,7 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(
                 policy.PullRequestObligationPolicyError,
-                "Read-only exact-head jobs",
+                "git diff --check",
             ):
                 policy.validate(repo)
 

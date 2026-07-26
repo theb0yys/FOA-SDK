@@ -66,70 +66,98 @@ def validate(root: Path = REPO_ROOT) -> None:
         workflow,
         (
             "pull_request:",
-            "pull_request_target:",
             "ready_for_review",
-            "auto_merge_enabled",
-            "Enforce ready-PR obligations",
-            "github.event_name == 'pull_request_target'",
-            "github.event.pull_request.base.sha",
-            "pull-requests: write",
+            "push:",
+            "branches: [main]",
+            "workflow_dispatch:",
+            "permissions:",
+            "contents: read",
+            "static-validation:",
+            "canonical-interchange-compiled:",
+            "windows-prerequisites:",
             "persist-credentials: false",
-            "convertPullRequestToDraft",
-            "PULL_REQUEST_NODE_ID",
-            "Validate mandatory merge obligations",
+            "github.event.pull_request.head.sha || github.sha",
+            "github.event.pull_request.base.sha",
+            "Validate pull-request declarations",
             'validate_pr_obligations.py --event "$GITHUB_EVENT_PATH"',
-            "github.event_name != 'pull_request_target'",
+            "git diff --check",
+            "Windows O3DE prerequisites",
         ),
         "PR validation workflow",
     )
     reject(
         workflow,
         (
-            "pull_request_target' && github.event.pull_request.draft == true",
+            "pull_request_target:",
+            "pull-requests: write",
+            "issues: write",
+            "contents: write",
+            "actions: write",
+            "convertPullRequestToDraft",
+            "PULL_REQUEST_NODE_ID",
+            "gh api",
+            "gh pr ",
+            "gh issue ",
+            "gh workflow ",
+            "git push",
+            "git commit",
+            "secrets.",
         ),
         "PR validation workflow",
     )
 
-    target_job_start = workflow.find("  enforce-obligations:")
     static_job_start = workflow.find("  static-validation:")
-    if target_job_start < 0 or static_job_start <= target_job_start:
+    compiled_job_start = workflow.find("  canonical-interchange-compiled:")
+    windows_job_start = workflow.find("  windows-prerequisites:")
+    if not (0 <= static_job_start < compiled_job_start < windows_job_start):
         raise PullRequestObligationPolicyError(
-            "PR validation workflow must keep the privileged governor before the static job."
+            "PR validation workflow must keep static, compiled, and Windows prerequisite "
+            "gates in separate ordered jobs."
         )
 
-    privileged_job = workflow[target_job_start:static_job_start]
+    static_job = workflow[static_job_start:compiled_job_start]
     require(
-        privileged_job,
+        static_job,
         (
+            "github.event.pull_request.head.sha || github.sha",
             "github.event.pull_request.base.sha",
-            "validate_pr_obligations.py",
-            "convertPullRequestToDraft",
+            "persist-credentials: false",
+            "fetch-depth: 0",
+            "Validate pull-request declarations",
+            'validate_pr_obligations.py --event "$GITHUB_EVENT_PATH"',
+            "git diff --check",
         ),
-        "Privileged PR-target job",
+        "Read-only static validation job",
     )
     reject(
-        privileged_job,
-        (
-            "github.event.pull_request.head.sha",
-            "run_local_validation.py",
-            "developer_preview.py",
-            "ctest",
-            "cmake --build",
-            "lfs: true",
-        ),
-        "Privileged PR-target job",
+        static_job,
+        ("pull-requests: write", "contents: write", "self-hosted", "secrets."),
+        "Read-only static validation job",
     )
 
-    read_only_jobs = workflow[static_job_start:]
+    compiled_job = workflow[compiled_job_start:windows_job_start]
     require(
-        read_only_jobs,
+        compiled_job,
         (
-            "github.event.pull_request.head.sha",
-            "github.event.pull_request.base.sha",
-            "git diff --check",
-            "Windows O3DE prerequisites",
+            "runs-on: windows-2022",
+            "github.event.pull_request.head.sha || github.sha",
+            "persist-credentials: false",
+            "--no-tests=error",
         ),
-        "Read-only exact-head jobs",
+        "Read-only compiled validation job",
+    )
+
+    windows_job = workflow[windows_job_start:]
+    require(
+        windows_job,
+        (
+            "Windows O3DE prerequisites",
+            "runs-on: windows-2022",
+            "github.event.pull_request.head.sha || github.sha",
+            "persist-credentials: false",
+            "developer_preview.py prerequisites",
+        ),
+        "Read-only Windows prerequisite job",
     )
 
     if "## Mandatory merge obligations" not in template:
@@ -181,8 +209,8 @@ def main() -> int:
         print(f"Pull request obligation policy validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Pull request obligation policy validation passed: the trusted governor stays "
-        "base-bound while read-only checks are bound to the exact PR head."
+        "Pull request obligation policy validation passed: automatic validation remains "
+        "read-only and its checks are bound to the exact PR head."
     )
     return 0
 

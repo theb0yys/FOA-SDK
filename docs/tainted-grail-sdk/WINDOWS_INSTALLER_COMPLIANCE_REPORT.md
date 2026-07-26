@@ -6,9 +6,12 @@ The sole requirements authority for this audit is
 [`WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md`](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md).
 No requirement outside that approved document is treated as an installer acceptance gate.
 
-The merged implementation audited clause by clause was `main` commit
-`9203e75728292a5e0c18bebe7d48056fa0a8f95a`. Corrections are isolated in draft
-pull request **#179**, branch `installer-design-conformance`.
+The implementation originally audited clause by clause was `main` commit
+`9203e75728292a5e0c18bebe7d48056fa0a8f95a`. The first correction set was
+reviewed historically in pull request **#179**, branch
+`installer-design-conformance`, and subsequently entered `main`. Current
+acceptance binds to an exact source commit and does not treat live pull-request
+state as artifact evidence.
 
 This report distinguishes implementation compliance from artifact evidence. The
 implementation is not declared finally complete until an exact-head inventory is
@@ -25,6 +28,8 @@ reviewed by a human and package mode produces and passes lifecycle testing for
 | Lifecycle smoke checked operation exit codes but did not prove the Start Menu target, shared installed manifest, or real repair restoration. | The design requires the same manifest payload, a launcher Start Menu entry, and working repair of product-owned files. | Smoke now compares installed/staged manifest hashes, resolves the shortcut target, damages the installed launcher, requires repair to restore its exact hash, and reruns launcher self-test. Commit `7c93011f90eaad693b8fb3314ab9444fb0d137ab`. | `test_lifecycle_smoke_proves_manifest_shortcut_repair_and_uninstall` plus the package-mode Windows smoke itself. |
 | Bypass prevention rejected one known temporary workflow name only. | A renamed alternate workflow could bypass the canonical inventory/review/package route. | Validator now scans all other YAML workflows for installer execution signatures. Commit `00f5811d428d9e2e612d906df57361aae37285b6`. | `test_renamed_alternate_installer_workflow_is_rejected` and `test_temporary_inventory_workflow_is_rejected`. |
 | Explicit exclusions were documented but not all were protected by a regression test over the installer-owned implementation. | Signing, update/service, FoA deployment, telemetry, prerequisite installation, and proprietary toolkit behavior must remain outside this installer. | Added scoped negative tests over the canonical workflow, packaging, wizard, runner, payload, and installed launcher. Commit `b0b69f1709324736f271aabd65d4e7aa787456f6`. | `test_explicitly_excluded_installer_capabilities_remain_absent`. |
+| The pinned `windows-2022` runner supplies CMake 3.31, while the approved per-user WiX 4 package requires the supported CMake 4.3 contract. | Package mode could fail before producing an MSI, and lowering the packaging contract would weaken the researched per-user behavior. | Package mode now downloads official CMake/CPack 4.3.4, verifies the exact archive SHA-256, and invokes those tools by absolute path only for MSI packaging. Commit `61a13412eb7881ce776dd71a3d2570862b0a7c75`. | `test_packaging_uses_exact_hash_pinned_cmake_4_3_toolchain`, pin-tamper validator tests, and `validate_installer_workflow.py`. |
+| The wizard launched the unqualified name `msiexec.exe`. | Executable search-path resolution could select a different program instead of the Windows system installer. | The wizard now resolves `%SystemRoot%\System32\msiexec.exe`, requires an absolute regular non-reparse file, and launches that exact path. Commit `61a13412eb7881ce776dd71a3d2570862b0a7c75`. | `WindowsInstallerWizardTests.test_runner_uses_argument_list_for_install_repair_and_uninstall` and `validate_installer_workflow.py`. |
 
 ## Clause-by-clause requirement mapping
 
@@ -46,10 +51,11 @@ reviewed by a human and package mode produces and passes lifecycle testing for
 | Deterministic portable ZIP with one versioned root, stable order/timestamps, Zip64, and checksum sidecar | `archive_payload` and `verify_archive` | Portable archive verification and byte-determinism tests | None |
 | MSI consumes the same verified staging root as the ZIP | Workflow passes `SDK_STAGE` to both archive and `TG_INSTALLER_PAYLOAD_ROOT`; packaging CMake installs that directory | `test_zip_and_msi_are_built_from_the_same_verified_stage`; installed-manifest hash comparison | Must be proven by the final package run |
 | WiX 4.0.4 and matching UI extension are pinned build-only tools in isolated caches | Workflow installs WiX under `$RUNNER_TEMP/wix` and redirects the global extension cache with `$RUNNER_TEMP/wix-extensions` | Installer validator and `test_wix_extension_cache_must_be_isolated` | None |
+| CMake/CPack 4.3.4 is a hash-pinned build-only packaging toolchain | Workflow downloads the official CMake Windows x64 ZIP, verifies SHA-256 `86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1`, and invokes exact extracted paths only in the MSI step | Installer validator, pipeline contract, and pin-tamper tests | The final package run must prove the hosted download and WiX generation path |
 | MSI is Windows x64 and per-user, with stable Upgrade Code, version-derived Product Code, Start Menu launcher, Programs and Features metadata, repair, and uninstall | `Installer/Packaging/Windows/CMakeLists.txt` | Installer validator; launcher/package source tests; package-mode lifecycle smoke | Actual older-to-newer upgrade smoke remains intentionally pending until two independently reviewed versions exist |
 | `FOA-SDK-Installer.exe` is a self-contained Windows Forms x64 executable embedding the exact MSI and sidecar | `FOAInstallerLauncher.csproj`; workflow `dotnet publish`; `InstallerPayload.cs` | `WindowsInstallerWizardTests.test_project_builds_self_contained_winforms_exe_with_optional_embedded_msi`; package smoke resolves and verifies embedded resources | Must be built on the exact reviewed package run |
 | Executable extracts into a private temporary directory and verifies captured MSI bytes | `InstallerPayload.cs::FromEmbeddedResource`, `FromExternalFile`, and `VerifyChecksum` | Windows installer launcher tests and canonical sidecar tests | Must pass in the final EXE smoke |
-| Executable displays operation and reviewed fingerprint and delegates mutation only to Windows Installer | `InstallerWizardForm.cs`; `WindowsInstallerRunner.cs` uses `msiexec /i`, `/fa`, and `/x` | Windows installer wizard tests | None |
+| Executable displays operation and reviewed fingerprint and delegates mutation only to Windows Installer | `InstallerWizardForm.cs`; `WindowsInstallerRunner.cs` resolves the absolute system `msiexec.exe` and uses `/i`, `/fa`, and `/x` | Windows installer wizard tests and installer validator | None |
 | Executable remains `asInvoker`; MSI remains per-user | `Installer/Launcher/Windows/app.manifest`; packaging CMake | Manifest and packaging validator tests | None |
 | Final retention contains exactly EXE/MSI/ZIP plus canonical checksum sidecars | `verify_installer_artifacts.py`; isolated CPack output; workflow retention directory | Exact artifact-set, extra-directory, malformed-record, and checksum-tamper tests | Must pass against the generated artifacts |
 | Install proves the MSI carries the exact reviewed manifest and Start Menu shortcut targets the installed launcher | Package-mode smoke in canonical workflow | `test_lifecycle_smoke_proves_manifest_shortcut_repair_and_uninstall` | Must pass on Windows package run |
@@ -65,7 +71,7 @@ reviewed by a human and package mode produces and passes lifecycle testing for
 
 ### 1. Exact reviewed executable artifact
 
-A compliant `FOA-SDK-Installer.exe` does not yet exist for the corrected PR head. The
+A compliant `FOA-SDK-Installer.exe` does not yet exist for an exact reviewed source commit. The
 following approved process must complete without substitution:
 
 1. run canonical workflow `mode=inventory` on the exact final commit;
@@ -73,7 +79,9 @@ following approved process must complete without substitution:
 3. record the exact inventory SHA-256, named human reviewer, UTC review time, and durable evidence reference;
 4. run canonical workflow `mode=package` on the same exact commit with those values;
 5. require final artifact-set verification and install/manifest/shortcut/repair/uninstall smoke to pass;
-6. retain the unsigned artifact and record its run, artifact ID, digests, exact source commit, review metadata, and lifecycle result in the durable PR #179 conversation without changing the reviewed source commit.
+6. retain the unsigned artifact and record its run, artifact ID, digests, exact
+   source commit, review metadata, and lifecycle result in a durable external
+   installer acceptance record without changing the reviewed source commit.
 
 No automated actor may invent or impersonate step 2 or its review metadata.
 
@@ -87,8 +95,9 @@ but upgrade execution must not be claimed from structure alone.
 
 The exact reviewed source must not be changed merely to fill in post-build evidence:
 doing so would create a new source commit and invalidate the reviewed inventory. After
-the package run succeeds, the following completed record belongs in the durable PR #179
-conversation, anchored to the exact reviewed source commit:
+the package run succeeds, the following completed record belongs in a durable
+external installer acceptance record anchored to the exact reviewed source
+commit:
 
 - Final source commit: **pending**
 - Inventory workflow run: **pending**

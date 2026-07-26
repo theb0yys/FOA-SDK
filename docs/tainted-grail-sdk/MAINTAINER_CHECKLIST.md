@@ -22,7 +22,7 @@
 - test plan is proportionate to risk;
 - no redistribution problem is apparent.
 
-## Per pull request
+## Per human-contributor pull request
 
 ### Scope and governance
 
@@ -66,6 +66,16 @@
 - PR is ready, not draft;
 - pending checks are not treated as passing.
 
+## Per automated-agent commit
+
+- current branch is exactly `main`;
+- the user-requested scope and governing research are identified;
+- the staged diff contains no unrelated or protected files;
+- required focused and repository gates are recorded honestly;
+- the commit carries DCO sign-off;
+- no branch, pull request, issue, review, comment, workflow, ref, tag, or
+  repository-setting mutation was performed.
+
 ### Manual UI evidence changes
 
 For a PR that changes the Windows manual UI evidence contract:
@@ -78,7 +88,7 @@ For a PR that changes the Windows manual UI evidence contract:
 - generated screenshots are kept beneath `build/` or outside the repository and are not committed;
 - implementation does not claim the actual Windows pass unless reviewed evidence exists.
 
-## After merge
+## After a human merge
 
 - verify merge commit on `main`;
 - synchronize `foa-development` to the merge commit;

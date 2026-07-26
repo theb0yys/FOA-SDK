@@ -51,6 +51,8 @@ Installer changes require, as applicable:
 7. proof that an external workspace sentinel survives repair and uninstall;
 8. an independently reviewed second version before claiming actual upgrade coverage;
 9. Windows Editor UI validation; and
-10. the repository's exact-head validation and draft-PR process.
+10. the repository's exact-head validation and current review path: a human
+    pull request where applicable, or the direct-to-`main` `AGENTS.md` contract
+    for automated-agent changes.
 
 See [Windows Installer and Prebuilt Artifact Workflow Design](../docs/tainted-grail-sdk/WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) for the governing design and [Installing the Prebuilt Windows SDK](../docs/tainted-grail-sdk/INSTALLING_PREBUILT_SDK.md) for the user workflow.

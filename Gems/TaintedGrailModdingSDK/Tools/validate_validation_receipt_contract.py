@@ -350,7 +350,7 @@ def validate(repo_root: Path) -> None:
             "its receipt source",
             "commit matches the reviewed head",
             "compiled-test gates remain mandatory",
-            "FOA-plug-in-development",
+            "foa-development",
         ),
         "Review and merge policy",
     )

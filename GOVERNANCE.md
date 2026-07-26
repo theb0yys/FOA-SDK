@@ -52,7 +52,9 @@ Current CODEOWNERS entries identify the default review owner for project-control
 
 ### Routine changes
 
-Small fixes, documentation corrections, tests, and internal refactors may proceed through normal pull-request review.
+Small fixes, documentation corrections, tests, and internal refactors may
+proceed through normal human pull-request review or the separately governed
+automated-agent path in `AGENTS.md`.
 
 ### Significant changes
 
@@ -88,16 +90,21 @@ A proposal to change an invariant requires a dedicated architecture decision rec
 
 ## Branch governance
 
-The repository has two long-lived branches:
+The human-contributor workflow has two long-lived branches:
 
 - `main` — reviewed integration state;
 - `foa-development` — active development.
 
-Direct development on `main` is prohibited. New work begins only after `foa-development` is synchronized to the latest accepted `main` state.
+Human direct development on `main` is prohibited. Human work begins only after
+`foa-development` is synchronized to the latest accepted `main` state.
+
+Automated agents follow `AGENTS.md`: they make focused, validated, DCO-signed
+file commits directly to `main` and must not create or control branches, pull
+requests, issues, reviews, comments, workflows, or repository settings.
 
 ## Review and merge authority
 
-A pull request requires:
+A human-contributor pull request requires:
 
 - completed template;
 - linked issue or design when required;

@@ -52,7 +52,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Read-only **Tainted Grail Post-Deployment Verification and Release Blockers** pane with mandatory human review and every verifier, promotion, launch, adapter, signing, and publication flag false.
 - Public Slice 16 contract documentation and seventeen-pane Windows manual UI coverage for post-deployment reports.
 - Repository-owned `run_local_validation.py` entry point for Python unit tests, contract validators, temporary fixture/diagnostics verification, tracked-path hygiene, O3DE source policy, and optional compiled catalog tests.
-- CI/runner policy validator, negative regression tests, and public manual-validation documentation covering unavailable Actions, self-hosted runner isolation, registration-token handling, and restoration gates.
+- CI/runner policy validator, negative regression tests, and public validation documentation covering automatic read-only checks, manual host-heavy gates, self-hosted runner isolation, and registration-token handling.
 - Pure-Core `AdapterDeploymentExecutionEvidenceService` and typed execution-result contracts for exact reviewed work-order binding, separately reviewed executor metadata, attempted steps, backup/restore outcomes, target verification, rollback, failures, safe logs, and candidate evidence return.
 - Transient `AdapterDeploymentExecutionResultRegistry` and read-only **Tainted Grail Deployment Execution Result Evidence** pane; no executor is invoked and there is no automatic evidence promotion.
 - Deployment execution-result production-linked C++ tests, focused validator and negative tests, workflow definition, public Phase 8 documentation, and sixteen-pane Windows UI coverage.
@@ -91,9 +91,9 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 - Installer workflow output now includes a SHA-256 sidecar for the final executable and exercises clean install, installed-launcher self-test, repair, uninstall, and external-workspace preservation through that executable.
 - Actor/Troop status now records the deterministic fixture and public documentation as implemented; exact-head O3DE configure/build, compiled catalog tests, and Windows evidence remain the active acceptance gate before the slice is described as exact-head verified.
 - The focused Actor/Troop checklist supplements the current twenty-six-pane Hub-plus-specialist checklist instead of regressing the repository to the historical twenty-three-pane count.
-- Automatic pull-request and push triggers are suspended because exact-head jobs could not acquire GitHub-hosted runners; the TG SDK, Editor-entry, and repository-hygiene workflows are manual-only.
+- Relevant pull requests and pushes to `main` now run read-only static, canonical-interchange, and Windows-prerequisite validation on pinned hosted runners; host-heavy Editor, exact-head receipt, and installer workflows remain manually controlled.
 - The inherited full-engine `AR` workflow and generic upstream `Validation` workflow are removed from this fork so queued checks are not misrepresented as TG SDK test evidence.
-- Exact local validation evidence is the development merge gate until automatic Actions are safely restored; **no automated per-commit test result is claimed**.
+- Exact local and compiled evidence remains mandatory and complements automatic read-only checks; no queued, absent, skipped, or unexecuted job is claimed as a pass.
 - Phase 8 now includes deterministic release-artifact provenance/signing-intent metadata; an externally supplied release-assembly and checksum-result envelope is the next ordered slice.
 - Focused execution-result validators continue to enforce exact work-order and reviewed-executor binding, typed attempted steps, backup/restore outcomes, target verification, rollback, same-subject failures/logs, candidate evidence-only return, non-mutation, and the no-executor boundary.
 - The Windows manual UI checklist now covers all twenty-six panes and the default Hub plus zero-transient-input states.
@@ -134,7 +134,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Known limitations
 
-- Automatic GitHub Actions are unavailable in the current repository/account state; manual workflow definitions remain present, but full local and compiled validation must be run and recorded from a real checkout.
+- Automatic read-only checks do not replace full local, O3DE configure/build, compiled-test, Windows Editor, or installer evidence; every unexecuted host-heavy gate remains pending.
 - Exact-head Actor/Troop O3DE configure/build, compiled catalog tests, and Windows Editor evidence remain pending; documentation and deterministic fixture success alone are not host verification.
 - Release-artifact checksums, provenance, legal review, signing identities, publication targets, reviewer identities, and timestamps are caller-supplied metadata; no trusted filesystem reader, hasher, identity provider, signing service, uploader, or publication system exists.
 - A `ready` release-artifact envelope proves exact metadata shape only. It does not prove files exist, checksums match file bytes, legal rights exist, a signature was produced, or a target accepted a release.

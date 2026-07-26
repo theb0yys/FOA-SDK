@@ -41,14 +41,22 @@ Contributions that bypass the product boundary, evidence rules, ownership model,
 
 ## Branch model
 
-The repository uses only two long-lived branches:
+The human-contributor workflow uses two long-lived branches:
 
 - `main` — reviewed integration state;
 - `foa-development` — active development.
 
-Do not create feature branches in the public repository unless a maintainer explicitly authorises an exception. Do not commit directly to `main`.
+Human contributors do not create feature branches in the public repository
+unless a maintainer explicitly authorises an exception, and do not commit
+directly to `main`.
 
-## Contribution lifecycle
+`AGENTS.md` defines a separate binding path for repository automation. Automated
+agents commit only the requested, validated, DCO-signed file changes directly to
+`main`. They do not create, switch, rename, or delete branches; create or modify
+pull requests, issues, reviews, or comments; or control workflows and repository
+settings.
+
+## Human contribution lifecycle
 
 ### 1. Open or select an issue
 
@@ -123,6 +131,10 @@ Reviewers may request:
 
 A maintainer merges approved work into `main`. After merging, `foa-development` is synchronized to the merge commit before new work begins.
 
+Automated-agent changes do not use this pull-request sequence. They still require
+the same research, focused diff review, validation, DCO sign-off, documentation,
+and honest failure reporting required by `AGENTS.md`.
+
 ## Developer Certificate of Origin
 
 All commits require DCO sign-off:
@@ -184,7 +196,7 @@ Never use private game files or copyrighted assets as committed test fixtures.
 
 ## Documentation
 
-Update the relevant public documentation in the same pull request. New data fields must be documented in [DATA_FORMATS.md](docs/tainted-grail-sdk/DATA_FORMATS.md). User-facing behavior must be reflected in [USER_GUIDE.md](docs/tainted-grail-sdk/USER_GUIDE.md).
+Update the relevant public documentation in the same review unit. New data fields must be documented in [DATA_FORMATS.md](docs/tainted-grail-sdk/DATA_FORMATS.md). User-facing behavior must be reflected in [USER_GUIDE.md](docs/tainted-grail-sdk/USER_GUIDE.md).
 
 ## Security and privacy
 

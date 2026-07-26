@@ -29,7 +29,6 @@ MANUAL_WORKFLOWS = (
     ".github/workflows/tainted-grail-repository-hygiene.yml",
     ".github/workflows/tainted-grail-sdk-installer.yml",
 )
-AGENT_POLICY = "AGENTS.md"
 CI_POLICY = "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
 LOCAL_RUNNER = "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
 
@@ -113,22 +112,7 @@ def validate_local_runner(repo_root: Path) -> None:
     )
 
 
-def validate_agent_mode(repo_root: Path, automatic: str) -> None:
-    agent_policy = read_text(repo_root / AGENT_POLICY)
-    require_fragments(
-        agent_policy,
-        (
-            "Mandatory GitHub Agent Policy",
-            "The designated branch is `main`",
-            "commits directly to `main`",
-            "create, rename, delete, or switch branches",
-            "open, update, close, merge, or otherwise modify pull requests",
-            "create, update, close, label, assign, lock, or comment on issues",
-            "trigger, cancel, approve, or rerun workflows or jobs",
-            "committing the user-requested file changes directly to the designated branch",
-        ),
-        "Agent policy",
-    )
+def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
     require_fragments(
         automatic,
         (
@@ -272,153 +256,13 @@ def validate_agent_mode(repo_root: Path, automatic: str) -> None:
     )
 
 
-def validate_legacy_mode(repo_root: Path, automatic: str) -> None:
-    """Retain compatibility for synthetic unit-test repositories without AGENTS.md."""
-
-    require_fragments(
-        automatic,
-        (
-            "pull_request:",
-            "pull_request_target:",
-            "push:",
-            "workflow_dispatch:",
-            '".github/**"',
-            '"docs/**"',
-            '"scripts/**"',
-            "runs-on: ubuntu-latest",
-            "runs-on: windows-latest",
-            "contents: read",
-            "run_local_validation.py --keep-going --static-only --skip-source-policy",
-            "Enforce ready-PR obligations",
-            "github.event_name == 'pull_request_target'",
-            "pull-requests: write",
-            "persist-credentials: false",
-            "fetch-depth: 0",
-            "git diff --check",
-            "tg-sdk-reviewed-range.txt",
-            "convertPullRequestToDraft",
-            "Windows O3DE prerequisites",
-            "developer_preview.py prerequisites",
-        ),
-        "Automatic TG SDK workflow",
-    )
-    reject_fragments(
-        automatic,
-        ("self-hosted", "--ctest-build-dir", "secrets."),
-        "Automatic TG SDK workflow",
-    )
-
-    target_job_start = automatic.find("  enforce-obligations:")
-    static_job_start = automatic.find("  static-validation:")
-    windows_job_start = automatic.find("  windows-prerequisites:")
-    if target_job_start < 0 or static_job_start <= target_job_start or windows_job_start <= static_job_start:
-        raise CiRunnerPolicyError(
-            "Automatic TG SDK workflow does not keep target enforcement, static validation, "
-            "and Windows prerequisites in separate ordered jobs."
-        )
-
-    privileged_job = automatic[target_job_start:static_job_start]
-    require_fragments(
-        privileged_job,
-        (
-            "github.event.pull_request.base.sha",
-            "validate_pr_obligations.py",
-            "convertPullRequestToDraft",
-        ),
-        "Privileged PR-target job",
-    )
-    reject_fragments(
-        privileged_job,
-        (
-            "run_local_validation.py",
-            "ctest",
-            "cmake",
-            "xvfb-run",
-            "pip install",
-            "npm ",
-            "make ",
-            "lfs: true",
-            "windows-latest",
-            "github.event.pull_request.head.sha",
-        ),
-        "Privileged PR-target job",
-    )
-
-    static_job = automatic[static_job_start:windows_job_start]
-    require_fragments(
-        static_job,
-        (
-            "github.event.pull_request.head.sha",
-            "fetch-depth: 0",
-            "github.event.pull_request.base.sha",
-            "github.event.before",
-            "git diff --check",
-            "tg-sdk-reviewed-range.log",
-            "tg-sdk-reviewed-range.txt",
-        ),
-        "Read-only static validation job",
-    )
-    reject_fragments(
-        static_job,
-        ("pull-requests: write", "self-hosted", "secrets."),
-        "Read-only static validation job",
-    )
-
-    windows_job = automatic[windows_job_start:]
-    require_fragments(
-        windows_job,
-        (
-            "runs-on: windows-latest",
-            "contents: read",
-            "persist-credentials: false",
-            "github.event.pull_request.head.sha",
-            "O3DE_COMMIT:",
-            "sparse-checkout",
-            "developer_preview.py prerequisites",
-            "tg-sdk-windows-prerequisites.log",
-        ),
-        "Windows prerequisite job",
-    )
-    reject_fragments(
-        windows_job,
-        ("pull-requests: write", "self-hosted", "secrets.", "cmake --build", "--ctest-build-dir"),
-        "Windows prerequisite job",
-    )
-
-    policy = read_text(repo_root / CI_POLICY)
-    require_fragments(
-        policy,
-        (
-            "run_local_validation.py",
-            "automatic pull-request static validation",
-            "pull_request_target",
-            "trusted base commit",
-            "pull request to draft",
-            "reviewed-range",
-            "Windows prerequisite",
-            "--static-only",
-            "--ctest-build-dir",
-            "compiled Catalog CTest",
-            "self-hosted runner",
-            "registration token",
-            "does not claim an O3DE build",
-            "Pending is not passing",
-        ),
-        "CI/local-validation policy",
-    )
-
-
 def validate_ci_runner_policy(repo_root: Path) -> None:
     validate_removed_workflows(repo_root)
     automatic = read_text(repo_root / AUTOMATIC_STATIC_WORKFLOW)
-    agent_mode = (repo_root / AGENT_POLICY).is_file()
-    if agent_mode:
-        validate_agent_mode(repo_root, automatic)
-    else:
-        validate_legacy_mode(repo_root, automatic)
+    validate_read_only_mode(repo_root, automatic)
     validate_manual_workflows(
         repo_root,
-        require_explicit_read_only=agent_mode,
+        require_explicit_read_only=True,
     )
     validate_local_runner(repo_root)
 

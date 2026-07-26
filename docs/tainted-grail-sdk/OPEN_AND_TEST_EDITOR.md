@@ -95,7 +95,9 @@ build/Tainted Grail Modding Editor.shortcut.json
 The project is materialized beneath
 `%LOCALAPPDATA%\O3DE\TGEditor`. Repository-owned
 bootstrap files are managed there, while additional user-authored levels are
-preserved. O3DE's conventional `Cache` and `user/log` paths remain inside that
+preserved. The per-user `project.json` rebinds its external Gem directories to
+the canonical reviewed product checkout; the tracked portable manifest remains
+unchanged. O3DE's conventional `Cache` and `user/log` paths remain inside that
 materialized project, while wrapper logs are a sibling beneath the same bounded
 root. No Defender exclusion or administrator permission is required.
 Asset-preparation stdout and stderr remain beneath the same root in `launcher`.

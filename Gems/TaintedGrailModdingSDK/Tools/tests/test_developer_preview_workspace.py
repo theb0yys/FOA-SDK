@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -26,7 +27,27 @@ class DeveloperPreviewWorkspaceTests(unittest.TestCase):
         for relative in (*workspace.MANAGED_PROJECT_FILES, *workspace.PRESERVED_PROJECT_FILES):
             path = project / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(f"source:{relative.as_posix()}\n".encode())
+            if relative != workspace.PROJECT_MANIFEST:
+                path.write_bytes(f"source:{relative.as_posix()}\n".encode())
+        external = (
+            Path("Gems/ExternalToolchain"),
+            Path("Gems/TaintedGrailModdingSDK"),
+        )
+        for relative in external:
+            (repo / relative).mkdir(parents=True)
+        (project / workspace.PROJECT_MANIFEST).write_text(
+            json.dumps(
+                {
+                    "project_name": "TaintedGrailModdingEditor",
+                    "external_subdirectories": [
+                        f"../{relative.as_posix()}" for relative in external
+                    ],
+                },
+                indent=4,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         return repo
 
     def environment(self, root: Path) -> dict[str, str]:
@@ -63,6 +84,26 @@ class DeveloperPreviewWorkspaceTests(unittest.TestCase):
                 paths.startup_level.read_bytes(),
                 (repo / workspace.PREVIEW_PROJECT / workspace.PREVIEW_STARTUP_LEVEL).read_bytes(),
             )
+            source_manifest = json.loads(
+                (repo / workspace.PREVIEW_PROJECT / workspace.PROJECT_MANIFEST).read_text()
+            )
+            materialized_manifest = json.loads(
+                (paths.project / workspace.PROJECT_MANIFEST).read_text()
+            )
+            self.assertEqual(
+                source_manifest["external_subdirectories"],
+                [
+                    "../Gems/ExternalToolchain",
+                    "../Gems/TaintedGrailModdingSDK",
+                ],
+            )
+            self.assertEqual(
+                materialized_manifest["external_subdirectories"],
+                [
+                    (repo / "Gems/ExternalToolchain").resolve().as_posix(),
+                    (repo / "Gems/TaintedGrailModdingSDK").resolve().as_posix(),
+                ],
+            )
 
     def test_user_levels_and_modified_startup_level_are_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -89,12 +130,12 @@ class DeveloperPreviewWorkspaceTests(unittest.TestCase):
             repo = self.make_repo(root)
             environment = self.environment(root)
             paths = workspace.materialize_preview_workspace(repo, environment=environment)
-            source = repo / workspace.PREVIEW_PROJECT / "project.json"
+            source = repo / workspace.PREVIEW_PROJECT / "CMakeLists.txt"
             source.write_text("updated source\n", encoding="utf-8")
 
             workspace.materialize_preview_workspace(repo, environment=environment)
 
-            self.assertEqual((paths.project / "project.json").read_text(), "updated source\n")
+            self.assertEqual((paths.project / "CMakeLists.txt").read_text(), "updated source\n")
 
     def test_modified_managed_file_is_not_overwritten(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -102,14 +143,38 @@ class DeveloperPreviewWorkspaceTests(unittest.TestCase):
             repo = self.make_repo(root)
             environment = self.environment(root)
             paths = workspace.materialize_preview_workspace(repo, environment=environment)
-            (paths.project / "project.json").write_text("external change\n", encoding="utf-8")
-            (repo / workspace.PREVIEW_PROJECT / "project.json").write_text(
+            (paths.project / "CMakeLists.txt").write_text("external change\n", encoding="utf-8")
+            (repo / workspace.PREVIEW_PROJECT / "CMakeLists.txt").write_text(
                 "updated source\n",
                 encoding="utf-8",
             )
 
             with self.assertRaisesRegex(workspace.WorkspaceError, "refusing to overwrite"):
                 workspace.materialize_preview_workspace(repo, environment=environment)
+
+    def test_external_subdirectory_escape_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo = self.make_repo(root)
+            outside = root / "outside"
+            outside.mkdir()
+            project_manifest = repo / workspace.PREVIEW_PROJECT / workspace.PROJECT_MANIFEST
+            project_manifest.write_text(
+                json.dumps(
+                    {
+                        "project_name": "TaintedGrailModdingEditor",
+                        "external_subdirectories": ["../../outside"],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(workspace.WorkspaceError, "product-owned"):
+                workspace.materialize_preview_workspace(
+                    repo,
+                    environment=self.environment(root),
+                )
 
     def test_missing_or_relative_local_app_data_fails_closed(self) -> None:
         with self.assertRaisesRegex(workspace.WorkspaceError, "unavailable"):

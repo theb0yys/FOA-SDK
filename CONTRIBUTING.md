@@ -41,22 +41,22 @@ Contributions that bypass the product boundary, evidence rules, ownership model,
 
 ## Branch model
 
-The human-contributor workflow uses two long-lived branches:
+The repository uses two long-lived branches:
 
 - `main` — reviewed integration state;
 - `foa-development` — active development.
 
-Human contributors do not create feature branches in the public repository
-unless a maintainer explicitly authorises an exception, and do not commit
-directly to `main`.
+Contributors and automated agents do not commit directly to `main`. Work happens
+on a non-`main` branch and enters `main` only through a pull request for
+maintainer audit.
 
-`AGENTS.md` defines a separate binding path for repository automation. Automated
-agents commit only the requested, validated, DCO-signed file changes directly to
-`main`. They do not create, switch, rename, or delete branches; create or modify
-pull requests, issues, reviews, or comments; or control workflows and repository
-settings.
+`AGENTS.md` defines the binding path for repository automation. Automated agents
+must make focused, validated, DCO-signed commits on a working branch, open a pull
+request to `main`, and leave final audit, approval, and merge to the maintainer.
+They must not rewrite governance, validation, tests, workflows, or process
+records unless the user explicitly requested that exact change.
 
-## Human contribution lifecycle
+## Contribution lifecycle
 
 ### 1. Open or select an issue
 
@@ -85,7 +85,7 @@ The design review must answer:
 - What user data, game data, saves, or deployments could be affected?
 - What tests prove the intended behavior?
 
-### 3. Implement on `foa-development`
+### 3. Implement on a working branch
 
 Keep changes focused. Do not combine unrelated refactors, generated files, formatting churn, and new behavior in one review unit.
 
@@ -131,9 +131,9 @@ Reviewers may request:
 
 A maintainer merges approved work into `main`. After merging, `foa-development` is synchronized to the merge commit before new work begins.
 
-Automated-agent changes do not use this pull-request sequence. They still require
-the same research, focused diff review, validation, DCO sign-off, documentation,
-and honest failure reporting required by `AGENTS.md`.
+Automated-agent changes use the same branch and pull-request audit sequence. They
+also require the same research, focused diff review, validation, DCO sign-off,
+documentation, and honest failure reporting required by `AGENTS.md`.
 
 ## Developer Certificate of Origin
 

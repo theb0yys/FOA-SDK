@@ -86,15 +86,9 @@ internal sealed class InstallerWizardForm : Form
     {
         return BuildPage(
             "Welcome to FOA-SDK Setup",
-            "This wizard installs the complete prebuilt Tainted Grail: The Fall of Avalon Modding Editor and SDK.
-
-"
-            + "After setup, FOA-SDK.exe is the local launcher: clicking it opens the installed SDK editor with the bundled project.
-
-"
-            + "No Git, Python, CMake, Visual Studio, or source build is required. The reviewed MSI is embedded in this application and its SHA-256 is verified before Windows Installer starts.
-
-"
+            "This wizard installs the complete prebuilt Tainted Grail: The Fall of Avalon Modding Editor and SDK.\n\n"
+            + "After setup, FOA-SDK.exe is the local launcher: clicking it opens the installed SDK editor with the bundled project.\n\n"
+            + "No Git, Python, CMake, Visual Studio, or source build is required. The reviewed MSI is embedded in this application and its SHA-256 is verified before Windows Installer starts.\n\n"
             + "Keep workspaces and generated mod output outside the installation directory.");
     }
 

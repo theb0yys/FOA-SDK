@@ -171,9 +171,9 @@ Start with:
 - `main` is reviewed integrated product state.
 - Human contributions use the existing `foa-development` branch and enter
   `main` through pull requests.
-- Repository agents follow the binding `AGENTS.md` exception: focused,
-  DCO-signed file changes are committed directly to `main`, and agents do not
-  create or control branches, pull requests, issues, reviews, or workflows.
+- Repository agents follow `AGENTS.md`: focused, DCO-signed changes are made on
+  a non-`main` branch, submitted to `main` by pull request for maintainer audit,
+  and left for maintainer approval and merge.
 - Significant changes require design review, focused validation, exact-head evidence where applicable, and maintainer approval.
 - Direct runtime authority, automatic evidence promotion, and unreviewed generated artifacts are prohibited.
 

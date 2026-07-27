@@ -32,6 +32,15 @@ foreach($step in @(
 )){Add-U $steps $step}
 if(-not (Test-Path -LiteralPath $BuildRoot)){Add-U $warnings "Build root $BuildRoot is not available in this environment; artifact execution may be blocked."}
 if(-not [string]::IsNullOrWhiteSpace($ExternalDestination)){Add-U $warnings 'An external destination was supplied. Confirm explicit approval before writing.'}
-$result=[ordered]@{request=$Request;target_paths=$TargetPath;engine_root=$EngineRoot;build_root=$BuildRoot;external_destination=$ExternalDestination;products=@($products);required_steps=@($steps);warnings=@($warnings)}
+$result=[ordered]@{
+    request=$Request
+    target_paths=[string[]]$TargetPath
+    engine_root=$EngineRoot
+    build_root=$BuildRoot
+    external_destination=$ExternalDestination
+    products=[object[]]$products.ToArray()
+    required_steps=[string[]]$steps.ToArray()
+    warnings=[string[]]$warnings.ToArray()
+}
 if($AsJson){$result|ConvertTo-Json -Depth 6;return}
 'Codex artifact/deployment preflight';'===================================';"Request: $Request";'';"Build root: $BuildRoot";'';'Products:';if($products.Count){$products|%{"- $($_.name) [$($_.kind)]`n  Build: $($_.build_command)"}}else{'- (not detected)'};'';'Required steps:';$steps|%{"- $_"};if($warnings.Count){'';'Warnings:';$warnings|%{"- $_"}}

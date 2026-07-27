@@ -77,7 +77,9 @@ Use `.codex/checklists/deep_research_brief_template.md`. Include:
 
 Static research review proves only document authority. It does not prove O3DE configure/build, Editor behavior, Unity conversion, installer behavior, runtime-adapter execution, deployment, save compatibility, or Fall of Avalon runtime behavior.
 
-Report `runtime sign-off not performed` unless exact-install runtime evidence was actually captured.
+## Runtime Proof
+
+Report `runtime sign-off not performed` unless exact-install runtime evidence was actually captured. Document authority, static inspection, local script execution, and passing repository checks are not runtime proof.
 
 ## Handoff
 

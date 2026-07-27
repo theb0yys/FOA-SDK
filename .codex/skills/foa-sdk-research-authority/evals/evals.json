@@ -1,1 +1,40 @@
-{"skill_name":"foa-sdk-research-authority","evals":[{"id":1,"prompt":"Add an unresearched runtime behaviour.","expected_output":"Requires exact controlling authority and stops if absent.","assertions":[{"text":"Does not invent behaviour."},{"text":"Separates controlling from supporting sources."},{"text":"Produces a research brief when blocked."}]},{"id":2,"prompt":"Review whether a UI and Foundation change is authorised.","expected_output":"Maps both owner surfaces and their gates.","assertions":[{"text":"Identifies owners."},{"text":"Checks contradictions."},{"text":"Does not claim runtime proof."}]},{"id":3,"prompt":"Research and code disagree; pick one.","expected_output":"Stops unless a specific newer authority resolves it.","assertions":[{"text":"Does not invent a tie-breaker."},{"text":"Reports stale sources."},{"text":"States runtime sign-off not performed."}]}]}
+{
+  "skill_name": "foa-sdk-research-authority",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a new runtime-adapter behaviour from memory; I know we discussed it before.",
+      "expected_output": "Agent refuses to implement from memory, maps the request to controlling research, reports missing or contradictory authority, and stops if no exact research authorises the behaviour. If authority is still unclear or unproven, agent produces a Deep Research Brief for a ChatGPT Deep Research agent with uncertain areas, repository or GitHub paths, and highlighted relevant file areas.",
+      "files": [],
+      "assertions": [
+        {"text": "Does not implement behaviour from memory or assumption."},
+        {"text": "Requires exact research files or owner documents before edits."},
+        {"text": "Reports stop conditions and the next researched process."},
+        {"text": "Produces a Deep Research Brief when authority is unclear, contradictory, missing, outdated, or unproven."}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review a UI and Foundation-owner change in FOA-SDK and tell me if it is authorised.",
+      "expected_output": "Agent maps request, UI surface, owner surface, process documents, domain research, gates, and tests, then reports which sources are controlling authority and which are only context.",
+      "files": [],
+      "assertions": [
+        {"text": "Separates controlling authority from supporting context."},
+        {"text": "Identifies owner and UI surfaces before judging the change."},
+        {"text": "Does not claim runtime proof from research review."}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "The research seems to disagree with the current code. Just pick the best option.",
+      "expected_output": "Agent stops, names the contradiction, identifies the most specific or newest source only if clear, and otherwise produces a Deep Research Brief for a ChatGPT Deep Research agent rather than choosing arbitrarily.",
+      "files": [],
+      "assertions": [
+        {"text": "Stops on unresolved contradictory research."},
+        {"text": "Does not invent a tie-breaker."},
+        {"text": "Reports runtime sign-off not performed when only static review occurred."},
+        {"text": "Includes relevant repository or GitHub file paths and highlighted conflicts in the Deep Research Brief."}
+      ]
+    }
+  ]
+}

@@ -3,11 +3,12 @@
 ## Binding automation boundary
 
 `AGENTS.md` is the repository-specific authority for GitHub agents and automated
-workflows. Agent-authored repository changes are normal file commits directly to
-`main`. Agents and workflows must not create, move, rename, switch, or delete
-branches, tags, or refs; create or modify pull requests, issues, reviews, or
-comments; change repository settings; or trigger, cancel, rerun, approve, or
-otherwise control workflow runs.
+workflows. Agent-authored repository changes must happen on a non-main branch and
+be submitted by pull request for maintainer audit. Agents must not commit
+directly to main, move refs, post comments, merge pull requests, change
+repository settings, or trigger, cancel, rerun, approve, or otherwise control
+workflow runs unless the repository owner explicitly authorises that exact action
+for the current task.
 
 Automated validation is read-only. Workflow tokens use `contents: read` unless a
 separately documented human-operated release design explicitly requires a narrower
@@ -156,7 +157,7 @@ requests, screenshots, logs, source files, or retained shell history.
 
 Create receipts outside the repository from a clean exact commit. The tool
 derives the 40-character source commit from `git rev-parse HEAD`; callers do not
-supply a claimed commit, status, exit code, or timestamp.
+ supply a claimed commit, status, exit code, or timestamp.
 
 ```shell
 python Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py init \

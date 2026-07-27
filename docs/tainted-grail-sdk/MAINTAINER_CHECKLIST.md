@@ -22,11 +22,11 @@
 - test plan is proportionate to risk;
 - no redistribution problem is apparent.
 
-## Per human-contributor pull request
+## Per pull request
 
 ### Scope and governance
 
-- PR targets `main` from `foa-development`;
+- PR targets `main` from `foa-development` or an explicitly maintainer-authorised focused non-`main` branch;
 - template is complete;
 - issue/design is linked when required;
 - commits include DCO sign-off;
@@ -66,15 +66,17 @@
 - PR is ready, not draft;
 - pending checks are not treated as passing.
 
-## Per automated-agent commit
+## Per automated-agent pull request
 
-- current branch is exactly `main`;
+- current working branch is not `main`;
 - the user-requested scope and governing research are identified;
-- the staged diff contains no unrelated or protected files;
+- the diff contains no unrelated or protected files;
 - required focused and repository gates are recorded honestly;
-- the commit carries DCO sign-off;
-- no branch, pull request, issue, review, comment, workflow, ref, tag, or
-  repository-setting mutation was performed.
+- commits carry DCO sign-off;
+- no direct `main` commit, self-approval, self-merge, workflow control, protected
+  ref mutation, issue mutation, review/comment mutation, or repository-setting
+  mutation was performed unless the repository owner explicitly authorised that
+  exact action for the current task.
 
 ### Manual UI evidence changes
 
@@ -91,7 +93,7 @@ For a PR that changes the Windows manual UI evidence contract:
 ## After a human merge
 
 - verify merge commit on `main`;
-- synchronize `foa-development` to the merge commit;
+- synchronize `foa-development` to the merge commit when applicable;
 - verify post-merge workflows;
 - update issue/milestone state;
 - update roadmap phase when applicable;

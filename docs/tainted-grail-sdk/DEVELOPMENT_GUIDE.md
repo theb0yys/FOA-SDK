@@ -6,16 +6,20 @@ This guide covers local development for the `TaintedGrailModdingSDK` Gem. It sup
 
 ## Repository model
 
-Human-contributor branches:
+Long-lived branches:
 
 - `main` — reviewed integration state;
 - `foa-development` — active development.
 
-Human contributors work directly on `foa-development` and do not commit directly
-to `main`. Automated agents follow the binding `AGENTS.md` path instead: focused,
-validated, DCO-signed file commits directly to `main`, with no branch,
-pull-request, issue, review, comment, workflow, or repository-setting mutation.
-Significant changes require design review before implementation.
+Human contributors normally work directly on `foa-development` and do not commit
+directly to `main`. Automated agents follow the binding `AGENTS.md` path:
+focused, validated, DCO-signed file changes on a non-`main` working branch,
+submitted to `main` by pull request for maintainer audit. Agents do not commit
+directly to `main`, approve or merge their own work, control workflows, or mutate
+branches, refs, pull requests, issues, reviews, comments, repository settings,
+or protected process records unless the repository owner explicitly authorises
+that exact action for the current task. Significant changes require design review
+before implementation.
 
 ## Prerequisites
 
@@ -279,24 +283,25 @@ Review the full diff, then create a DCO-signed commit:
 git commit -s -m "Add concise imperative summary"
 ```
 
-## Human pull-request workflow
+## Pull-request workflow
 
-1. Synchronize `foa-development` to the accepted `main` merge commit.
+1. Synchronize `foa-development` to the accepted `main` merge commit when that branch is the active base.
 2. Obtain design review for significant changes.
-3. Implement and perform pre-commit self-review.
+3. Implement on a non-`main` branch and perform pre-commit self-review.
 4. Run focused and relevant local tests.
 5. Update documentation and changelog.
-6. Open a pull request from `foa-development` to `main`.
+6. Open or update a pull request from the working branch to `main`.
 7. Complete every PR-template section.
 8. Resolve review threads and CI failures.
 9. Obtain maintainer approval.
 10. Merge through GitHub only after required checks pass.
-11. Synchronize `foa-development` to the new merge commit before new work.
+11. Synchronize `foa-development` to the new merge commit before new work when applicable.
 
-Automated-agent work does not create or modify a pull request. Before each
-direct-to-`main` commit, the agent verifies the branch, reads the applicable
-research, reviews the complete diff, runs the required gates, and records DCO
-sign-off.
+Automated-agent work follows the same branch-to-pull-request maintainer-audit
+path defined in `AGENTS.md`. Before each agent commit, the agent verifies the
+branch, reads the applicable research, reviews the complete diff, runs or reports
+only the gates that actually executed, and records DCO sign-off. Agents leave
+approval, merge, and final acceptance to the maintainer.
 
 ## Debugging
 

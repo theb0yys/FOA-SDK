@@ -257,6 +257,5 @@ A change is done only when:
 - documentation and changelog are updated;
 - migration and compatibility effects are handled;
 - maintainer approval is recorded where required;
-- the change is present on `main`; human-contributor work is merged and
-  `foa-development` is synchronized, while automated-agent work follows the
-  direct-to-`main` `AGENTS.md` contract.
+- the change is present on `main` after the reviewed branch-to-pull-request path,
+  and `foa-development` is synchronized when that branch is used for continued work.

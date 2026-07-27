@@ -22,6 +22,8 @@ Code changes use `Get-AgentTestPlan.ps1` and `Get-AgentPerformancePlan.ps1`. Bui
 | `foa-unity-bridge-gates` | Unity provider, conversion project, canonical handoff, runtime profile, or adapter bridge. |
 | `foa-migration-release-gates` | Schema, dependency, O3DE pin, Unity profile, adapter, installer, or release migration. |
 
+Every skill directory contains its `SKILL.md` and a three-case `evals/evals.json` behavioural evaluation pack. Minified JSON is valid and does not indicate missing evaluation cases.
+
 Validate the pack with:
 
 ```powershell

@@ -415,10 +415,10 @@ jobs:
             throw "Installer wizard repair failed with exit $($repair.ExitCode)."
           }
           if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash -cne $reviewedLauncherHash) {
-            throw "MSI repair did not restore the reviewed product-owned FOA-SDK.exe bytes."
+            throw "MSI repair did not restore the reviewed product-owned launcher bytes."
           }
           & $launcher --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Repaired FOA-SDK.exe self-test failed." }
+          if ($LASTEXITCODE -ne 0) { throw "Repaired launcher self-test failed." }
 
           $remove = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
             -ArgumentList @("--quiet", "--operation", "uninstall", "--install-root", `

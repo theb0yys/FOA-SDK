@@ -14,8 +14,9 @@ Status: implemented, continuing hardening.
 - Editor-only product boundary.
 - Focused repository validation and public governance/documentation.
 - Human contributions use `foa-development` and review into `main`; automated
-  repository agents follow `AGENTS.md` and commit focused, validated changes
-  directly to `main` without branch or pull-request mutation.
+  repository agents follow `AGENTS.md`: focused, validated, DCO-signed changes
+  are made on a non-`main` branch and submitted to `main` by pull request for
+  maintainer audit and merge.
 - Approved prebuilt Windows SDK installer source is integrated on `main`:
   canonical O3DE `INSTALL` layout, exact redistribution review, MSI/portable
   ZIP, a self-contained executable wizard with the reviewed MSI embedded,

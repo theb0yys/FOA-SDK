@@ -1,0 +1,27 @@
+{
+  "schema_version": "foa-sdk-evidence-pack-v1",
+  "request": "",
+  "scope": {"target_paths": [], "changed_files": [], "out_of_scope": []},
+  "skills": {"activated": [], "not_applicable": []},
+  "research_authority": {
+    "controlling_docs": [], "supporting_context": [], "contradictions": [], "missing_authority": [],
+    "next_researched_stop_or_process": "", "deep_research_brief_required": false,
+    "deep_research_brief_path": "", "deep_research_brief_summary": {
+      "blocked_question": "", "uncertain_areas": [], "repo_or_github_paths_for_research_agent": [],
+      "highlighted_relevant_areas": [], "expected_research_agent_output": ""
+    }
+  },
+  "impact": {"systems": [], "surfaces": [], "public_contracts": [], "persistence_config_build_runtime_ui_impact": [], "blast_radius": ""},
+  "protected_files": {"touched": [], "avoided": [], "permission_required": false},
+  "compatibility": {"contract_schema_persistence_interchange_config_dependency_migration_impact": [], "consumer_tests": [], "status": ""},
+  "tests": {
+    "required": [], "commands_run": [], "passed": [], "failed": [], "static_package_assertions": [],
+    "o3de_build_rows": [], "manual_editor_unity_installer_rows": [], "runtime_rows": [],
+    "non_runnable_governed_rows": [], "missing_lanes": []
+  },
+  "performance": {"risk": "", "budget_or_threshold": "", "baseline_or_expected_cost": "", "measured_result": "", "command": "", "build_configuration": "", "runtime_context": "", "missing_lanes": []},
+  "build_deploy": {"build_commands": [], "artifacts": [], "external_destinations": [], "backup_paths": [], "sha256_timestamp_evidence": [], "approval": "", "status": ""},
+  "github_release": {"branch": "", "commit": "", "pull_request": "", "pr_template_checked": false, "codeowners_status": "", "release_status": ""},
+  "runtime_proof": {"performed": false, "evidence": [], "runtime_signoff_status": "runtime sign-off not performed"},
+  "validation_status": {"complete": false, "partial": false, "blocked": false, "not_run": false, "reasons": []}
+}

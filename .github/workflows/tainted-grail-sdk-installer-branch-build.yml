@@ -1,8 +1,11 @@
 name: FOA-SDK Installer Branch Build
 
 # Branch-scoped development build path for the dedicated installer branch.
-# This workflow uploads unsigned development artifacts only; it does not create
-# a public release, tag, deployment, signing claim, or runtime/game mutation.
+# The uploaded deliverable is the single user-facing `installer` folder.
+# Internal MSI, ZIP, staging, inventory, logs, and packaging products remain build
+# machinery unless the installer itself is being updated.
+# This workflow uploads unsigned development artifacts only; it does not create a
+# public release, tag, deployment, signing claim, or runtime/game mutation.
 on:
   push:
     branches:
@@ -45,6 +48,7 @@ jobs:
           "SDK_PACKAGES=$env:RUNNER_TEMP/THIRD_PARTY_PACKAGES.json" >> $env:GITHUB_ENV
           "SDK_STAGE=$env:RUNNER_TEMP/tg-sdk-stage" >> $env:GITHUB_ENV
           "SDK_ARTIFACTS=$env:RUNNER_TEMP/tg-sdk-artifacts" >> $env:GITHUB_ENV
+          "SDK_INSTALLER_FOLDER=$env:RUNNER_TEMP/installer" >> $env:GITHUB_ENV
           "SDK_PACKAGE_BUILD=$env:RUNNER_TEMP/tg-sdk-package-build" >> $env:GITHUB_ENV
           "SDK_PACKAGE_OUTPUT=$env:RUNNER_TEMP/tg-sdk-package-output" >> $env:GITHUB_ENV
           "SDK_PACKAGE_CMAKE_ROOT=$env:RUNNER_TEMP/cmake-4.3.4" >> $env:GITHUB_ENV
@@ -142,7 +146,7 @@ jobs:
           $inventory = Get-Content -LiteralPath $env:SDK_INVENTORY -Raw | ConvertFrom-Json
           "SDK_INVENTORY_SHA256=$($inventory.inventory_sha256)" >> $env:GITHUB_ENV
 
-      - name: Stage reviewed payload and create portable ZIP
+      - name: Stage reviewed payload and build internal portable ZIP
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path $env:SDK_ARTIFACTS | Out-Null
@@ -210,7 +214,7 @@ jobs:
           "SDK_PACKAGE_CMAKE=$packageCmake" >> $env:GITHUB_ENV
           "SDK_PACKAGE_CPACK=$packageCpack" >> $env:GITHUB_ENV
 
-      - name: Build standard MSI from the same staged payload
+      - name: Build internal MSI from the same staged payload
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path $env:SDK_PACKAGE_OUTPUT | Out-Null
@@ -229,7 +233,7 @@ jobs:
           Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)
           Copy-Item -LiteralPath $checksum -Destination (Join-Path $env:SDK_ARTIFACTS "$($msi.Name).sha256")
 
-      - name: Build self-contained installer wizard with the reviewed MSI
+      - name: Build self-contained installer wizard
         shell: pwsh
         run: |
           $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_ARTIFACTS -Filter *.msi -File -ErrorAction Stop)
@@ -257,7 +261,7 @@ jobs:
           Set-Content -LiteralPath $wizardChecksum -Encoding utf8 -NoNewline `
             -Value "$wizardHash  FOA-SDK-Installer.exe`n"
 
-      - name: Verify retained installer artifacts and checksums
+      - name: Verify retained internal installer artifacts and checksums
         run: >-
           python Gems/TaintedGrailModdingSDK/Tools/verify_installer_artifacts.py
           --artifact-root "${{ env.SDK_ARTIFACTS }}"
@@ -350,10 +354,26 @@ jobs:
             throw "MSI uninstall removed external workspace data."
           }
 
-      - name: Upload unsigned development installer artifacts
+      - name: Prepare installer folder
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath $env:SDK_INSTALLER_FOLDER) {
+            Remove-Item -LiteralPath $env:SDK_INSTALLER_FOLDER -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $env:SDK_INSTALLER_FOLDER | Out-Null
+          Copy-Item -LiteralPath (Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe") `
+            -Destination (Join-Path $env:SDK_INSTALLER_FOLDER "FOA-SDK-Installer.exe")
+          Copy-Item -LiteralPath (Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe.sha256") `
+            -Destination (Join-Path $env:SDK_INSTALLER_FOLDER "FOA-SDK-Installer.exe.sha256")
+          $files = @(Get-ChildItem -LiteralPath $env:SDK_INSTALLER_FOLDER -File)
+          if ($files.Count -ne 2) {
+            throw "The installer folder must contain only FOA-SDK-Installer.exe and its checksum."
+          }
+
+      - name: Upload installer folder
         uses: actions/upload-artifact@v4
         with:
-          name: foa-sdk-unsigned-installer-${{ env.TG_INSTALLER_VERSION }}-${{ github.run_id }}
-          path: ${{ env.SDK_ARTIFACTS }}
+          name: installer
+          path: ${{ env.SDK_INSTALLER_FOLDER }}
           if-no-files-found: error
           retention-days: 14

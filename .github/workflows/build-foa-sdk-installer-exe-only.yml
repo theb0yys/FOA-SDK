@@ -1,0 +1,34 @@
+name: Build FOA-SDK-Installer.exe only
+
+# Manual entry point for the verified installer build route.
+# This workflow does not build, package, sign, release, deploy, or mutate the SDK itself.
+# It dispatches the reviewed installer branch build workflow on the requested ref.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or ref to build with the verified installer branch workflow.
+        required: false
+        default: installer
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-verified-installer-build:
+    name: Dispatch verified installer branch build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch verified installer branch build workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = core.getInput('ref') || 'installer';
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'tainted-grail-sdk-installer-branch-build.yml',
+              ref
+            });
+            core.notice(`Dispatched verified installer workflow on ${ref}.`);

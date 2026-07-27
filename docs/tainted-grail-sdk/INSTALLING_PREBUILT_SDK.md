@@ -20,10 +20,11 @@ profile. The installer does not discover, modify, launch, or deploy to FoA.
 
 ## Verify the artifact
 
-The standard artifact is `FOA-SDK-Installer.exe`. Compare its SHA-256 with
-`FOA-SDK-Installer.exe.sha256` before running it. The checksum verifies the
-downloaded bytes against the reviewed artifact metadata; current development
-artifacts remain unsigned, so it is not a publisher signature.
+The standard artifact is the `installer` folder containing `FOA-SDK-Installer.exe`
+and `FOA-SDK-Installer.exe.sha256`. Compare the executable SHA-256 with the
+sidecar before running it. The checksum verifies the downloaded bytes against
+the reviewed artifact metadata; current development artifacts remain unsigned,
+so it is not a publisher signature.
 
 For a portable ZIP, compare its SHA-256 value with the adjacent `.sha256` file.
 After extraction, retain these files at the product root:
@@ -40,22 +41,22 @@ from another build or copy raw files into the installation.
 ## Executable wizard installation
 
 1. Close any running O3DE Editor and Asset Processor instances.
-2. Run the reviewed `FOA-SDK-Installer.exe`.
-3. Select **Install or upgrade the complete FOA-SDK**.
-4. Choose the default per-user location or another absolute writable location.
-5. Review the displayed MSI SHA-256 and external-workspace boundary, then select
+2. Open the `installer` folder.
+3. Run the reviewed `FOA-SDK-Installer.exe`.
+4. Select **Install or upgrade the complete FOA-SDK**.
+5. Choose the default per-user location or another absolute writable location.
+6. Review the displayed MSI SHA-256 and external-workspace boundary, then select
    **Apply**.
-6. Leave **Launch Tainted Grail Modding Editor** selected, or open it later from
-   the **Tainted Grail FoA SDK** Start
-   Menu folder.
+7. Leave **Launch FOA-SDK** selected, or open `FOA-SDK.exe` later from the
+   **Tainted Grail FoA SDK** Start Menu folder or the installed SDK `bin` folder.
 
 The executable contains the reviewed MSI and verifies its captured bytes before
 starting Windows Installer. No Python, Git, CMake, Visual Studio, source checkout,
 or separately installed .NET runtime is required.
 
-The launcher checks the installed manifest, Editor, and dedicated project before
-starting `Editor.exe --project-path <installed-project>`. An actionable error
-asks you to repair or reinstall when that layout is incomplete.
+The installed launcher is `FOA-SDK.exe`. It checks the installed manifest, Editor,
+and bundled project before starting `Editor.exe --project-path <installed-project>`.
+An actionable error asks you to repair or reinstall when that layout is incomplete.
 
 Keep real workspaces, imported evidence, generated output, staging, deployment,
 and FoA diagnostic data outside the installation directory. Those external
@@ -88,7 +89,7 @@ different reviewed build.
 Extract the ZIP to a new empty directory; do not overlay another version. Run:
 
 ```text
-bin\Windows\profile\Default\TaintedGrailModdingEditorLauncher.exe
+bin\Windows\profile\Default\FOA-SDK.exe
 ```
 
 The ZIP and MSI contain the same staged manifest payload. The ZIP has no Windows

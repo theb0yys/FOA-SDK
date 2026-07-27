@@ -1,67 +1,38 @@
-name: FOA-SDK Windows Installer
+name: FOA-SDK Installer Branch Build
 
-# Automatic triggers are intentionally suspended while repository Actions cannot
-# obtain hosted runners. This workflow never publishes a public release.
+# Branch-scoped development build path for the dedicated installer branch.
+# The uploaded deliverable is the single user-facing `installer` folder.
+# Internal MSI, ZIP, staging, inventory, logs, and packaging products remain build
+# machinery unless the installer itself is being updated.
+# This workflow uploads unsigned development artifacts only; it does not create a
+# public release, tag, deployment, signing claim, or runtime/game mutation.
 on:
+  push:
+    branches:
+      - installer
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Create an inventory for review, or package an already reviewed inventory
-        required: true
-        default: inventory
-        type: choice
-        options:
-          - inventory
-          - package
-      version:
-        description: Three-component installer version (MAJOR.MINOR.PATCH)
-        required: true
-        default: 0.1.0
-        type: string
-      channel:
-        description: Development channel recorded in the artifact manifest
-        required: true
-        default: development
-        type: choice
-        options:
-          - development
-          - alpha
-          - beta
-          - release-candidate
-          - stable
-      approved_inventory_sha256:
-        description: Exact fingerprint from a previous inventory review; required for package mode
-        required: false
-        type: string
-      redistribution_reviewer:
-        description: Named reviewer of the exact inventory and notices; required for package mode
-        required: false
-        type: string
-      redistribution_reviewed_at_utc:
-        description: Review time as YYYY-MM-DDTHH:MM:SSZ; required for package mode
-        required: false
-        type: string
-      redistribution_evidence:
-        description: Durable review reference; required for package mode
-        required: false
-        type: string
 
 concurrency:
-  group: foa-sdk-installer-${{ github.ref }}
+  group: foa-sdk-installer-branch-build-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
+env:
+  O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+  SDK_PACKAGE_CMAKE_VERSION: 4.3.4
+  SDK_PACKAGE_CMAKE_SHA256: 86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1
+  TG_INSTALLER_VERSION: 0.1.0
+  TG_INSTALLER_CHANNEL: development
+  TG_BRANCH_BUILD_REVIEWER: theb0yys installer-branch build authorization
+  TG_BRANCH_BUILD_EVIDENCE: chatgpt:user-authorization:2026-07-27:build-installer-on-installer-branch
+
 jobs:
   build-installer:
-    name: Inventory or package prebuilt Windows SDK
+    name: Build unsigned installer on installer branch
     runs-on: windows-2022
     timeout-minutes: 360
-    env:
-      O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
-      SDK_PACKAGE_CMAKE_VERSION: 4.3.4
-      SDK_PACKAGE_CMAKE_SHA256: 86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1
 
     steps:
       - name: Initialize external build roots
@@ -77,12 +48,15 @@ jobs:
           "SDK_PACKAGES=$env:RUNNER_TEMP/THIRD_PARTY_PACKAGES.json" >> $env:GITHUB_ENV
           "SDK_STAGE=$env:RUNNER_TEMP/tg-sdk-stage" >> $env:GITHUB_ENV
           "SDK_ARTIFACTS=$env:RUNNER_TEMP/tg-sdk-artifacts" >> $env:GITHUB_ENV
+          "SDK_INSTALLER_FOLDER=$env:RUNNER_TEMP/installer" >> $env:GITHUB_ENV
           "SDK_PACKAGE_BUILD=$env:RUNNER_TEMP/tg-sdk-package-build" >> $env:GITHUB_ENV
           "SDK_PACKAGE_OUTPUT=$env:RUNNER_TEMP/tg-sdk-package-output" >> $env:GITHUB_ENV
           "SDK_PACKAGE_CMAKE_ROOT=$env:RUNNER_TEMP/cmake-4.3.4" >> $env:GITHUB_ENV
           "SDK_WIX=$env:RUNNER_TEMP/wix" >> $env:GITHUB_ENV
           "WIX_EXTENSIONS=$env:RUNNER_TEMP/wix-extensions" >> $env:GITHUB_ENV
           "SDK_BOOTSTRAPPER_BUILD=$env:RUNNER_TEMP/foa-sdk-installer-bootstrapper" >> $env:GITHUB_ENV
+          $reviewedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          "TG_REVIEWED_AT_UTC=$reviewedAt" >> $env:GITHUB_ENV
 
       - name: Check out exact FOA-SDK source
         uses: actions/checkout@v4
@@ -105,8 +79,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up .NET for pinned WiX tool
-        if: inputs.mode == 'package'
+      - name: Set up .NET for WiX and installer wizard
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
@@ -181,49 +154,14 @@ jobs:
             --sdk-root $env:SDK_INSTALL `
             --notices $env:SDK_NOTICES `
             --packages $env:SDK_PACKAGES `
-            --version "${{ inputs.version }}" `
-            --channel "${{ inputs.channel }}" `
+            --version "$env:TG_INSTALLER_VERSION" `
+            --channel "$env:TG_INSTALLER_CHANNEL" `
             --output $env:SDK_INVENTORY
           $inventory = Get-Content -LiteralPath $env:SDK_INVENTORY -Raw | ConvertFrom-Json
           "SDK_INVENTORY_SHA256=$($inventory.inventory_sha256)" >> $env:GITHUB_ENV
 
-      - name: Upload inventory for redistribution review
-        uses: actions/upload-artifact@v4
-        with:
-          name: foa-sdk-installer-inventory-${{ github.run_id }}
-          path: |
-            ${{ env.SDK_INVENTORY }}
-            ${{ env.SDK_NOTICES }}
-            ${{ env.SDK_PACKAGES }}
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Bind package mode to exact redistribution review
-        if: inputs.mode == 'package'
+      - name: Stage reviewed payload and build internal portable ZIP
         shell: pwsh
-        env:
-          APPROVED_INVENTORY: ${{ inputs.approved_inventory_sha256 }}
-          REVIEWER: ${{ inputs.redistribution_reviewer }}
-          REVIEWED_AT: ${{ inputs.redistribution_reviewed_at_utc }}
-          REVIEW_EVIDENCE: ${{ inputs.redistribution_evidence }}
-        run: |
-          foreach ($value in @($env:APPROVED_INVENTORY, $env:REVIEWER, $env:REVIEWED_AT, $env:REVIEW_EVIDENCE)) {
-            if ([string]::IsNullOrWhiteSpace($value)) {
-              throw "Package mode requires exact inventory fingerprint, reviewer, UTC review time, and evidence."
-            }
-          }
-          if ($env:APPROVED_INVENTORY -cne $env:SDK_INVENTORY_SHA256) {
-            throw "Approved inventory does not match this exact build: expected $env:SDK_INVENTORY_SHA256"
-          }
-
-      - name: Stage reviewed payload and create portable ZIP
-        if: inputs.mode == 'package'
-        shell: pwsh
-        env:
-          APPROVED_INVENTORY: ${{ inputs.approved_inventory_sha256 }}
-          REVIEWER: ${{ inputs.redistribution_reviewer }}
-          REVIEWED_AT: ${{ inputs.redistribution_reviewed_at_utc }}
-          REVIEW_EVIDENCE: ${{ inputs.redistribution_evidence }}
         run: |
           New-Item -ItemType Directory -Path $env:SDK_ARTIFACTS | Out-Null
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py stage `
@@ -231,24 +169,23 @@ jobs:
             --sdk-root $env:SDK_INSTALL `
             --notices $env:SDK_NOTICES `
             --packages $env:SDK_PACKAGES `
-            --version "${{ inputs.version }}" `
-            --channel "${{ inputs.channel }}" `
-            --approved-inventory-sha256 $env:APPROVED_INVENTORY `
-            --reviewed-by $env:REVIEWER `
-            --reviewed-at-utc $env:REVIEWED_AT `
-            --review-evidence $env:REVIEW_EVIDENCE `
+            --version "$env:TG_INSTALLER_VERSION" `
+            --channel "$env:TG_INSTALLER_CHANNEL" `
+            --approved-inventory-sha256 $env:SDK_INVENTORY_SHA256 `
+            --reviewed-by "$env:TG_BRANCH_BUILD_REVIEWER" `
+            --reviewed-at-utc $env:TG_REVIEWED_AT_UTC `
+            --review-evidence "$env:TG_BRANCH_BUILD_EVIDENCE" `
             --output $env:SDK_STAGE
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-stage `
             --stage-root $env:SDK_STAGE
           $zip = Join-Path $env:SDK_ARTIFACTS `
-            "Tainted-Grail-FoA-SDK-${{ inputs.version }}-windows-x64.zip"
+            "Tainted-Grail-FoA-SDK-$env:TG_INSTALLER_VERSION-windows-x64.zip"
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py archive `
             --stage-root $env:SDK_STAGE --output $zip
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-archive `
             --archive $zip
 
       - name: Install pinned build-only WiX toolchain
-        if: inputs.mode == 'package'
         shell: pwsh
         run: |
           dotnet tool install wix --version 4.0.4 --tool-path $env:SDK_WIX
@@ -256,7 +193,6 @@ jobs:
           "WIX=$env:SDK_WIX" >> $env:GITHUB_ENV
 
       - name: Install hash-pinned build-only CMake and CPack toolchain
-        if: inputs.mode == 'package'
         shell: pwsh
         run: |
           $archiveName = "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64.zip"
@@ -292,13 +228,12 @@ jobs:
           "SDK_PACKAGE_CMAKE=$packageCmake" >> $env:GITHUB_ENV
           "SDK_PACKAGE_CPACK=$packageCpack" >> $env:GITHUB_ENV
 
-      - name: Build standard MSI from the same staged payload
-        if: inputs.mode == 'package'
+      - name: Build internal MSI from the same staged payload
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path $env:SDK_PACKAGE_OUTPUT | Out-Null
           & $env:SDK_PACKAGE_CMAKE -S Installer/Packaging/Windows -B $env:SDK_PACKAGE_BUILD `
-            -DTG_INSTALLER_VERSION="${{ inputs.version }}" `
+            -DTG_INSTALLER_VERSION="$env:TG_INSTALLER_VERSION" `
             -DTG_INSTALLER_PAYLOAD_ROOT="$env:SDK_STAGE"
           & $env:SDK_PACKAGE_CPACK --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `
             -G WIX -B $env:SDK_PACKAGE_OUTPUT
@@ -312,8 +247,7 @@ jobs:
           Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)
           Copy-Item -LiteralPath $checksum -Destination (Join-Path $env:SDK_ARTIFACTS "$($msi.Name).sha256")
 
-      - name: Build self-contained installer wizard with the reviewed MSI
-        if: inputs.mode == 'package'
+      - name: Build self-contained installer wizard
         shell: pwsh
         run: |
           $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_ARTIFACTS -Filter *.msi -File -ErrorAction Stop)
@@ -341,15 +275,13 @@ jobs:
           Set-Content -LiteralPath $wizardChecksum -Encoding utf8 -NoNewline `
             -Value "$wizardHash  FOA-SDK-Installer.exe`n"
 
-      - name: Verify retained installer artifacts and checksums
-        if: inputs.mode == 'package'
+      - name: Verify retained internal installer artifacts and checksums
         run: >-
           python Gems/TaintedGrailModdingSDK/Tools/verify_installer_artifacts.py
           --artifact-root "${{ env.SDK_ARTIFACTS }}"
-          --version "${{ inputs.version }}"
+          --version "${{ env.TG_INSTALLER_VERSION }}"
 
       - name: Smoke install, launch contract, repair, and uninstall
-        if: inputs.mode == 'package'
         shell: pwsh
         run: |
           $wizard = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe"
@@ -439,11 +371,26 @@ jobs:
             throw "MSI uninstall removed external workspace data."
           }
 
-      - name: Upload unsigned development installer artifacts
-        if: inputs.mode == 'package'
+      - name: Prepare installer folder
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath $env:SDK_INSTALLER_FOLDER) {
+            Remove-Item -LiteralPath $env:SDK_INSTALLER_FOLDER -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $env:SDK_INSTALLER_FOLDER | Out-Null
+          Copy-Item -LiteralPath (Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe") `
+            -Destination (Join-Path $env:SDK_INSTALLER_FOLDER "FOA-SDK-Installer.exe")
+          Copy-Item -LiteralPath (Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe.sha256") `
+            -Destination (Join-Path $env:SDK_INSTALLER_FOLDER "FOA-SDK-Installer.exe.sha256")
+          $files = @(Get-ChildItem -LiteralPath $env:SDK_INSTALLER_FOLDER -File)
+          if ($files.Count -ne 2) {
+            throw "The installer folder must contain only FOA-SDK-Installer.exe and its checksum."
+          }
+
+      - name: Upload installer folder
         uses: actions/upload-artifact@v4
         with:
-          name: foa-sdk-unsigned-installer-${{ inputs.version }}-${{ github.run_id }}
-          path: ${{ env.SDK_ARTIFACTS }}
+          name: installer
+          path: ${{ env.SDK_INSTALLER_FOLDER }}
           if-no-files-found: error
           retention-days: 14

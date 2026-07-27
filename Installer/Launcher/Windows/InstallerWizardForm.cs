@@ -18,7 +18,7 @@ internal sealed class InstallerWizardForm : Form
     private readonly TextBox _installRoot = new() { Width = 460 };
     private readonly Label _reviewText = NewBodyLabel();
     private readonly Label _resultText = NewBodyLabel();
-    private readonly CheckBox _launchEditor = new() { Text = "Launch Tainted Grail Modding Editor", AutoSize = true, Checked = true };
+    private readonly CheckBox _launchEditor = new() { Text = "Launch FOA-SDK", AutoSize = true, Checked = true };
     private readonly ProgressBar _progress = new() { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 30, Width = 520, Height = 22 };
     private readonly List<Control> _pages = new();
     private int _pageIndex;
@@ -87,6 +87,7 @@ internal sealed class InstallerWizardForm : Form
         return BuildPage(
             "Welcome to FOA-SDK Setup",
             "This wizard installs the complete prebuilt Tainted Grail: The Fall of Avalon Modding Editor and SDK.\n\n"
+            + "After setup, FOA-SDK.exe is the local launcher: clicking it opens the installed SDK editor with the bundled project.\n\n"
             + "No Git, Python, CMake, Visual Studio, or source build is required. The reviewed MSI is embedded in this application and its SHA-256 is verified before Windows Installer starts.\n\n"
             + "Keep workspaces and generated mod output outside the installation directory.");
     }
@@ -234,7 +235,7 @@ internal sealed class InstallerWizardForm : Form
                 }
                 catch (InvalidOperationException ex)
                 {
-                    MessageBox.Show(this, ex.Message, "Unable to launch Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(this, ex.Message, "Unable to launch FOA-SDK", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     ExitCode = 1;
                     return;
                 }
@@ -269,6 +270,7 @@ internal sealed class InstallerWizardForm : Form
         _reviewText.Text = $"Operation: {operation}\n\n"
             + $"Installation directory: {_options.InstallRoot}\n\n"
             + $"Reviewed MSI SHA-256: {_payload.Sha256}\n\n"
+            + "FOA-SDK.exe will be the installed local launcher for the SDK editor and project.\n\n"
             + "External workspaces, generated content, FoA diagnostics, and game files are outside this operation.";
     }
 

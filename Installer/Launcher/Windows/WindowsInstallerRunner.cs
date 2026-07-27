@@ -121,11 +121,11 @@ internal static class InstalledEditorLauncher
             "Windows",
             "profile",
             "Default",
-            "TaintedGrailModdingEditorLauncher.exe");
+            "FOA-SDK.exe");
         if (!File.Exists(launcher))
         {
             throw new InvalidOperationException(
-                "The installed Editor launcher is missing. Run Repair before starting the SDK.");
+                "FOA-SDK.exe is missing. Run Repair before starting the SDK.");
         }
         Process.Start(new ProcessStartInfo
         {

@@ -152,6 +152,20 @@ jobs:
       - name: Build canonical O3DE INSTALL target
         run: cmake --build $env:SDK_BUILD --config profile --target INSTALL --parallel 2
 
+      - name: Create FOA-SDK.exe launcher entry point
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:SDK_INSTALL "bin/Windows/profile/Default"
+          $source = Join-Path $bin "TaintedGrailModdingEditorLauncher.exe"
+          $target = Join-Path $bin "FOA-SDK.exe"
+          if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Installed SDK launcher source is missing: $source"
+          }
+          Copy-Item -LiteralPath $source -Destination $target -Force
+          if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            throw "FOA-SDK.exe launcher entry point was not created."
+          }
+
       - name: Generate notices and third-party package inventory
         run: >-
           python "$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"
@@ -360,9 +374,12 @@ jobs:
           }
 
           $launcher = Join-Path $installRoot `
-            "bin/Windows/profile/Default/TaintedGrailModdingEditorLauncher.exe"
+            "bin/Windows/profile/Default/FOA-SDK.exe"
           $installedManifest = Join-Path $installRoot "INSTALL_MANIFEST.json"
           $stagedManifest = Join-Path $env:SDK_STAGE "INSTALL_MANIFEST.json"
+          if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
+            throw "FOA-SDK.exe was not installed as the SDK launcher."
+          }
           if (-not (Test-Path -LiteralPath $installedManifest -PathType Leaf)) {
             throw "MSI install did not preserve the reviewed INSTALL_MANIFEST.json."
           }
@@ -372,9 +389,9 @@ jobs:
             throw "Installed MSI manifest differs from the exact reviewed staging manifest."
           }
           $startMenuEntry = Join-Path $env:APPDATA `
-            "Microsoft/Windows/Start Menu/Programs/Tainted Grail FoA SDK/Tainted Grail Modding Editor.lnk"
+            "Microsoft/Windows/Start Menu/Programs/Tainted Grail FoA SDK/FOA-SDK.lnk"
           if (-not (Test-Path -LiteralPath $startMenuEntry -PathType Leaf)) {
-            throw "MSI Start Menu entry was not created."
+            throw "MSI Start Menu entry for FOA-SDK.exe was not created."
           }
           $shortcutShell = New-Object -ComObject WScript.Shell
           $shortcut = $shortcutShell.CreateShortcut($startMenuEntry)
@@ -384,12 +401,12 @@ jobs:
             throw "MSI Start Menu entry targets '$shortcutTarget' instead of '$expectedTarget'."
           }
           & $launcher --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed launcher self-test failed." }
+          if ($LASTEXITCODE -ne 0) { throw "FOA-SDK.exe self-test failed." }
 
           $reviewedLauncherHash = (Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash
           [System.IO.File]::WriteAllBytes($launcher, [byte[]](0x4d, 0x5a, 0x00, 0x00))
           if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash -ceq $reviewedLauncherHash) {
-            throw "Repair smoke test could not damage the installed launcher fixture."
+            throw "Repair smoke test could not damage the installed FOA-SDK.exe fixture."
           }
           $repair = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
             -ArgumentList @("--quiet", "--operation", "repair", "--install-root", `
@@ -410,7 +427,7 @@ jobs:
             throw "Installer wizard uninstall failed with exit $($remove.ExitCode)."
           }
           if (Test-Path -LiteralPath $launcher -PathType Leaf) {
-            throw "MSI uninstall left the product launcher installed."
+            throw "MSI uninstall left FOA-SDK.exe installed."
           }
           if (Test-Path -LiteralPath $installedManifest -PathType Leaf) {
             throw "MSI uninstall left the product manifest installed."

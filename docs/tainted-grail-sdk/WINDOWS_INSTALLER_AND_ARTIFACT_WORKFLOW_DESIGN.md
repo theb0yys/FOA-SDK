@@ -14,9 +14,10 @@ code signing, automatic update, FoA deployment, game launch, or save mutation.
 ## User problem
 
 Mod authors must not have to clone this O3DE fork, configure CMake, install Visual
-Studio, download the build dependency graph, or compile the Editor before using
-the TG SDK. Contributors may retain the source-build path, but end users need a
-standard prebuilt Windows installation and a portable recovery artifact.
+Studio, download the build dependency graph, compile the Editor, or handle a
+separate MSI before using the TG SDK. Contributors may retain the source-build
+path, but end users need one standard prebuilt Windows installation entry point:
+`FOA-SDK-Installer.exe`.
 
 ## Accepted outcome
 
@@ -24,16 +25,21 @@ One reviewed Windows x64 `profile` build produces:
 
 - a self-contained `FOA-SDK-Installer.exe` wizard with the exact reviewed MSI
   and its canonical SHA-256 record embedded;
-- a per-user MSI with Start Menu integration and standard Windows Installer
-  repair, upgrade, and uninstall behavior;
+- an internal per-user MSI payload with Start Menu integration and standard
+  Windows Installer repair, upgrade, and uninstall behavior;
 - a deterministic portable ZIP for controlled testing and recovery;
 - one canonical `INSTALL_MANIFEST.json` shared by both forms;
 - `SHA256SUMS`, a ZIP checksum, build provenance, third-party notices, the O3DE
   package inventory, and an SPDX 2.3 file inventory;
 - a dedicated launcher that opens the installed Editor with the installed
   `TaintedGrailModdingEditor` project;
-- no requirement for Git, Python, CMake, Visual Studio, or a source build on the
-  user's machine.
+- no requirement for Git, Python, CMake, Visual Studio, a source build, or a
+  separate MSI on the user's machine.
+
+The user-facing install contract is the executable wizard. End users do not
+select, run, verify, pair, or repair through a standalone MSI. The MSI exists as
+an embedded internal Windows Installer payload and as retained maintainer audit
+or diagnostic evidence only.
 
 The MSI is per-user so the editor project and O3DE user data have a writable
 home without administrator elevation. Workspaces, FoA diagnostics, generated
@@ -75,7 +81,7 @@ validate
   -> bind approval to the exact inventory fingerprint
   -> stage and re-hash the captured bytes
   -> create deterministic portable ZIP
-  -> create MSI from the same staging root
+  -> create internal MSI from the same staging root
   -> embed the reviewed MSI in the self-contained executable wizard
   -> checksum the final executable
   -> clean install / launcher self-test / repair / uninstall through the wizard
@@ -114,19 +120,21 @@ timestamps, Zip64 support, and its own SHA-256 sidecar.
 
 `FOA-SDK-Installer.exe` is the standard user entry point. It is a native Windows
 Forms executable published self-contained for Windows x64, so the user does not
-need Python or a separately installed .NET runtime. It embeds the exact MSI and
-checksum produced after redistribution review, extracts the MSI into a private
-temporary directory, verifies the captured bytes, displays the selected
-lifecycle operation and fingerprint, and invokes Windows Installer. An
-adjacent or explicitly selected MSI is a development fallback only and requires
-its canonical `.sha256` sidecar.
+need Python, a separately installed .NET runtime, or a standalone MSI. It embeds
+the exact internal MSI and checksum produced after redistribution review,
+extracts the MSI into a private temporary directory, verifies the captured bytes,
+displays the selected lifecycle operation and fingerprint, and invokes Windows
+Installer internally. An adjacent or explicitly selected MSI is a
+maintainer/developer diagnostic fallback only and requires its canonical
+`.sha256` sidecar; it is not a user workflow or distribution contract.
 
 The executable does not replace MSI ownership or implement an independent file
-copier. Windows Installer remains the sole authority for product-file mutation,
-registration, Start Menu integration, repair, major upgrade, and uninstall.
-The executable itself requests `asInvoker`; the reviewed MSI is per-user.
+copier. Windows Installer remains the internal authority for product-file
+mutation, registration, Start Menu integration, repair, major upgrade, and
+uninstall. The executable itself requests `asInvoker`; the reviewed MSI is
+per-user.
 
-The MSI uses CPack's WiX generator with:
+The internal MSI uses CPack's WiX generator with:
 
 - fixed project-owned Upgrade Code
   `EF05F481-EEED-4CE5-A623-0915EC28F92D`;
@@ -173,16 +181,18 @@ payload-verification failure, install failure, launcher
 self-test failure, repair failure, or uninstall failure exits non-zero.
 
 Rollback during development is deletion of the isolated build/install/staging
-outputs and revert of the focused installer commit. Installed rollback uses
-Windows Installer uninstall or installation of a separately reviewed newer
-corrective version. No workflow deletes external workspaces or alters FoA.
+outputs and revert of the focused installer commit. Installed rollback uses the
+reviewed executable's uninstall path or installation of a separately reviewed
+newer corrective executable. No workflow deletes external workspaces or alters
+FoA.
 
 ## Explicit exclusions
 
 - automatic updater or background service;
 - signing keys, signing, or signature-verification claims;
 - public release/tag creation or publication;
-- automatic prerequisite installation beyond MSI itself;
+- user-facing MSI distribution or standalone MSI install instructions;
+- automatic prerequisite installation beyond the embedded internal MSI itself;
 - FoA discovery, deployment, BepInEx/Harmony loading, game launch, or save access;
 - telemetry;
 - proprietary game/toolkit files;

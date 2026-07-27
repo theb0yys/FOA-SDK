@@ -67,9 +67,9 @@ exact-head pass.
 
 ## Gate 3 — Pull-request review before merge
 
-Every human-contributor change to `main` uses a pull request from the existing
-`foa-development` branch or an explicitly maintainer-authorised focused branch
-based on the current `main` head.
+Every change to `main` uses a pull request from the existing `foa-development`
+branch or an explicitly maintainer-authorised focused non-`main` branch based on
+the current `main` head.
 
 The pull request must include:
 
@@ -83,17 +83,17 @@ The pull request must include:
 
 ## Automated-agent path
 
-`AGENTS.md` is the binding authority for repository agents. Agents commit only
-the user-requested, researched, validated, DCO-signed file changes directly to
-`main`. They do not create, switch, rename, or delete branches; create or modify
-pull requests, issues, reviews, or comments; or trigger and control workflows.
-This exception changes the Git transport path, not the design, self-review,
-testing, documentation, or honesty gates.
+`AGENTS.md` is the binding authority for repository agents. Agents make only the
+user-requested, researched, validated, DCO-signed file changes on a non-`main`
+working branch, submit the work to `main` by pull request for maintainer audit,
+and leave approval and merge to the maintainer. Agents do not commit directly to
+`main`, control workflows, or mutate branches, refs, pull requests, issues,
+reviews, comments, repository settings, or protected process records unless the
+repository owner explicitly authorises that exact action for the current task.
 
 ## Required merge conditions
 
-A human-contributor pull request may merge only when all of the following are
-true:
+A pull request may merge only when all of the following are true:
 
 - it is marked ready for review;
 - all commits satisfy DCO requirements;
@@ -163,7 +163,7 @@ Authors must:
 - add regression tests for repaired defects;
 - avoid suppressions or broad exceptions used only to obtain a green result;
 - request re-review after material changes;
-- update the PR description when a human-contributor review scope or evidence changes;
+- update the PR description when the review scope or evidence changes;
 - never present a syntax-only, static-only, queued, absent, or zero-test result as
   a successful full repository build.
 
@@ -183,22 +183,21 @@ normal review and validation completed immediately afterward.
 
 ## Merge method
 
-For human-contributor pull requests, use a normal merge commit unless squash or
-rebase has a documented reason. The selected method must preserve DCO and useful
-attribution.
+For pull requests, use a normal merge commit unless squash or rebase has a
+documented reason. The selected method must preserve DCO and useful attribution.
 
 ## After merge
 
 1. Confirm `main` points to the accepted merge commit.
-2. Synchronize `foa-development` to that commit.
+2. Synchronize `foa-development` to that commit when it remains the active development branch.
 3. Confirm the push-to-main static workflow ran for the merge commit.
 4. Record post-merge exact-head validation only when it actually ran.
 5. Revert promptly if the merged result violates an accepted gate.
 
 ## Prohibited merge behavior
 
-- direct human push to `main`, or automated direct commits outside the exact
-  `AGENTS.md` scope;
+- direct human push to `main`, or automated direct commits outside an exact
+  repository-owner exception for the current task;
 - merge while an enabled required check is pending or failing;
 - merge without an executed compiled test target;
 - merge with a missing or stale exact-head receipt;

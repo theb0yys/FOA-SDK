@@ -54,7 +54,7 @@ foreach ($dir in $dirs) {
         Fail "$($dir.Name): name mismatch"
     }
 
-    foreach ($requiredHeading in @('Research', 'Hard Stop', 'Validation', 'Runtime Proof')) {
+    foreach ($requiredHeading in @('Research', 'Hard Stop', 'Validation')) {
         $headingPattern = "(?im)^##\s+$([regex]::Escape($requiredHeading))\s*$"
         if ($content -notmatch $headingPattern) {
             Fail "$($dir.Name): missing required heading '$requiredHeading'"

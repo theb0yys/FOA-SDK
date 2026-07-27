@@ -5,10 +5,10 @@
 `AGENTS.md` is the repository-specific authority for GitHub agents and automated
 workflows. Agent-authored repository changes must happen on a non-main branch and
 be submitted by pull request for maintainer audit. Agents must not commit
-directly to main, move refs, post comments, merge pull requests, change
-repository settings, or trigger, cancel, rerun, approve, or otherwise control
-workflow runs unless the repository owner explicitly authorises that exact action
-for the current task.
+directly to main. Agents must not push commits, move refs, post comments, merge
+pull requests, change repository settings, or trigger, cancel, rerun, approve, or
+otherwise control workflow runs unless the repository owner explicitly authorises
+that exact action for the current task.
 
 Automated validation is read-only. Workflow tokens use `contents: read` unless a
 separately documented human-operated release design explicitly requires a narrower

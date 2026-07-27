@@ -105,9 +105,11 @@ internal sealed record InstallerOptions(
         "Tainted Grail FoA SDK");
 
     public static string HelpText() =>
-        "Usage: FOA-SDK-Installer.exe [--msi <reviewed.msi>] "
+        "Usage: FOA-SDK-Installer.exe "
         + "[--install-root <directory>] [--operation install|repair|uninstall] "
-        + "[--quiet] [--smoke-test] [--launch-after-install|--no-launch-after-install] [--no-dialog]";
+        + "[--launch-after-install|--no-launch-after-install]\n"
+        + "Maintainer/developer diagnostics only: [--msi <reviewed.msi>] "
+        + "[--quiet] [--smoke-test] [--no-dialog]";
 
     private static InstallerOperation ParseOperation(string value) => value.ToLowerInvariant() switch
     {

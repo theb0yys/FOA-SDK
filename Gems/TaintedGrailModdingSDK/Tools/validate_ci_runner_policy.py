@@ -29,6 +29,7 @@ MANUAL_WORKFLOWS = (
     ".github/workflows/tainted-grail-repository-hygiene.yml",
     ".github/workflows/tainted-grail-sdk-installer.yml",
 )
+AGENT_POLICY = "AGENTS.md"
 CI_POLICY = "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
 LOCAL_RUNNER = "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
 
@@ -49,6 +50,27 @@ def reject_fragments(text: str, fragments: tuple[str, ...], label: str) -> None:
     for fragment in fragments:
         if fragment in text:
             raise CiRunnerPolicyError(f"{label} contains prohibited fragment {fragment!r}.")
+
+
+def validate_agent_policy(repo_root: Path) -> None:
+    agent_policy = read_text(repo_root / AGENT_POLICY)
+    require_fragments(
+        agent_policy,
+        (
+            "Mandatory GitHub Agent Policy",
+            "binding for every automated agent, assistant, bot, workflow, and tool",
+            "The reviewed integration branch is `main`",
+            "non-`main` working branch",
+            "pull request for maintainer audit",
+            "commit directly to `main`",
+            "bypass a required pull-request audit",
+            "modify tests, validators, workflows, process documents, governance documents",
+            "claim validation, review, approval, authorization, provenance, signing, or completion",
+            "leave merge, approval, and final acceptance to the maintainer",
+            "direct-to-main defaults",
+        ),
+        "Agent policy",
+    )
 
 
 def validate_removed_workflows(repo_root: Path) -> None:
@@ -239,17 +261,20 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
         policy,
         (
             "Binding automation boundary",
-            "normal file commits directly to",
+            "Agent-authored repository changes must happen on a non-main branch",
+            "pull request for maintainer audit",
+            "must not commit directly to main",
             "Automated validation is read-only",
             "no `pull_request_target` trigger",
             "pinned `windows-2022`",
-            "must not push commits, move refs, create branches, post comments",
+            "must not push commits, move refs, post comments, merge pull requests",
             "--parallel 2",
             "--static-only",
             "--ctest-build-dir",
             "--no-tests=error",
             "Pending is not passing",
             "self-declared metadata are not proof",
+            "repository owner authorized an action",
             "registration token is a secret",
         ),
         "CI/local-validation policy",
@@ -257,6 +282,7 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
 
 
 def validate_ci_runner_policy(repo_root: Path) -> None:
+    validate_agent_policy(repo_root)
     validate_removed_workflows(repo_root)
     automatic = read_text(repo_root / AUTOMATIC_STATIC_WORKFLOW)
     validate_read_only_mode(repo_root, automatic)
@@ -275,8 +301,9 @@ def main() -> int:
         print(f"CI runner policy validation failed: {error}", file=sys.stderr)
         return 1
     print(
-        "CI runner policy validation passed: GitHub automation is read-only, exact-head "
-        "validation remains separated by evidence layer, and host-heavy workflows remain manual."
+        "CI runner policy validation passed: GitHub automation is read-only, agent work "
+        "must enter main through maintainer-audited pull requests, exact-head validation "
+        "remains separated by evidence layer, and host-heavy workflows remain manual."
     )
     return 0
 

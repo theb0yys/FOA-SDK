@@ -52,9 +52,9 @@ Current CODEOWNERS entries identify the default review owner for project-control
 
 ### Routine changes
 
-Small fixes, documentation corrections, tests, and internal refactors may
-proceed through normal human pull-request review or the separately governed
-automated-agent path in `AGENTS.md`.
+Small fixes, documentation corrections, tests, and internal refactors proceed through
+pull-request review. Automated-agent work follows the same maintainer-audited
+branch and pull-request path defined in `AGENTS.md`.
 
 ### Significant changes
 
@@ -90,21 +90,23 @@ A proposal to change an invariant requires a dedicated architecture decision rec
 
 ## Branch governance
 
-The human-contributor workflow has two long-lived branches:
+The repository has two long-lived branches:
 
 - `main` — reviewed integration state;
 - `foa-development` — active development.
 
-Human direct development on `main` is prohibited. Human work begins only after
-`foa-development` is synchronized to the latest accepted `main` state.
+Direct development on `main` is prohibited. Work begins on a non-`main` branch
+and enters `main` only through a pull request that the maintainer can audit.
 
 Automated agents follow `AGENTS.md`: they make focused, validated, DCO-signed
-file commits directly to `main` and must not create or control branches, pull
-requests, issues, reviews, comments, workflows, or repository settings.
+file commits on a working branch, open a pull request to `main`, and leave final
+audit, approval, and merge to the maintainer. Agents must not rewrite governance,
+validation, tests, workflows, or process records unless the user explicitly
+requested that exact change.
 
 ## Review and merge authority
 
-A human-contributor pull request requires:
+A pull request requires:
 
 - completed template;
 - linked issue or design when required;

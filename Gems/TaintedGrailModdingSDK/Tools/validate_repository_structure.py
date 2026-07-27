@@ -30,6 +30,7 @@ ALLOWED_ROOT_FILES = {
     ".editorconfig",
     ".gitattributes",
     ".gitignore",
+    "AGENTS.md",
     "CHANGELOG.md",
     "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
@@ -86,6 +87,7 @@ ALLOWED_DOC_TREES = {"tainted-grail-sdk", "tainted-grail-modding"}
 REQUIRED_PATHS = {
     ".github/CODEOWNERS",
     AUTOMATIC_STATIC_WORKFLOW,
+    "AGENTS.md",
     "Gems/ExternalToolchain/gem.json",
     "Gems/TaintedGrailModdingSDK/gem.json",
     "Installer/README.md",

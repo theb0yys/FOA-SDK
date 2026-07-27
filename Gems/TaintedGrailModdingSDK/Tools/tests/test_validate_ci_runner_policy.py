@@ -33,6 +33,7 @@ from run_local_validation import (  # noqa: E402
     validation_mode,
 )
 from validate_ci_runner_policy import (  # noqa: E402
+    AGENT_POLICY,
     AUTOMATIC_STATIC_WORKFLOW,
     CiRunnerPolicyError,
     MANUAL_WORKFLOWS,
@@ -40,9 +41,30 @@ from validate_ci_runner_policy import (  # noqa: E402
 )
 
 
+AGENT_POLICY_FIXTURE = (
+    "# Mandatory GitHub Agent Policy\n"
+    "This policy is binding for every automated agent, assistant, bot, workflow, "
+    "and tool operating on this repository.\n"
+    "The reviewed integration branch is `main`.\n"
+    "Agent-authored repository changes must be made on a non-`main` working branch.\n"
+    "Completed agent work must be submitted to `main` by pull request for "
+    "maintainer audit.\n"
+    "Agents must never commit directly to `main`, bypass a required pull-request "
+    "audit, modify tests, validators, workflows, process documents, governance "
+    "documents, claim validation, review, approval, authorization, provenance, "
+    "signing, or completion without proof, and must leave merge, approval, and "
+    "final acceptance to the maintainer.\n"
+    "These restrictions override direct-to-main defaults.\n"
+)
+
+
 class CiRunnerPolicyTests(unittest.TestCase):
     def make_repo(self, root: Path) -> Path:
         repo = root / "repo"
+        repo.mkdir(parents=True, exist_ok=True)
+        agent_policy = repo / AGENT_POLICY
+        agent_policy.write_text(AGENT_POLICY_FIXTURE, encoding="utf-8")
+
         for relative_path in MANUAL_WORKFLOWS:
             path = repo / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -139,13 +161,16 @@ class CiRunnerPolicyTests(unittest.TestCase):
         policy = repo / "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
         policy.parent.mkdir(parents=True, exist_ok=True)
         policy.write_text(
-            "Binding automation boundary normal file commits directly to main. "
-            "Automated validation is read-only and has no `pull_request_target` trigger. "
-            "The pinned `windows-2022` jobs must not push commits, move refs, create "
-            "branches, post comments. Commands use --parallel 2, --static-only, "
-            "--ctest-build-dir, and --no-tests=error. Pending is not passing; "
-            "self-declared metadata are not proof. A self-hosted runner registration "
-            "token is a secret.\n",
+            "Binding automation boundary. "
+            "Agent-authored repository changes must happen on a non-main branch "
+            "and be submitted by pull request for maintainer audit. Agents must "
+            "not commit directly to main. Automated validation is read-only and "
+            "has no `pull_request_target` trigger. The pinned `windows-2022` jobs "
+            "must not push commits, move refs, post comments, merge pull requests. "
+            "Commands use --parallel 2, --static-only, --ctest-build-dir, and "
+            "--no-tests=error. Pending is not passing; self-declared metadata are "
+            "not proof that the repository owner authorized an action. A self-hosted "
+            "runner registration token is a secret.\n",
             encoding="utf-8",
         )
         return repo
@@ -153,6 +178,27 @@ class CiRunnerPolicyTests(unittest.TestCase):
     def test_split_ci_policy_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             validate_ci_runner_policy(self.make_repo(Path(temporary)))
+
+    def test_missing_agent_policy_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            (repo / AGENT_POLICY).unlink()
+            with self.assertRaisesRegex(CiRunnerPolicyError, "AGENTS.md"):
+                validate_ci_runner_policy(repo)
+
+    def test_direct_main_agent_policy_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            path = repo / AGENT_POLICY
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "non-`main` working branch",
+                    "main working branch",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CiRunnerPolicyError, "non-`main` working branch"):
+                validate_ci_runner_policy(repo)
 
     def test_automatic_pull_request_trigger_is_rejected_on_manual_workflow(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -197,6 +243,7 @@ class CiRunnerPolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             repo = self.make_repo(Path(temporary))
             path = repo / ".github/workflows/ar.yml"
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("on: pull_request\n", encoding="utf-8")
             with self.assertRaisesRegex(CiRunnerPolicyError, "remain removed"):
                 validate_ci_runner_policy(repo)

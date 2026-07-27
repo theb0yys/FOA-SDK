@@ -61,6 +61,7 @@ AGENT_POLICY_FIXTURE = (
 class CiRunnerPolicyTests(unittest.TestCase):
     def make_repo(self, root: Path) -> Path:
         repo = root / "repo"
+        repo.mkdir(parents=True, exist_ok=True)
         agent_policy = repo / AGENT_POLICY
         agent_policy.write_text(AGENT_POLICY_FIXTURE, encoding="utf-8")
 

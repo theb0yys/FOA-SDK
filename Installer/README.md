@@ -1,6 +1,6 @@
 # FOA-SDK installer
 
-`Installer/` owns the source needed to turn one reviewed prebuilt FOA-SDK payload into user-facing Windows artifacts. End users install the complete SDK from `FOA-SDK-Installer.exe`; the user workflow requires no Git, Python, CMake, Visual Studio, repository checkout, or O3DE source build.
+`Installer/` owns the source needed to turn one reviewed prebuilt FOA-SDK payload into a simple user-facing Windows setup wizard. End users run `FOA-SDK-Installer.exe`; the wizard stores the SDK locally, installs the bundled editor project, and gives the user `FOA-SDK.exe` as the launcher that opens the SDK editor. The user workflow requires no Git, Python, CMake, Visual Studio, repository checkout, or O3DE source build.
 
 Generated MSI files, portable ZIP archives, staged payloads, build caches, logs, screenshots, signing material, and release uploads belong under the external `foa-build/` root or another reviewed output directory, never in this source tree.
 
@@ -17,7 +17,7 @@ The removed suite catalogue, receipt, capability-token, and Python bootstrapper 
 
 ## User flow
 
-The package workflow builds the canonical O3DE `INSTALL` target once, records and reviews its exact inventory, stages and re-hashes those captured bytes, and produces an MSI and portable ZIP from that same staging root. It then embeds the reviewed MSI and its SHA-256 sidecar into a self-contained `FOA-SDK-Installer.exe`.
+The package workflow builds the canonical O3DE `INSTALL` target once, records and reviews its exact inventory, stages and re-hashes those captured bytes, and produces an internal MSI and portable ZIP from that same staging root. It then embeds the reviewed MSI and its SHA-256 sidecar into a self-contained `FOA-SDK-Installer.exe`.
 
 The executable wizard:
 
@@ -26,7 +26,9 @@ The executable wizard:
 3. displays the operation, installation directory, fingerprint, and external-workspace boundary;
 4. invokes Windows Installer for install/upgrade, repair, or uninstall;
 5. records the verbose Windows Installer log; and
-6. optionally launches the installed `TaintedGrailModdingEditorLauncher.exe` after success.
+6. optionally launches the installed `FOA-SDK.exe` after success.
+
+The installed product includes `FOA-SDK.exe` as the user entry point. Clicking that executable starts the bundled SDK editor against the installed project. The longer generated O3DE launcher name may remain as internal compatibility detail, but it is not the user contract.
 
 An explicitly supplied or adjacent development MSI is accepted only with its `.sha256` sidecar. The launcher captures those bytes into its private temporary root and verifies the captured copy before execution, preventing a path from being changed between validation and Windows Installer startup.
 
@@ -47,7 +49,7 @@ Installer changes require, as applicable:
 3. exact inventory, provenance, licence, notice, SBOM, and redistribution review;
 4. successful MSI and portable ZIP creation from one verified stage;
 5. executable-wizard construction with the exact reviewed MSI and checksum embedded;
-6. clean install, installed-launcher self-test, repair, and uninstall through the executable;
+6. clean install, `FOA-SDK.exe` self-test, repair, and uninstall through the executable;
 7. proof that an external workspace sentinel survives repair and uninstall;
 8. an independently reviewed second version before claiming actual upgrade coverage;
 9. Windows Editor UI validation; and

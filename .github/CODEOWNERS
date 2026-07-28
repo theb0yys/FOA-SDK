@@ -1,0 +1,20 @@
+# FOA-SDK product ownership
+* @theb0yys
+
+/.github/ @theb0yys
+/Gems/ExternalToolchain/ @theb0yys
+/Gems/TaintedGrailModdingSDK/ @theb0yys
+/Installer/ @theb0yys
+/Plugins/ @theb0yys
+/TaintedGrailModdingEditor/ @theb0yys
+/Research/ @theb0yys
+/docs/tainted-grail-sdk/ @theb0yys
+/o3de.lock.json @theb0yys
+/README.md @theb0yys
+/ROADMAP.md @theb0yys
+/CHANGELOG.md @theb0yys
+/CONTRIBUTING.md @theb0yys
+/GOVERNANCE.md @theb0yys
+/SECURITY.md @theb0yys
+/SUPPORT.md @theb0yys
+/LICENSE.txt @theb0yys

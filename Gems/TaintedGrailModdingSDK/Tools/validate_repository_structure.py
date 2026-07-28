@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Iterable
 
 ALLOWED_TOP_LEVEL_DIRECTORIES = {
+    ".codex",
     ".github",
     "Gems",
     "Installer",
@@ -34,6 +35,8 @@ ALLOWED_ROOT_FILES = {
     "CHANGELOG.md",
     "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
+    "CURRENT_TASK.md",
+    "DECISIONS.md",
     "GOVERNANCE.md",
     "LICENSE.txt",
     "LICENSE_APACHE2.TXT",
@@ -76,14 +79,15 @@ ALLOWED_GITHUB_FILES = {
     ".github/ISSUE_TEMPLATE/tg_sdk_feature.yml",
     ".github/ISSUE_TEMPLATE/tg_sdk_research.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/workflows/agent-skill-validation.yml",
     AUTOMATIC_STATIC_WORKFLOW,
     ".github/workflows/tainted-grail-editor-entry.yml",
     ".github/workflows/tainted-grail-repository-hygiene.yml",
     ".github/workflows/tainted-grail-sdk-foundation.yml",
     ".github/workflows/tainted-grail-sdk-installer.yml",
 }
-ALLOWED_DOC_ROOT_FILES = {"docs/README.md"}
-ALLOWED_DOC_TREES = {"tainted-grail-sdk", "tainted-grail-modding"}
+ALLOWED_DOC_ROOT_FILES = {"docs/README.md", "docs/protected-files-policy.md"}
+ALLOWED_DOC_TREES = {"tainted-grail-sdk", "tainted-grail-modding", "systems"}
 REQUIRED_PATHS = {
     ".github/CODEOWNERS",
     AUTOMATIC_STATIC_WORKFLOW,

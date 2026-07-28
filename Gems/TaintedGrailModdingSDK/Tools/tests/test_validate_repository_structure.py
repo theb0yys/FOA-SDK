@@ -29,6 +29,8 @@ def valid_tree() -> set[str]:
             "CHANGELOG.md",
             "CODE_OF_CONDUCT.md",
             "CONTRIBUTING.md",
+            "CURRENT_TASK.md",
+            "DECISIONS.md",
             "GOVERNANCE.md",
             "LICENSE.txt",
             "LICENSE_APACHE2.TXT",
@@ -57,14 +59,28 @@ class RepositoryStructureContractTests(unittest.TestCase):
     def test_documentation_hub_roots_are_explicitly_governed(self) -> None:
         self.assertEqual(
             contract.ALLOWED_DOC_TREES,
-            {"tainted-grail-sdk", "tainted-grail-modding"},
+            {"tainted-grail-sdk", "tainted-grail-modding", "systems"},
         )
-        self.assertEqual(contract.ALLOWED_DOC_ROOT_FILES, {"docs/README.md"})
+        self.assertEqual(
+            contract.ALLOWED_DOC_ROOT_FILES,
+            {"docs/README.md", "docs/protected-files-policy.md"},
+        )
         contract.validate_paths(
             valid_tree()
             | {
                 "docs/tainted-grail-modding/runtime/README.md",
                 "docs/tainted-grail-modding/reference/README.md",
+                "docs/systems/SYSTEM_INDEX.md",
+            }
+        )
+
+    def test_agent_process_pack_is_allowed(self) -> None:
+        contract.validate_paths(
+            valid_tree()
+            | {
+                ".codex/README.md",
+                ".codex/skills/foa-sdk-research-sentinel/SKILL.md",
+                ".codex/workflows/foa_sdk_development_process.md",
             }
         )
 
@@ -83,6 +99,11 @@ class RepositoryStructureContractTests(unittest.TestCase):
             "missing required",
         ):
             contract.validate_paths(paths)
+
+    def test_agent_skill_validation_workflow_is_allowed(self) -> None:
+        contract.validate_paths(
+            valid_tree() | {".github/workflows/agent-skill-validation.yml"}
+        )
 
     def test_installer_launcher_source_passes(self) -> None:
         paths = valid_tree() | {

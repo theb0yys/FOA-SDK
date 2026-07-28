@@ -1,0 +1,104 @@
+name: FOA-SDK Editor Entry
+
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. Run this workflow manually only after Actions is restored.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+
+jobs:
+  validate-entry:
+    name: Validate dedicated project and trusted clickable entry
+    runs-on: windows-2022
+    timeout-minutes: 20
+
+    steps:
+      - name: Initialize external build roots
+        shell: pwsh
+        run: |
+          "O3DE_ROOT=$env:RUNNER_TEMP/o3de" >> $env:GITHUB_ENV
+          "FOA_BUILD_ROOT=$env:RUNNER_TEMP/foa-build" >> $env:GITHUB_ENV
+
+      - name: Check out exact FOA-SDK source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check out exact external O3DE policy surface
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/o3de/o3de.git $env:O3DE_ROOT
+          git -C $env:O3DE_ROOT sparse-checkout init --no-cone
+          @('/engine.json', '/CMakePresets.json', '/scripts/commit_validation/') |
+            git -C $env:O3DE_ROOT sparse-checkout set --stdin
+          git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT
+          $actual = git -C $env:O3DE_ROOT rev-parse HEAD
+          if ($actual -cne $env:O3DE_COMMIT) {
+            throw "External O3DE commit mismatch: $actual"
+          }
+
+      - name: Test dedicated project contract
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_project.py" -v
+
+      - name: Test canonical path policy
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_path_policy.py" -v
+
+      - name: Test low-level Windows shortcut generator
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_shortcut.py" -v
+
+      - name: Test trusted clickable entry
+        run: >-
+          python -m unittest discover
+          -s Gems/TaintedGrailModdingSDK/Tools/tests
+          -p "test_developer_preview_entry.py" -v
+
+      - name: Validate dedicated project and clickable entry
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview_project.py
+
+      - name: Validate canonical path and executable policy
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_path_policy.py
+
+      - name: Dry-run trusted external-engine entry generation
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create
+          --build-dir "${{ env.FOA_BUILD_ROOT }}/tg-sdk-developer-preview-0-windows-profile"
+          --output "${{ env.FOA_BUILD_ROOT }}/Tainted Grail Modding Editor.lnk"
+          --dry-run
+
+      - name: Create, inspect, and label a diagnostic-only Windows shortcut
+        shell: pwsh
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
+        run: |
+          $editor = Join-Path $env:RUNNER_TEMP "Editor.exe"
+          $shortcut = Join-Path $env:FOA_BUILD_ROOT "diagnostic-entries/CI Diagnostic Editor.lnk"
+          New-Item -ItemType File -Path $editor -Force | Out-Null
+
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
+            --editor $editor `
+            --diagnostic-override `
+            --output $shortcut
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py verify `
+            --shortcut $shortcut `
+            --allow-diagnostic-override

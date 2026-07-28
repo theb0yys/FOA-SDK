@@ -1,0 +1,449 @@
+name: FOA-SDK Windows Installer
+
+# Automatic triggers are intentionally suspended while repository Actions cannot
+# obtain hosted runners. This workflow never publishes a public release.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Create an inventory for review, or package an already reviewed inventory
+        required: true
+        default: inventory
+        type: choice
+        options:
+          - inventory
+          - package
+      version:
+        description: Three-component installer version (MAJOR.MINOR.PATCH)
+        required: true
+        default: 0.1.0
+        type: string
+      channel:
+        description: Development channel recorded in the artifact manifest
+        required: true
+        default: development
+        type: choice
+        options:
+          - development
+          - alpha
+          - beta
+          - release-candidate
+          - stable
+      approved_inventory_sha256:
+        description: Exact fingerprint from a previous inventory review; required for package mode
+        required: false
+        type: string
+      redistribution_reviewer:
+        description: Named reviewer of the exact inventory and notices; required for package mode
+        required: false
+        type: string
+      redistribution_reviewed_at_utc:
+        description: Review time as YYYY-MM-DDTHH:MM:SSZ; required for package mode
+        required: false
+        type: string
+      redistribution_evidence:
+        description: Durable review reference; required for package mode
+        required: false
+        type: string
+
+concurrency:
+  group: foa-sdk-installer-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    name: Inventory or package prebuilt Windows SDK
+    runs-on: windows-2022
+    timeout-minutes: 360
+    env:
+      O3DE_COMMIT: 68683f23fb747380d3efa2424bd5f30242e9c5a2
+      SDK_PACKAGE_CMAKE_VERSION: 4.3.4
+      SDK_PACKAGE_CMAKE_SHA256: 86e5fcafb38bdf58346a78b187c7b6b4f252ae5242cffe24c463a92bbd2e77d1
+
+    steps:
+      - name: Initialize external build roots
+        shell: pwsh
+        run: |
+          "O3DE_ROOT=$env:RUNNER_TEMP/o3de" >> $env:GITHUB_ENV
+          "FOA_BUILD_ROOT=$env:RUNNER_TEMP/foa-build" >> $env:GITHUB_ENV
+          "SDK_VALIDATION_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-validation" >> $env:GITHUB_ENV
+          "SDK_BUILD=$env:RUNNER_TEMP/foa-build/tg-sdk-installer-engine" >> $env:GITHUB_ENV
+          "SDK_INSTALL=$env:RUNNER_TEMP/tg-sdk-install" >> $env:GITHUB_ENV
+          "SDK_INVENTORY=$env:RUNNER_TEMP/tg-sdk-installer-inventory.json" >> $env:GITHUB_ENV
+          "SDK_NOTICES=$env:RUNNER_TEMP/NOTICES.txt" >> $env:GITHUB_ENV
+          "SDK_PACKAGES=$env:RUNNER_TEMP/THIRD_PARTY_PACKAGES.json" >> $env:GITHUB_ENV
+          "SDK_STAGE=$env:RUNNER_TEMP/tg-sdk-stage" >> $env:GITHUB_ENV
+          "SDK_ARTIFACTS=$env:RUNNER_TEMP/tg-sdk-artifacts" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_BUILD=$env:RUNNER_TEMP/tg-sdk-package-build" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_OUTPUT=$env:RUNNER_TEMP/tg-sdk-package-output" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_CMAKE_ROOT=$env:RUNNER_TEMP/cmake-4.3.4" >> $env:GITHUB_ENV
+          "SDK_WIX=$env:RUNNER_TEMP/wix" >> $env:GITHUB_ENV
+          "WIX_EXTENSIONS=$env:RUNNER_TEMP/wix-extensions" >> $env:GITHUB_ENV
+          "SDK_BOOTSTRAPPER_BUILD=$env:RUNNER_TEMP/foa-sdk-installer-bootstrapper" >> $env:GITHUB_ENV
+
+      - name: Check out exact FOA-SDK source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out exact external O3DE source
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none https://github.com/o3de/o3de.git $env:O3DE_ROOT
+          git -C $env:O3DE_ROOT checkout --detach $env:O3DE_COMMIT
+          $actual = git -C $env:O3DE_ROOT rev-parse HEAD
+          if ($actual -cne $env:O3DE_COMMIT) {
+            throw "External O3DE commit mismatch: $actual"
+          }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up .NET for pinned WiX tool
+        if: inputs.mode == 'package'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Configure compiled validation build
+        shell: pwsh
+        run: |
+          $project = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
+          $packages = Join-Path $env:RUNNER_TEMP "o3de-packages"
+          cmake -S $env:O3DE_ROOT -B $env:SDK_VALIDATION_BUILD -G "Visual Studio 17 2022" -A x64 `
+            -DLY_PROJECTS="$project" `
+            -DLY_3RDPARTY_PATH="$packages" `
+            -DLY_DISABLE_TEST_MODULES=OFF `
+            -DO3DE_FETCHCONTENT_FORCE_GIT=ON
+
+      - name: Build required compiled Catalog tests
+        run: >-
+          cmake --build $env:SDK_VALIDATION_BUILD --config profile
+          --target TaintedGrailModdingSDK.Catalog.Tests --parallel 2
+
+      - name: Run authoritative repository and compiled-test validation
+        env:
+          FOA_O3DE_ROOT: ${{ env.O3DE_ROOT }}
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py
+          --engine-root "${{ env.O3DE_ROOT }}"
+          --ctest-build-dir "${{ env.SDK_VALIDATION_BUILD }}"
+          --keep-going
+
+      - name: Configure prebuilt O3DE SDK layout
+        shell: pwsh
+        run: |
+          $project = Join-Path $env:GITHUB_WORKSPACE "TaintedGrailModdingEditor"
+          $packages = Join-Path $env:RUNNER_TEMP "o3de-packages"
+          cmake -S $env:O3DE_ROOT -B $env:SDK_BUILD -G "Visual Studio 17 2022" -A x64 `
+            -DLY_PROJECTS="$project" `
+            -DLY_3RDPARTY_PATH="$packages" `
+            -DLY_DISABLE_TEST_MODULES=ON `
+            -DO3DE_FETCHCONTENT_FORCE_GIT=ON `
+            -DO3DE_INSTALL_ENGINE_NAME=TaintedGrailFoASDK `
+            -DCMAKE_INSTALL_PREFIX="$env:SDK_INSTALL"
+
+      - name: Build canonical O3DE INSTALL target
+        run: cmake --build $env:SDK_BUILD --config profile --target INSTALL --parallel 2
+
+      - name: Create FOA-SDK.exe launcher entry point
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:SDK_INSTALL "bin/Windows/profile/Default"
+          $source = Join-Path $bin "TaintedGrailModdingEditorLauncher.exe"
+          $target = Join-Path $bin "FOA-SDK.exe"
+          if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Installed SDK launcher source is missing: $source"
+          }
+          Copy-Item -LiteralPath $source -Destination $target -Force
+          if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            throw "FOA-SDK.exe launcher entry point was not created."
+          }
+
+      - name: Generate notices and third-party package inventory
+        run: >-
+          python "$env:O3DE_ROOT/scripts/license_scanner/license_scanner.py"
+          --scan-path "$env:SDK_INSTALL"
+          --license-file-path "$env:SDK_NOTICES"
+          --package-file-path "$env:SDK_PACKAGES"
+
+      - name: Generate exact installer inventory
+        shell: pwsh
+        run: |
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py inventory `
+            --repo-root $env:GITHUB_WORKSPACE `
+            --sdk-root $env:SDK_INSTALL `
+            --notices $env:SDK_NOTICES `
+            --packages $env:SDK_PACKAGES `
+            --version "${{ inputs.version }}" `
+            --channel "${{ inputs.channel }}" `
+            --output $env:SDK_INVENTORY
+          $inventory = Get-Content -LiteralPath $env:SDK_INVENTORY -Raw | ConvertFrom-Json
+          "SDK_INVENTORY_SHA256=$($inventory.inventory_sha256)" >> $env:GITHUB_ENV
+
+      - name: Upload inventory for redistribution review
+        uses: actions/upload-artifact@v4
+        with:
+          name: foa-sdk-installer-inventory-${{ github.run_id }}
+          path: |
+            ${{ env.SDK_INVENTORY }}
+            ${{ env.SDK_NOTICES }}
+            ${{ env.SDK_PACKAGES }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind package mode to exact redistribution review
+        if: inputs.mode == 'package'
+        shell: pwsh
+        env:
+          APPROVED_INVENTORY: ${{ inputs.approved_inventory_sha256 }}
+          REVIEWER: ${{ inputs.redistribution_reviewer }}
+          REVIEWED_AT: ${{ inputs.redistribution_reviewed_at_utc }}
+          REVIEW_EVIDENCE: ${{ inputs.redistribution_evidence }}
+        run: |
+          foreach ($value in @($env:APPROVED_INVENTORY, $env:REVIEWER, $env:REVIEWED_AT, $env:REVIEW_EVIDENCE)) {
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "Package mode requires exact inventory fingerprint, reviewer, UTC review time, and evidence."
+            }
+          }
+          if ($env:APPROVED_INVENTORY -cne $env:SDK_INVENTORY_SHA256) {
+            throw "Approved inventory does not match this exact build: expected $env:SDK_INVENTORY_SHA256"
+          }
+
+      - name: Stage reviewed payload and create portable ZIP
+        if: inputs.mode == 'package'
+        shell: pwsh
+        env:
+          APPROVED_INVENTORY: ${{ inputs.approved_inventory_sha256 }}
+          REVIEWER: ${{ inputs.redistribution_reviewer }}
+          REVIEWED_AT: ${{ inputs.redistribution_reviewed_at_utc }}
+          REVIEW_EVIDENCE: ${{ inputs.redistribution_evidence }}
+        run: |
+          New-Item -ItemType Directory -Path $env:SDK_ARTIFACTS | Out-Null
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py stage `
+            --repo-root $env:GITHUB_WORKSPACE `
+            --sdk-root $env:SDK_INSTALL `
+            --notices $env:SDK_NOTICES `
+            --packages $env:SDK_PACKAGES `
+            --version "${{ inputs.version }}" `
+            --channel "${{ inputs.channel }}" `
+            --approved-inventory-sha256 $env:APPROVED_INVENTORY `
+            --reviewed-by $env:REVIEWER `
+            --reviewed-at-utc $env:REVIEWED_AT `
+            --review-evidence $env:REVIEW_EVIDENCE `
+            --output $env:SDK_STAGE
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-stage `
+            --stage-root $env:SDK_STAGE
+          $zip = Join-Path $env:SDK_ARTIFACTS `
+            "Tainted-Grail-FoA-SDK-${{ inputs.version }}-windows-x64.zip"
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py archive `
+            --stage-root $env:SDK_STAGE --output $zip
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-archive `
+            --archive $zip
+
+      - name: Install pinned build-only WiX toolchain
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          dotnet tool install wix --version 4.0.4 --tool-path $env:SDK_WIX
+          & "$env:SDK_WIX/wix.exe" extension add --global WixToolset.UI.wixext/4.0.4
+          "WIX=$env:SDK_WIX" >> $env:GITHUB_ENV
+
+      - name: Install hash-pinned build-only CMake and CPack toolchain
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          $archiveName = "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64.zip"
+          $archive = Join-Path $env:RUNNER_TEMP $archiveName
+          $uri = "https://cmake.org/files/v4.3/$archiveName"
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+          $actualHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256) {
+            throw "CMake packaging toolchain hash mismatch: expected $env:SDK_PACKAGE_CMAKE_SHA256; actual $actualHash"
+          }
+          New-Item -ItemType Directory -Path $env:SDK_PACKAGE_CMAKE_ROOT | Out-Null
+          Expand-Archive -LiteralPath $archive -DestinationPath $env:SDK_PACKAGE_CMAKE_ROOT
+          $toolRoot = Join-Path $env:SDK_PACKAGE_CMAKE_ROOT `
+            "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64"
+          $packageCmake = Join-Path $toolRoot "bin/cmake.exe"
+          $packageCpack = Join-Path $toolRoot "bin/cpack.exe"
+          foreach ($tool in @($packageCmake, $packageCpack)) {
+            if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) {
+              throw "Pinned packaging tool is missing: $tool"
+            }
+            if ((Get-Item -LiteralPath $tool).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+              throw "Pinned packaging tool must not be a reparse point: $tool"
+            }
+          }
+          $cmakeVersion = (& $packageCmake --version | Select-Object -First 1)
+          $cpackVersion = (& $packageCpack --version | Select-Object -First 1)
+          if ($cmakeVersion -cne "cmake version $env:SDK_PACKAGE_CMAKE_VERSION") {
+            throw "Unexpected packaging CMake version: $cmakeVersion"
+          }
+          if ($cpackVersion -cne "cpack version $env:SDK_PACKAGE_CMAKE_VERSION") {
+            throw "Unexpected packaging CPack version: $cpackVersion"
+          }
+          "SDK_PACKAGE_CMAKE=$packageCmake" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_CPACK=$packageCpack" >> $env:GITHUB_ENV
+
+      - name: Build standard MSI from the same staged payload
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path $env:SDK_PACKAGE_OUTPUT | Out-Null
+          & $env:SDK_PACKAGE_CMAKE -S Installer/Packaging/Windows -B $env:SDK_PACKAGE_BUILD `
+            -DTG_INSTALLER_VERSION="${{ inputs.version }}" `
+            -DTG_INSTALLER_PAYLOAD_ROOT="$env:SDK_STAGE"
+          & $env:SDK_PACKAGE_CPACK --config "$env:SDK_PACKAGE_BUILD/CPackConfig.cmake" `
+            -G WIX -B $env:SDK_PACKAGE_OUTPUT
+          $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_PACKAGE_OUTPUT -Filter *.msi -File -ErrorAction Stop)
+          if ($msiFiles.Count -ne 1) { throw "Expected exactly one generated MSI; found $($msiFiles.Count)." }
+          $msi = $msiFiles[0]
+          $checksum = "$($msi.FullName).sha256"
+          if (-not (Test-Path -LiteralPath $checksum -PathType Leaf)) {
+            throw "MSI checksum sidecar was not created: $checksum"
+          }
+          Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)
+          Copy-Item -LiteralPath $checksum -Destination (Join-Path $env:SDK_ARTIFACTS "$($msi.Name).sha256")
+
+      - name: Build self-contained installer wizard with the reviewed MSI
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          $msiFiles = @(Get-ChildItem -LiteralPath $env:SDK_ARTIFACTS -Filter *.msi -File -ErrorAction Stop)
+          if ($msiFiles.Count -ne 1) { throw "Expected exactly one MSI; found $($msiFiles.Count)." }
+          $msi = $msiFiles[0]
+          $checksum = "$($msi.FullName).sha256"
+          if (-not (Test-Path -LiteralPath $checksum -PathType Leaf)) {
+            throw "MSI checksum sidecar was not created: $checksum"
+          }
+          dotnet publish Installer/Launcher/Windows/FOAInstallerLauncher.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:BaseIntermediateOutputPath="$env:FOA_BUILD_ROOT/installer-wizard-obj/" `
+            -p:BaseOutputPath="$env:FOA_BUILD_ROOT/installer-wizard-bin/" `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=embedded `
+            -p:InstallerMsiPath="$($msi.FullName)" `
+            -p:InstallerMsiChecksumPath="$checksum" `
+            -o $env:SDK_BOOTSTRAPPER_BUILD
+          Copy-Item -LiteralPath "$env:SDK_BOOTSTRAPPER_BUILD/FOA-SDK-Installer.exe" `
+            -Destination "$env:SDK_ARTIFACTS/FOA-SDK-Installer.exe"
+          $wizard = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe"
+          $wizardChecksum = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe.sha256"
+          $wizardHash = (Get-FileHash -LiteralPath $wizard -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath $wizardChecksum -Encoding utf8 -NoNewline `
+            -Value "$wizardHash  FOA-SDK-Installer.exe`n"
+
+      - name: Verify retained installer artifacts and checksums
+        if: inputs.mode == 'package'
+        run: >-
+          python Gems/TaintedGrailModdingSDK/Tools/verify_installer_artifacts.py
+          --artifact-root "${{ env.SDK_ARTIFACTS }}"
+          --version "${{ inputs.version }}"
+
+      - name: Smoke install, launch contract, repair, and uninstall
+        if: inputs.mode == 'package'
+        shell: pwsh
+        run: |
+          $wizard = Join-Path $env:SDK_ARTIFACTS "FOA-SDK-Installer.exe"
+          if (-not (Test-Path -LiteralPath $wizard -PathType Leaf)) {
+            throw "Self-contained installer wizard was not created."
+          }
+          $installRoot = Join-Path $env:RUNNER_TEMP "installed-foa-sdk"
+          $externalWorkspace = Join-Path $env:RUNNER_TEMP "external-workspace"
+          New-Item -ItemType Directory -Path $externalWorkspace | Out-Null
+          Set-Content -LiteralPath (Join-Path $externalWorkspace "preserve.txt") -Value "preserve"
+
+          $wizardSmoke = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--smoke-test")
+          if ($wizardSmoke.ExitCode -ne 0) {
+            throw "Installer wizard smoke test failed with exit $($wizardSmoke.ExitCode)."
+          }
+          $install = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--quiet", "--operation", "install", "--install-root", `
+              "`"$installRoot`"", "--no-launch-after-install")
+          if ($install.ExitCode -ne 0) {
+            throw "Installer wizard install failed with exit $($install.ExitCode)."
+          }
+
+          $launcher = Join-Path $installRoot `
+            "bin/Windows/profile/Default/FOA-SDK.exe"
+          $installedManifest = Join-Path $installRoot "INSTALL_MANIFEST.json"
+          $stagedManifest = Join-Path $env:SDK_STAGE "INSTALL_MANIFEST.json"
+          if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
+            throw "FOA-SDK.exe was not installed as the SDK launcher."
+          }
+          if (-not (Test-Path -LiteralPath $installedManifest -PathType Leaf)) {
+            throw "MSI install did not preserve the reviewed INSTALL_MANIFEST.json."
+          }
+          $installedManifestHash = (Get-FileHash -LiteralPath $installedManifest -Algorithm SHA256).Hash
+          $stagedManifestHash = (Get-FileHash -LiteralPath $stagedManifest -Algorithm SHA256).Hash
+          if ($installedManifestHash -cne $stagedManifestHash) {
+            throw "Installed MSI manifest differs from the exact reviewed staging manifest."
+          }
+          $startMenuEntry = Join-Path $env:APPDATA `
+            "Microsoft/Windows/Start Menu/Programs/Tainted Grail FoA SDK/FOA-SDK.lnk"
+          if (-not (Test-Path -LiteralPath $startMenuEntry -PathType Leaf)) {
+            throw "MSI Start Menu entry for FOA-SDK.exe was not created."
+          }
+          $shortcutShell = New-Object -ComObject WScript.Shell
+          $shortcut = $shortcutShell.CreateShortcut($startMenuEntry)
+          $shortcutTarget = [System.IO.Path]::GetFullPath($shortcut.TargetPath)
+          $expectedTarget = [System.IO.Path]::GetFullPath($launcher)
+          if (-not [string]::Equals($shortcutTarget, $expectedTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "MSI Start Menu entry targets '$shortcutTarget' instead of '$expectedTarget'."
+          }
+          & $launcher --self-test
+          if ($LASTEXITCODE -ne 0) { throw "FOA-SDK.exe self-test failed." }
+
+          $reviewedLauncherHash = (Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash
+          [System.IO.File]::WriteAllBytes($launcher, [byte[]](0x4d, 0x5a, 0x00, 0x00))
+          if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash -ceq $reviewedLauncherHash) {
+            throw "Repair smoke test could not damage the installed FOA-SDK.exe fixture."
+          }
+          $repair = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--quiet", "--operation", "repair", "--install-root", `
+              "`"$installRoot`"", "--no-launch-after-install")
+          if ($repair.ExitCode -ne 0) {
+            throw "Installer wizard repair failed with exit $($repair.ExitCode)."
+          }
+          if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash -cne $reviewedLauncherHash) {
+            throw "MSI repair did not restore the reviewed product-owned launcher bytes."
+          }
+          & $launcher --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Repaired launcher self-test failed." }
+
+          $remove = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--quiet", "--operation", "uninstall", "--install-root", `
+              "`"$installRoot`"", "--no-launch-after-install")
+          if ($remove.ExitCode -ne 0) {
+            throw "Installer wizard uninstall failed with exit $($remove.ExitCode)."
+          }
+          if (Test-Path -LiteralPath $launcher -PathType Leaf) {
+            throw "MSI uninstall left FOA-SDK.exe installed."
+          }
+          if (Test-Path -LiteralPath $installedManifest -PathType Leaf) {
+            throw "MSI uninstall left the product manifest installed."
+          }
+          if (Test-Path -LiteralPath $startMenuEntry -PathType Leaf) {
+            throw "MSI uninstall left the product Start Menu entry installed."
+          }
+          if (-not (Test-Path -LiteralPath (Join-Path $externalWorkspace "preserve.txt"))) {
+            throw "MSI uninstall removed external workspace data."
+          }
+
+      - name: Upload unsigned development installer artifacts
+        if: inputs.mode == 'package'
+        uses: actions/upload-artifact@v4
+        with:
+          name: foa-sdk-unsigned-installer-${{ inputs.version }}-${{ github.run_id }}
+          path: ${{ env.SDK_ARTIFACTS }}
+          if-no-files-found: error
+          retention-days: 14

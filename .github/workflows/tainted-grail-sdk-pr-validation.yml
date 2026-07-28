@@ -1,0 +1,199 @@
+name: Tainted Grail SDK Read-Only Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+    paths:
+      - ".github/**"
+      - "Gems/TaintedGrailModdingSDK/**"
+      - "Gems/ExternalToolchain/**"
+      - "Installer/**"
+      - "Plugins/**"
+      - "Research/**"
+      - "TaintedGrailModdingEditor/**"
+      - "docs/**"
+      - "scripts/**"
+      - "*.md"
+      - ".gitattributes"
+      - "o3de.lock.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/**"
+      - "Gems/TaintedGrailModdingSDK/**"
+      - "Gems/ExternalToolchain/**"
+      - "Installer/**"
+      - "Plugins/**"
+      - "Research/**"
+      - "TaintedGrailModdingEditor/**"
+      - "docs/**"
+      - "scripts/**"
+      - "*.md"
+      - ".gitattributes"
+      - "o3de.lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tg-sdk-validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-validation:
+    name: Python, validators, and reviewed range
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact event commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate pull-request declarations
+        if: github.event_name == 'pull_request'
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligations.py --event "$GITHUB_EVENT_PATH"
+
+      - name: Verify exact reviewed range
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          head_sha="$(git rev-parse HEAD)"
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) base_sha="$PR_BASE_SHA" ;;
+            push) base_sha="$PUSH_BEFORE_SHA" ;;
+            workflow_dispatch) base_sha="$(git rev-parse HEAD^)" ;;
+            *) echo "Unsupported validation event: $GITHUB_EVENT_NAME" >&2; exit 1 ;;
+          esac
+          if [[ ! "$base_sha" =~ ^[0-9a-f]{40}$ || ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Reviewed range requires full base and head SHAs." >&2
+            exit 1
+          fi
+          git cat-file -e "${base_sha}^{commit}"
+          git diff --check "$base_sha" "$head_sha" 2>&1 | tee tg-sdk-reviewed-range.log
+          printf 'event=%s\nbase=%s\nhead=%s\n' "$GITHUB_EVENT_NAME" "$base_sha" "$head_sha" > tg-sdk-reviewed-range.txt
+
+      - name: Validate merge-obligation policy contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligation_policy.py
+
+      - name: Run non-compiled TG SDK validation layer
+        shell: bash
+        run: |
+          set -o pipefail
+          python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py --keep-going --static-only --skip-source-policy 2>&1 | tee tg-sdk-static-validation.log
+
+      - name: Preserve exact-run validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tg-sdk-static-validation-${{ github.run_id }}
+          path: |
+            tg-sdk-static-validation.log
+            tg-sdk-reviewed-range.log
+            tg-sdk-reviewed-range.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  canonical-interchange-compiled:
+    name: Exact-head O3DE canonical interchange build and tests
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+      TEST_TARGET: TaintedGrailModdingSDK.CanonicalInterchange.Tests
+      TEST_PATTERN: TaintedGrailModdingSDK\.CanonicalInterchange\.Tests
+      CONFIGURATION: profile
+    steps:
+      - name: Check out exact event commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+
+      - name: Check out pinned O3DE source
+        uses: actions/checkout@v4
+        with:
+          repository: o3de/o3de
+          ref: ${{ env.O3DE_COMMIT }}
+          path: o3de
+          persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Configure pinned O3DE project
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-canonical-interchange"
+          cmake --preset windows-vs-unity `
+            -S "$env:GITHUB_WORKSPACE\o3de" `
+            -B $buildDir `
+            -A x64 `
+            "-DLY_PROJECTS=$env:GITHUB_WORKSPACE\TaintedGrailModdingEditor" `
+            "-DO3DE_FETCHCONTENT_FORCE_GIT=ON"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build canonical interchange tests
+        shell: pwsh
+        run: |
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-canonical-interchange"
+          cmake --build $buildDir --config "$env:CONFIGURATION" --target "$env:TEST_TARGET" --parallel 2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run canonical interchange compiled tests
+        shell: pwsh
+        run: |
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-canonical-interchange"
+          ctest --test-dir $buildDir -C "$env:CONFIGURATION" --output-on-failure --no-tests=error -R "$env:TEST_PATTERN"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  windows-prerequisites:
+    name: Windows O3DE prerequisites
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+    steps:
+      - name: Check out exact event commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check out exact external O3DE policy surface
+        shell: pwsh
+        run: |
+          $engineRoot = Join-Path $env:RUNNER_TEMP "o3de-policy"
+          "FOA_O3DE_ROOT=$engineRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          git clone --filter=blob:none --no-checkout https://github.com/o3de/o3de.git $engineRoot
+          git -C $engineRoot sparse-checkout init --no-cone
+          git -C $engineRoot sparse-checkout set --no-cone /engine.json /CMakePresets.json /scripts/commit_validation/
+          git -C $engineRoot checkout --detach $env:O3DE_COMMIT
+          if ((git -C $engineRoot rev-parse HEAD) -cne $env:O3DE_COMMIT) { throw "External O3DE commit mismatch." }
+
+      - name: Execute Windows prerequisite gate
+        shell: pwsh
+        run: |
+          $buildRoot = Join-Path $env:RUNNER_TEMP "foa-build/tg-sdk-developer-preview-0-windows-profile"
+          python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites --engine-root $env:FOA_O3DE_ROOT --build-dir $buildRoot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

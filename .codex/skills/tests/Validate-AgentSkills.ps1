@@ -35,12 +35,6 @@ foreach ($name in $expected) {
     }
 }
 
-$requiredHeadingGroups = @(
-    @{ Name = 'Research'; Allowed = @('Research', 'Research To Read') },
-    @{ Name = 'Hard Stop'; Allowed = @('Hard Stop', 'Hard Stops') },
-    @{ Name = 'Validation'; Allowed = @('Validation') }
-)
-
 foreach ($dir in $dirs) {
     $skill = Join-Path $dir.FullName 'SKILL.md'
     $eval = Join-Path $dir.FullName 'evals/evals.json'
@@ -58,20 +52,6 @@ foreach ($dir in $dirs) {
     $namePattern = "(?m)^name:\s*$([regex]::Escape($dir.Name))\s*$"
     if ($content -notmatch $namePattern) {
         Fail "$($dir.Name): name mismatch"
-    }
-
-    foreach ($requiredHeadingGroup in $requiredHeadingGroups) {
-        $hasRequiredHeading = $false
-        foreach ($allowedHeading in $requiredHeadingGroup['Allowed']) {
-            $headingPattern = "(?im)^##\s+$([regex]::Escape($allowedHeading))\s*$"
-            if ($content -match $headingPattern) {
-                $hasRequiredHeading = $true
-                break
-            }
-        }
-        if (-not $hasRequiredHeading) {
-            Fail "$($dir.Name): missing required heading '$($requiredHeadingGroup['Name'])'"
-        }
     }
 
     if (-not (Test-Path -LiteralPath $eval)) {

@@ -16,6 +16,12 @@ internal static class Program
         try
         {
             InstallerOptions options = InstallerOptions.Parse(args);
+
+            if (options.ToolWizardOnly)
+            {
+                return RunToolWizard(options);
+            }
+
             using InstallerPayload payload = InstallerPayload.Resolve(options.MsiPath);
 
             if (options.SmokeTest)
@@ -52,6 +58,24 @@ internal static class Program
             }
             return 1;
         }
+    }
+
+    private static int RunToolWizard(InstallerOptions options)
+    {
+        if (options.Quiet)
+        {
+            throw new ArgumentException("The Tool Wizard is interactive; remove --quiet to open it.");
+        }
+
+        using ToolSetupWizardForm form = new(options.InstallRoot);
+        if (options.SmokeTest)
+        {
+            form.CreateControl();
+            return 0;
+        }
+
+        Application.Run(form);
+        return form.ExitCode;
     }
 
     private static async Task<int> RunQuietAsync(InstallerPayload payload, InstallerOptions options)

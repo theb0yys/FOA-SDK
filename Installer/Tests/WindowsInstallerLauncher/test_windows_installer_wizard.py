@@ -14,6 +14,8 @@ OPTIONS = LAUNCHER_ROOT / "InstallerOptions.cs"
 PAYLOAD = LAUNCHER_ROOT / "InstallerPayload.cs"
 RUNNER = LAUNCHER_ROOT / "WindowsInstallerRunner.cs"
 WIZARD = LAUNCHER_ROOT / "InstallerWizardForm.cs"
+TOOL_PROFILE = LAUNCHER_ROOT / "ToolSetupProfile.cs"
+TOOL_WIZARD = LAUNCHER_ROOT / "ToolSetupWizardForm.cs"
 MANIFEST = LAUNCHER_ROOT / "app.manifest"
 POWERSHELL_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.ps1"
 CMD_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.cmd"
@@ -53,6 +55,7 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         program = PROGRAM.read_text(encoding="utf-8")
         self.assertIn("InstallerPayload.Resolve", program)
         self.assertIn("InstallerWizardForm", program)
+        self.assertIn("ToolSetupWizardForm", program)
         self.assertIn("WindowsInstallerRunner.RunAsync", program)
         self.assertNotRegex(program, re.compile(r"\bpython(w|3)?(?:\.exe)?\b", re.IGNORECASE))
         self.assertNotIn("SuiteWizard", program)
@@ -95,9 +98,35 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("Uninstall FOA-SDK", wizard)
         self.assertIn("External workspaces are never removed", wizard)
         self.assertIn("Reviewed MSI SHA-256", wizard)
+        self.assertIn("Open Tool Wizard", wizard)
+        self.assertNotIn("O3DE Editor:", wizard)
+        self.assertNotIn("Unity Editor:", wizard)
+        self.assertNotIn("TG install:", wizard)
         self.assertIn("--operation install|repair|uninstall", options)
         self.assertIn("--smoke-test", options)
         self.assertIn("--quiet", options)
+        self.assertIn("--tool-wizard", options)
+
+    def test_tool_wizard_is_separate_from_installer_lifecycle(self) -> None:
+        program = PROGRAM.read_text(encoding="utf-8")
+        installer = WIZARD.read_text(encoding="utf-8")
+        tool_profile = TOOL_PROFILE.read_text(encoding="utf-8")
+        tool_wizard = TOOL_WIZARD.read_text(encoding="utf-8")
+
+        self.assertLess(
+            program.index("options.ToolWizardOnly"),
+            program.index("InstallerPayload.Resolve"),
+        )
+        self.assertIn("ToolSetupWizardLauncher.Launch", installer)
+        self.assertIn("ToolSetupProfile.Save", tool_wizard)
+        self.assertIn("O3DE Editor:", tool_wizard)
+        self.assertIn("Unity Editor:", tool_wizard)
+        self.assertIn("TG install:", tool_wizard)
+        self.assertIn("tool-profile.local.json", tool_profile)
+        self.assertIn("conversion_execution_allowed = false", tool_profile)
+        self.assertIn("deployment_execution_allowed = false", tool_profile)
+        self.assertNotIn("WindowsInstallerRunner.RunAsync", tool_wizard)
+        self.assertNotIn("InstallerPayload.Resolve", tool_wizard)
 
     def test_build_entrypoints_embed_reviewed_msi_and_default_self_contained(self) -> None:
         cmd = CMD_BUILD.read_text(encoding="utf-8")
@@ -127,6 +156,8 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("$install.ExitCode", workflow)
         self.assertIn("$repair.ExitCode", workflow)
         self.assertIn("$remove.ExitCode", workflow)
+        self.assertIn("--tool-wizard", workflow)
+        self.assertIn("Tool Wizard smoke test", workflow)
 
     def test_readme_documents_real_installation_not_review_receipts(self) -> None:
         readme = README.read_text(encoding="utf-8")

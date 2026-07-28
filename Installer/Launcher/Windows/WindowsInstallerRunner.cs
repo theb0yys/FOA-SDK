@@ -92,6 +92,7 @@ internal static class WindowsInstallerRunner
 
     private static void ValidateInstallRoot(string installRoot)
     {
+        RejectKnownGameRuntime(installRoot);
         string current = installRoot;
         while (!string.IsNullOrWhiteSpace(current))
         {
@@ -107,6 +108,17 @@ internal static class WindowsInstallerRunner
                 break;
             }
             current = parent;
+        }
+    }
+
+    private static void RejectKnownGameRuntime(string installRoot)
+    {
+        if (File.Exists(Path.Combine(installRoot, "UnityPlayer.dll"))
+            || Directory.Exists(Path.Combine(installRoot, "TaintedGrail_Data"))
+            || File.Exists(Path.Combine(installRoot, "TaintedGrail.exe")))
+        {
+            throw new InvalidOperationException(
+                "The installation directory appears to be a Tainted Grail or Unity runtime. Choose a separate FOA-SDK directory.");
         }
     }
 }

@@ -19,6 +19,7 @@ internal sealed class InstallerWizardForm : Form
     private readonly Label _reviewText = NewBodyLabel();
     private readonly Label _resultText = NewBodyLabel();
     private readonly CheckBox _launchEditor = new() { Text = "Launch FOA-SDK", AutoSize = true, Checked = true };
+    private readonly CheckBox _openToolWizard = new() { Text = "Open Tool Wizard", AutoSize = true, Checked = true };
     private readonly ProgressBar _progress = new() { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 30, Width = 520, Height = 22 };
     private readonly List<Control> _pages = new();
     private int _pageIndex;
@@ -32,8 +33,8 @@ internal sealed class InstallerWizardForm : Form
         ExitCode = 1;
         Text = "FOA-SDK Setup";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(720, 500);
-        Size = new Size(760, 540);
+        MinimumSize = new Size(720, 540);
+        Size = new Size(760, 580);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = true;
@@ -42,6 +43,8 @@ internal sealed class InstallerWizardForm : Form
         Controls.Add(_content);
         Controls.Add(BuildButtonBar());
         _installRoot.Text = options.InstallRoot;
+        _launchEditor.Checked = options.LaunchAfterInstall;
+        _openToolWizard.Checked = options.OpenToolWizardAfterInstall;
         ApplyInitialOperation(options.Operation);
         _pages.Add(BuildWelcomePage());
         _pages.Add(BuildOptionsPage());
@@ -144,8 +147,10 @@ internal sealed class InstallerWizardForm : Form
         _resultText.Location = new Point(32, 115);
         _resultText.Size = new Size(640, 220);
         _launchEditor.Location = new Point(32, 350);
+        _openToolWizard.Location = new Point(32, 378);
         page.Controls.Add(_resultText);
         page.Controls.Add(_launchEditor);
+        page.Controls.Add(_openToolWizard);
         return page;
     }
 
@@ -240,6 +245,19 @@ internal sealed class InstallerWizardForm : Form
                     return;
                 }
             }
+            if (_operationSucceeded && _openToolWizard.Visible && _openToolWizard.Checked)
+            {
+                try
+                {
+                    ToolSetupWizardLauncher.Launch(_options.InstallRoot);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    MessageBox.Show(this, ex.Message, "Unable to open Tool Wizard", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ExitCode = 1;
+                    return;
+                }
+            }
             Close();
         }
     }
@@ -255,6 +273,7 @@ internal sealed class InstallerWizardForm : Form
         {
             InstallRoot = InstallerOptions.NormalizeInstallRoot(_installRoot.Text),
             Operation = operation,
+            OpenToolWizardAfterInstall = _openToolWizard.Checked,
         };
     }
 
@@ -271,7 +290,8 @@ internal sealed class InstallerWizardForm : Form
             + $"Installation directory: {_options.InstallRoot}\n\n"
             + $"Reviewed MSI SHA-256: {_payload.Sha256}\n\n"
             + "FOA-SDK.exe will be the installed local launcher for the SDK editor and project.\n\n"
-            + "External workspaces, generated content, FoA diagnostics, and game files are outside this operation.";
+            + "External workspaces, generated content, FoA diagnostics, and game files are outside this operation.\n\n"
+            + "Tool Wizard: available after successful install for local workspace and tool readiness.";
     }
 
     private async Task RunOperationAsync()
@@ -285,7 +305,9 @@ internal sealed class InstallerWizardForm : Form
             ExitCode = result.Succeeded ? 0 : result.ExitCode == 0 ? 1 : result.ExitCode;
             _resultText.Text = $"{result.Message}\n\nLog: {result.LogPath}";
             _launchEditor.Visible = result.Succeeded && _options.Operation is not InstallerOperation.Uninstall;
-            _launchEditor.Checked = true;
+            _launchEditor.Checked = _options.LaunchAfterInstall;
+            _openToolWizard.Visible = result.Succeeded && _options.Operation is not InstallerOperation.Uninstall;
+            _openToolWizard.Checked = _options.OpenToolWizardAfterInstall;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
@@ -293,6 +315,7 @@ internal sealed class InstallerWizardForm : Form
             ExitCode = 1;
             _resultText.Text = $"Setup failed before completion.\n\n{ex.Message}";
             _launchEditor.Visible = false;
+            _openToolWizard.Visible = false;
         }
         finally
         {

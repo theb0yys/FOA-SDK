@@ -1,0 +1,31 @@
+name: Agent skill validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.codex/**'
+      - 'AGENTS.md'
+      - 'CURRENT_TASK.md'
+      - 'DECISIONS.md'
+      - 'docs/protected-files-policy.md'
+      - 'docs/systems/SYSTEM_INDEX.md'
+      - '.github/workflows/agent-skill-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-agent-skills:
+    name: Validate agent skills
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate FOA-SDK agent skill pack
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .codex/skills/tests/Validate-AgentSkills.ps1

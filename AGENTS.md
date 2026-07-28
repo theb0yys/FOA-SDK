@@ -37,6 +37,24 @@ If any required governing document is missing, unread, contradictory, or unclear
 
 The repository documents are authority. Agent judgement, convenience, memory, generic practice, tool defaults, and passing checks are not authority.
 
+## Mandatory FOA-SDK Codex process
+
+For every repository task, agents must activate `.codex/skills/foa-sdk-research-sentinel/SKILL.md`, run or reproduce `.codex/scripts/Get-AgentSkillPlan.ps1`, and follow `.codex/workflows/foa_research_first_process_stack.md` and `.codex/workflows/foa_sdk_development_process.md`.
+
+Before editing, agents must:
+
+- read `CURRENT_TASK.md` and `DECISIONS.md` when present;
+- classify the owner and blast radius through `docs/systems/SYSTEM_INDEX.md`;
+- identify controlling research and stop conditions;
+- complete `.codex/checklists/deep_review.md`;
+- run `.codex/scripts/Get-AgentTestPlan.ps1` and `.codex/scripts/Get-AgentPerformancePlan.ps1` for code or behaviour changes;
+- run `.codex/scripts/Get-AgentBuildDeployPlan.ps1` for artifact-producing, conversion, packaging, installer, or runtime-adapter changes;
+- map the required evidence through `.codex/checklists/evidence_pack_template.json`.
+
+Implementation must stop and a Deep Research Brief must be produced when authority is missing, unclear, contradictory, outdated, or unproven. Foundation, UI, O3DE host, plug-in, canonical interchange, Unity conversion, installer, runtime-adapter, migration, harness, and exact-install runtime proof are distinct and must not substitute for one another.
+
+All actions must stay on the controlling research path. Every handoff must report the next researched stop/process, or state that none exists. Static inspection, configure success, compilation, local tests, Editor acceptance, conversion output, installer output, or adapter build must not be reported as Fall of Avalon runtime sign-off.
+
 ## Research and document authority
 
 Agents must not create, update, delete, move, rename, rewrite, summarise into replacement form, reclassify, or structurally reorganise research records, governing documents, process documents, policy documents, contribution rules, release gates, validation gates, architecture records, design records, or folder-governing `README.md` files unless the repository owner explicitly authorises that exact document change for the current task.

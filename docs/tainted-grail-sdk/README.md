@@ -11,6 +11,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Developer Preview Exact-Head Verification](DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md) — reviewed-range whitespace checking, external receipts, O3DE configure/build, compiled tests, authoritative receipt/UI re-verification, and Windows evidence finalization.
 - [Windows Manual UI Smoke](DEVELOPER_PREVIEW_MANUAL_UI_SMOKE.md) — real Windows checklist, screenshot-evidence initializer/verifier, exact-commit binding, privacy attestation, and evidence handling.
 - [Developer Preview Troubleshooting](DEVELOPER_PREVIEW_TROUBLESHOOTING.md) — missing Editor output, path-policy and clickable-entry failures, absent TG SDK panes, native log locations, diagnostics failures, and verification guidance.
+- [Visual Game-Content Browser and Preview Pipeline Gate](VISUAL_GAME_CONTENT_BROWSER_AND_PREVIEW_PIPELINE.md) — blocks function-complete visual and item/recipe/actor/troop workflow claims until profile-bound discovery, local preview artefacts, generated O3DE preview products, and typed selector bindings exist.
 - [User Guide](USER_GUIDE.md) — build, open, configure, and use the foundation editor tools.
 - [Catalog Guide](CATALOG_GUIDE.md) — canonical search, record inspection, evidence promotion, relationships, validation, and blockers.
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
@@ -131,7 +132,7 @@ The project is pre-alpha. Current implemented editor workflows cover:
 
 Automatic GitHub-hosted static validation now runs for relevant pull requests and pushes to `main`; exact-head O3DE configure, build, compiled tests, and Windows evidence remain separate mandatory gates.
 
-The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, and remaining specialised domain tools are not complete.
+The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, visual game-content browser and preview products, typed visual selector binding, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

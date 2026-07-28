@@ -20,6 +20,13 @@ MANIFEST = LAUNCHER_ROOT / "app.manifest"
 POWERSHELL_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.ps1"
 CMD_BUILD = LAUNCHER_ROOT / "build-foa-installer-launcher.cmd"
 README = LAUNCHER_ROOT / "README.md"
+FUNCTIONAL_READINESS_SCRIPT = (
+    REPO_ROOT
+    / "Installer"
+    / "Tests"
+    / "WindowsFunctionalReadiness"
+    / "Invoke-FoaWindowsFunctionalReadiness.ps1"
+)
 DISCOVERY_BRIDGE = (
     REPO_ROOT
     / "Gems"
@@ -86,6 +93,7 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn('InstallerOperation.Uninstall => "/x"', runner)
         self.assertIn('startInfo.ArgumentList.Add("/qn")', runner)
         self.assertIn("INSTALL_ROOT=", runner)
+        self.assertIn('Path.Combine(options.EvidenceRoot, "installer-logs")', runner)
         self.assertIn("FileAttributes.ReparsePoint", runner)
         self.assertNotIn('Verb = "runas"', runner)
         self.assertNotIn("Arguments =", runner)
@@ -106,6 +114,9 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("--smoke-test", options)
         self.assertIn("--quiet", options)
         self.assertIn("--tool-wizard", options)
+        self.assertIn("--evidence-root", options)
+        self.assertIn("--save-tool-profile", options)
+        self.assertIn("--workspace-root", options)
 
     def test_tool_wizard_is_separate_from_installer_lifecycle(self) -> None:
         program = PROGRAM.read_text(encoding="utf-8")
@@ -117,6 +128,8 @@ class WindowsInstallerWizardTests(unittest.TestCase):
             program.index("options.ToolWizardOnly"),
             program.index("InstallerPayload.Resolve"),
         )
+        self.assertIn("options.SaveToolProfile", program)
+        self.assertIn("ToolSetupProfile.Save", program)
         self.assertIn("ToolSetupWizardLauncher.Launch", installer)
         self.assertIn("ToolSetupProfile.Save", tool_wizard)
         self.assertIn("O3DE Editor:", tool_wizard)
@@ -152,12 +165,26 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("Get-FileHash", workflow)
         self.assertIn("BaseIntermediateOutputPath", workflow)
         self.assertIn("BaseOutputPath", workflow)
-        self.assertIn("Start-Process -FilePath $wizard -Wait -PassThru", workflow)
-        self.assertIn("$install.ExitCode", workflow)
-        self.assertIn("$repair.ExitCode", workflow)
-        self.assertIn("$remove.ExitCode", workflow)
-        self.assertIn("--tool-wizard", workflow)
-        self.assertIn("Tool Wizard smoke test", workflow)
+        self.assertIn("Invoke-FoaWindowsFunctionalReadiness.ps1", workflow)
+        self.assertIn("windows-functional-readiness", workflow)
+        self.assertIn("-StagedManifest $stagedManifest", workflow)
+
+    def test_functional_readiness_script_proves_user_flow_and_captures_evidence(self) -> None:
+        script = FUNCTIONAL_READINESS_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("foa.sdk.windows_functional_readiness.v1", script)
+        self.assertIn("installer-wizard-smoke", script)
+        self.assertIn("installer-clean-install", script)
+        self.assertIn("tool-profile-save", script)
+        self.assertIn("installed-launcher-self-test", script)
+        self.assertIn("installer-repair", script)
+        self.assertIn("installer-uninstall", script)
+        self.assertIn("functional-readiness-summary.json", script)
+        self.assertIn("tool-profile.local.json", script)
+        self.assertIn("installer-logs", script)
+        self.assertIn("--save-tool-profile", script)
+        self.assertIn("--evidence-root", script)
+        self.assertIn("ready_for_authoring", script)
+        self.assertIn("MSI uninstall removed external workspace data", script)
 
     def test_readme_documents_real_installation_not_review_receipts(self) -> None:
         readme = README.read_text(encoding="utf-8")

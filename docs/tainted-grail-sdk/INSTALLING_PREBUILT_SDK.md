@@ -47,7 +47,9 @@ from another build or copy raw files into the installation.
 5. Choose the default per-user location or another absolute writable location.
 6. Review the displayed MSI SHA-256 and external-workspace boundary, then select
    **Apply**.
-7. Leave **Launch FOA-SDK** selected, or open `FOA-SDK.exe` later from the
+7. Leave **Open Tool Wizard** selected to configure the local workspace and
+   optional tool paths.
+8. Leave **Launch FOA-SDK** selected, or open `FOA-SDK.exe` later from the
    **Tainted Grail FoA SDK** Start Menu folder or the installed SDK `bin` folder.
 
 The executable contains the reviewed MSI and verifies its captured bytes before
@@ -57,6 +59,13 @@ or separately installed .NET runtime is required.
 The installed launcher is `FOA-SDK.exe`. It checks the installed manifest, Editor,
 and bundled project before starting `Editor.exe --project-path <installed-project>`.
 An actionable error asks you to repair or reinstall when that layout is incomplete.
+
+The Tool Wizard is separate from Windows Installer. It creates or records an
+external workspace, optional O3DE Editor path, optional Unity Editor and
+conversion project paths, and optional local Tainted Grail install path. It saves
+`%LOCALAPPDATA%\FOA-SDK\ToolWizard\tool-profile.local.json`. Conversion and
+deployment remain preview/readiness states only; the Tool Wizard does not run
+Unity conversion, deploy adapters, or write into the game.
 
 Keep real workspaces, imported evidence, generated output, staging, deployment,
 and FoA diagnostic data outside the installation directory. Those external
@@ -98,6 +107,11 @@ manually only after confirming that no workspace was placed inside it.
 
 ## Troubleshooting
 
+- **Need evidence for a failing setup path:** rerun the reviewed installer with
+  the Windows readiness smoke from
+  `Installer\Tests\WindowsFunctionalReadiness\Invoke-FoaWindowsFunctionalReadiness.ps1`.
+  It captures MSI logs, command logs, the Tool Wizard profile copy, and
+  `functional-readiness-summary.json`.
 - **Executable checksum mismatch:** stop and obtain a new reviewed artifact.
 - **Manifest missing:** run the executable's Repair operation or obtain the complete artifact.
 - **Editor/project missing:** run Repair; do not point the launcher at an

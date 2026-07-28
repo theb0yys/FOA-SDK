@@ -38,19 +38,40 @@ Normal use is a double-click on `FOA-SDK-Installer.exe`. The supported command-l
 ```text
 FOA-SDK-Installer.exe [--msi <reviewed.msi>]
   [--install-root <absolute-directory>]
+  [--evidence-root <absolute-directory>]
   [--operation install|upgrade|repair|uninstall]
   [--quiet] [--smoke-test]
   [--launch-after-install|--no-launch-after-install]
   [--open-tool-wizard-after-install|--no-open-tool-wizard-after-install]
-  [--tool-wizard]
+  [--tool-wizard] [--save-tool-profile]
+  [--workspace-root <absolute-directory>]
+  [--o3de-editor <Editor.exe>]
+  [--unity-editor <Unity.exe>]
+  [--unity-project <absolute-directory>]
+  [--tainted-grail-install <absolute-directory>]
   [--no-dialog]
 ```
 
 `--smoke-test` verifies payload resolution and constructs the wizard without applying MSI changes. The packaging smoke then uses `--quiet` for the real clean-install, repair, and uninstall lifecycle and checks the installed Editor launcher plus an external workspace sentinel.
 
-`--tool-wizard --smoke-test` constructs the Tool Wizard without resolving an MSI. Normal Tool Wizard use saves `%LOCALAPPDATA%\FOA-SDK\ToolWizard\tool-profile.local.json` and creates the selected external workspace directory if needed. It records preview readiness only; conversion and deployment execution stay disabled until later reviewed flows.
+`--tool-wizard --smoke-test` constructs the Tool Wizard without resolving an MSI. `--tool-wizard --save-tool-profile --no-dialog` saves the same local profile from command-line paths for Windows readiness automation. Normal Tool Wizard use saves `%LOCALAPPDATA%\FOA-SDK\ToolWizard\tool-profile.local.json` and creates the selected external workspace directory if needed. It records preview readiness only; conversion and deployment execution stay disabled until later reviewed flows.
 
-Verbose MSI logs are written beneath `%LOCALAPPDATA%\FOA-SDK\Installer\Logs`. A success code of 1641 or 3010 is reported as successful with a Windows restart required.
+Verbose MSI logs are written beneath `%LOCALAPPDATA%\FOA-SDK\Installer\Logs` by default, or beneath `<evidence-root>\installer-logs` when `--evidence-root` is supplied. A success code of 1641 or 3010 is reported as successful with a Windows restart required.
+
+## Functional readiness smoke
+
+The reusable Windows smoke path is:
+
+```powershell
+Installer\Tests\WindowsFunctionalReadiness\Invoke-FoaWindowsFunctionalReadiness.ps1 `
+  -InstallerExe C:\reviewed\FOA-SDK-Installer.exe `
+  -InstallRoot "$env:TEMP\installed-foa-sdk" `
+  -EvidenceRoot "$env:TEMP\foa-sdk-readiness-evidence" `
+  -StagedManifest C:\reviewed-stage\INSTALL_MANIFEST.json `
+  -ExternalWorkspace "$env:TEMP\external-foa-workspace"
+```
+
+It proves the user flow without touching game files: installer wizard smoke, Tool Wizard smoke, clean install, installed `FOA-SDK.exe --self-test`, Tool Wizard profile save, repair after deliberately damaging the installed launcher, uninstall, external workspace preservation, MSI log capture, and `functional-readiness-summary.json`.
 
 ## Security and trust boundary
 

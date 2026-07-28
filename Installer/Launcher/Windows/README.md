@@ -6,6 +6,8 @@ The release artifact embeds one reviewed MSI and its canonical lowercase `.sha25
 
 The wizard runs as the current user. The MSI is per-user and does not require administrator elevation. The executable never launches FoA, deploys runtime adapters, mutates saves or workspaces, signs artifacts, or publishes a release.
 
+After a successful install or repair, the result page can open the separate Tool Wizard. The Tool Wizard is a local readiness step for the user workspace, O3DE Editor, Unity conversion project, and local Tainted Grail install path. It is not part of the MSI lifecycle and can be opened directly with `--tool-wizard` without resolving an MSI.
+
 ## Build
 
 The packaging workflow is the authoritative producer because it binds the exact reviewed MSI:
@@ -39,10 +41,14 @@ FOA-SDK-Installer.exe [--msi <reviewed.msi>]
   [--operation install|upgrade|repair|uninstall]
   [--quiet] [--smoke-test]
   [--launch-after-install|--no-launch-after-install]
+  [--open-tool-wizard-after-install|--no-open-tool-wizard-after-install]
+  [--tool-wizard]
   [--no-dialog]
 ```
 
 `--smoke-test` verifies payload resolution and constructs the wizard without applying MSI changes. The packaging smoke then uses `--quiet` for the real clean-install, repair, and uninstall lifecycle and checks the installed Editor launcher plus an external workspace sentinel.
+
+`--tool-wizard --smoke-test` constructs the Tool Wizard without resolving an MSI. Normal Tool Wizard use saves `%LOCALAPPDATA%\FOA-SDK\ToolWizard\tool-profile.local.json` and creates the selected external workspace directory if needed. It records preview readiness only; conversion and deployment execution stay disabled until later reviewed flows.
 
 Verbose MSI logs are written beneath `%LOCALAPPDATA%\FOA-SDK\Installer\Logs`. A success code of 1641 or 3010 is reported as successful with a Windows restart required.
 

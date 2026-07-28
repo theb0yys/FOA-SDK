@@ -15,6 +15,8 @@ internal sealed record InstallerOptions(
     bool Quiet,
     bool SmokeTest,
     bool LaunchAfterInstall,
+    bool OpenToolWizardAfterInstall,
+    bool ToolWizardOnly,
     bool NoDialog)
 {
     public static InstallerOptions Parse(string[] args)
@@ -25,6 +27,8 @@ internal sealed record InstallerOptions(
         bool quiet = false;
         bool smokeTest = false;
         bool launchAfterInstall = false;
+        bool openToolWizardAfterInstall = true;
+        bool toolWizardOnly = false;
         bool noDialog = false;
 
         for (int index = 0; index < args.Length; index++)
@@ -55,6 +59,15 @@ internal sealed record InstallerOptions(
                 case "--no-launch-after-install":
                     launchAfterInstall = false;
                     break;
+                case "--open-tool-wizard-after-install":
+                    openToolWizardAfterInstall = true;
+                    break;
+                case "--no-open-tool-wizard-after-install":
+                    openToolWizardAfterInstall = false;
+                    break;
+                case "--tool-wizard":
+                    toolWizardOnly = true;
+                    break;
                 case "--no-dialog":
                     noDialog = true;
                     break;
@@ -73,6 +86,8 @@ internal sealed record InstallerOptions(
             quiet,
             smokeTest,
             launchAfterInstall,
+            openToolWizardAfterInstall,
+            toolWizardOnly,
             noDialog);
     }
 
@@ -107,7 +122,9 @@ internal sealed record InstallerOptions(
     public static string HelpText() =>
         "Usage: FOA-SDK-Installer.exe [--msi <reviewed.msi>] "
         + "[--install-root <directory>] [--operation install|repair|uninstall] "
-        + "[--quiet] [--smoke-test] [--launch-after-install|--no-launch-after-install] [--no-dialog]";
+        + "[--quiet] [--smoke-test] [--launch-after-install|--no-launch-after-install] "
+        + "[--open-tool-wizard-after-install|--no-open-tool-wizard-after-install] "
+        + "[--tool-wizard] [--no-dialog]";
 
     private static InstallerOperation ParseOperation(string value) => value.ToLowerInvariant() switch
     {

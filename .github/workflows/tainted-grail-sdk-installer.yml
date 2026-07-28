@@ -366,6 +366,11 @@ jobs:
           if ($wizardSmoke.ExitCode -ne 0) {
             throw "Installer wizard smoke test failed with exit $($wizardSmoke.ExitCode)."
           }
+          $toolWizardSmoke = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @("--tool-wizard", "--smoke-test", "--install-root", "`"$installRoot`"")
+          if ($toolWizardSmoke.ExitCode -ne 0) {
+            throw "Tool Wizard smoke test failed with exit $($toolWizardSmoke.ExitCode)."
+          }
           $install = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
             -ArgumentList @("--quiet", "--operation", "install", "--install-root", `
               "`"$installRoot`"", "--no-launch-after-install")

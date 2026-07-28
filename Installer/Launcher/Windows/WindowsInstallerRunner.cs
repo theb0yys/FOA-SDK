@@ -13,11 +13,13 @@ internal static class WindowsInstallerRunner
     {
         ValidateInstallRoot(options.InstallRoot);
         string windowsInstallerPath = ResolveWindowsInstallerPath();
-        string logDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FOA-SDK",
-            "Installer",
-            "Logs");
+        string logDirectory = options.EvidenceRoot is null
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FOA-SDK",
+                "Installer",
+                "Logs")
+            : Path.Combine(options.EvidenceRoot, "installer-logs");
         Directory.CreateDirectory(logDirectory);
         string logPath = Path.Combine(
             logDirectory,

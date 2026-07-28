@@ -25,6 +25,10 @@ import verify_installer_artifacts as artifacts
 REPO_ROOT = Path(__file__).resolve().parents[4]
 WORKFLOW = REPO_ROOT / ".github/workflows/tainted-grail-sdk-installer.yml"
 INSTALLER_PAYLOAD = REPO_ROOT / "Installer/Launcher/Windows/InstallerPayload.cs"
+FUNCTIONAL_READINESS_SCRIPT = (
+    REPO_ROOT
+    / "Installer/Tests/WindowsFunctionalReadiness/Invoke-FoaWindowsFunctionalReadiness.ps1"
+)
 INSTALLER_IMPLEMENTATION = (
     WORKFLOW,
     REPO_ROOT / "Installer/Packaging/Windows/CMakeLists.txt",
@@ -123,7 +127,7 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Build standard MSI from the same staged payload",
             "Build self-contained installer wizard with the reviewed MSI",
             "Verify retained installer artifacts and checksums",
-            "Smoke install, launch contract, repair, and uninstall",
+            "Smoke install, configure, launch contract, repair, and uninstall",
             "Upload unsigned development installer artifacts",
         )
         positions = [workflow.index(f"- name: {name}") for name in ordered_steps]
@@ -176,17 +180,21 @@ class InstallerPipelineContractTests(unittest.TestCase):
 
     def test_lifecycle_smoke_proves_manifest_shortcut_repair_and_uninstall(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
+        script = FUNCTIONAL_READINESS_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("Invoke-FoaWindowsFunctionalReadiness.ps1", workflow)
+        self.assertIn("windows-functional-readiness", workflow)
         for fragment in (
             "Installed MSI manifest differs from the exact reviewed staging manifest",
             "CreateShortcut($startMenuEntry)",
             "MSI Start Menu entry targets",
             "WriteAllBytes($launcher",
             "MSI repair did not restore the reviewed product-owned launcher bytes",
-            "Repaired launcher self-test failed",
+            "repaired-launcher-self-test",
             "MSI uninstall left the product manifest installed",
             "MSI uninstall removed external workspace data",
+            "functional-readiness-summary.json",
         ):
-            self.assertIn(fragment, workflow)
+            self.assertIn(fragment, script)
 
     def test_explicitly_excluded_installer_capabilities_remain_absent(self) -> None:
         forbidden = (

@@ -348,7 +348,7 @@ jobs:
           --artifact-root "${{ env.SDK_ARTIFACTS }}"
           --version "${{ inputs.version }}"
 
-      - name: Smoke install, launch contract, repair, and uninstall
+      - name: Smoke install, configure, launch contract, repair, and uninstall
         if: inputs.mode == 'package'
         shell: pwsh
         run: |
@@ -357,92 +357,16 @@ jobs:
             throw "Self-contained installer wizard was not created."
           }
           $installRoot = Join-Path $env:RUNNER_TEMP "installed-foa-sdk"
-          $externalWorkspace = Join-Path $env:RUNNER_TEMP "external-workspace"
-          New-Item -ItemType Directory -Path $externalWorkspace | Out-Null
-          Set-Content -LiteralPath (Join-Path $externalWorkspace "preserve.txt") -Value "preserve"
-
-          $wizardSmoke = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
-            -ArgumentList @("--smoke-test")
-          if ($wizardSmoke.ExitCode -ne 0) {
-            throw "Installer wizard smoke test failed with exit $($wizardSmoke.ExitCode)."
-          }
-          $toolWizardSmoke = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
-            -ArgumentList @("--tool-wizard", "--smoke-test", "--install-root", "`"$installRoot`"")
-          if ($toolWizardSmoke.ExitCode -ne 0) {
-            throw "Tool Wizard smoke test failed with exit $($toolWizardSmoke.ExitCode)."
-          }
-          $install = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
-            -ArgumentList @("--quiet", "--operation", "install", "--install-root", `
-              "`"$installRoot`"", "--no-launch-after-install")
-          if ($install.ExitCode -ne 0) {
-            throw "Installer wizard install failed with exit $($install.ExitCode)."
-          }
-
-          $launcher = Join-Path $installRoot `
-            "bin/Windows/profile/Default/FOA-SDK.exe"
-          $installedManifest = Join-Path $installRoot "INSTALL_MANIFEST.json"
           $stagedManifest = Join-Path $env:SDK_STAGE "INSTALL_MANIFEST.json"
-          if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
-            throw "FOA-SDK.exe was not installed as the SDK launcher."
-          }
-          if (-not (Test-Path -LiteralPath $installedManifest -PathType Leaf)) {
-            throw "MSI install did not preserve the reviewed INSTALL_MANIFEST.json."
-          }
-          $installedManifestHash = (Get-FileHash -LiteralPath $installedManifest -Algorithm SHA256).Hash
-          $stagedManifestHash = (Get-FileHash -LiteralPath $stagedManifest -Algorithm SHA256).Hash
-          if ($installedManifestHash -cne $stagedManifestHash) {
-            throw "Installed MSI manifest differs from the exact reviewed staging manifest."
-          }
-          $startMenuEntry = Join-Path $env:APPDATA `
-            "Microsoft/Windows/Start Menu/Programs/Tainted Grail FoA SDK/FOA-SDK.lnk"
-          if (-not (Test-Path -LiteralPath $startMenuEntry -PathType Leaf)) {
-            throw "MSI Start Menu entry for FOA-SDK.exe was not created."
-          }
-          $shortcutShell = New-Object -ComObject WScript.Shell
-          $shortcut = $shortcutShell.CreateShortcut($startMenuEntry)
-          $shortcutTarget = [System.IO.Path]::GetFullPath($shortcut.TargetPath)
-          $expectedTarget = [System.IO.Path]::GetFullPath($launcher)
-          if (-not [string]::Equals($shortcutTarget, $expectedTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "MSI Start Menu entry targets '$shortcutTarget' instead of '$expectedTarget'."
-          }
-          & $launcher --self-test
-          if ($LASTEXITCODE -ne 0) { throw "FOA-SDK.exe self-test failed." }
+          $readinessEvidence = Join-Path $env:SDK_ARTIFACTS "windows-functional-readiness"
+          $externalWorkspace = Join-Path $env:RUNNER_TEMP "external-workspace"
 
-          $reviewedLauncherHash = (Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash
-          [System.IO.File]::WriteAllBytes($launcher, [byte[]](0x4d, 0x5a, 0x00, 0x00))
-          if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash -ceq $reviewedLauncherHash) {
-            throw "Repair smoke test could not damage the installed FOA-SDK.exe fixture."
-          }
-          $repair = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
-            -ArgumentList @("--quiet", "--operation", "repair", "--install-root", `
-              "`"$installRoot`"", "--no-launch-after-install")
-          if ($repair.ExitCode -ne 0) {
-            throw "Installer wizard repair failed with exit $($repair.ExitCode)."
-          }
-          if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash -cne $reviewedLauncherHash) {
-            throw "MSI repair did not restore the reviewed product-owned launcher bytes."
-          }
-          & $launcher --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Repaired launcher self-test failed." }
-
-          $remove = Start-Process -FilePath $wizard -Wait -PassThru -WindowStyle Hidden `
-            -ArgumentList @("--quiet", "--operation", "uninstall", "--install-root", `
-              "`"$installRoot`"", "--no-launch-after-install")
-          if ($remove.ExitCode -ne 0) {
-            throw "Installer wizard uninstall failed with exit $($remove.ExitCode)."
-          }
-          if (Test-Path -LiteralPath $launcher -PathType Leaf) {
-            throw "MSI uninstall left FOA-SDK.exe installed."
-          }
-          if (Test-Path -LiteralPath $installedManifest -PathType Leaf) {
-            throw "MSI uninstall left the product manifest installed."
-          }
-          if (Test-Path -LiteralPath $startMenuEntry -PathType Leaf) {
-            throw "MSI uninstall left the product Start Menu entry installed."
-          }
-          if (-not (Test-Path -LiteralPath (Join-Path $externalWorkspace "preserve.txt"))) {
-            throw "MSI uninstall removed external workspace data."
-          }
+          Installer/Tests/WindowsFunctionalReadiness/Invoke-FoaWindowsFunctionalReadiness.ps1 `
+            -InstallerExe $wizard `
+            -InstallRoot $installRoot `
+            -EvidenceRoot $readinessEvidence `
+            -StagedManifest $stagedManifest `
+            -ExternalWorkspace $externalWorkspace
 
       - name: Upload unsigned development installer artifacts
         if: inputs.mode == 'package'

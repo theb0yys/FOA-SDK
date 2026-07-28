@@ -49,8 +49,11 @@ Installer changes require, as applicable:
 3. exact inventory, provenance, licence, notice, SBOM, and redistribution review;
 4. successful MSI and portable ZIP creation from one verified stage;
 5. executable-wizard construction with the exact reviewed MSI and checksum embedded;
-6. clean install, `FOA-SDK.exe` self-test, repair, and uninstall through the executable;
-7. proof that an external workspace sentinel survives repair and uninstall;
+6. clean install, Tool Wizard profile save, `FOA-SDK.exe` self-test, repair, and
+   uninstall through the executable;
+7. retained Windows readiness evidence, including MSI logs, command logs,
+   `tool-profile.local.json`, `functional-readiness-summary.json`, and proof that
+   an external workspace sentinel survives repair and uninstall;
 8. an independently reviewed second version before claiming actual upgrade coverage;
 9. Windows Editor UI validation; and
 10. the repository's exact-head validation and current branch-to-pull-request

@@ -62,6 +62,24 @@ internal static class Program
 
     private static int RunToolWizard(InstallerOptions options)
     {
+        if (options.SaveToolProfile)
+        {
+            ToolSetupOptions loaded = ToolSetupProfile.LoadOrDefault(options.InstallRoot);
+            ToolSetupOptions setupOptions = loaded with
+            {
+                WorkspaceRoot = options.WorkspaceRoot ?? loaded.WorkspaceRoot,
+                O3deEditorPath = options.O3deEditorPath ?? loaded.O3deEditorPath,
+                UnityEditorPath = options.UnityEditorPath ?? loaded.UnityEditorPath,
+                UnityProjectPath = options.UnityProjectPath ?? loaded.UnityProjectPath,
+                TaintedGrailInstallPath = options.TaintedGrailInstallPath ?? loaded.TaintedGrailInstallPath,
+            };
+            ToolSetupSaveResult result = ToolSetupProfile.Save(setupOptions, options.InstallRoot);
+            ToolSetupOptions normalized = ToolSetupProfile.Normalize(setupOptions, options.InstallRoot);
+            Console.WriteLine($"Tool profile saved: {result.ProfilePath}");
+            Console.WriteLine(ToolSetupProfile.Describe(normalized, result.Readiness));
+            return 0;
+        }
+
         if (options.Quiet)
         {
             throw new ArgumentException("The Tool Wizard is interactive; remove --quiet to open it.");

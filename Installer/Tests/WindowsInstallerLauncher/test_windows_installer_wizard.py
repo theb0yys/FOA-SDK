@@ -195,6 +195,12 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertNotIn("review evidence only", readme)
         self.assertNotIn("Suite Wizard receipt", readme)
 
+    def test_installed_launcher_reports_partial_layout_with_setup_guidance(self) -> None:
+        launcher = (LAUNCHER_ROOT / "InstalledEditorLauncher.cpp").read_text(encoding="utf-8")
+        self.assertIn("complete installed FOA-SDK layout", launcher)
+        self.assertIn("Missing: ", launcher)
+        self.assertIn("Run FOA-SDK-Installer.exe to install or repair the SDK.", launcher)
+
     def test_discovery_bridge_registers_wizard_tests(self) -> None:
         bridge = DISCOVERY_BRIDGE.read_text(encoding="utf-8")
         self.assertIn("test_windows_installer_wizard.py", bridge)

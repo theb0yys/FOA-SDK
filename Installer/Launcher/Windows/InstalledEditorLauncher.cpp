@@ -133,11 +133,14 @@ namespace
             installRoot = installRoot.parent_path();
         }
 
+        const std::filesystem::path manifest = installRoot / ManifestFileName;
         editor = binaryDirectory / EditorFileName;
         project = installRoot / ProjectDirectoryName;
-        if (!IsRegularFile(installRoot / ManifestFileName))
+        if (!IsRegularFile(manifest))
         {
-            error = L"The installed SDK manifest is missing. Repair or reinstall the SDK.";
+            error = L"This launcher must run from a complete installed FOA-SDK layout.\n\nMissing: "
+                + manifest.native()
+                + L"\n\nRun FOA-SDK-Installer.exe to install or repair the SDK.";
             return false;
         }
         if (!IsRegularFile(editor))

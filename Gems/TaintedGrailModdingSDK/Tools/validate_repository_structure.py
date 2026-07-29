@@ -72,6 +72,15 @@ ALLOWED_INSTALLER_ROOT_FILES = {
 ALLOWED_INSTALLER_LANE_FILES = {
     f"Installer/{lane}/README.md" for lane in ALLOWED_INSTALLER_LANES
 }
+FORBIDDEN_GENERATED_SOURCE_EXTENSIONS = {
+    ".7z",
+    ".dll",
+    ".exe",
+    ".msi",
+    ".pdb",
+    ".zip",
+}
+FORBIDDEN_GENERATED_SOURCE_DIRECTORIES = {"Artifacts", "artifacts"}
 ALLOWED_GITHUB_FILES = {
     ".github/CODEOWNERS",
     ".github/ISSUE_TEMPLATE/config.yml",
@@ -179,10 +188,17 @@ def validate_paths(paths: Iterable[str]) -> None:
     unexpected_plugins: set[str] = set()
     plugin_packages: set[tuple[str, str]] = set()
     unexpected_installer: set[str] = set()
+    generated_source_artifacts: set[str] = set()
 
     for path in tracked:
         parts = path.split("/")
         top = parts[0]
+        suffix = Path(path).suffix.casefold()
+        if suffix in FORBIDDEN_GENERATED_SOURCE_EXTENSIONS or any(
+            part in FORBIDDEN_GENERATED_SOURCE_DIRECTORIES for part in parts
+        ):
+            generated_source_artifacts.add(path)
+            continue
         if len(parts) == 1:
             if top in FORBIDDEN_ENGINE_FILES:
                 forbidden.add(path)
@@ -276,6 +292,11 @@ def validate_paths(paths: Iterable[str]) -> None:
     if missing_plugin_manifests:
         problems.append(
             "plug-in packages missing plugin.json: " + ", ".join(missing_plugin_manifests)
+        )
+    if generated_source_artifacts:
+        problems.append(
+            "generated artifacts tracked in source: "
+            + ", ".join(sorted(generated_source_artifacts)[:20])
         )
     if problems:
         raise RepositoryStructureError("; ".join(problems))

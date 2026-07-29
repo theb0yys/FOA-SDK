@@ -2,7 +2,7 @@
 
 `Installer/` owns the source needed to turn one reviewed prebuilt FOA-SDK payload into a simple user-facing Windows setup wizard. End users run `FOA-SDK-Installer.exe`; the wizard stores the SDK locally, installs the bundled editor project, and gives the user `FOA-SDK.exe` as the launcher that opens the SDK editor. The user workflow requires no Git, Python, CMake, Visual Studio, repository checkout, or O3DE source build.
 
-Generated MSI files, portable ZIP archives, staged payloads, build caches, logs, screenshots, signing material, and release uploads belong under the external `foa-build/` root or another reviewed output directory, never in this source tree.
+Generated MSI files, portable ZIP archives, staged payloads, build caches, logs, screenshots, signing material, release uploads, and raw installed-launcher binaries belong under the external `foa-build/` root or another reviewed output directory, never in this source tree.
 
 ## Layout
 
@@ -28,7 +28,7 @@ The executable wizard:
 5. records the verbose Windows Installer log; and
 6. optionally launches the installed `FOA-SDK.exe` after success.
 
-The installed product includes `FOA-SDK.exe` as the user entry point. Clicking that executable starts the bundled SDK editor against the installed project. The longer generated O3DE launcher name may remain as internal compatibility detail, but it is not the user contract.
+The installed product includes `FOA-SDK.exe` as the user entry point. Clicking that executable starts the bundled SDK editor against the installed project. The longer generated O3DE launcher name may remain as internal compatibility detail, but it is not the user contract and must not be committed by itself; without the manifest, `Editor.exe`, and installed project beside it, that launcher is only a partial installed-payload file.
 
 An explicitly supplied or adjacent development MSI is accepted only with its `.sha256` sidecar. The launcher captures those bytes into its private temporary root and verifies the captured copy before execution, preventing a path from being changed between validation and Windows Installer startup.
 

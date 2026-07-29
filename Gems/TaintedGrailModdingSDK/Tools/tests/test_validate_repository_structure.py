@@ -112,6 +112,20 @@ class RepositoryStructureContractTests(unittest.TestCase):
         }
         contract.validate_paths(paths)
 
+    def test_generated_installer_binary_in_source_fails(self) -> None:
+        paths = valid_tree() | {
+            "Installer/Launcher/Windows/Artifacts/bin/Windows/profile/Default/TaintedGrailModdingEditorLauncher.exe",
+        }
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "generated artifacts"):
+            contract.validate_paths(paths)
+
+    def test_generated_installer_artifact_directory_in_source_fails(self) -> None:
+        paths = valid_tree() | {
+            "Installer/Launcher/Windows/artifacts/README.md",
+        }
+        with self.assertRaisesRegex(contract.RepositoryStructureError, "generated artifacts"):
+            contract.validate_paths(paths)
+
     def test_obsolete_installer_suite_lane_fails(self) -> None:
         paths = valid_tree() | {"Installer/Suites/Developer/suite.json"}
         with self.assertRaisesRegex(contract.RepositoryStructureError, "unexpected installer"):

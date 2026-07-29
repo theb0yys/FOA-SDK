@@ -202,11 +202,23 @@ def html_page(model: Mapping[str, Any], entries: Sequence[Mapping[str, Any]]) ->
     for entry in entries:
         issues = "; ".join(html.escape(str(i.get("Message", i))) for i in entry.get("Issues", []) if isinstance(i, dict))
         rows.append("<tr>" + f"<td>{html.escape(str(entry['DisplayName']))}</td>" + f"<td>{html.escape(str(entry['EntryKind']))}</td>" + f"<td>{html.escape(str(entry['PreviewAvailability']))}</td>" + f"<td>{html.escape(str(entry['IssueSeverity']))}</td>" + f"<td>{html.escape(', '.join(map(str, entry.get('ProductCachePaths', []))))}</td>" + f"<td>{html.escape(issues)}</td>" + "</tr>")
-    doc = """<!doctype html>
-<html lang=\"en\"><head><meta charset=\"utf-8\"><title>FOA Asset Browser Preview Pane</title><style>body{font-family:system-ui,sans-serif;margin:1.5rem}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:.45rem;text-align:left}.boundary{border:1px solid #555;padding:.75rem;margin-bottom:1rem}</style></head><body>
-<h1>FOA Asset Browser Preview Pane</h1><div class=\"boundary\"><strong>Boundary:</strong> static local UI render only. No ODE Asset Browser mutation, no typed bindings, no runtime authority.</div>
-<p>Source model: %s</p><table><thead><tr><th>Name</th><th>Kind</th><th>Preview</th><th>Severity</th><th>Product cache path</th><th>Issues</th></tr></thead><tbody>%s</tbody></table></body></html>
-""" % (html.escape(str(model.get("AssetBrowserModelId", ""))), "\n".join(rows))
+    source_model = html.escape(str(model.get("AssetBrowserModelId", "")))
+    body_rows = "\n".join(rows)
+    doc = (
+        "<!doctype html>\n"
+        '<html lang="en"><head><meta charset="utf-8"><title>FOA Asset Browser Preview Pane</title>'
+        "<style>body{font-family:system-ui,sans-serif;margin:1.5rem}"
+        "table{border-collapse:collapse;width:100%}"
+        "th,td{border:1px solid #999;padding:.45rem;text-align:left}"
+        ".boundary{border:1px solid #555;padding:.75rem;margin-bottom:1rem}</style></head><body>\n"
+        "<h1>FOA Asset Browser Preview Pane</h1>"
+        '<div class="boundary"><strong>Boundary:</strong> static local UI render only. '
+        "No ODE Asset Browser mutation, no typed bindings, no runtime authority.</div>\n"
+        f"<p>Source model: {source_model}</p>"
+        "<table><thead><tr><th>Name</th><th>Kind</th><th>Preview</th><th>Severity</th>"
+        f"<th>Product cache path</th><th>Issues</th></tr></thead><tbody>{body_rows}</tbody></table>"
+        "</body></html>\n"
+    )
     return doc.encode("utf-8")
 
 def build_render(workspace_path: Path, model_path: Path, *, output_root: Path | None = None, captured_at: str | None = None, replace: bool = False) -> tuple[dict[str, Any], Path]:

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+#
 """Asset Browser pane model built from O3DE import-proof evidence only."""
 from __future__ import annotations
 import argparse, hashlib, json, shutil

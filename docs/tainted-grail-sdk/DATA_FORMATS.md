@@ -57,6 +57,78 @@ V1 is permanently inert. A later execution gate must introduce a new contract ve
 relax the V1 validators. Provider and extension identities remain exact handoff bindings in V1;
 their final product values are resolved only by the later provider-selection gate.
 
+## Terrain heightmap document
+
+Suffix:
+
+```text
+*.tgheightmap.json
+```
+
+Purpose: local-only, editor-owned terrain heightmap authoring state for user-exported heightmap
+inputs. Version 1 does not identify native FoA map objects, grant runtime permission, deploy files,
+publish payloads, or promote evidence.
+
+Schema identity:
+
+```text
+Schema ID: foa.terrain-heightmap
+Schema version: 1
+Canonical payload: unsigned 16-bit integer tiles
+Tile byte order: little-endian
+Tile storage order: row-major
+```
+
+Top-level fields:
+
+- `schema`;
+- `schema_version`;
+- `document_id`;
+- `map_identity`;
+- `profile_binding`;
+- `source_binding`;
+- `grid`;
+- `sample_encoding`;
+- `vertical_mapping`;
+- `coordinate_space`;
+- `tiles`;
+- `provenance`;
+- `legal_state`;
+- `revision`;
+- `local_payload_state`;
+- `authority`.
+
+Schema-1 rules:
+
+- unknown schema versions and unknown required enum values are rejected;
+- `map_identity` uses a stable synthetic terrain map ID, and public aliases do not become native
+  map identities;
+- `profile_binding` binds the document to the active profile ID, game version, branch, runtime
+  target, and profile fingerprint;
+- `source_binding` records a redacted, local-only user-exported source observation and must not
+  contain private absolute input paths;
+- `grid` dimensions are positive and bounded, and total-sample multiplication must not overflow;
+- `sample_encoding` is canonical `u16`, little-endian, row-major, unsigned, 16-bit payload data;
+- `vertical_mapping` uses finite metres and requires `max_height_metres > min_height_metres`;
+- `coordinate_space` records handedness, axes, row-zero orientation, sample-position semantics, and
+  a deterministic transform;
+- `tiles` must exactly cover the grid without gaps, overlaps, duplicates, path escapes, case
+  collisions, private paths, unsupported suffixes, or byte-size mismatches;
+- canonical height conversion is
+  `height_metres = min_height_metres + (uint16_sample / 65535) * (max_height_metres - min_height_metres)`;
+- workspace-derived manifests, local tile payloads, source observations, and preview projections
+  remain excluded from official package contents by default;
+- all authority flags stay false: `runtime_use_allowed`, `deployment_allowed`,
+  `publication_allowed`, `packaging_allowed`, `game_write_allowed`, and
+  `evidence_promotion_allowed`.
+
+Accepted first-route inputs are explicit user-selected 16-bit greyscale PNG, 16-bit greyscale TIFF,
+and raw U16 grids with mandatory sidecars. Raw sidecars must provide dimensions, byte order,
+vertical range, spacing, coordinate basis, row-zero orientation, and sample-position semantics; the
+importer must not guess these from file size or appearance. Direct Unity bundles, scenes, `.assets`,
+`.resS`, Addressables bundles, executables, assemblies, saves, and protected containers are not valid
+heightmap inputs.
+
 ## Workspace document
 
 Suffix:

@@ -57,6 +57,8 @@ set(FILES
     Source/TaintedFrameworkKnowledge.h
     Source/TaintedInterfaceUiUtilities.cpp
     Source/TaintedInterfaceUiUtilities.h
+    Source/TerrainHeightmapDocument.cpp
+    Source/TerrainHeightmapDocument.h
     Source/WorkspacePersistenceService.cpp
     Source/WorkspacePersistenceService.h
     Source/WorkspaceSchemaService.cpp

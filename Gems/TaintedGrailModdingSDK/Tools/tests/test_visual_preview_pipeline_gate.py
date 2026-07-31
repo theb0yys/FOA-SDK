@@ -38,7 +38,7 @@ class VisualPreviewPipelineGateTests(unittest.TestCase):
                 encoding="utf-8",
             )
             index_path.write_text(
-                "- [Visual Game-Content Browser and Preview Pipeline Gate](VISUAL_GAME_CONTENT_BROWSER_AND_PREVIEW_PIPELINE.md) — blocks function-complete visual and item/recipe/actor/troop workflow claims.\n",
+                "- [Visual Game-Content Browser and Preview Pipeline Gate](VISUAL_GAME_CONTENT_BROWSER_AND_PREVIEW_PIPELINE.md) \u2014 blocks function-complete visual and item/recipe/actor/troop workflow claims.\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(validator.VisualPreviewPipelineGateError, "Native icon and thumbnail extraction"):
@@ -54,7 +54,7 @@ class VisualPreviewPipelineGateTests(unittest.TestCase):
             source = (validator.REPO_ROOT / validator.DOC_PATH).read_text(encoding="utf-8")
             doc_path.write_text(source + "\nruntime-assisted capture is approved for Alpha\n", encoding="utf-8")
             index_path.write_text(
-                "- [Visual Game-Content Browser and Preview Pipeline Gate](VISUAL_GAME_CONTENT_BROWSER_AND_PREVIEW_PIPELINE.md) — blocks function-complete visual and item/recipe/actor/troop workflow claims.\n",
+                "- [Visual Game-Content Browser and Preview Pipeline Gate](VISUAL_GAME_CONTENT_BROWSER_AND_PREVIEW_PIPELINE.md) \u2014 blocks function-complete visual and item/recipe/actor/troop workflow claims.\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(validator.VisualPreviewPipelineGateError, "runtime-assisted capture"):

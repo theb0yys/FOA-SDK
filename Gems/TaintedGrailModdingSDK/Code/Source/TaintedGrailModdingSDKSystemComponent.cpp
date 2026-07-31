@@ -221,8 +221,8 @@ namespace TaintedGrailModdingSDK
             packOptions);
 
         AzToolsFramework::ViewPaneOptions intakeOptions;
-        intakeOptions.paneRect = QRect(140, 140, 1000, 900);
-        intakeOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
+        intakeOptions.paneRect = QRect(140, 140, 720, 900);
+        intakeOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         intakeOptions.isDeletable = true;
         intakeOptions.isPreview = true;
         intakeOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.SourceIntake");

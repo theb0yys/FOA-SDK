@@ -87,7 +87,7 @@ PANES = (
         "extension.avalon-ai-authoring",
     ),
     Pane(
-        "Tainted Grail Road Atlas Editor",
+        "Tainted Grail Map Editor (Road Atlas)",
         "Plugins/Authoring/RoadAtlas/Gem/Code/Source/RoadAtlasEditorModule.cpp",
         "Plugins/Authoring/RoadAtlas/Gem/Code/Source/RoadAtlasEditorWidget.cpp",
         "Plugins/Authoring/RoadAtlas/Gem/Code/road_atlas_authoring_files.cmake",

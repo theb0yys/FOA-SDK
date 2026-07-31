@@ -233,6 +233,7 @@ namespace TaintedGrailModdingSDK
             "item-recipe-dump",
             "scene-world-observation",
             "json-register",
+            "asset-import-proof",
             "avalon-core-source-set",
         };
         json.m_supportedExtensions = { ".json" };
@@ -259,6 +260,8 @@ namespace TaintedGrailModdingSDK
             "decompilation-note",
             "runtime-log",
             "screenshot",
+            "visual-preview-artifact",
+            "asset-import-proof",
             "csv-register",
             "json-register",
             "avalon-core-source-set",
@@ -506,6 +509,34 @@ namespace TaintedGrailModdingSDK
         if (suffix == "jpg" || suffix == "jpeg")
         {
             return "image/jpeg";
+        }
+        if (suffix == "dds")
+        {
+            return "image/vnd-ms.dds";
+        }
+        if (suffix == "tga")
+        {
+            return "image/x-tga";
+        }
+        if (suffix == "tif" || suffix == "tiff")
+        {
+            return "image/tiff";
+        }
+        if (suffix == "fbx")
+        {
+            return "model/vnd.autodesk.fbx";
+        }
+        if (suffix == "obj")
+        {
+            return "model/obj";
+        }
+        if (suffix == "gltf")
+        {
+            return "model/gltf+json";
+        }
+        if (suffix == "glb")
+        {
+            return "model/gltf-binary";
         }
         if (suffix == "log" || suffix == "txt" || suffix == "md")
         {

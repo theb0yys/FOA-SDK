@@ -23,6 +23,7 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QSplitter>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -63,8 +64,12 @@ namespace TaintedGrailModdingSDK
     {
         FoundationNotificationBus::Handler::BusConnect();
 
+        setMinimumWidth(420);
+        setMaximumWidth(960);
+        setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+
         auto* rootLayout = new QVBoxLayout(this);
-        auto* heading = new QLabel(tr("Tainted Grail Source and Evidence Intake"), this);
+        auto* heading = new QLabel(tr("Tainted Grail Asset Import and Evidence Inspection"), this);
         QFont headingFont = heading->font();
         headingFont.setPointSize(headingFont.pointSize() + 3);
         headingFont.setBold(true);
@@ -72,7 +77,7 @@ namespace TaintedGrailModdingSDK
         rootLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Every artifact is SHA-256 fingerprinted and bound to the active exact FoA profile before it enters the registry. Structured JSON and CSV may extract evidence; other inputs remain source-only until reviewed."),
+            tr("Browse to local model, texture, source, or evidence artifacts. Every import is SHA-256 fingerprinted and bound to the active exact FoA profile before it enters the registry. Structured JSON and CSV may extract evidence; other inputs remain source-only until reviewed."),
             this);
         description->setWordWrap(true);
         rootLayout->addWidget(description);
@@ -87,17 +92,18 @@ namespace TaintedGrailModdingSDK
         profileLayout->addRow(tr("Runtime target"), m_runtimeValue);
         rootLayout->addWidget(profileGroup);
 
-        auto* intakeGroup = new QGroupBox(tr("Import Artifact"), this);
+        auto* intakeGroup = new QGroupBox(tr("Import Asset or Source Artifact"), this);
         auto* intakeLayout = new QFormLayout(intakeGroup);
 
         auto* inputRow = new QWidget(intakeGroup);
         auto* inputLayout = new QHBoxLayout(inputRow);
         inputLayout->setContentsMargins(0, 0, 0, 0);
         m_inputPathEdit = new QLineEdit(inputRow);
+        m_inputPathEdit->setPlaceholderText(tr("Browse to a local asset/source artifact; no typed binding is created by import."));
         auto* browseButton = new QPushButton(tr("Browse..."), inputRow);
         inputLayout->addWidget(m_inputPathEdit, 1);
         inputLayout->addWidget(browseButton);
-        intakeLayout->addRow(tr("Input file"), inputRow);
+        intakeLayout->addRow(tr("Artifact file"), inputRow);
 
         m_sourceKindCombo = new QComboBox(intakeGroup);
         m_sourceKindCombo->addItems({
@@ -107,6 +113,8 @@ namespace TaintedGrailModdingSDK
             "decompilation-note",
             "runtime-log",
             "screenshot",
+            "visual-preview-artifact",
+            "asset-import-proof",
             "csv-register",
             "json-register",
             "avalon-core-source-set"
@@ -286,9 +294,9 @@ namespace TaintedGrailModdingSDK
 
         const QString filePath = QFileDialog::getOpenFileName(
             this,
-            tr("Select TG source artifact"),
+            tr("Select Tainted Grail asset/source artifact"),
             startDirectory,
-            tr("Supported inputs (*.json *.csv *.log *.txt *.md *.png *.jpg *.jpeg);;All files (*)"));
+            tr("Preview assets (*.fbx *.obj *.gltf *.glb *.png *.jpg *.jpeg *.dds *.tga *.tif *.tiff);;Evidence documents (*.json *.csv *.log *.txt *.md);;All files (*)"));
         if (filePath.isEmpty())
         {
             return;

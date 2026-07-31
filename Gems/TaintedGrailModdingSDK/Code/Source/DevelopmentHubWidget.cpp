@@ -35,7 +35,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogGovernancePane = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorPane = "Tainted Grail Item and Recipe Editor";
         constexpr const char* ActorTroopEditorPane = "Tainted Grail Actor and Troop Editor";
-        constexpr const char* RoadAtlasEditorPane = "Tainted Grail Road Atlas Editor";
+        constexpr const char* RoadAtlasEditorPane = "Tainted Grail Map Editor (Road Atlas)";
         constexpr const char* AvalonAIEditorPane = "Tainted Grail Avalon AI Editor";
         constexpr const char* EconomyCoveragePane = "Tainted Grail Economy Acquisition Coverage";
         constexpr const char* EconomyDuplicatesPane = "Tainted Grail Economy Cross-Pack Duplicates";
@@ -234,12 +234,12 @@ namespace TaintedGrailModdingSDK
             tr("Research and author"),
             tr("Move from fingerprinted source material to reviewed canonical records and typed economy authoring."),
             {
-                { tr("Source and evidence intake"), tr("Register sources and evidence without inferring facts."), SourceIntakePane },
+                { tr("Asset import and evidence intake"), tr("Browse, fingerprint, import, and inspect local source or preview-asset artifacts without inferring facts."), SourceIntakePane },
                 { tr("Catalog browser"), tr("Inspect canonical identities, relationships, evidence, and blockers."), CatalogBrowserPane },
                 { tr("Catalog governance"), tr("Record reviewed validation, permission, prohibition, and staleness decisions."), CatalogGovernancePane },
                 { tr("Item and recipe editor"), tr("Author typed economy profiles against existing canonical identities."), ItemRecipeEditorPane },
                 { tr("Actor and troop editor"), tr("Author evidence-bound population profiles and troop composition without runtime spawn authority."), ActorTroopEditorPane },
-                { tr("Road Atlas editor"), tr("Author and validate exact-profile planning-only road topology snapshots."), RoadAtlasEditorPane },
+                { tr("Map editor (Road Atlas)"), tr("Author and validate exact-profile planning-only map road topology snapshots."), RoadAtlasEditorPane },
                 { tr("Avalon AI editor"), tr("Author API 2.0 packages and deterministic inert AI plans."), AvalonAIEditorPane },
             }));
 

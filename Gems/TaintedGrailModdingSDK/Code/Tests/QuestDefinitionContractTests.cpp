@@ -221,6 +221,16 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(HasIssue(
             ValidateQuestDefinitionV1(tooMany),
             "quest.bounds.exceeded"));
+
+        QuestDefinitionV1 tooManyCompatibilityTags = MakeValidQuestDefinition();
+        for (int index = 0; index < 300; ++index)
+        {
+            tooManyCompatibilityTags.m_compatibilityTags.push_back(
+                "compat.fixture.contract-only");
+        }
+        EXPECT_TRUE(HasIssue(
+            ValidateQuestDefinitionV1(tooManyCompatibilityTags),
+            "quest.bounds.exceeded"));
     }
 
     TEST(QuestDefinitionContractTests, ReferencesAmbiguityCyclesAndUnknownRegistriesFailClosed)

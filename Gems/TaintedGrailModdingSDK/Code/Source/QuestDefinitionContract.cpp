@@ -1628,6 +1628,7 @@ namespace TaintedGrailModdingSDK
             || definition.m_conditions.size() > MaxQuestDefinitionItems
             || definition.m_actions.size() > MaxQuestDefinitionItems
             || definition.m_outcomes.empty() || definition.m_outcomes.size() > MaxQuestDefinitionItems
+            || definition.m_compatibilityTags.size() > MaxQuestDefinitionItems
             || definition.m_bindingRequirements.empty()
             || definition.m_bindingRequirements.size() > MaxQuestDefinitionItems)
         {

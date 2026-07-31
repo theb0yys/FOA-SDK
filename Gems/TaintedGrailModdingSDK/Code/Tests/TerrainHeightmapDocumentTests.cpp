@@ -29,6 +29,17 @@ namespace TaintedGrailModdingSDK
             return "sha256:" + AZStd::string(64, fill);
         }
 
+        AZStd::string IndexedSha(AZ::u32 index)
+        {
+            constexpr char Hex[] = "0123456789abcdef";
+            AZStd::string hash = "sha256:";
+            for (AZ::u32 offset = 0; offset < 64; ++offset)
+            {
+                hash.push_back(Hex[(index + offset) % 16]);
+            }
+            return hash;
+        }
+
         AZStd::string ToAzString(const QString& value)
         {
             const QByteArray utf8 = value.toUtf8();
@@ -392,6 +403,65 @@ namespace TaintedGrailModdingSDK
             return document;
         }
 
+        TerrainHeightmap::TerrainHeightmapDocumentV1 MakeLargeBoundDocument(
+            AZ::u32 width = 16385,
+            AZ::u32 height = 16385)
+        {
+            auto document = MakeDocument();
+            document.m_documentId = "terrain-document.synthetic-wa-th-large-bound";
+            document.m_mapIdentity.m_mapId = "terrain-map.synthetic-wa-th-large-bound";
+            document.m_mapIdentity.m_displayName = "Synthetic WA-TH Large Bound Terrain";
+            document.m_sourceBinding.m_sourceObjectIdentifier = "synthetic-wa-th-large-bound.raw";
+            document.m_sourceBinding.m_relativeLocator = "Sources/Terrain/synthetic-wa-th-large-bound.raw";
+            document.m_grid.m_width = width;
+            document.m_grid.m_height = height;
+            document.m_tiles.clear();
+
+            AZ::u32 tileIndex = 0;
+            for (AZ::u32 originY = 0; originY < height;
+                 originY += TerrainHeightmap::TerrainHeightmapNominalTileSize)
+            {
+                const AZ::u32 tileHeight = AZStd::min(
+                    TerrainHeightmap::TerrainHeightmapNominalTileSize,
+                    height - originY);
+                for (AZ::u32 originX = 0; originX < width;
+                     originX += TerrainHeightmap::TerrainHeightmapNominalTileSize)
+                {
+                    const AZ::u32 tileWidth = AZStd::min(
+                        TerrainHeightmap::TerrainHeightmapNominalTileSize,
+                        width - originX);
+                    TerrainHeightmap::Tile tile;
+                    tile.m_tileId = AZStd::string::format(
+                        "terrain-tile.synthetic-wa-th.%04u",
+                        tileIndex);
+                    tile.m_originX = originX;
+                    tile.m_originY = originY;
+                    tile.m_width = tileWidth;
+                    tile.m_height = tileHeight;
+                    tile.m_relativePath = AZStd::string::format(
+                        "Tiles/wa-th-large-bound/%04u.terrain.u16le",
+                        tileIndex);
+                    tile.m_byteSize = static_cast<AZ::u64>(tileWidth)
+                        * static_cast<AZ::u64>(tileHeight)
+                        * 2u;
+                    tile.m_sha256 = IndexedSha(tileIndex);
+                    document.m_tiles.push_back(AZStd::move(tile));
+                    ++tileIndex;
+                }
+            }
+            return document;
+        }
+
+        AZ::u64 MaxTileByteSize(const AZStd::vector<TerrainHeightmap::Tile>& tiles)
+        {
+            AZ::u64 maxBytes = 0;
+            for (const auto& tile : tiles)
+            {
+                maxBytes = AZStd::max(maxBytes, tile.m_byteSize);
+            }
+            return maxBytes;
+        }
+
         bool HasIssue(
             const TerrainHeightmap::ValidationResult& result,
             const AZStd::string& code)
@@ -470,6 +540,54 @@ namespace TaintedGrailModdingSDK
         const auto hugeResult = TerrainHeightmap::ValidateDocument(huge);
         EXPECT_FALSE(hugeResult.m_accepted);
         EXPECT_TRUE(HasIssue(hugeResult, "grid.invalid"));
+    }
+
+    TEST(TerrainHeightmapDocumentTests, WaThLargeImportBoundStaysWithinDeterministicPerformanceCardinality)
+    {
+        constexpr AZ::u32 WaThLargeWidth = 16385;
+        constexpr AZ::u32 WaThLargeHeight = 16385;
+        constexpr AZ::u64 WaThLargeSamples =
+            static_cast<AZ::u64>(WaThLargeWidth) * WaThLargeHeight;
+        constexpr AZ::u64 WaThLargeSourceBytes = WaThLargeSamples * 2u;
+        constexpr AZ::u64 WaThMemoryBudgetBytes = 768ull * 1024ull * 1024ull;
+        constexpr AZ::u64 WaThFullTileBytes =
+            static_cast<AZ::u64>(TerrainHeightmap::TerrainHeightmapNominalTileSize)
+            * TerrainHeightmap::TerrainHeightmapNominalTileSize
+            * 2u;
+        constexpr AZ::u64 ExpectedTileColumns =
+            (WaThLargeWidth + TerrainHeightmap::TerrainHeightmapNominalTileSize - 1u)
+            / TerrainHeightmap::TerrainHeightmapNominalTileSize;
+        constexpr AZ::u64 ExpectedTileRows =
+            (WaThLargeHeight + TerrainHeightmap::TerrainHeightmapNominalTileSize - 1u)
+            / TerrainHeightmap::TerrainHeightmapNominalTileSize;
+
+        const auto document = MakeLargeBoundDocument();
+        const auto result = TerrainHeightmap::ValidateDocument(document);
+
+        EXPECT_TRUE(result.m_accepted);
+        EXPECT_EQ(result.m_totalSamples, WaThLargeSamples);
+        EXPECT_EQ(result.m_totalSamples, TerrainHeightmap::TerrainHeightmapMaximumTotalSamples);
+        EXPECT_EQ(result.m_tileCount, ExpectedTileColumns * ExpectedTileRows);
+        EXPECT_EQ(result.m_tileCount, 289ull);
+        EXPECT_LE(result.m_tileCount, TerrainHeightmap::TerrainHeightmapMaximumTileCount);
+        EXPECT_EQ(WaThLargeSourceBytes, 536936450ull);
+        EXPECT_LE(WaThLargeSourceBytes, WaThMemoryBudgetBytes);
+        EXPECT_EQ(MaxTileByteSize(document.m_tiles), WaThFullTileBytes);
+        EXPECT_LE(WaThFullTileBytes, WaThMemoryBudgetBytes);
+        ASSERT_FALSE(document.m_tiles.empty());
+        EXPECT_EQ(document.m_tiles.back().m_originX, 16384);
+        EXPECT_EQ(document.m_tiles.back().m_originY, 16384);
+        EXPECT_EQ(document.m_tiles.back().m_width, 1);
+        EXPECT_EQ(document.m_tiles.back().m_height, 1);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, WaThLargeImportBoundRejectsOneSampleBeyondMaximum)
+    {
+        const auto document = MakeLargeBoundDocument(16386, 16385);
+        const auto result = TerrainHeightmap::ValidateDocument(document);
+
+        EXPECT_FALSE(result.m_accepted);
+        EXPECT_TRUE(HasIssue(result, "grid.invalid"));
     }
 
     TEST(TerrainHeightmapDocumentTests, NonFiniteOrInvertedVerticalRangeFailsClosed)
@@ -804,6 +922,67 @@ namespace TaintedGrailModdingSDK
         const auto second = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
         EXPECT_FALSE(second.IsSuccess());
         EXPECT_NE(second.GetError().find("already exists"), AZStd::string::npos);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, RawImportProducesByteIdenticalSyntheticOutputsAcrossThreeRuns)
+    {
+        AZStd::vector<QByteArray> manifests;
+        AZStd::vector<QByteArray> observations;
+        AZStd::vector<QByteArray> tilePayloads;
+        AZStd::vector<AZStd::string> documentFingerprints;
+        AZStd::vector<AZStd::string> sourceFingerprints;
+        AZStd::vector<AZStd::string> sidecarFingerprints;
+        AZStd::vector<AZStd::string> tileFingerprints;
+        const QByteArray rawBytes(
+            "\x10\x00\x20\x00\x30\x00\x40\x00",
+            8);
+
+        for (int runIndex = 0; runIndex < 3; ++runIndex)
+        {
+            QTemporaryDir temporary;
+            ASSERT_TRUE(temporary.isValid());
+            const QString rawPath = QDir(temporary.path()).filePath("deterministic.raw");
+            const QString sidecarPath = QDir(temporary.path()).filePath("deterministic.raw.json");
+            ASSERT_TRUE(WriteFile(rawPath, rawBytes));
+            ASSERT_TRUE(WriteFile(sidecarPath, SidecarJson(2, 2, "little-endian")));
+
+            auto outcome = TerrainHeightmap::ImportRawHeightmapToWorkspace(
+                MakeImportRequest(
+                    temporary,
+                    rawPath,
+                    sidecarPath,
+                    "terrain-import.deterministic-performance"));
+            ASSERT_TRUE(outcome.IsSuccess()) << outcome.GetError().c_str();
+            const auto& result = outcome.GetValue();
+            ASSERT_EQ(result.m_publishedTilePaths.size(), 1);
+            ASSERT_EQ(result.m_document.m_tiles.size(), 1);
+            EXPECT_TRUE(TerrainHeightmap::ValidateDocument(result.m_document).m_accepted);
+
+            manifests.push_back(ReadAll(result.m_publishedManifestPath));
+            observations.push_back(ReadAll(result.m_sourceObservationPath));
+            tilePayloads.push_back(ReadAll(result.m_publishedTilePaths.front()));
+            documentFingerprints.push_back(
+                TerrainHeightmap::CalculateDocumentFingerprint(result.m_document));
+            sourceFingerprints.push_back(result.m_sourceFingerprint);
+            sidecarFingerprints.push_back(result.m_sidecarFingerprint);
+            tileFingerprints.push_back(result.m_document.m_tiles.front().m_sha256);
+        }
+
+        ASSERT_EQ(manifests.size(), 3);
+        EXPECT_EQ(manifests[0], manifests[1]);
+        EXPECT_EQ(manifests[1], manifests[2]);
+        EXPECT_EQ(observations[0], observations[1]);
+        EXPECT_EQ(observations[1], observations[2]);
+        EXPECT_EQ(tilePayloads[0], tilePayloads[1]);
+        EXPECT_EQ(tilePayloads[1], tilePayloads[2]);
+        EXPECT_EQ(documentFingerprints[0], documentFingerprints[1]);
+        EXPECT_EQ(documentFingerprints[1], documentFingerprints[2]);
+        EXPECT_EQ(sourceFingerprints[0], sourceFingerprints[1]);
+        EXPECT_EQ(sourceFingerprints[1], sourceFingerprints[2]);
+        EXPECT_EQ(sidecarFingerprints[0], sidecarFingerprints[1]);
+        EXPECT_EQ(sidecarFingerprints[1], sidecarFingerprints[2]);
+        EXPECT_EQ(tileFingerprints[0], tileFingerprints[1]);
+        EXPECT_EQ(tileFingerprints[1], tileFingerprints[2]);
     }
 
     TEST(TerrainHeightmapDocumentTests, Png16ImageImportPublishesCanonicalLittleEndianTile)

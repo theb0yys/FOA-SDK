@@ -19,7 +19,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
     constexpr AZ::u32 TerrainHeightmapNominalTileSize = 1024;
     constexpr AZ::u32 TerrainHeightmapMaximumWidth = 32768;
     constexpr AZ::u32 TerrainHeightmapMaximumHeight = 32768;
-    constexpr AZ::u64 TerrainHeightmapMaximumTotalSamples = 268435456;
+    constexpr AZ::u64 TerrainHeightmapMaximumTotalSamples =
+        static_cast<AZ::u64>(16385) * 16385u;
     constexpr AZ::u64 TerrainHeightmapMaximumTileCount = 1024;
 
     struct ProfileBinding

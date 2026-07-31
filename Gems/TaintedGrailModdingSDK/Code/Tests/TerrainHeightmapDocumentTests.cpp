@@ -14,6 +14,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
+#include <QImageWriter>
 #include <QTemporaryDir>
 
 #include <limits>
@@ -96,6 +98,170 @@ namespace TaintedGrailModdingSDK
             request.m_operationId = operationId;
             request.m_createdAtUtc = "2026-07-31T04:20:00Z";
             return request;
+        }
+
+        TerrainHeightmap::ImageHeightmapImportRequest MakeImageImportRequest(
+            const QTemporaryDir& temporary,
+            const QString& imagePath,
+            const char* operationId = "terrain-import.synthetic-image")
+        {
+            TerrainHeightmap::ImageHeightmapImportRequest request;
+            request.m_workspaceRoot = ToAzString(temporary.path());
+            request.m_imageInputPath = ToAzString(imagePath);
+            request.m_mapIdentity.m_mapId = "terrain-map.synthetic-image-import";
+            request.m_mapIdentity.m_displayName = "Synthetic Image Terrain";
+            request.m_mapIdentity.m_publicAliases = { "Horns of the South" };
+            request.m_profileBinding.m_profileId = "profile.foa.synthetic";
+            request.m_profileBinding.m_gameVersion = "1.0.0";
+            request.m_profileBinding.m_branch = "mono";
+            request.m_profileBinding.m_runtimeTarget = "Mono";
+            request.m_profileBinding.m_profileFingerprint = Sha('a');
+            request.m_gridMetadata.m_sampleSpacingXMetres = 1.0;
+            request.m_gridMetadata.m_sampleSpacingYMetres = 2.0;
+            request.m_verticalMapping.m_minHeightMetres = -10.0;
+            request.m_verticalMapping.m_maxHeightMetres = 50.0;
+            request.m_coordinateSpace.m_handedness = "right-handed";
+            request.m_coordinateSpace.m_upAxis = "z";
+            request.m_coordinateSpace.m_forwardAxis = "y";
+            request.m_coordinateSpace.m_rowZeroOrientation = "north";
+            request.m_coordinateSpace.m_samplePosition = "cell-center";
+            request.m_coordinateSpace.m_sourceToCanonicalTransform = {
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            };
+            request.m_operationId = operationId;
+            request.m_createdAtUtc = "2026-07-31T04:25:00Z";
+            return request;
+        }
+
+        bool WriteGrayscale16Image(
+            const QString& path,
+            const QByteArray& format,
+            AZ::u32 width,
+            AZ::u32 height,
+            const AZStd::vector<quint16>& samples)
+        {
+            if (samples.size() != static_cast<size_t>(width) * height)
+            {
+                return false;
+            }
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            QImage image(
+                static_cast<int>(width),
+                static_cast<int>(height),
+                QImage::Format_Grayscale16);
+            for (AZ::u32 y = 0; y < height; ++y)
+            {
+                quint16* row = reinterpret_cast<quint16*>(image.scanLine(y));
+                for (AZ::u32 x = 0; x < width; ++x)
+                {
+                    row[x] = samples[(static_cast<size_t>(y) * width) + x];
+                }
+            }
+            QImageWriter writer(path, format);
+            return writer.write(image);
+        }
+
+        bool WriteGrayscale8Image(
+            const QString& path,
+            const QByteArray& format)
+        {
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            QImage image(2, 2, QImage::Format_Grayscale8);
+            image.fill(128);
+            QImageWriter writer(path, format);
+            return writer.write(image);
+        }
+
+        QByteArray LittleEndianSamples(const AZStd::vector<quint16>& samples)
+        {
+            QByteArray bytes;
+            bytes.resize(static_cast<int>(samples.size() * 2u));
+            char* output = bytes.data();
+            for (size_t index = 0; index < samples.size(); ++index)
+            {
+                output[index * 2u] = static_cast<char>(samples[index] & 0xffu);
+                output[(index * 2u) + 1u] =
+                    static_cast<char>((samples[index] >> 8u) & 0xffu);
+            }
+            return bytes;
+        }
+
+        void AppendLe16(QByteArray& bytes, quint16 value)
+        {
+            bytes.append(static_cast<char>(value & 0xffu));
+            bytes.append(static_cast<char>((value >> 8u) & 0xffu));
+        }
+
+        void AppendLe32(QByteArray& bytes, AZ::u32 value)
+        {
+            bytes.append(static_cast<char>(value & 0xffu));
+            bytes.append(static_cast<char>((value >> 8u) & 0xffu));
+            bytes.append(static_cast<char>((value >> 16u) & 0xffu));
+            bytes.append(static_cast<char>((value >> 24u) & 0xffu));
+        }
+
+        void AppendTiffEntry(
+            QByteArray& bytes,
+            quint16 tag,
+            quint16 type,
+            AZ::u32 count,
+            AZ::u32 value)
+        {
+            AppendLe16(bytes, tag);
+            AppendLe16(bytes, type);
+            AppendLe32(bytes, count);
+            AppendLe32(bytes, value);
+        }
+
+        QByteArray Tiff16ImageBytes(
+            AZ::u32 width,
+            AZ::u32 height,
+            const AZStd::vector<quint16>& samples)
+        {
+            constexpr quint16 ShortType = 3;
+            constexpr quint16 LongType = 4;
+            constexpr quint16 EntryCount = 10;
+            constexpr AZ::u32 IfdOffset = 8;
+            constexpr AZ::u32 ImageOffset = IfdOffset + 2u + (EntryCount * 12u) + 4u;
+            const AZ::u32 sampleBytes = static_cast<AZ::u32>(samples.size() * 2u);
+
+            QByteArray bytes;
+            bytes.append("II", 2);
+            AppendLe16(bytes, 42);
+            AppendLe32(bytes, IfdOffset);
+            AppendLe16(bytes, EntryCount);
+            AppendTiffEntry(bytes, 256, LongType, 1, width);
+            AppendTiffEntry(bytes, 257, LongType, 1, height);
+            AppendTiffEntry(bytes, 258, ShortType, 1, 16);
+            AppendTiffEntry(bytes, 259, ShortType, 1, 1);
+            AppendTiffEntry(bytes, 262, ShortType, 1, 1);
+            AppendTiffEntry(bytes, 273, LongType, 1, ImageOffset);
+            AppendTiffEntry(bytes, 277, ShortType, 1, 1);
+            AppendTiffEntry(bytes, 278, LongType, 1, height);
+            AppendTiffEntry(bytes, 279, LongType, 1, sampleBytes);
+            AppendTiffEntry(bytes, 339, ShortType, 1, 1);
+            AppendLe32(bytes, 0);
+            bytes.append(LittleEndianSamples(samples));
+            return bytes;
+        }
+
+        QByteArray OversizedPngHeader()
+        {
+            return QByteArray(
+                "\x89PNG\r\n\x1A\n"
+                "\x00\x00\x00\x0D"
+                "IHDR"
+                "\x00\x00\x80\x01"
+                "\x00\x00\x00\x01"
+                "\x10\x00\x00\x00\x00"
+                "\x1D\x0F\x72\x89"
+                "\x00\x00\x00\x00"
+                "IEND"
+                "\xAE\x42\x60\x82",
+                45);
         }
 
         QByteArray ReadAll(const AZStd::string& path)
@@ -636,6 +802,184 @@ namespace TaintedGrailModdingSDK
 
         ASSERT_TRUE(TerrainHeightmap::ImportRawHeightmapToWorkspace(request).IsSuccess());
         const auto second = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        EXPECT_FALSE(second.IsSuccess());
+        EXPECT_NE(second.GetError().find("already exists"), AZStd::string::npos);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, Png16ImageImportPublishesCanonicalLittleEndianTile)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("synthetic.png");
+        const AZStd::vector<quint16> samples = {
+            0x0001,
+            0x0102,
+            0xABCD,
+            0xFF00,
+        };
+        ASSERT_TRUE(WriteGrayscale16Image(imagePath, "png", 2, 2, samples));
+
+        auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(temporary, imagePath));
+        ASSERT_TRUE(outcome.IsSuccess()) << outcome.GetError().c_str();
+        const auto& result = outcome.GetValue();
+
+        EXPECT_EQ(result.m_document.m_sourceBinding.m_sourceKind, "user-exported-png16");
+        EXPECT_EQ(result.m_document.m_grid.m_width, 2);
+        EXPECT_EQ(result.m_document.m_grid.m_height, 2);
+        EXPECT_FALSE(result.m_document.m_authority.m_runtimeUseAllowed);
+        EXPECT_FALSE(result.m_document.m_authority.m_deploymentAllowed);
+        EXPECT_FALSE(result.m_document.m_authority.m_packagingAllowed);
+        EXPECT_TRUE(TerrainHeightmap::ValidateDocument(result.m_document).m_accepted);
+        ASSERT_EQ(result.m_publishedTilePaths.size(), 1);
+        EXPECT_EQ(ReadAll(result.m_publishedTilePaths.front()), LittleEndianSamples(samples));
+
+        const QByteArray manifestBytes = ReadAll(result.m_publishedManifestPath);
+        EXPECT_TRUE(manifestBytes.contains("\"source_kind\":\"user-exported-png16\""));
+        EXPECT_FALSE(manifestBytes.contains(imagePath.toUtf8()));
+        EXPECT_FALSE(manifestBytes.contains(temporary.path().toUtf8()));
+
+        const QByteArray observationBytes = ReadAll(result.m_sourceObservationPath);
+        EXPECT_TRUE(observationBytes.contains("\"metadata_sha256\":\"sha256:"));
+        EXPECT_FALSE(observationBytes.contains("\"sidecar_sha256\""));
+        EXPECT_FALSE(observationBytes.contains(imagePath.toUtf8()));
+    }
+
+    TEST(TerrainHeightmapDocumentTests, Tiff16ImageImportPublishesCanonicalLittleEndianTile)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("synthetic.tiff");
+        const AZStd::vector<quint16> samples = {
+            0x1001,
+            0x2002,
+        };
+        ASSERT_TRUE(WriteFile(imagePath, Tiff16ImageBytes(2, 1, samples)));
+
+        auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(
+                temporary,
+                imagePath,
+                "terrain-import.synthetic-tiff"));
+        ASSERT_TRUE(outcome.IsSuccess()) << outcome.GetError().c_str();
+        const auto& result = outcome.GetValue();
+
+        EXPECT_EQ(result.m_document.m_sourceBinding.m_sourceKind, "user-exported-tiff16");
+        ASSERT_EQ(result.m_publishedTilePaths.size(), 1);
+        EXPECT_EQ(ReadAll(result.m_publishedTilePaths.front()), LittleEndianSamples(samples));
+        EXPECT_TRUE(TerrainHeightmap::ValidateDocument(result.m_document).m_accepted);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportRejectsUnsupportedBitDepth)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("grayscale8.png");
+        ASSERT_TRUE(WriteGrayscale8Image(imagePath, "png"));
+
+        const auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(
+                temporary,
+                imagePath,
+                "terrain-import.grayscale8"));
+        EXPECT_FALSE(outcome.IsSuccess());
+        EXPECT_NE(outcome.GetError().find("16-bit grayscale"), AZStd::string::npos);
+        EXPECT_FALSE(QFileInfo(QDir(temporary.path()).filePath("Derived/Terrain")).exists());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportRejectsMalformedImage)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("malformed.png");
+        ASSERT_TRUE(WriteFile(imagePath, QByteArray("not-a-png", 9)));
+
+        const auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(
+                temporary,
+                imagePath,
+                "terrain-import.malformed-image"));
+        EXPECT_FALSE(outcome.IsSuccess());
+        EXPECT_TRUE(
+            outcome.GetError().find("PNG or TIFF image content") != AZStd::string::npos
+            || outcome.GetError().find("decode") != AZStd::string::npos);
+        EXPECT_FALSE(QFileInfo(QDir(temporary.path()).filePath("Derived/Terrain")).exists());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportRejectsOversizedMetadataBeforeDecode)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("oversized.png");
+        ASSERT_TRUE(WriteFile(imagePath, OversizedPngHeader()));
+
+        const auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(
+                temporary,
+                imagePath,
+                "terrain-import.oversized-image"));
+        EXPECT_FALSE(outcome.IsSuccess());
+        EXPECT_NE(outcome.GetError().find("dimensions"), AZStd::string::npos);
+        EXPECT_FALSE(QFileInfo(QDir(temporary.path()).filePath("Derived/Terrain")).exists());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportRequiresValidCallerMetadata)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("metadata.png");
+        ASSERT_TRUE(WriteGrayscale16Image(
+            imagePath,
+            "png",
+            1,
+            1,
+            AZStd::vector<quint16>{ 0x0007 }));
+        auto request = MakeImageImportRequest(
+            temporary,
+            imagePath,
+            "terrain-import.bad-image-metadata");
+        request.m_gridMetadata.m_sampleSpacingXMetres = 0.0;
+
+        const auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(request);
+        EXPECT_FALSE(outcome.IsSuccess());
+        EXPECT_NE(outcome.GetError().find("metadata"), AZStd::string::npos);
+        EXPECT_FALSE(QFileInfo(QDir(temporary.path()).filePath("Derived/Terrain")).exists());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportRejectsProtectedAndUnsupportedInputSuffixes)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("payload.assets");
+        ASSERT_TRUE(WriteFile(imagePath, QByteArray("\x00\x00", 2)));
+
+        const auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(
+                temporary,
+                imagePath,
+                "terrain-import.protected-image"));
+        EXPECT_FALSE(outcome.IsSuccess());
+        EXPECT_NE(outcome.GetError().find("prohibited"), AZStd::string::npos);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportWillNotOverwritePublishedRevision)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("no-overwrite.png");
+        ASSERT_TRUE(WriteGrayscale16Image(
+            imagePath,
+            "png",
+            1,
+            1,
+            AZStd::vector<quint16>{ 0x002A }));
+        const auto request = MakeImageImportRequest(
+            temporary,
+            imagePath,
+            "terrain-import.no-overwrite-image");
+
+        ASSERT_TRUE(TerrainHeightmap::ImportImageHeightmapToWorkspace(request).IsSuccess());
+        const auto second = TerrainHeightmap::ImportImageHeightmapToWorkspace(request);
         EXPECT_FALSE(second.IsSuccess());
         EXPECT_NE(second.GetError().find("already exists"), AZStd::string::npos);
     }

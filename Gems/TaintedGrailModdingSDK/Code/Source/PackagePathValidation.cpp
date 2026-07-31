@@ -107,6 +107,30 @@ namespace TaintedGrailModdingSDK
             }
             return true;
         }
+
+        bool StartsWith(const AZStd::string& value, const char* prefix)
+        {
+            const AZStd::string prefixValue(prefix);
+            return value.size() >= prefixValue.size()
+                && value.substr(0, prefixValue.size()) == prefixValue;
+        }
+
+        bool EndsWith(const AZStd::string& value, const char* suffix)
+        {
+            const AZStd::string suffixValue(suffix);
+            return value.size() >= suffixValue.size()
+                && value.substr(value.size() - suffixValue.size()) == suffixValue;
+        }
+
+        bool IsLocalTerrainPackageIdentity(const AZStd::string& windowsIdentity)
+        {
+            return StartsWith(windowsIdentity, "derived/terrain/")
+                || StartsWith(windowsIdentity, "staging/terrain/")
+                || StartsWith(windowsIdentity, "sourceobservations/terrain/")
+                || EndsWith(windowsIdentity, ".tgheightmap.json")
+                || EndsWith(windowsIdentity, ".terrain.u16le")
+                || windowsIdentity.find("_gsi") != AZStd::string::npos;
+        }
     } // namespace
 
     bool TryBuildPackagePathIdentity(
@@ -164,6 +188,36 @@ namespace TaintedGrailModdingSDK
     {
         PackagePathIdentity identity;
         return TryBuildPackagePathIdentity(value, identity);
+    }
+
+    bool IsLocalTerrainPackageExcludedPath(const AZStd::string& value)
+    {
+        PackagePathIdentity identity;
+        return TryBuildPackagePathIdentity(value, identity)
+            && IsLocalTerrainPackageIdentity(identity.m_windowsIdentity);
+    }
+
+    bool TryValidatePackManifestPackagePath(
+        const AZStd::string& value,
+        PackagePathIdentity& identity,
+        AZStd::string* error)
+    {
+        if (!TryBuildPackagePathIdentity(value, identity, error))
+        {
+            return false;
+        }
+        if (IsLocalTerrainPackageIdentity(identity.m_windowsIdentity))
+        {
+            SetError(
+                error,
+                "Pack manifests cannot declare local terrain heightmap manifests, tile payloads, source observations, staging paths, or generated terrain preview projections.");
+            return false;
+        }
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
     }
 
     bool IsPackagePathInsideRoot(

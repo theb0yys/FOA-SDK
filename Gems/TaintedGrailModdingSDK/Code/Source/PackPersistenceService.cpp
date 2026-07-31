@@ -34,6 +34,11 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Runtime actions cannot be enabled in an editor-owned pack manifest."));
         }
+        AZStd::string packagePathError;
+        if (!pack.HasAllowedPackagePaths(&packagePathError))
+        {
+            return AZ::Failure(AZStd::move(packagePathError));
+        }
 
         return AZ::JsonSerializationUtils::SaveObjectToFile(&pack, filePath);
     }
@@ -64,6 +69,11 @@ namespace TaintedGrailModdingSDK
         if (pack.m_runtimeActionsEnabled)
         {
             return AZ::Failure(AZStd::string("The pack manifest requests runtime actions, which are disabled in the editor foundation."));
+        }
+        AZStd::string packagePathError;
+        if (!pack.HasAllowedPackagePaths(&packagePathError))
+        {
+            return AZ::Failure(AZStd::move(packagePathError));
         }
 
         return AZ::Success(AZStd::move(pack));

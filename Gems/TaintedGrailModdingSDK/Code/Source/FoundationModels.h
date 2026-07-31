@@ -67,6 +67,7 @@ namespace TaintedGrailModdingSDK
         static void Reflect(AZ::ReflectContext* context);
         bool HasStableIdentity() const;
         bool UsesSupportedSchema() const;
+        bool HasAllowedPackagePaths(AZStd::string* error = nullptr) const;
 
         AZ::u32 m_schemaVersion = 1;
         AZStd::string m_packId;

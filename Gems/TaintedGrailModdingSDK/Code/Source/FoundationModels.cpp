@@ -7,6 +7,7 @@
 
 #include "FoundationModels.h"
 
+#include "PackagePathValidation.h"
 #include "ResearchContractValidation.h"
 
 #include <AzCore/Serialization/SerializeContext.h>
@@ -82,6 +83,29 @@ namespace TaintedGrailModdingSDK
             AZStd::sort(sorted.begin(), sorted.end());
             return AZStd::adjacent_find(sorted.begin(), sorted.end())
                 == sorted.end();
+        }
+
+        bool ValidatePackagePathList(
+            const AZStd::vector<AZStd::string>& paths,
+            const char* fieldName,
+            AZStd::string* error)
+        {
+            for (const AZStd::string& path : paths)
+            {
+                PackagePathIdentity identity;
+                AZStd::string pathError;
+                if (!TryValidatePackManifestPackagePath(path, identity, &pathError))
+                {
+                    if (error)
+                    {
+                        *error = AZStd::string(fieldName)
+                            + " contains a package path that is unsafe or local-only terrain workspace state: "
+                            + pathError;
+                    }
+                    return false;
+                }
+            }
+            return true;
         }
     } // namespace
 
@@ -200,6 +224,27 @@ namespace TaintedGrailModdingSDK
     bool PackManifest::UsesSupportedSchema() const
     {
         return m_schemaVersion == 1;
+    }
+
+    bool PackManifest::HasAllowedPackagePaths(AZStd::string* error) const
+    {
+        if (!ValidatePackagePathList(
+                m_contentDefinitionPaths,
+                "ContentDefinitionPaths",
+                error)
+            || !ValidatePackagePathList(m_assetPaths, "AssetPaths", error)
+            || !ValidatePackagePathList(
+                m_localisationPaths,
+                "LocalisationPaths",
+                error))
+        {
+            return false;
+        }
+        if (error)
+        {
+            error->clear();
+        }
+        return true;
     }
 
     void SourceImporterContract::Reflect(AZ::ReflectContext* context)

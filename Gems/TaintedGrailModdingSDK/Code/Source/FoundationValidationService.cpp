@@ -244,6 +244,17 @@ namespace TaintedGrailModdingSDK
                         "Runtime actions are not available in the editor-owned research foundation.",
                         { "all_runtime_actions" }));
                 }
+                AZStd::string packagePathError;
+                if (!pack.HasAllowedPackagePaths(&packagePathError))
+                {
+                    blockers.push_back(MakeBlocker(
+                        "foundation.pack.package-paths." + subject,
+                        "error",
+                        "pack-manifest",
+                        subject,
+                        packagePathError,
+                        { "package", "release" }));
+                }
                 if (pack.m_contentDefinitionPaths.empty())
                 {
                     blockers.push_back(MakeBlocker(

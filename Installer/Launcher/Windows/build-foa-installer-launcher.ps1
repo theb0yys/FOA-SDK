@@ -33,6 +33,7 @@ $PublishArgs = @(
     "/p:BaseIntermediateOutputPath=$IntermediatePath",
     "/p:BaseOutputPath=$BinaryPath",
     "/p:PublishSingleFile=true",
+    "/p:EnableCompressionInSingleFile=true",
     "/p:IncludeNativeLibrariesForSelfExtract=true",
     "/p:DebugType=embedded",
     "--self-contained=$(-not $FrameworkDependent)"

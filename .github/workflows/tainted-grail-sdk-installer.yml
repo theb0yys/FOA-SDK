@@ -152,9 +152,10 @@ jobs:
       - name: Build canonical O3DE INSTALL target
         run: cmake --build $env:SDK_BUILD --config profile --target INSTALL --parallel 2
 
-      - name: Create FOA-SDK.exe launcher entry point
+      - name: Build and verify installed FOA-SDK.exe launcher entry point
         shell: pwsh
         run: |
+          cmake --build $env:SDK_BUILD --config profile --target TaintedGrailModdingEditorLauncher --parallel 2
           $bin = Join-Path $env:SDK_INSTALL "bin/Windows/profile/Default"
           $source = Join-Path $bin "TaintedGrailModdingEditorLauncher.exe"
           $target = Join-Path $bin "FOA-SDK.exe"
@@ -164,6 +165,15 @@ jobs:
           Copy-Item -LiteralPath $source -Destination $target -Force
           if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
             throw "FOA-SDK.exe launcher entry point was not created."
+          }
+          $sourceHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+          $targetHash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sourceHash -cne $targetHash) {
+            throw "FOA-SDK.exe does not match the reviewed installed launcher build."
+          }
+          & $target --self-test
+          if ($LASTEXITCODE -ne 0) {
+            throw "FOA-SDK.exe installed launcher self-test failed before inventory review."
           }
 
       - name: Generate notices and third-party package inventory

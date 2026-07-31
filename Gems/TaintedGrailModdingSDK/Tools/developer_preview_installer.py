@@ -37,6 +37,7 @@ CONFIGURATION = "profile"
 BIN_DIRECTORY = PurePosixPath("bin/Windows/profile/Default")
 EDITOR_PATH = BIN_DIRECTORY / "Editor.exe"
 LAUNCHER_PATH = BIN_DIRECTORY / "TaintedGrailModdingEditorLauncher.exe"
+SDK_ENTRYPOINT_PATH = BIN_DIRECTORY / "FOA-SDK.exe"
 MANIFEST_NAME = "INSTALL_MANIFEST.json"
 CHECKSUMS_NAME = "SHA256SUMS"
 PROVENANCE_NAME = "BUILD_PROVENANCE.json"
@@ -337,6 +338,10 @@ def validate_sdk_identity(sdk_root: Path) -> None:
         )
     require_regular_file(sdk_root / Path(EDITOR_PATH.as_posix()), "Installed Editor.exe")
     require_regular_file(sdk_root / Path(LAUNCHER_PATH.as_posix()), "Installed SDK launcher")
+    require_regular_file(
+        sdk_root / Path(SDK_ENTRYPOINT_PATH.as_posix()),
+        "Installed FOA-SDK.exe launcher entry point",
+    )
     require_regular_file(sdk_root / "LICENSE.txt", "Installed SDK licence")
 
 

@@ -78,6 +78,85 @@ Schema-1 rules:
   `authority.save_mutation_allowed`, `authority.deployment_allowed`, and
   `authority.asset_extraction_allowed` are always `false`.
 
+## QuestBindingManifest document
+
+Suffix:
+
+```text
+*.tgquestbindings.json
+```
+
+Purpose: portable, engine-neutral binding data that records which reviewed catalog,
+evidence, and permission references satisfy a `QuestDefinition` V1 binding requirement.
+Version 1 is inert contract data only.
+
+Schema identity:
+
+```text
+Schema ID: foa.quest-binding-manifest
+Schema version: 1
+Canonical fingerprint: lowercase sha256 over the canonical JSON projection
+```
+
+Top-level fields:
+
+- `schema`;
+- `schema_version`;
+- `manifest_id`;
+- `quest_id`;
+- `content_version`;
+- `owner_pack_id`;
+- `owner_module_id`;
+- `quest_definition_fingerprint`;
+- `catalog_id`;
+- `catalog_fingerprint`;
+- `profile_id`;
+- `game_version`;
+- `branch`;
+- `runtime_target`;
+- `role_bindings`;
+- `location_bindings`;
+- `anchor_bindings`;
+- `item_bindings`;
+- `reward_bindings`;
+- `dialogue_bindings`;
+- `journal_bindings`;
+- `minimum_sdk_version`;
+- `compatibility_tags`;
+- `authority`;
+- optional `manifest_fingerprint`.
+
+Schema-1 rules:
+
+- unknown public fields and unknown schema versions are rejected;
+- `manifest_id`, `quest_id`, pack/module IDs, binding IDs, requirement IDs,
+  role IDs, subject kinds, usage IDs, catalog IDs, evidence IDs, source IDs,
+  permission IDs, validation IDs, and compatibility tags use stable contract IDs;
+- `binding_kind` is a bounded discriminator matching its containing binding array;
+- binding rows are duplicate-free and canonical JSON sorts binding arrays, evidence
+  refs, permission refs, and compatibility tags on copies;
+- `quest_definition_fingerprint`, `catalog_fingerprint`, evidence
+  `source_fingerprint`, and optional `manifest_fingerprint` are lowercase
+  `sha256:<64-hex-digits>` values;
+- `manifest_fingerprint` is excluded from its own canonical projection;
+- binding rows may validate by value against an immutable supplied `QuestDefinition`
+  snapshot and must match declared binding requirements when that snapshot is supplied;
+- catalog references bind stable catalog record/context identifiers and must not embed
+  native O3DE, Unity, FoA runtime handles, absolute paths, traversal paths, URIs, or
+  GUID-like values;
+- evidence references require source IDs, source fingerprints, and matching
+  profile/build context;
+- permission references must match subject kind, subject ID, and usage; missing,
+  denied, unresolved, stale, or mismatched permission status fails closed;
+- all authority flags stay false: `runtime_execution_allowed`,
+  `editor_mutation_allowed`, `save_mutation_allowed`, `deployment_allowed`,
+  `catalog_mutation_allowed`, `evidence_promotion_allowed`,
+  `permission_grant_allowed`, and `asset_extraction_allowed`.
+
+The document does not query live catalog services, repair catalog state, promote evidence,
+grant permission, launch FoA, access saves, mutate editor state, deploy packages, or prove
+runtime behavior.
+
 ## External-tool interchange Gate 0 envelopes
 
 Gate 0 defines four canonical Core-only envelopes:

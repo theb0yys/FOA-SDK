@@ -29,12 +29,12 @@ internal sealed class ToolSetupWizardForm : Form
         _installRoot = InstallerOptions.NormalizeInstallRoot(installRoot);
         _options = ToolSetupProfile.LoadOrDefault(_installRoot);
         ExitCode = 1;
-        Text = "FOA-SDK Tool Wizard";
+        Text = "FOA-SDK Tool Setup Wizard";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(820, 620);
-        Size = new Size(860, 660);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        MinimumSize = new Size(940, 700);
+        Size = new Size(1040, 760);
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MaximizeBox = true;
         MinimizeBox = true;
         AutoScaleMode = AutoScaleMode.Dpi;
 
@@ -75,8 +75,8 @@ internal sealed class ToolSetupWizardForm : Form
     private Control BuildWelcomePage()
     {
         return BuildPage(
-            "Welcome to the Tool Wizard",
-            "This wizard configures local FOA-SDK authoring tools after the product is installed.\n\n"
+            "Welcome to the Tool Setup Wizard",
+            "This separate wizard configures local authoring paths after the SDK product is installed.\n\n"
             + "It records an external workspace plus optional O3DE, Unity conversion, and Tainted Grail paths.\n\n"
             + "It does not run Windows Installer, mutate game files, deploy adapters, or execute Unity conversion.");
     }
@@ -85,19 +85,19 @@ internal sealed class ToolSetupWizardForm : Form
     {
         Panel page = BuildPage(
             "Choose local tools",
-            "The workspace is required and must live outside the installed product. Tool paths can be left blank and completed later.");
+            "Use Browse to select existing folders or executables. Type a new workspace path if it should be created when the profile is saved.");
         TableLayoutPanel grid = new()
         {
             ColumnCount = 3,
             RowCount = 5,
             Location = new Point(32, 145),
-            Size = new Size(745, 240),
+            Size = new Size(830, 250),
             AutoSize = true,
         };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 500));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 585));
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
-        AddToolRow(grid, 0, "Workspace:", _workspaceRoot, () => BrowseFolder(_workspaceRoot, "Choose the external FOA workspace directory", true));
+        AddToolRow(grid, 0, "Workspace:", _workspaceRoot, () => BrowseFolder(_workspaceRoot, "Choose the external FOA workspace directory", false));
         AddToolRow(grid, 1, "O3DE Editor:", _o3deEditorPath, () => BrowseExecutable(_o3deEditorPath, "Select O3DE Editor.exe", "O3DE Editor|Editor.exe|Executables|*.exe"));
         AddToolRow(grid, 2, "Unity Editor:", _unityEditorPath, () => BrowseExecutable(_unityEditorPath, "Select Unity.exe", "Unity Editor|Unity.exe|Executables|*.exe"));
         AddToolRow(grid, 3, "Unity project:", _unityProjectPath, () => BrowseFolder(_unityProjectPath, "Choose the Unity conversion project directory", false));
@@ -110,7 +110,7 @@ internal sealed class ToolSetupWizardForm : Form
     {
         Panel page = BuildPage("Review tool readiness", string.Empty);
         _reviewText.Location = new Point(32, 105);
-        _reviewText.Size = new Size(740, 430);
+        _reviewText.Size = new Size(830, 450);
         page.Controls.Add(_reviewText);
         return page;
     }
@@ -119,7 +119,7 @@ internal sealed class ToolSetupWizardForm : Form
     {
         Panel page = BuildPage("Tool Wizard result", string.Empty);
         _resultText.Location = new Point(32, 115);
-        _resultText.Size = new Size(740, 320);
+        _resultText.Size = new Size(830, 340);
         page.Controls.Add(_resultText);
         return page;
     }
@@ -138,7 +138,7 @@ internal sealed class ToolSetupWizardForm : Form
         Label text = NewBodyLabel();
         text.Text = body;
         text.Location = new Point(32, 88);
-        text.Size = new Size(700, 300);
+        text.Size = new Size(830, 320);
         page.Controls.Add(title);
         page.Controls.Add(text);
         return page;
@@ -188,7 +188,9 @@ internal sealed class ToolSetupWizardForm : Form
         {
             Description = description,
             InitialDirectory = InitialDirectoryFor(target.Text),
+            SelectedPath = InitialDirectoryFor(target.Text),
             ShowNewFolderButton = showNewFolderButton,
+            UseDescriptionForTitle = true,
         };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
@@ -330,7 +332,7 @@ internal static class ToolSetupWizardLauncher
         }
         if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
         {
-            throw new InvalidOperationException("FOA-SDK-Installer.exe could not locate itself to open the Tool Wizard.");
+            throw new InvalidOperationException("FOA-SDK-Installer.exe could not locate itself to open the Tool Setup Wizard.");
         }
 
         ProcessStartInfo startInfo = new()
@@ -342,6 +344,6 @@ internal static class ToolSetupWizardLauncher
         startInfo.ArgumentList.Add("--install-root");
         startInfo.ArgumentList.Add(installRoot);
         _ = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("FOA-SDK Tool Wizard did not start.");
+            ?? throw new InvalidOperationException("FOA-SDK Tool Setup Wizard did not start.");
     }
 }

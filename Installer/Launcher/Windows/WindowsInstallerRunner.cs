@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 using System.Diagnostics;
+using System.Text;
 
 namespace FOA.SDK.InstallerLauncher;
 
@@ -13,17 +14,17 @@ internal static class WindowsInstallerRunner
     {
         ValidateInstallRoot(options.InstallRoot);
         string windowsInstallerPath = ResolveWindowsInstallerPath();
-        string logDirectory = options.EvidenceRoot is null
-            ? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "FOA-SDK",
-                "Installer",
-                "Logs")
-            : Path.Combine(options.EvidenceRoot, "installer-logs");
-        Directory.CreateDirectory(logDirectory);
-        string logPath = Path.Combine(
-            logDirectory,
-            $"{DateTime.UtcNow:yyyyMMddTHHmmssZ}-{options.Operation.ToString().ToLowerInvariant()}-{Guid.NewGuid():N}.log");
+        string logDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "FOA-SDK",
+            "Installer",
+            "Logs");
+        EnsureDirectoryExists(logDirectory);
+        string logFileName = $"{DateTime.UtcNow:yyyyMMddTHHmmssZ}-{options.Operation.ToString().ToLowerInvariant()}-{Guid.NewGuid():N}.log";
+        string logPath = Path.Combine(logDirectory, logFileName);
+        string? evidenceLogPath = options.EvidenceRoot is null
+            ? null
+            : Path.Combine(options.EvidenceRoot, "installer-logs", logFileName);
 
         ProcessStartInfo startInfo = new()
         {
@@ -31,20 +32,14 @@ internal static class WindowsInstallerRunner
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = payload.MsiFile.DirectoryName ?? AppContext.BaseDirectory,
+            Arguments = BuildWindowsInstallerArguments(payload, options, logPath),
         };
-        startInfo.ArgumentList.Add(options.Operation switch
+        if (IsDebugConsoleEnabled())
         {
-            InstallerOperation.InstallOrUpgrade => "/i",
-            InstallerOperation.Repair => "/fa",
-            InstallerOperation.Uninstall => "/x",
-            _ => throw new InvalidOperationException("Unsupported installer operation."),
-        });
-        startInfo.ArgumentList.Add(payload.MsiFile.FullName);
-        startInfo.ArgumentList.Add("/qn");
-        startInfo.ArgumentList.Add("/norestart");
-        startInfo.ArgumentList.Add($"INSTALL_ROOT={options.InstallRoot}");
-        startInfo.ArgumentList.Add("/l*v");
-        startInfo.ArgumentList.Add(logPath);
+            Console.Error.WriteLine($"Windows Installer path: {startInfo.FileName}");
+            Console.Error.WriteLine($"Windows Installer working directory: {startInfo.WorkingDirectory}");
+            Console.Error.WriteLine($"Windows Installer arguments: {startInfo.Arguments}");
+        }
 
         using Process process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Windows Installer did not start.");
@@ -53,6 +48,7 @@ internal static class WindowsInstallerRunner
         int exitCode = process.ExitCode;
         bool succeeded = SuccessfulExitCodes.Contains(exitCode);
         bool rebootRequired = exitCode is 1641 or 3010;
+        string reportedLogPath = CopyLogToEvidenceIfRequested(logPath, evidenceLogPath);
         string operation = options.Operation switch
         {
             InstallerOperation.InstallOrUpgrade => "Installation or upgrade",
@@ -64,8 +60,146 @@ internal static class WindowsInstallerRunner
             ? rebootRequired
                 ? $"{operation} completed; Windows requested a restart."
                 : $"{operation} completed successfully."
-            : $"{operation} failed with Windows Installer exit code {exitCode}.";
-        return new InstallerRunResult(succeeded, exitCode, rebootRequired, message, logPath);
+            : $"{operation} failed with Windows Installer exit code {exitCode}: {DescribeExitCode(exitCode)}";
+        return new InstallerRunResult(succeeded, exitCode, rebootRequired, message, reportedLogPath);
+    }
+
+    private static string BuildWindowsInstallerArguments(
+        InstallerPayload payload,
+        InstallerOptions options,
+        string logPath)
+    {
+        string verb = options.Operation switch
+        {
+            InstallerOperation.InstallOrUpgrade => "/i",
+            InstallerOperation.Repair => "/fvamus",
+            InstallerOperation.Uninstall => "/x",
+            _ => throw new InvalidOperationException("Unsupported installer operation."),
+        };
+        return string.Join(
+            " ",
+            verb,
+            QuoteProcessArgument(payload.MsiFile.FullName),
+            "/qn",
+            "/norestart",
+            FormatInstallerPropertyArgument("INSTALL_ROOT", options.InstallRoot),
+            "/l*v",
+            QuoteProcessArgument(logPath));
+    }
+
+    private static string FormatInstallerPropertyArgument(string propertyName, string value)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName)
+            || !propertyName.All(character =>
+                character == '_'
+                || character is >= 'A' and <= 'Z'
+                || character is >= '0' and <= '9'))
+        {
+            throw new InvalidOperationException("Windows Installer property names must be uppercase public properties.");
+        }
+        if (value.Contains('"'))
+        {
+            throw new InvalidOperationException("Windows Installer property values must not contain quotation marks.");
+        }
+        return $"{propertyName}={QuoteProcessArgument(value)}";
+    }
+
+    private static string QuoteProcessArgument(string value)
+    {
+        if (value.Contains('"'))
+        {
+            throw new InvalidOperationException("Windows Installer command arguments must not contain quotation marks.");
+        }
+
+        StringBuilder builder = new(value.Length + 2);
+        builder.Append('"');
+        int trailingBackslashes = 0;
+        foreach (char character in value)
+        {
+            if (character == '\\')
+            {
+                trailingBackslashes++;
+                builder.Append(character);
+                continue;
+            }
+            trailingBackslashes = 0;
+            builder.Append(character);
+        }
+        builder.Insert(builder.Length - trailingBackslashes, new string('\\', trailingBackslashes));
+        builder.Append('"');
+        return builder.ToString();
+    }
+
+    private static string DescribeExitCode(int exitCode) => exitCode switch
+    {
+        1602 => "the installation was cancelled.",
+        1603 => "Windows Installer reported a fatal installation error.",
+        1618 => "another Windows Installer operation is already in progress.",
+        1638 => "another version of this product is already installed.",
+        1639 => "Windows Installer rejected the command line before it could apply the package.",
+        _ => "Windows Installer did not complete the requested operation.",
+    };
+
+    private static bool IsDebugConsoleEnabled() => string.Equals(
+        Environment.GetEnvironmentVariable("FOA_SDK_INSTALLER_DEBUG_ERRORS"),
+        "1",
+        StringComparison.Ordinal);
+
+    private static string CopyLogToEvidenceIfRequested(string sourceLogPath, string? evidenceLogPath)
+    {
+        if (string.IsNullOrWhiteSpace(evidenceLogPath))
+        {
+            return sourceLogPath;
+        }
+
+        try
+        {
+            string? evidenceDirectory = Path.GetDirectoryName(evidenceLogPath);
+            if (string.IsNullOrWhiteSpace(evidenceDirectory))
+            {
+                return sourceLogPath;
+            }
+            EnsureDirectoryExists(evidenceDirectory);
+            if (File.Exists(sourceLogPath))
+            {
+                File.Copy(sourceLogPath, evidenceLogPath, overwrite: true);
+                return evidenceLogPath;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            if (IsDebugConsoleEnabled())
+            {
+                Console.Error.WriteLine($"Evidence log copy failed: {ex.Message}");
+            }
+        }
+        return sourceLogPath;
+    }
+
+    private static void EnsureDirectoryExists(string directory)
+    {
+        string fullPath = Path.GetFullPath(directory);
+        Stack<string> missingDirectories = new();
+        string? current = fullPath;
+        while (!string.IsNullOrWhiteSpace(current) && !Directory.Exists(current))
+        {
+            missingDirectories.Push(current);
+            string? parent = Directory.GetParent(current)?.FullName;
+            if (string.IsNullOrWhiteSpace(parent)
+                || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+            current = parent;
+        }
+
+        while (missingDirectories.TryPop(out string? missingDirectory))
+        {
+            if (missingDirectory is not null)
+            {
+                Directory.CreateDirectory(missingDirectory);
+            }
+        }
     }
 
     private static string ResolveWindowsInstallerPath()

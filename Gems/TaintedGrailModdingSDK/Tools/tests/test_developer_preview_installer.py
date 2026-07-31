@@ -61,6 +61,7 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
         (sdk / "LICENSE.txt").write_text("Apache-2.0 OR MIT\n", encoding="utf-8")
         (binary / "Editor.exe").write_bytes(b"editor")
         (binary / "TaintedGrailModdingEditorLauncher.exe").write_bytes(b"launcher")
+        (binary / "FOA-SDK.exe").write_bytes(b"launcher")
         (binary / "AzCore.dll").write_bytes(b"runtime")
         (sdk / installer.PROJECT_DIRECTORY).mkdir()
         (sdk / installer.PROJECT_DIRECTORY / "preview.png").write_bytes(b"stale install preview")
@@ -112,6 +113,7 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
             self.assertEqual(first, second)
             paths = {entry["path"] for entry in first["entries"]}
             self.assertIn(f"{installer.PROJECT_DIRECTORY}/project.json", paths)
+            self.assertIn(installer.SDK_ENTRYPOINT_PATH.as_posix(), paths)
             self.assertNotIn(f"{installer.PROJECT_DIRECTORY}/CMakeLists.txt", paths)
             self.assertNotIn(f"{installer.PROJECT_DIRECTORY}/cmake/EngineFinder.cmake", paths)
 
@@ -261,6 +263,14 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
                 json.dumps({"engine_name": "o3de", "sdk_engine": True}), encoding="utf-8"
             )
             with self.assertRaisesRegex(installer.InstallerError, "O3DE_INSTALL_ENGINE_NAME"):
+                installer.build_inventory(
+                    repo, sdk, notices, packages, VERSION, SOURCE_COMMIT, "development"
+                )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo, sdk, notices, packages = self.make_inputs(root)
+            (sdk / Path(installer.SDK_ENTRYPOINT_PATH.as_posix())).unlink()
+            with self.assertRaisesRegex(installer.InstallerError, "FOA-SDK.exe"):
                 installer.build_inventory(
                     repo, sdk, notices, packages, VERSION, SOURCE_COMMIT, "development"
                 )

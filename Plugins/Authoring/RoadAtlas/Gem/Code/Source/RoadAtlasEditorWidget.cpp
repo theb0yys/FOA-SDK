@@ -363,9 +363,9 @@ namespace RoadAtlasAuthoring
         : QWidget(parent)
     {
         setObjectName(QStringLiteral("TaintedGrailRoadAtlasEditor"));
-        setAccessibleName(tr("Tainted Grail Road Atlas Editor"));
+        setAccessibleName(tr("Tainted Grail Map Editor (Road Atlas)"));
         auto* layout = new QVBoxLayout(this);
-        auto* heading = new QLabel(tr("Tainted Grail Road Atlas Editor"), this);
+        auto* heading = new QLabel(tr("Tainted Grail Map Editor (Road Atlas)"), this);
         QFont font = heading->font();
         font.setBold(true);
         font.setPointSize(font.pointSize() + 3);
@@ -373,18 +373,18 @@ namespace RoadAtlasAuthoring
         layout->addWidget(heading);
 
         auto* boundary = new QLabel(
-            tr("Author and validate exact-profile Road Atlas schema-1 snapshots. "
+            tr("Author and validate exact-profile map and Road Atlas schema-1 snapshots. "
                "Documents are stored atomically by the host. Planning output remains inert; "
                "scene mutation, movement, spawning, deployment, and FoA execution are unavailable."),
             this);
         boundary->setWordWrap(true);
         layout->addWidget(boundary);
 
-        auto* group = new QGroupBox(tr("Typed Road Atlas JSON"), this);
+        auto* group = new QGroupBox(tr("Typed Map/Road Atlas JSON"), this);
         auto* groupLayout = new QVBoxLayout(group);
         m_document = new QTextEdit(group);
         m_document->setAcceptRichText(false);
-        m_document->setAccessibleName(tr("Road Atlas snapshot JSON"));
+        m_document->setAccessibleName(tr("Map and Road Atlas snapshot JSON"));
         m_document->setTabChangesFocus(true);
         groupLayout->addWidget(m_document, 1);
         layout->addWidget(group, 1);
@@ -461,7 +461,7 @@ namespace RoadAtlasAuthoring
         }
         m_lastLoaded = QByteArray(contents.data(), static_cast<qsizetype>(contents.size()));
         m_document->setPlainText(QString::fromUtf8(m_lastLoaded));
-        SetStatus(tr("Loaded the workspace Road Atlas document. Validate before saving changes."), false);
+        SetStatus(tr("Loaded the workspace map/Road Atlas document. Validate before saving changes."), false);
     }
 
     void RoadAtlasEditorWidget::ValidateDocument()
@@ -546,7 +546,7 @@ namespace RoadAtlasAuthoring
         m_document->setPlainText(QString::fromUtf8(payload));
         m_valid = true;
         m_save->setEnabled(true);
-        SetStatus(tr("Road Atlas snapshot saved atomically to the active workspace."), false);
+        SetStatus(tr("Map/Road Atlas snapshot saved atomically to the active workspace."), false);
     }
 
     void RoadAtlasEditorWidget::RevertDocument()

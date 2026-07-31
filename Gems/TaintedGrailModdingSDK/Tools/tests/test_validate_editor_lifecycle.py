@@ -57,7 +57,7 @@ class EditorLifecycleContractTests(unittest.TestCase):
             self.mutate(
                 root,
                 contract.HUB_SOURCE,
-                '"Tainted Grail Road Atlas Editor"',
+                '"Tainted Grail Map Editor (Road Atlas)"',
                 '"Removed Road Atlas route"',
             )
             with self.assertRaisesRegex(contract.EditorLifecycleError, "Hub route"):
@@ -80,7 +80,7 @@ class EditorLifecycleContractTests(unittest.TestCase):
             self.mutate(
                 root,
                 road_module,
-                'QStringLiteral("RoadAtlasAuthoring.Editor")',
+                'QStringLiteral("RoadAtlasAuthoring.MapEditorDock")',
                 'QStringLiteral("AvalonAIAuthoring.Editor")',
             )
             with self.assertRaisesRegex(contract.EditorLifecycleError, "unique layout"):

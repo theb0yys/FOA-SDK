@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Tests/LocalSetupDetectionServiceTests.cpp
     Tests/TaintedFrameworkEditorServicesTests.cpp
     Tests/TaintedFrameworkKnowledgeTests.cpp
     Tests/TaintedInterfaceUiUtilitiesTests.cpp

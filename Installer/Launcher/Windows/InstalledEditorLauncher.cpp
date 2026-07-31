@@ -16,12 +16,16 @@ namespace
     constexpr wchar_t ProductName[] = L"Tainted Grail Modding Editor";
     constexpr wchar_t EditorFileName[] = L"Editor.exe";
     constexpr wchar_t ProjectDirectoryName[] = L"TaintedGrailModdingEditor";
+    constexpr wchar_t StartupLevelRelativePath[] = L"Levels\\DefaultLevel\\DefaultLevel.prefab";
     constexpr wchar_t ManifestFileName[] = L"INSTALL_MANIFEST.json";
     constexpr wchar_t SelfTestArgument[] = L"--self-test";
 
-    int Fail(const std::wstring& message)
+    int Fail(const std::wstring& message, bool showDialog)
     {
-        MessageBoxW(nullptr, message.c_str(), ProductName, MB_OK | MB_ICONERROR);
+        if (showDialog)
+        {
+            MessageBoxW(nullptr, message.c_str(), ProductName, MB_OK | MB_ICONERROR);
+        }
         return 1;
     }
 
@@ -113,6 +117,7 @@ namespace
         std::filesystem::path& binaryDirectory,
         std::filesystem::path& editor,
         std::filesystem::path& project,
+        std::filesystem::path& startupLevel,
         std::wstring& error)
     {
         std::filesystem::path executable;
@@ -135,6 +140,7 @@ namespace
 
         editor = binaryDirectory / EditorFileName;
         project = installRoot / ProjectDirectoryName;
+        startupLevel = project / StartupLevelRelativePath;
         if (!IsRegularFile(installRoot / ManifestFileName))
         {
             error = L"The installed SDK manifest is missing. Repair or reinstall the SDK.";
@@ -150,6 +156,11 @@ namespace
             error = L"The installed Tainted Grail editor project is missing. Repair or reinstall the SDK.";
             return false;
         }
+        if (!IsRegularFile(startupLevel))
+        {
+            error = L"The installed default Editor level is missing. Repair or reinstall the SDK.";
+            return false;
+        }
         return true;
     }
 } // namespace
@@ -159,19 +170,22 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR commandLine, int)
     std::filesystem::path binaryDirectory;
     std::filesystem::path editor;
     std::filesystem::path project;
+    std::filesystem::path startupLevel;
     std::wstring error;
-    if (!ResolveInstalledLayout(binaryDirectory, editor, project, error))
+    const std::wstring extraArguments = commandLine ? commandLine : L"";
+    const bool selfTest = extraArguments == SelfTestArgument;
+    if (!ResolveInstalledLayout(binaryDirectory, editor, project, startupLevel, error))
     {
-        return Fail(error);
+        return Fail(error, !selfTest);
     }
 
-    const std::wstring extraArguments = commandLine ? commandLine : L"";
-    if (extraArguments == SelfTestArgument)
+    if (selfTest)
     {
         return 0;
     }
 
-    std::wstring editorCommand = QuoteArgument(editor) + L" --project-path " + QuoteArgument(project);
+    std::wstring editorCommand =
+        QuoteArgument(editor) + L" --project-path " + QuoteArgument(project) + L" " + QuoteArgument(startupLevel);
     if (!extraArguments.empty())
     {
         editorCommand += L" " + extraArguments;
@@ -194,7 +208,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR commandLine, int)
             &startup,
             &process))
     {
-        return Fail(L"Unable to launch the installed Editor: " + WindowsError(GetLastError()));
+        return Fail(L"Unable to launch the installed Editor: " + WindowsError(GetLastError()), true);
     }
 
     CloseHandle(process.hThread);

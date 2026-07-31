@@ -117,6 +117,7 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Run authoritative repository and compiled-test validation",
             "Configure prebuilt O3DE SDK layout",
             "Build canonical O3DE INSTALL target",
+            "Build and verify installed FOA-SDK.exe launcher entry point",
             "Generate notices and third-party package inventory",
             "Generate exact installer inventory",
             "Upload inventory for redistribution review",
@@ -140,6 +141,20 @@ class InstallerPipelineContractTests(unittest.TestCase):
         self.assertNotIn("--sdk-root $env:SDK_VALIDATION_BUILD", workflow)
         self.assertIn("--scan-path \"$env:SDK_INSTALL\"", workflow)
 
+    def test_inventory_requires_verified_installed_sdk_entrypoint(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        installer_source = (
+            REPO_ROOT / "Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--target TaintedGrailModdingEditorLauncher", workflow)
+        self.assertIn("FOA-SDK.exe does not match the reviewed installed launcher build.", workflow)
+        self.assertIn(
+            "FOA-SDK.exe installed launcher self-test failed before inventory review.",
+            workflow,
+        )
+        self.assertIn('SDK_ENTRYPOINT_PATH = BIN_DIRECTORY / "FOA-SDK.exe"', installer_source)
+        self.assertIn("Installed FOA-SDK.exe launcher entry point", installer_source)
+
     def test_zip_and_msi_are_built_from_the_same_verified_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("--stage-root $env:SDK_STAGE", workflow)
@@ -162,6 +177,18 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Copy-Item -LiteralPath $msi.FullName -Destination (Join-Path $env:SDK_ARTIFACTS $msi.Name)",
             workflow,
         )
+
+    def test_msi_package_label_and_cabs_match_payload_role(self) -> None:
+        packaging = (REPO_ROOT / "Installer/Packaging/Windows/CMakeLists.txt").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('set(CPACK_PACKAGE_NAME "Tainted Grail FoA SDK MSI Payload")', packaging)
+        self.assertIn("Windows Installer payload for the prebuilt", packaging)
+        self.assertIn("set(CPACK_WIX_CAB_PER_COMPONENT ON)", packaging)
+        self.assertIn('set(CPACK_WIX_BUILD_EXTRA_FLAGS "-sw1026")', packaging)
+        self.assertIn("COMPONENT p_lib_base", packaging)
+        self.assertIn('set(tg_lib_component "p_lib_${tg_lib_bucket}")', packaging)
+        self.assertIn('COMPONENT "p_${tg_payload_component_suffix}"', packaging)
 
     def test_packaging_uses_exact_hash_pinned_cmake_4_3_toolchain(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")

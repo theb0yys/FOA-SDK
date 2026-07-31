@@ -37,6 +37,8 @@ set(FILES
     Source/FoundationValidationService.h
     Source/FoundationWorkspaceLoadService.cpp
     Source/FoundationWorkspaceLoadService.h
+    Source/LocalSetupDetectionService.cpp
+    Source/LocalSetupDetectionService.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/PathPolicyService.cpp

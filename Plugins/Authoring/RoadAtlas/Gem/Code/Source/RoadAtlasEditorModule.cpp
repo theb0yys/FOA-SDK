@@ -25,7 +25,7 @@ namespace RoadAtlasAuthoring
     namespace
     {
         constexpr const char* ExtensionId = "extension.avalon-core-road-atlas";
-        constexpr const char* PaneName = "Tainted Grail Road Atlas Editor";
+        constexpr const char* PaneName = "Tainted Grail Map Editor (Road Atlas)";
     }
 
     class RoadAtlasEditorSystemComponent final
@@ -119,11 +119,11 @@ namespace RoadAtlasAuthoring
                 return;
             }
             AzToolsFramework::ViewPaneOptions options;
-            options.paneRect = QRect(240, 180, 1180, 900);
+            options.paneRect = QRect(1320, 160, 680, 940);
             options.preferedDockingArea = Qt::RightDockWidgetArea;
             options.isDeletable = true;
             options.isPreview = true;
-            options.saveKeyName = QStringLiteral("RoadAtlasAuthoring.Editor");
+            options.saveKeyName = QStringLiteral("RoadAtlasAuthoring.MapEditorDock");
             AzToolsFramework::RegisterViewPane<RoadAtlasEditorWidget>(
                 PaneName,
                 "Tainted Grail SDK",

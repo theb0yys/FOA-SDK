@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "FoundationModels.h"
 #include "FoundationNotificationBus.h"
 
 #include <QWidget>
@@ -31,7 +32,11 @@ namespace TaintedGrailModdingSDK
     private:
         void OnFoundationChanged() override;
         void LoadFormFromWorkspace();
-        void ApplyConfiguration();
+        void LoadFormFromModel(const WorkspaceModel& workspace);
+        WorkspaceModel BuildWorkspaceFromFields() const;
+        bool ApplyConfiguration();
+        void AutoDetectConfiguration();
+        bool EnsureWorkspaceDirectories(const WorkspaceModel& workspace);
         void OpenWorkspace();
         void SaveWorkspace();
         void SaveWorkspaceAs();
@@ -67,6 +72,7 @@ namespace TaintedGrailModdingSDK
         QLineEdit* m_diagnosticsPathEdit = nullptr;
         QLineEdit* m_extractedDataPathEdit = nullptr;
         QLineEdit* m_dlcScopesEdit = nullptr;
+        AZStd::string m_workspaceFilePath;
 
         QTableWidget* m_countsTable = nullptr;
         QTableWidget* m_domainTable = nullptr;

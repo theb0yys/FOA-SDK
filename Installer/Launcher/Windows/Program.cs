@@ -50,7 +50,17 @@ internal static class Program
         {
             if (InstallerOptions.WantsConsoleError(args))
             {
-                Console.Error.WriteLine($"{Title}: {ex.Message}");
+                if (string.Equals(
+                    Environment.GetEnvironmentVariable("FOA_SDK_INSTALLER_DEBUG_ERRORS"),
+                    "1",
+                    StringComparison.Ordinal))
+                {
+                    Console.Error.WriteLine($"{Title}: {ex}");
+                }
+                else
+                {
+                    Console.Error.WriteLine($"{Title}: {ex.Message}");
+                }
             }
             else
             {

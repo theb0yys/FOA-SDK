@@ -115,6 +115,7 @@ dotnet publish "%PROJECT%" ^
   -r "%RUNTIME%" ^
   --self-contained "%SELF_CONTAINED%" ^
   /p:PublishSingleFile=true ^
+  /p:EnableCompressionInSingleFile=true ^
   /p:BaseIntermediateOutputPath="%BUILD_ROOT_MSBUILD%/obj/" ^
   /p:BaseOutputPath="%BUILD_ROOT_MSBUILD%/bin/" ^
   /p:IncludeNativeLibrariesForSelfExtract=true ^

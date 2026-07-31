@@ -155,10 +155,23 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
                 AZ::AzTest
     )
 
+    set(tg_canonical_interchange_ctest_command
+        "${Python_EXECUTABLE}"
+        -B
+        -s
+        "${CMAKE_CURRENT_LIST_DIR}/../Tools/run_aztest_without_gtest_xml.py"
+        $<TARGET_FILE_DIR:${gem_name}.CanonicalInterchange.Tests>/$<TARGET_FILE_NAME:AZ::AzTestRunner>
+        $<TARGET_FILE:${gem_name}.CanonicalInterchange.Tests>
+        AzRunUnitTests
+    )
+
     ly_add_googletest(
         NAME Gem::${gem_name}.CanonicalInterchange.Tests
         LABELS REQUIRES_tiaf
+        TEST_COMMAND ${tg_canonical_interchange_ctest_command}
     )
+
+    ly_add_dependencies(${gem_name}.CanonicalInterchange.Tests AZ::AzTestRunner)
 endif()
 
 # Tool Gems are resolved for both Editor/Project Manager tools and builder hosts.

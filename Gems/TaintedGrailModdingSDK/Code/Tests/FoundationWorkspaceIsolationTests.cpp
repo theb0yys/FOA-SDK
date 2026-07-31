@@ -6,13 +6,44 @@
  */
 
 #include "FoundationService.h"
+#include "FoundationValidationService.h"
+#include "PackagePathValidation.h"
+#include "PackPersistenceService.h"
 
+#include <AzCore/Component/ComponentApplication.h>
+#include <AzCore/IO/FileIO.h>
+#include <AzCore/Serialization/Json/JsonSystemComponent.h>
+#include <AzCore/Serialization/Json/RegistrationContext.h>
+#include <AzCore/Serialization/SerializeContext.h>
+#include <AzFramework/IO/LocalFileIO.h>
 #include <AzTest/AzTest.h>
+
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QTemporaryDir>
 
 namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        AZStd::string ToAzString(const QString& value)
+        {
+            const QByteArray utf8 = value.toUtf8();
+            return AZStd::string(utf8.constData(), static_cast<size_t>(utf8.size()));
+        }
+
+        bool WriteFile(const QString& path, const QByteArray& bytes)
+        {
+            if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+            {
+                return false;
+            }
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly | QIODevice::Truncate)
+                && file.write(bytes) == bytes.size();
+        }
+
         AZStd::string Fingerprint(char digit)
         {
             return AZStd::string("sha256:") + AZStd::string(64, digit);
@@ -147,6 +178,72 @@ namespace TaintedGrailModdingSDK
             return pack;
         }
 
+        PackManifest MakePackageGuardPack()
+        {
+            PackManifest pack = MakePack();
+            pack.m_targetGameVersion = "1.0.0";
+            pack.m_targetBranch = "mono";
+            pack.m_requiredCoreVersion = "1.0.0";
+            pack.m_requiredAdapterVersion = "1.0.0";
+            pack.m_saveImpact = "none";
+            pack.m_contentDefinitionPaths = {
+                "Content/Definitions/synthetic.tgcontent.json",
+            };
+            pack.m_assetPaths = {
+                "Assets/Synthetic/asset.json",
+            };
+            pack.m_localisationPaths = {
+                "Localization/en_us.lang.json",
+            };
+            pack.m_buildConfiguration = "Profile";
+            pack.m_releaseChannel = "development";
+            return pack;
+        }
+
+        QByteArray PackJsonWithAssetPath(const char* assetPath)
+        {
+            QByteArray json = R"({
+  "AssetPaths": [")";
+            json += assetPath;
+            json += R"("],
+  "BuildConfiguration": "Profile",
+  "CompatibleGameVersions": [],
+  "ContentDefinitionPaths": ["Content/Definitions/synthetic.tgcontent.json"],
+  "Dependencies": [],
+  "DisplayName": "Terrain Package Guard",
+  "DlcScopes": [],
+  "Incompatibilities": [],
+  "LocalisationPaths": ["Localization/en_us.lang.json"],
+  "OwnerId": "owner",
+  "PackId": "owner.terrain-package-guard",
+  "ReleaseChannel": "development",
+  "RequiredAdapterVersion": "1.0.0",
+  "RequiredCoreVersion": "1.0.0",
+  "RequiredMods": [],
+  "RuntimeActionsEnabled": false,
+  "SaveImpact": "none",
+  "SchemaVersion": 1,
+  "TargetBranch": "mono",
+  "TargetGameVersion": "1.0.0",
+  "Version": "1.0.0"
+})";
+            return json;
+        }
+
+        bool HasBlockerWithId(
+            const AZStd::vector<BlockerRecord>& blockers,
+            const AZStd::string& blockerId)
+        {
+            for (const BlockerRecord& blocker : blockers)
+            {
+                if (blocker.m_blockerId == blockerId)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         FoundationWorkspaceLoadDependencies MakeLoadDependencies(
             const WorkspaceModel& workspaceA,
             const WorkspaceModel& workspaceB)
@@ -209,6 +306,72 @@ namespace TaintedGrailModdingSDK
                 };
             return dependencies;
         }
+
+        class PackPersistenceServiceTests
+            : public ::testing::Test
+        {
+        protected:
+            void SetUp() override
+            {
+                AZ::ComponentApplication::Descriptor descriptor;
+                descriptor.m_useExistingAllocator = true;
+                AZ::ComponentApplication::StartupParameters startup;
+                startup.m_loadStaticModules = false;
+                startup.m_loadDynamicModules = false;
+                startup.m_loadAssetCatalog = false;
+                startup.m_loadSettingsRegistry = false;
+                ASSERT_NE(m_application.Create(descriptor, startup), nullptr);
+                m_created = true;
+
+                if (!AZ::IO::FileIOBase::GetInstance())
+                {
+                    AZ::IO::FileIOBase::SetInstance(&m_fileIO);
+                    m_installedFileIo = true;
+                }
+
+                AZ::SerializeContext* serializeContext =
+                    m_application.GetSerializeContext();
+                AZ::JsonRegistrationContext* jsonRegistrationContext =
+                    m_application.GetJsonRegistrationContext();
+                ASSERT_NE(serializeContext, nullptr);
+                ASSERT_NE(jsonRegistrationContext, nullptr);
+                AZ::JsonSystemComponent::Reflect(serializeContext);
+                AZ::JsonSystemComponent::Reflect(jsonRegistrationContext);
+                PackManifest::Reflect(serializeContext);
+            }
+
+            void TearDown() override
+            {
+                if (AZ::SerializeContext* serializeContext =
+                        m_application.GetSerializeContext())
+                {
+                    serializeContext->EnableRemoveReflection();
+                    PackManifest::Reflect(serializeContext);
+                    AZ::JsonSystemComponent::Reflect(serializeContext);
+                    serializeContext->DisableRemoveReflection();
+                }
+                if (AZ::JsonRegistrationContext* jsonRegistrationContext =
+                        m_application.GetJsonRegistrationContext())
+                {
+                    jsonRegistrationContext->EnableRemoveReflection();
+                    AZ::JsonSystemComponent::Reflect(jsonRegistrationContext);
+                    jsonRegistrationContext->DisableRemoveReflection();
+                }
+                if (m_created)
+                {
+                    m_application.Destroy();
+                }
+                if (m_installedFileIo)
+                {
+                    AZ::IO::FileIOBase::SetInstance(nullptr);
+                }
+            }
+
+            AZ::ComponentApplication m_application;
+            AZ::IO::LocalFileIO m_fileIO;
+            bool m_created = false;
+            bool m_installedFileIo = false;
+        };
     } // namespace
 
     TEST(FoundationWorkspaceIsolationTests, SetWorkspaceClearsAllPriorWorkspaceStateAndSaveTarget)
@@ -270,5 +433,137 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(service.GetSourceRegistry().GetSources().empty());
         EXPECT_TRUE(service.GetSourceRegistry().GetEvidence().empty());
         EXPECT_TRUE(service.GetCatalog().GetRecords().empty());
+    }
+
+    TEST(PackManifestPackagePathPolicyTests, SharedValidatorRejectsLocalTerrainWorkspaceArtifacts)
+    {
+        EXPECT_TRUE(IsLocalTerrainPackageExcludedPath(
+            "Derived/Terrain/terrain-map/Revisions/revision/fingerprint/terrain.tgheightmap.json"));
+        EXPECT_TRUE(IsLocalTerrainPackageExcludedPath(
+            "SourceObservations/Terrain/import/source-observation.json"));
+        EXPECT_TRUE(IsLocalTerrainPackageExcludedPath(
+            "Staging/Terrain/import/fingerprint/Tiles/00000000-00000000.terrain.u16le"));
+        EXPECT_TRUE(IsLocalTerrainPackageExcludedPath(
+            "Generated/Terrain/terrain-map_gsi.png"));
+
+        PackagePathIdentity identity;
+        AZStd::string error;
+        EXPECT_FALSE(TryValidatePackManifestPackagePath(
+            "Derived/Terrain/terrain-map/Revisions/revision/fingerprint/terrain.tgheightmap.json",
+            identity,
+            &error));
+        EXPECT_NE(error.find("local terrain"), AZStd::string::npos)
+            << error.c_str();
+
+        EXPECT_FALSE(TryValidatePackManifestPackagePath(
+            "../Derived/Terrain/escape.terrain.u16le",
+            identity,
+            &error));
+        EXPECT_FALSE(error.empty())
+            << error.c_str();
+
+        EXPECT_TRUE(TryValidatePackManifestPackagePath(
+            "Content/Definitions/synthetic.tgcontent.json",
+            identity,
+            &error))
+            << error.c_str();
+        EXPECT_EQ(identity.m_normalizedPath, "Content/Definitions/synthetic.tgcontent.json");
+    }
+
+    TEST(PackManifestPackagePathPolicyTests, PackManifestRejectsTerrainPathsInEveryPackagePathList)
+    {
+        AZStd::string error;
+        EXPECT_TRUE(MakePackageGuardPack().HasAllowedPackagePaths(&error))
+            << error.c_str();
+
+        PackManifest contentPath = MakePackageGuardPack();
+        contentPath.m_contentDefinitionPaths = {
+            "Derived/Terrain/terrain-map/Revisions/revision/fingerprint/terrain.tgheightmap.json",
+        };
+        EXPECT_FALSE(contentPath.HasAllowedPackagePaths(&error));
+        EXPECT_NE(error.find("ContentDefinitionPaths"), AZStd::string::npos)
+            << error.c_str();
+
+        PackManifest assetPath = MakePackageGuardPack();
+        assetPath.m_assetPaths = {
+            "SourceObservations/Terrain/import/source-observation.json",
+        };
+        EXPECT_FALSE(assetPath.HasAllowedPackagePaths(&error));
+        EXPECT_NE(error.find("AssetPaths"), AZStd::string::npos)
+            << error.c_str();
+
+        PackManifest localisationPath = MakePackageGuardPack();
+        localisationPath.m_localisationPaths = {
+            "Staging/Terrain/import/fingerprint/Tiles/00000000-00000000.terrain.u16le",
+        };
+        EXPECT_FALSE(localisationPath.HasAllowedPackagePaths(&error));
+        EXPECT_NE(error.find("LocalisationPaths"), AZStd::string::npos)
+            << error.c_str();
+    }
+
+    TEST_F(
+        PackPersistenceServiceTests,
+        SaveAndLoadRejectTerrainPackageCandidates)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString packPath = QDir(temporary.path()).filePath(
+            "Packs/owner.terrain-package-guard.tgpack.json");
+
+        PackManifest invalid = MakePackageGuardPack();
+        invalid.m_assetPaths = {
+            "Derived/Terrain/terrain-map/Revisions/revision/fingerprint/Tiles/00000000-00000000.terrain.u16le",
+        };
+
+        PackPersistenceService service;
+        const auto save = service.Save(invalid, ToAzString(packPath));
+        EXPECT_FALSE(save.IsSuccess());
+        EXPECT_NE(save.GetError().find("local-only terrain"), AZStd::string::npos)
+            << save.GetError().c_str();
+        EXPECT_FALSE(QFileInfo::exists(packPath));
+
+        ASSERT_TRUE(WriteFile(
+            packPath,
+            PackJsonWithAssetPath(
+                "SourceObservations/Terrain/import/source-observation.json")));
+        const auto load = service.Load(ToAzString(packPath));
+        EXPECT_FALSE(load.IsSuccess());
+        EXPECT_NE(load.GetError().find("local-only terrain"), AZStd::string::npos)
+            << load.GetError().c_str();
+    }
+
+    TEST(PackManifestPackagePathPolicyTests, FoundationRejectsActivePackWithTerrainPackageCandidates)
+    {
+        PackManifest invalid = MakePackageGuardPack();
+        invalid.m_assetPaths = {
+            "Derived/Terrain/terrain-map/Revisions/revision/fingerprint/Tiles/00000000-00000000.terrain.u16le",
+        };
+
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        AZStd::string error;
+        EXPECT_FALSE(service.SetActivePack(invalid, &error));
+        EXPECT_NE(error.find("local-only terrain"), AZStd::string::npos)
+            << error.c_str();
+        EXPECT_EQ(service.GetActivePack(), nullptr);
+    }
+
+    TEST(PackManifestPackagePathPolicyTests, FoundationValidationReportsTerrainPackagePathBlocker)
+    {
+        PackManifest invalid = MakePackageGuardPack();
+        invalid.m_assetPaths = {
+            "Derived/Terrain/terrain-map/Revisions/revision/fingerprint/Tiles/00000000-00000000.terrain.u16le",
+        };
+
+        FoundationValidationService service;
+        const AZStd::vector<BlockerRecord> blockers = service.Evaluate(
+            MakeWorkspace("owner.workspace", "owner.profile", "1.0.0"),
+            { invalid },
+            SourceEvidenceRegistry{},
+            {},
+            CatalogDatabase{});
+
+        EXPECT_TRUE(HasBlockerWithId(
+            blockers,
+            "foundation.pack.package-paths.owner.workspace-a-pack"));
     }
 } // namespace TaintedGrailModdingSDK

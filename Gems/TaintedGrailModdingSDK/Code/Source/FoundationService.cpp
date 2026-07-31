@@ -224,6 +224,15 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        AZStd::string packagePathError;
+        if (!pack.HasAllowedPackagePaths(&packagePathError))
+        {
+            if (error)
+            {
+                *error = AZStd::move(packagePathError);
+            }
+            return false;
+        }
 
         if (PackManifest* existing = FindPackById(pack.m_packId))
         {

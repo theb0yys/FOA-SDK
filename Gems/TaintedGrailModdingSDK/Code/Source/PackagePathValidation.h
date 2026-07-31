@@ -22,6 +22,11 @@ namespace TaintedGrailModdingSDK
         PackagePathIdentity& identity,
         AZStd::string* error = nullptr);
     bool IsSafePackageRelativePath(const AZStd::string& value);
+    bool IsLocalTerrainPackageExcludedPath(const AZStd::string& value);
+    bool TryValidatePackManifestPackagePath(
+        const AZStd::string& value,
+        PackagePathIdentity& identity,
+        AZStd::string* error = nullptr);
     bool IsPackagePathInsideRoot(
         const AZStd::string& root,
         const AZStd::string& path);

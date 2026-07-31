@@ -208,6 +208,34 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         AZ::u64 m_tileCount = 0;
     };
 
+    struct ImageHeightmapImportRequest
+    {
+        AZStd::string m_workspaceRoot;
+        AZStd::string m_imageInputPath;
+        MapIdentity m_mapIdentity;
+        ProfileBinding m_profileBinding;
+        Grid m_gridMetadata;
+        VerticalMapping m_verticalMapping;
+        CoordinateSpace m_coordinateSpace;
+        AZStd::string m_operationId;
+        AZStd::string m_createdAtUtc;
+        AZStd::string m_importerId = "importer.terrain-heightmap.image-u16";
+        AZStd::string m_importerVersion = "1.0.0";
+    };
+
+    struct ImageHeightmapImportResult
+    {
+        TerrainHeightmapDocumentV1 m_document;
+        WorkspaceStagingPlan m_stagingPlan;
+        AZStd::string m_publishedManifestPath;
+        AZStd::vector<AZStd::string> m_publishedTilePaths;
+        AZStd::string m_sourceObservationPath;
+        AZStd::string m_sourceFingerprint;
+        AZStd::string m_metadataFingerprint;
+        AZ::u64 m_sourceByteSize = 0;
+        AZ::u64 m_tileCount = 0;
+    };
+
     ValidationResult ValidateDocument(const TerrainHeightmapDocumentV1& document);
     AZStd::string BuildCanonicalDocumentJson(const TerrainHeightmapDocumentV1& document);
     AZStd::string CalculateDocumentFingerprint(const TerrainHeightmapDocumentV1& document);
@@ -223,4 +251,7 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
 
     AZ::Outcome<RawHeightmapImportResult, AZStd::string> ImportRawHeightmapToWorkspace(
         const RawHeightmapImportRequest& request);
+
+    AZ::Outcome<ImageHeightmapImportResult, AZStd::string> ImportImageHeightmapToWorkspace(
+        const ImageHeightmapImportRequest& request);
 } // namespace TaintedGrailModdingSDK::TerrainHeightmap

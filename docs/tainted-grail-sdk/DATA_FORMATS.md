@@ -18,6 +18,66 @@ All durable formats follow these rules:
 
 O3DE reflection versions are implementation metadata and are not durable document schema versions.
 
+## QuestDefinition document
+
+Suffix:
+
+```text
+*.tgquest.json
+```
+
+Purpose: portable, engine-neutral quest definition data. Version 1 describes authored quest shape
+only and does not grant runtime execution, editor mutation, save mutation, deployment, asset
+extraction, or Fall of Avalon runtime proof.
+
+Schema identity:
+
+```text
+Schema ID: foa.quest-definition
+Schema version: 1
+Canonical fingerprint: lowercase sha256 over the canonical JSON projection
+```
+
+Top-level fields:
+
+- `schema`;
+- `schema_version`;
+- `quest_id`;
+- `content_version`;
+- `owner_pack_id`;
+- `owner_module_id`;
+- `display`;
+- `lifecycle`;
+- `roles`;
+- `phases`;
+- `objectives`;
+- `transitions`;
+- `conditions`;
+- `actions`;
+- `outcomes`;
+- `binding_requirements`;
+- `minimum_sdk_version`;
+- `compatibility_tags`;
+- `authority`;
+- optional `quest_fingerprint`.
+
+Schema-1 rules:
+
+- unknown public fields and unknown schema versions are rejected;
+- IDs are stable contract IDs, not display names, native object references, paths, URIs, GUIDs, or
+  engine handles;
+- roles, phases, objectives, transitions, conditions, actions, outcomes, and binding requirements
+  use duplicate-free IDs;
+- transitions, objectives, phases, outcomes, and binding requirements must reference declared IDs;
+- exactly one entry phase and at least one terminal outcome are required;
+- ambiguous transitions and cycles without explicit repeat policy are rejected;
+- condition and action type IDs must come from the V1 registered vocabulary;
+- strings, arrays, document size, and nesting surfaces are bounded;
+- canonical JSON sorts set-like arrays and excludes `quest_fingerprint` from its own projection;
+- `authority.runtime_execution_allowed`, `authority.editor_mutation_allowed`,
+  `authority.save_mutation_allowed`, `authority.deployment_allowed`, and
+  `authority.asset_extraction_allowed` are always `false`.
+
 ## External-tool interchange Gate 0 envelopes
 
 Gate 0 defines four canonical Core-only envelopes:

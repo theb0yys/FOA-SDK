@@ -119,6 +119,8 @@ set(FILES
     Source/ExternalToolInterchangeCanonical.h
     Source/ExternalToolInterchangeContracts.cpp
     Source/ExternalToolInterchangeContracts.h
+    Source/QuestDefinitionContract.cpp
+    Source/QuestDefinitionContract.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
     Source/CatalogDatabaseBase.inl

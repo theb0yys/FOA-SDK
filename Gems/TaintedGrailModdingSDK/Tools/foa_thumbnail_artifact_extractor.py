@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+#
 """Native icon and thumbnail artefact extraction for the visual preview pipeline.
 
 Consumes a `foa-visual-asset-index.json` discovery index and emits local-only

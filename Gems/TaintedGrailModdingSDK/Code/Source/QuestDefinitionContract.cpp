@@ -1750,7 +1750,16 @@ namespace TaintedGrailModdingSDK
         {
             ValidateStableId(result, outcome.m_outcomeId, outcome.m_outcomeId, "outcomes.outcome_id", definition.m_display.m_fallbackName);
             ValidateStableId(result, outcome.m_textKey, outcome.m_outcomeId, "outcomes.text_key", definition.m_display.m_fallbackName);
-            if (!IsTerminalPhase(definition, outcome.m_phaseId))
+            if (!HasPhase(phaseIds, outcome.m_phaseId))
+            {
+                AddIssue(
+                    result,
+                    QuestDefinitionIssueSeverityV1::Error,
+                    IssueMissingReference,
+                    outcome.m_outcomeId,
+                    "outcomes.phase_id");
+            }
+            else if (!IsTerminalPhase(definition, outcome.m_phaseId))
             {
                 AddIssue(
                     result,

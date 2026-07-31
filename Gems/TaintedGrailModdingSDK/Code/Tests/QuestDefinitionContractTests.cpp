@@ -232,6 +232,12 @@ namespace TaintedGrailModdingSDK
             "quest.reference.missing"));
 
         definition = MakeValidQuestDefinition();
+        definition.m_outcomes.front().m_phaseId = "phase.fixture.missing";
+        EXPECT_TRUE(HasIssue(
+            ValidateQuestDefinitionV1(definition),
+            "quest.reference.missing"));
+
+        definition = MakeValidQuestDefinition();
         definition.m_actions.front().m_actionTypeId = "adapter.unknown-action";
         EXPECT_TRUE(HasIssue(
             ValidateQuestDefinitionV1(definition),

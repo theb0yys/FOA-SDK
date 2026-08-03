@@ -33,12 +33,14 @@ REQUIRED_PREVIEW_GEMS = (
     *REQUIRED_PRODUCT_GEMS,
     "AvalonAIAuthoring",
     "RoadAtlasAuthoring",
+    "TerrainAuthoring",
 )
 EXPECTED_EXTERNAL_SUBDIRECTORIES = (
     "../Gems/ExternalToolchain",
     "../Gems/TaintedGrailModdingSDK",
     "../Plugins/Authoring/AvalonAI/Gem",
     "../Plugins/Authoring/RoadAtlas/Gem",
+    "../Plugins/Authoring/TerrainAuthoring/Gem",
 )
 FORBIDDEN_ENGINE_ROOT_PATHS = (
     "Assets",

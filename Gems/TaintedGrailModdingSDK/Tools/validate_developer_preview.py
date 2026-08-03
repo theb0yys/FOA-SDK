@@ -22,6 +22,7 @@ EXPECTED_PROJECT_EXTERNAL_SUBDIRECTORIES = (
     "../Gems/TaintedGrailModdingSDK",
     "../Plugins/Authoring/AvalonAI/Gem",
     "../Plugins/Authoring/RoadAtlas/Gem",
+    "../Plugins/Authoring/TerrainAuthoring/Gem",
 )
 
 
@@ -98,6 +99,7 @@ def validate_project_external_boundary(product_root: Path) -> None:
         "TaintedGrailModdingSDK",
         "AvalonAIAuthoring",
         "RoadAtlasAuthoring",
+        "TerrainAuthoring",
     ):
         if gem_names.count(gem_name) != 1:
             fail(f"Developer Preview project must enable {gem_name!r} exactly once.")

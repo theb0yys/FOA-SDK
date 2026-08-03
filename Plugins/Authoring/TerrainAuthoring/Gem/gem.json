@@ -1,0 +1,11 @@
+{
+  "gem_name": "TerrainAuthoring",
+  "version": "0.1.0",
+  "display_name": "Terrain Authoring",
+  "license": "Apache-2.0 OR MIT",
+  "type": "Tool",
+  "summary": "Optional local-only terrain heightmap authoring shell.",
+  "canonical_tags": ["Gem"],
+  "user_tags": ["Editor", "World", "Terrain", "Tainted Grail"],
+  "dependencies": ["TaintedGrailModdingSDK"]
+}

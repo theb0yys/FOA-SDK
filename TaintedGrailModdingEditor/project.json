@@ -22,7 +22,8 @@
         "../Gems/ExternalToolchain",
         "../Gems/TaintedGrailModdingSDK",
         "../Plugins/Authoring/AvalonAI/Gem",
-        "../Plugins/Authoring/RoadAtlas/Gem"
+        "../Plugins/Authoring/RoadAtlas/Gem",
+        "../Plugins/Authoring/TerrainAuthoring/Gem"
     ],
     "gem_names": [
         "Atom",
@@ -31,6 +32,7 @@
         "ExternalToolchain",
         "TaintedGrailModdingSDK",
         "AvalonAIAuthoring",
-        "RoadAtlasAuthoring"
+        "RoadAtlasAuthoring",
+        "TerrainAuthoring"
     ]
 }

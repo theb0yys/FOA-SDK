@@ -88,6 +88,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
                         "../Gems/TaintedGrailModdingSDK",
                         "../Plugins/Authoring/AvalonAI/Gem",
                         "../Plugins/Authoring/RoadAtlas/Gem",
+                        "../Plugins/Authoring/TerrainAuthoring/Gem",
                     ],
                     "gem_names": [
                         "Atom",
@@ -97,6 +98,7 @@ class DeveloperPreviewProjectContractTests(unittest.TestCase):
                         "TaintedGrailModdingSDK",
                         "AvalonAIAuthoring",
                         "RoadAtlasAuthoring",
+                        "TerrainAuthoring",
                     ],
                 }
             ),

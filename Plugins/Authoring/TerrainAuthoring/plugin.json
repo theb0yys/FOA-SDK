@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "extension.terrain-authoring",
+  "name": "Terrain Authoring",
+  "version": "0.1.0",
+  "category": "authoring",
+  "status": "experimental",
+  "optional": true,
+  "entry_points": {
+    "o3de_gems": [
+      "Gem"
+    ]
+  },
+  "capabilities": [
+    "read-active-profile"
+  ],
+  "dependencies": [],
+  "compatibility": {
+    "game_versions": [
+      "1.23.401"
+    ],
+    "branches": [
+      "il2cpp",
+      "mono"
+    ],
+    "runtime_targets": [
+      "editor-only"
+    ]
+  },
+  "provenance": {
+    "origin": "theb0yys/FOA-SDK",
+    "revision": "project-owned",
+    "license": "Apache-2.0 OR MIT",
+    "redistribution_reviewed": true
+  }
+}

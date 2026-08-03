@@ -26,12 +26,14 @@ PRODUCT_GEM_DIRECTORIES = (
     "../Gems/TaintedGrailModdingSDK",
     "../Plugins/Authoring/AvalonAI/Gem",
     "../Plugins/Authoring/RoadAtlas/Gem",
+    "../Plugins/Authoring/TerrainAuthoring/Gem",
 )
 PRODUCT_GEM_NAMES = (
     "ExternalToolchain",
     "TaintedGrailModdingSDK",
     "AvalonAIAuthoring",
     "RoadAtlasAuthoring",
+    "TerrainAuthoring",
 )
 
 

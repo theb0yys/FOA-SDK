@@ -98,6 +98,115 @@ class PluginPackageContractTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def make_terrain_authoring_tree(
+        self,
+        root: Path,
+        *,
+        manifest_payload: dict | None = None,
+        module_suffix: str = "",
+        contracts_suffix: str = "",
+    ) -> None:
+        payload = manifest_payload or manifest(
+            "extension.terrain-authoring",
+            "authoring",
+        )
+        payload["name"] = "Terrain Authoring"
+        payload["version"] = "0.1.0"
+        payload["status"] = "experimental"
+        payload["compatibility"]["branches"] = ["il2cpp", "mono"]
+        payload["provenance"] = {
+            "origin": "theb0yys/FOA-SDK",
+            "revision": "project-owned",
+            "license": "Apache-2.0 OR MIT",
+            "redistribution_reviewed": True,
+        }
+        self.make_tree(root, [("Authoring", "TerrainAuthoring", payload)])
+
+        package_root = root / "Plugins/Authoring/TerrainAuthoring"
+        gem_root = package_root / "Gem"
+        (gem_root / "gem.json").write_text(
+            json.dumps(
+                {
+                    "gem_name": "TerrainAuthoring",
+                    "type": "Tool",
+                    "dependencies": ["TaintedGrailModdingSDK"],
+                }
+            ),
+            encoding="utf-8",
+        )
+        project_path = root / "TaintedGrailModdingEditor/project.json"
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+        project["gem_names"].remove("TerrainAuthoringGem")
+        project["gem_names"].append("TerrainAuthoring")
+        project_path.write_text(json.dumps(project), encoding="utf-8")
+
+        source_root = gem_root / "Code/Source"
+        source_root.mkdir(parents=True)
+        (gem_root / "Code/CMakeLists.txt").write_text(
+            "if(NOT PAL_TRAIT_BUILD_HOST_TOOLS)\n"
+            "GEM_MODULE\n"
+            "Gem::TaintedGrailModdingSDK.Framework.Static\n",
+            encoding="utf-8",
+        )
+        (gem_root / "Code/terrain_authoring_files.cmake").write_text(
+            "Source/TerrainAuthoringContracts.cpp\n"
+            "Source/TerrainAuthoringContracts.h\n"
+            "Source/TerrainAuthoringEditorModule.cpp\n",
+            encoding="utf-8",
+        )
+        (source_root / "TerrainAuthoringEditorModule.cpp").write_text(
+            "TerrainAuthoringShellComponent\n"
+            "GetRequiredServices\n"
+            "TaintedGrailModdingSDKService\n"
+            "ValidateShellContract\n"
+            "RegisterExtension\n"
+            "UnregisterExtension\n"
+            "TerrainAuthoringExtensionId\n"
+            "AZ_DECLARE_MODULE_CLASS\n"
+            "Gem_TerrainAuthoring\n"
+            + module_suffix,
+            encoding="utf-8",
+        )
+        contracts = (
+            "extension.terrain-authoring\n"
+            "TerrainHeightmapDocumentV1\n"
+            "TerrainHeightmapSchemaId\n"
+            "TerrainHeightmapSchemaVersion\n"
+            "ReadActiveProfile\n"
+            "m_availableInShell = false\n"
+            "m_invokesPreview = false\n"
+            "m_invokesAssetProcessor = false\n"
+            "m_invokesRuntime = false\n"
+            "m_runtimeUseAllowed = false\n"
+            "m_deploymentAllowed = false\n"
+            "m_publicationAllowed = false\n"
+            "m_packagingAllowed = false\n"
+            "m_gameWriteAllowed = false\n"
+            "m_evidencePromotionAllowed = false\n"
+            "m_directFoAInstallScanAllowed = false\n"
+            "m_externalProcessAllowed = false\n"
+            "m_roadAtlasMutationAllowed = false\n"
+            "BuildCommandDescriptors\n"
+            "BuildInitialServiceStatus\n"
+            "ValidateShellContract\n"
+            "terrain-authoring.import-local-heightmap\n"
+            "terrain-authoring.validate-candidate\n"
+            "terrain-authoring.open-document\n"
+            "terrain-authoring.save-revision\n"
+            "terrain-authoring.revert-revision\n"
+            "terrain-authoring.undo-edit\n"
+            "terrain-authoring.redo-edit\n"
+            + contracts_suffix
+        )
+        (source_root / "TerrainAuthoringContracts.h").write_text(
+            contracts,
+            encoding="utf-8",
+        )
+        (source_root / "TerrainAuthoringContracts.cpp").write_text(
+            contracts,
+            encoding="utf-8",
+        )
+
     def test_valid_tool_gem_package_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -305,6 +414,48 @@ class PluginPackageContractTests(unittest.TestCase):
                 "does not deterministically select",
             ):
                 contract.validate_plugin_packages(root)
+
+    def test_terrain_authoring_shell_contract_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_terrain_authoring_tree(root)
+            packages = contract.validate_plugin_packages(root)
+            contract.validate_terrain_authoring_shell(root, packages)
+
+    def test_terrain_authoring_shell_rejects_visible_pane_registration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_terrain_authoring_tree(
+                root,
+                module_suffix="AzToolsFramework::RegisterViewPane<TerrainAuthoringWidget>\n",
+            )
+            packages = contract.validate_plugin_packages(root)
+            with self.assertRaisesRegex(contract.PluginPackageError, "visible pane"):
+                contract.validate_terrain_authoring_shell(root, packages)
+
+    def test_terrain_authoring_shell_rejects_runtime_process_or_road_routes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_terrain_authoring_tree(
+                root,
+                contracts_suffix="QProcess\nRoadAtlasExtension\n",
+            )
+            packages = contract.validate_plugin_packages(root)
+            with self.assertRaisesRegex(contract.PluginPackageError, "forbidden"):
+                contract.validate_terrain_authoring_shell(root, packages)
+
+    def test_terrain_authoring_shell_rejects_broader_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payload = manifest("extension.terrain-authoring", "authoring")
+            payload["capabilities"] = [
+                "read-active-profile",
+                "submit-candidate-evidence",
+            ]
+            self.make_terrain_authoring_tree(root, manifest_payload=payload)
+            packages = contract.validate_plugin_packages(root)
+            with self.assertRaisesRegex(contract.PluginPackageError, "profile-only"):
+                contract.validate_terrain_authoring_shell(root, packages)
 
 
 if __name__ == "__main__":

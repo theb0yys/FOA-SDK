@@ -86,6 +86,39 @@ EXPECTED_KEYS = {
     "compatibility",
     "provenance",
 }
+TERRAIN_AUTHORING_EXTENSION_ID = "extension.terrain-authoring"
+TERRAIN_AUTHORING_RELATIVE_DIRECTORY = "Plugins/Authoring/TerrainAuthoring"
+TERRAIN_AUTHORING_GEM_NAME = "TerrainAuthoring"
+TERRAIN_AUTHORING_COMMAND_IDS = (
+    "terrain-authoring.import-local-heightmap",
+    "terrain-authoring.validate-candidate",
+    "terrain-authoring.open-document",
+    "terrain-authoring.save-revision",
+    "terrain-authoring.revert-revision",
+    "terrain-authoring.undo-edit",
+    "terrain-authoring.redo-edit",
+)
+TERRAIN_AUTHORING_FORBIDDEN_FRAGMENTS = (
+    ("RegisterViewPane", "visible pane registration"),
+    ("UnregisterViewPane", "visible pane lifecycle"),
+    ("EditorEvents", "editor pane lifecycle hook"),
+    ("QWidget", "Qt widget implementation"),
+    ("QDialog", "Qt dialog implementation"),
+    ("QProcess", "external process launch"),
+    ("ProcessLaunchInfo", "external process launch"),
+    ("ShellExecute", "shell execution"),
+    ("std::system", "shell execution"),
+    ("AssetProcessorBatch", "Asset Processor execution"),
+    ("AssetProcessor.exe", "Asset Processor execution"),
+    ("BepInEx", "FoA runtime loader route"),
+    ("HarmonyLib", "FoA runtime patch route"),
+    ("UnityEngine", "Unity runtime route"),
+    ("Addressables", "Unity protected source route"),
+    ("AssetBundle", "Unity protected source route"),
+    (".assets", "Unity protected source route"),
+    (".resS", "Unity protected source route"),
+    ("RoadAtlasExtension", "Road Atlas mutation route"),
+)
 
 
 class PluginPackageError(RuntimeError):
@@ -426,6 +459,138 @@ def validate_project_registration(repo_root: Path, packages: list[Package]) -> N
         )
 
 
+def require_text(path: Path, label: str) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        fail(f"Unable to read {label}: {path}: {exc}")
+
+
+def require_fragment(text: str, fragment: str, label: str) -> None:
+    if fragment not in text:
+        fail(f"{label} is missing required fragment {fragment!r}")
+
+
+def validate_terrain_authoring_shell(
+    repo_root: Path,
+    packages: list[Package],
+) -> None:
+    package = next(
+        (
+            item
+            for item in packages
+            if item.extension_id == TERRAIN_AUTHORING_EXTENSION_ID
+        ),
+        None,
+    )
+    if package is None:
+        fail("TerrainAuthoring shell package is missing")
+    if package.relative_directory != TERRAIN_AUTHORING_RELATIVE_DIRECTORY:
+        fail("TerrainAuthoring shell package moved outside its governed authoring path")
+    if package.gem_names != (TERRAIN_AUTHORING_GEM_NAME,):
+        fail("TerrainAuthoring shell must expose exactly one TerrainAuthoring Tool Gem")
+    if package.manifest.get("capabilities") != ["read-active-profile"]:
+        fail("TerrainAuthoring shell must remain profile-only")
+
+    compatibility = package.manifest.get("compatibility")
+    if not isinstance(compatibility, dict):
+        fail("TerrainAuthoring shell compatibility is malformed")
+    if compatibility.get("runtime_targets") != ["editor-only"]:
+        fail("TerrainAuthoring shell must remain editor-only")
+
+    package_root = repo_root / TERRAIN_AUTHORING_RELATIVE_DIRECTORY
+    required_files = (
+        package_root / "Gem/gem.json",
+        package_root / "Gem/CMakeLists.txt",
+        package_root / "Gem/Code/CMakeLists.txt",
+        package_root / "Gem/Code/terrain_authoring_files.cmake",
+        package_root / "Gem/Code/Source/TerrainAuthoringContracts.h",
+        package_root / "Gem/Code/Source/TerrainAuthoringContracts.cpp",
+        package_root / "Gem/Code/Source/TerrainAuthoringEditorModule.cpp",
+    )
+    for path in required_files:
+        if not path.is_file():
+            fail(f"TerrainAuthoring shell required file is missing: {path}")
+
+    manifest = require_text(
+        package_root / "Gem/Code/terrain_authoring_files.cmake",
+        "TerrainAuthoring source manifest",
+    )
+    for fragment in (
+        "Source/TerrainAuthoringContracts.cpp",
+        "Source/TerrainAuthoringContracts.h",
+        "Source/TerrainAuthoringEditorModule.cpp",
+    ):
+        require_fragment(manifest, fragment, "TerrainAuthoring source manifest")
+
+    cmake = require_text(
+        package_root / "Gem/Code/CMakeLists.txt",
+        "TerrainAuthoring CMake",
+    )
+    for fragment in (
+        "if(NOT PAL_TRAIT_BUILD_HOST_TOOLS)",
+        "GEM_MODULE",
+        "Gem::TaintedGrailModdingSDK.Framework.Static",
+    ):
+        require_fragment(cmake, fragment, "TerrainAuthoring CMake")
+
+    module = require_text(
+        package_root / "Gem/Code/Source/TerrainAuthoringEditorModule.cpp",
+        "TerrainAuthoring module",
+    )
+    for fragment in (
+        "TerrainAuthoringShellComponent",
+        "GetRequiredServices",
+        "TaintedGrailModdingSDKService",
+        "ValidateShellContract",
+        "RegisterExtension",
+        "UnregisterExtension",
+        "TerrainAuthoringExtensionId",
+        "AZ_DECLARE_MODULE_CLASS",
+        "Gem_TerrainAuthoring",
+    ):
+        require_fragment(module, fragment, "TerrainAuthoring module")
+
+    contracts = "\n".join(
+        require_text(path, "TerrainAuthoring contracts")
+        for path in (
+            package_root / "Gem/Code/Source/TerrainAuthoringContracts.h",
+            package_root / "Gem/Code/Source/TerrainAuthoringContracts.cpp",
+        )
+    )
+    for fragment in (
+        TERRAIN_AUTHORING_EXTENSION_ID,
+        "TerrainHeightmapDocumentV1",
+        "TerrainHeightmapSchemaId",
+        "TerrainHeightmapSchemaVersion",
+        "ReadActiveProfile",
+        "m_availableInShell = false",
+        "m_invokesPreview = false",
+        "m_invokesAssetProcessor = false",
+        "m_invokesRuntime = false",
+        "m_runtimeUseAllowed = false",
+        "m_deploymentAllowed = false",
+        "m_publicationAllowed = false",
+        "m_packagingAllowed = false",
+        "m_gameWriteAllowed = false",
+        "m_evidencePromotionAllowed = false",
+        "m_directFoAInstallScanAllowed = false",
+        "m_externalProcessAllowed = false",
+        "m_roadAtlasMutationAllowed = false",
+        "BuildCommandDescriptors",
+        "BuildInitialServiceStatus",
+        "ValidateShellContract",
+    ):
+        require_fragment(contracts, fragment, "TerrainAuthoring contracts")
+    for command_id in TERRAIN_AUTHORING_COMMAND_IDS:
+        require_fragment(contracts, command_id, "TerrainAuthoring command contract")
+
+    combined = "\n".join((manifest, cmake, module, contracts))
+    for fragment, label in TERRAIN_AUTHORING_FORBIDDEN_FRAGMENTS:
+        if fragment in combined:
+            fail(f"TerrainAuthoring shell contains forbidden {label}: {fragment}")
+
+
 def discover_packages(repo_root: Path) -> list[Package]:
     plugins_root = repo_root / "Plugins"
     packages: list[Package] = []
@@ -455,13 +620,15 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
     try:
         packages = validate_plugin_packages(repo_root)
+        validate_terrain_authoring_shell(repo_root, packages)
     except PluginPackageError as exc:
         print(f"FOA-SDK plug-in package validation failed: {exc}", file=sys.stderr)
         return 1
     print(
         "FOA-SDK plug-in package validation passed: "
         f"{len(packages)} optional Tool Gem package(s), exact manifests, entry points, "
-        "dependencies, compatibility, provenance, and project selection are governed."
+        "dependencies, compatibility, provenance, project selection, and the inert "
+        "TerrainAuthoring shell boundary are governed."
     )
     return 0
 

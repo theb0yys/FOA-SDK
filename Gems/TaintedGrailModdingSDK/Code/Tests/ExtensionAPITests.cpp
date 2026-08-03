@@ -162,6 +162,25 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(client.QueryCatalog(CatalogQuery{}, records, 16, &error));
     }
 
+    TEST_F(ExtensionAPITests, TerrainAuthoringShellIdentityHasProfileOnlyAuthority)
+    {
+        auto declaration = MakeDeclaration(
+            "extension.terrain-authoring",
+            { ExtensionAPI::Capability::ReadActiveProfile });
+        declaration.m_displayName = "Terrain Authoring";
+        declaration.m_version = "0.1.0";
+        ExtensionAPI::Client client = RegisterAndBind(declaration);
+
+        ExtensionAPI::ProfileView profile;
+        AZStd::string error;
+        ASSERT_TRUE(client.GetActiveProfile(profile, &error));
+        EXPECT_EQ(profile.m_profileId, "profile.foa.mono");
+
+        AZStd::vector<CatalogRecord> records;
+        EXPECT_FALSE(client.QueryCatalog(CatalogQuery{}, records, 16, &error));
+        EXPECT_FALSE(client.SubmitCandidateEvidence(MakeEvidence(), &error));
+    }
+
     TEST_F(ExtensionAPITests, UnboundOrUnknownClientFailsClosed)
     {
         ExtensionAPI::Client client;

@@ -330,6 +330,11 @@ namespace TaintedGrailModdingSDK
 
     void ItemVisualSelectorWidget::OnFoundationChanged()
     {
+        if (!LoadedModelMatchesActiveProfile())
+        {
+            ClearLoadedModel(
+                tr("The active FoA profile or ExtractedDataPath changed. The previously loaded preview model was cleared and must be reselected."));
+        }
         RefreshTargetChoices();
     }
 
@@ -443,7 +448,9 @@ namespace TaintedGrailModdingSDK
         const bool productSelected = selected
             && selected->m_entryKind == QStringLiteral("o3de-preview-product")
             && !selected->m_productAssetId.isEmpty();
-        const bool canBind = productSelected && profile;
+        const bool canBind = productSelected
+            && profile
+            && LoadedModelMatchesActiveProfile();
         m_applyAsset->setEnabled(canBind);
         m_applyIcon->setEnabled(
             canBind
@@ -483,17 +490,13 @@ namespace TaintedGrailModdingSDK
             SetStatus(tr("Choose a preview model before reloading."), true);
             return;
         }
-        LoadPreviewModel(m_modelPath->text());
+        const QString path = m_modelPath->text();
+        LoadPreviewModel(path);
     }
 
     bool ItemVisualSelectorWidget::LoadPreviewModel(const QString& path)
     {
-        m_entries.clear();
-        m_entryTable->clearContents();
-        m_entryTable->setRowCount(0);
-        m_previewer->Clear();
-        m_selectionInfo->setText(tr("No preview product selected."));
-        RefreshBindingSummary();
+        ClearLoadedModel();
 
         const QString extractedRoot = ResolveExtractedDataRoot();
         const QFileInfo requested(path);
@@ -663,6 +666,14 @@ namespace TaintedGrailModdingSDK
                     return false;
                 }
             }
+            else if (entry.m_entryKind != QStringLiteral("o3de-import-failure"))
+            {
+                SetStatus(
+                    tr("Pane entry %1 uses unsupported kind %2.")
+                        .arg(entry.m_paneEntryId, entry.m_entryKind),
+                    true);
+                return false;
+            }
             parsedEntries.push_back(AZStd::move(entry));
         }
 
@@ -682,10 +693,14 @@ namespace TaintedGrailModdingSDK
         m_entryTable->resizeColumnsToContents();
         m_modelPath->setText(canonicalPath);
         m_reloadModel->setEnabled(true);
+        m_loadedProfileId = JsonString(root, "ProfileId");
+        m_loadedGameVersion = JsonString(root, "GameVersion");
+        m_loadedBranch = JsonString(root, "Branch");
+        m_loadedRuntimeTarget = JsonString(root, "RuntimeTarget");
         m_modelInfo->setText(
             tr("Model: %1 | profile: %2 | entries: %3 | captured: %4")
                 .arg(JsonString(root, "AssetBrowserModelId"))
-                .arg(JsonString(root, "ProfileId"))
+                .arg(m_loadedProfileId)
                 .arg(static_cast<qulonglong>(m_entries.size()))
                 .arg(JsonString(root, "CapturedAt")));
         ApplySearchFilter();
@@ -693,6 +708,54 @@ namespace TaintedGrailModdingSDK
             tr("Loaded %1 bounded preview entries. Selection remains non-authoritative until an explicit binding action succeeds.")
                 .arg(static_cast<qulonglong>(m_entries.size())));
         return true;
+    }
+
+    void ItemVisualSelectorWidget::ClearLoadedModel(const QString& reason)
+    {
+        m_entries.clear();
+        m_entryTable->clearContents();
+        m_entryTable->setRowCount(0);
+        m_previewer->Clear();
+        m_modelPath->clear();
+        m_reloadModel->setEnabled(false);
+        m_loadedProfileId.clear();
+        m_loadedGameVersion.clear();
+        m_loadedBranch.clear();
+        m_loadedRuntimeTarget.clear();
+        m_modelInfo->setText(tr("No preview model loaded."));
+        m_selectionInfo->setText(tr("No preview product selected."));
+        RefreshBindingSummary();
+        if (!reason.isEmpty())
+        {
+            SetStatus(reason, true);
+        }
+    }
+
+    bool ItemVisualSelectorWidget::LoadedModelMatchesActiveProfile() const
+    {
+        if (m_modelPath->text().isEmpty())
+        {
+            return true;
+        }
+
+        const GameProfile* profile = FoundationService::Get().GetWorkspace().FindActiveGameProfile();
+        if (!profile
+            || m_loadedProfileId != ToQString(profile->m_profileId)
+            || m_loadedGameVersion != ToQString(profile->m_gameVersion)
+            || m_loadedBranch != ToQString(profile->m_branch)
+            || m_loadedRuntimeTarget != ToQString(profile->m_runtimeTarget))
+        {
+            return false;
+        }
+
+        const QString extractedRoot = ResolveExtractedDataRoot();
+        const QString modelPath = QFileInfo(m_modelPath->text()).canonicalFilePath();
+        return !extractedRoot.isEmpty()
+            && !modelPath.isEmpty()
+            && PathPolicyService::IsCanonicalPathContained(
+                ToAzString(extractedRoot),
+                ToAzString(modelPath),
+                true);
     }
 
     void ItemVisualSelectorWidget::ApplySearchFilter()
@@ -720,6 +783,13 @@ namespace TaintedGrailModdingSDK
 
     void ItemVisualSelectorWidget::RefreshSelection()
     {
+        if (!LoadedModelMatchesActiveProfile())
+        {
+            ClearLoadedModel(
+                tr("The loaded preview model no longer matches the active FoA profile or ExtractedDataPath."));
+            return;
+        }
+
         const PreviewEntry* selected = GetSelectedEntry();
         m_previewer->Clear();
         if (!selected)
@@ -786,6 +856,13 @@ namespace TaintedGrailModdingSDK
 
     void ItemVisualSelectorWidget::ApplySelection(bool iconBinding)
     {
+        if (!LoadedModelMatchesActiveProfile())
+        {
+            ClearLoadedModel(
+                tr("The loaded preview model no longer matches the active FoA profile or ExtractedDataPath."));
+            return;
+        }
+
         const PreviewEntry* selected = GetSelectedEntry();
         const QString itemId = ResolveBindingItemRecordId();
         if (!selected

@@ -60,6 +60,8 @@ namespace TaintedGrailModdingSDK
         void ChoosePreviewModel();
         void ReloadPreviewModel();
         bool LoadPreviewModel(const QString& path);
+        void ClearLoadedModel(const QString& reason = {});
+        bool LoadedModelMatchesActiveProfile() const;
         void ApplySearchFilter();
         void RefreshSelection();
         void ApplySelectionAsIcon();
@@ -86,6 +88,10 @@ namespace TaintedGrailModdingSDK
         QLabel* m_status = nullptr;
 
         AZStd::vector<PreviewEntry> m_entries;
+        QString m_loadedProfileId;
+        QString m_loadedGameVersion;
+        QString m_loadedBranch;
+        QString m_loadedRuntimeTarget;
         bool m_refreshing = false;
     };
 } // namespace TaintedGrailModdingSDK

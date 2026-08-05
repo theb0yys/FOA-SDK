@@ -56,6 +56,10 @@ set(FILES
     Source/FoundationStatusWidget.h
     Source/ItemRecipeEditorWidget.cpp
     Source/ItemRecipeEditorWidget.h
+    Source/ItemVisualSelectorInstallerSystemComponent.cpp
+    Source/ItemVisualSelectorInstallerSystemComponent.h
+    Source/ItemVisualSelectorWidget.cpp
+    Source/ItemVisualSelectorWidget.h
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
     Source/SourceEvidenceIntakeWidget.cpp

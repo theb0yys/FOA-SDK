@@ -8,6 +8,7 @@
 #include "AdapterReleaseArtifactPaneSystemComponent.h"
 #include "AdapterReleaseAssemblyPaneSystemComponent.h"
 #include "AdapterReleaseSigningPaneSystemComponent.h"
+#include "ItemVisualSelectorInstallerSystemComponent.h"
 #include "TaintedGrailModdingSDKSystemComponent.h"
 
 #include <AzCore/Memory/SystemAllocator.h>
@@ -31,6 +32,7 @@ namespace TaintedGrailModdingSDK
                 m_descriptors.end(),
                 {
                     TaintedGrailModdingSDKSystemComponent::CreateDescriptor(),
+                    ItemVisualSelectorInstallerSystemComponent::CreateDescriptor(),
                     AdapterReleaseArtifactPaneSystemComponent::CreateDescriptor(),
                     AdapterReleaseAssemblyPaneSystemComponent::CreateDescriptor(),
                     AdapterReleaseSigningPaneSystemComponent::CreateDescriptor(),
@@ -41,6 +43,7 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::ComponentTypeList{
                 azrtti_typeid<TaintedGrailModdingSDKSystemComponent>(),
+                azrtti_typeid<ItemVisualSelectorInstallerSystemComponent>(),
                 azrtti_typeid<AdapterReleaseArtifactPaneSystemComponent>(),
                 azrtti_typeid<AdapterReleaseAssemblyPaneSystemComponent>(),
                 azrtti_typeid<AdapterReleaseSigningPaneSystemComponent>(),

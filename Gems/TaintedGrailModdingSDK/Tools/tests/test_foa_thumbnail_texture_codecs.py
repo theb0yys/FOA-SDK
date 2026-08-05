@@ -134,6 +134,24 @@ class ThumbnailTextureCodecTests(unittest.TestCase):
         self.assertEqual(rgba[3], 0)
         self.assertEqual(rgba[7], 255)
 
+    def test_dds_cubemap_and_volume_are_unsupported(self) -> None:
+        cubemap = bytearray(dds(b"DXT1", bytes(8)))
+        struct.pack_into("<I", cubemap, 4 + 108, 0x00000200)
+        with self.assertRaisesRegex(
+            codecs.UnsupportedTextureError,
+            "cubemaps and volume",
+        ):
+            codecs.decode_dds(bytes(cubemap))
+
+        volume = bytearray(dds(b"DXT1", bytes(8)))
+        struct.pack_into("<I", volume, 4 + 20, 2)
+        struct.pack_into("<I", volume, 4 + 108, 0x00200000)
+        with self.assertRaisesRegex(
+            codecs.UnsupportedTextureError,
+            "cubemaps and volume",
+        ):
+            codecs.decode_dds(bytes(volume))
+
     def test_dds_unknown_fourcc_is_explicitly_unsupported(self) -> None:
         with self.assertRaisesRegex(
             codecs.UnsupportedTextureError,

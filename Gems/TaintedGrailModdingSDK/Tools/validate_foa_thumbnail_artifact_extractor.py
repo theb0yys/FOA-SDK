@@ -14,9 +14,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_artifact_extractor.py"
 LEGACY = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_artifact_extractor_legacy.py"
+EXTENDED = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_artifact_extractor_extended.py"
 CODECS = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_texture_codecs.py"
+CODECS_CORE = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_texture_codecs_core.py"
 TEST = "Gems/TaintedGrailModdingSDK/Tools/tests/test_foa_thumbnail_artifact_extractor.py"
 CODEC_TEST = "Gems/TaintedGrailModdingSDK/Tools/tests/test_foa_thumbnail_texture_codecs.py"
+EXTENDED_TEST = "Gems/TaintedGrailModdingSDK/Tools/tests/test_foa_thumbnail_artifact_extractor_extended.py"
 DOC = "docs/tainted-grail-sdk/FOA_THUMBNAIL_ARTIFACT_EXTRACTOR.md"
 
 
@@ -44,9 +47,12 @@ def reject(text: str, fragment: str, label: str) -> None:
 def validate() -> None:
     tool = read(TOOL)
     legacy = read(LEGACY)
+    extended = read(EXTENDED)
     codecs = read(CODECS)
+    codecs_core = read(CODECS_CORE)
     test = read(TEST)
     codec_test = read(CODEC_TEST)
+    extended_test = read(EXTENDED_TEST)
     doc = read(DOC)
 
     for fragment in (
@@ -84,7 +90,20 @@ def validate() -> None:
         "UnsupportedArtifactCount",
         "legacy_manifest",
     ):
-        require(tool, fragment, "extended thumbnail boundary")
+        require(extended, fragment, "extended thumbnail boundary")
+
+    for fragment in (
+        "AssetRecord ByteSize must be a non-negative integer",
+        "foa_thumbnail_artifact_extractor_extended",
+        "_extended._read_source_payload",
+    ):
+        require(tool, fragment, "thumbnail extractor hardening facade")
+
+    for fragment in (
+        "DDS cubemaps and volume textures are outside the Alpha cohort",
+        "foa_thumbnail_texture_codecs_core",
+    ):
+        require(codecs, fragment, "thumbnail codec hardening facade")
 
     for fragment in (
         "def encode_png_rgba",
@@ -100,7 +119,7 @@ def validate() -> None:
         "Color-mapped TGA images are outside the Alpha cohort",
         "DDS arrays, cubemaps, and non-2D resources",
     ):
-        require(codecs, fragment, "bounded thumbnail codecs")
+        require(codecs_core, fragment, "bounded thumbnail codecs")
 
     for fragment in (
         "test_extracts_generated_and_unsupported_thumbnail_artifacts",
@@ -116,10 +135,20 @@ def validate() -> None:
         "test_png_encoder_is_deterministic",
         "test_tga_raw_and_rle_origins",
         "test_dds_bc1_and_bc3",
+        "test_dds_cubemap_and_volume_are_unsupported",
         "test_dds_unknown_fourcc_is_explicitly_unsupported",
         "test_bounds_and_truncation_fail_closed",
     ):
         require(codec_test, fragment, "thumbnail codec tests")
+
+    for fragment in (
+        "test_builds_copy_tga_and_dds_outputs",
+        "test_source_fingerprint_and_missing_size_fail_closed",
+        "test_unsupported_dds_subformat_emits_receipt",
+        "test_decoded_payload_tampering_is_rejected",
+        "test_cubemap_and_volume_dds_emit_unsupported_receipts",
+    ):
+        require(extended_test, fragment, "extended thumbnail tests")
 
     for fragment in (
         "local preview artefact",
@@ -138,7 +167,7 @@ def validate() -> None:
     ):
         require(doc, fragment, "thumbnail extractor documentation")
 
-    combined_executable = tool + "\n" + codecs
+    combined_executable = tool + "\n" + extended + "\n" + codecs + "\n" + codecs_core
     for forbidden in (
         "subprocess.run",
         "Unity.exe",

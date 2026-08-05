@@ -16,7 +16,9 @@
 #include <QApplication>
 #include <QEvent>
 #include <QLabel>
+#include <QList>
 #include <QObject>
+#include <QPointer>
 #include <QTabWidget>
 #include <QWidget>
 
@@ -25,6 +27,13 @@ namespace TaintedGrailModdingSDK
     namespace
     {
         constexpr const char* InstalledProperty = "TaintedGrail.ItemVisualSelectorInstalled";
+
+        struct InstalledVisualSelectorTab
+        {
+            QPointer<QWidget> m_host;
+            QPointer<QTabWidget> m_tabs;
+            QPointer<ItemVisualSelectorWidget> m_selector;
+        };
 
         class ItemVisualSelectorEventFilter final
             : public QObject
@@ -42,7 +51,7 @@ namespace TaintedGrailModdingSDK
                 return QObject::eventFilter(watched, event);
             }
 
-            void TryInstall(QWidget* candidate) const
+            void TryInstall(QWidget* candidate)
             {
                 if (!candidate || candidate->property(InstalledProperty).toBool())
                 {
@@ -84,7 +93,37 @@ namespace TaintedGrailModdingSDK
                 auto* selector = new ItemVisualSelectorWidget(tabs);
                 selector->setProperty("TaintedGrail.VisualPreviewTab", true);
                 tabs->addTab(selector, QObject::tr("Visual Preview"));
+
+                InstalledVisualSelectorTab installed;
+                installed.m_host = candidate;
+                installed.m_tabs = tabs;
+                installed.m_selector = selector;
+                m_installedTabs.push_back(installed);
             }
+
+            void RemoveInstalled()
+            {
+                for (const InstalledVisualSelectorTab& installed : m_installedTabs)
+                {
+                    if (installed.m_host)
+                    {
+                        installed.m_host->setProperty(InstalledProperty, false);
+                    }
+                    if (installed.m_tabs && installed.m_selector)
+                    {
+                        const int index = installed.m_tabs->indexOf(installed.m_selector.data());
+                        if (index >= 0)
+                        {
+                            installed.m_tabs->removeTab(index);
+                        }
+                        delete installed.m_selector.data();
+                    }
+                }
+                m_installedTabs.clear();
+            }
+
+        private:
+            QList<InstalledVisualSelectorTab> m_installedTabs;
         };
     } // namespace
 
@@ -136,11 +175,14 @@ namespace TaintedGrailModdingSDK
         {
             return;
         }
+
+        auto* filter = static_cast<ItemVisualSelectorEventFilter*>(m_eventFilter);
         if (qApp)
         {
-            qApp->removeEventFilter(m_eventFilter);
+            qApp->removeEventFilter(filter);
         }
-        delete m_eventFilter;
+        filter->RemoveInstalled();
+        delete filter;
         m_eventFilter = nullptr;
     }
 } // namespace TaintedGrailModdingSDK

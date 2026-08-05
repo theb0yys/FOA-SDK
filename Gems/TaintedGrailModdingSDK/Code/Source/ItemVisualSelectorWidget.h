@@ -62,6 +62,7 @@ namespace TaintedGrailModdingSDK
         bool LoadPreviewModel(const QString& path);
         void ClearLoadedModel(const QString& reason = {});
         bool LoadedModelMatchesActiveProfile() const;
+        bool LoadedModelFileMatches() const;
         void ApplySearchFilter();
         void RefreshSelection();
         void ApplySelectionAsIcon();
@@ -92,6 +93,7 @@ namespace TaintedGrailModdingSDK
         QString m_loadedGameVersion;
         QString m_loadedBranch;
         QString m_loadedRuntimeTarget;
+        QString m_loadedModelSha256;
         bool m_refreshing = false;
     };
 } // namespace TaintedGrailModdingSDK

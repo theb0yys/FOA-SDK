@@ -21,6 +21,7 @@
 #include <QAbstractItemView>
 #include <QByteArray>
 #include <QComboBox>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -65,6 +66,12 @@ namespace TaintedGrailModdingSDK
         QString ToQString(const AZStd::string& value)
         {
             return QString::fromUtf8(value.c_str());
+        }
+
+        QString Sha256Hex(const QByteArray& payload)
+        {
+            return QString::fromLatin1(
+                QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
         }
 
         void ConfigureTable(QTableWidget* table)
@@ -450,6 +457,7 @@ namespace TaintedGrailModdingSDK
             && !selected->m_productAssetId.isEmpty();
         const bool canBind = productSelected
             && profile
+            && !m_loadedModelSha256.isEmpty()
             && LoadedModelMatchesActiveProfile();
         m_applyAsset->setEnabled(canBind);
         m_applyIcon->setEnabled(
@@ -536,6 +544,7 @@ namespace TaintedGrailModdingSDK
         }
         const QByteArray payload = file.readAll();
         file.close();
+        const QString modelSha256 = Sha256Hex(payload);
 
         QJsonParseError parseError;
         const QJsonDocument document = QJsonDocument::fromJson(payload, &parseError);
@@ -697,11 +706,13 @@ namespace TaintedGrailModdingSDK
         m_loadedGameVersion = JsonString(root, "GameVersion");
         m_loadedBranch = JsonString(root, "Branch");
         m_loadedRuntimeTarget = JsonString(root, "RuntimeTarget");
+        m_loadedModelSha256 = modelSha256;
         m_modelInfo->setText(
-            tr("Model: %1 | profile: %2 | entries: %3 | captured: %4")
+            tr("Model: %1 | profile: %2 | entries: %3 | SHA-256: %4 | captured: %5")
                 .arg(JsonString(root, "AssetBrowserModelId"))
                 .arg(m_loadedProfileId)
                 .arg(static_cast<qulonglong>(m_entries.size()))
+                .arg(m_loadedModelSha256.left(12))
                 .arg(JsonString(root, "CapturedAt")));
         ApplySearchFilter();
         SetStatus(
@@ -722,6 +733,7 @@ namespace TaintedGrailModdingSDK
         m_loadedGameVersion.clear();
         m_loadedBranch.clear();
         m_loadedRuntimeTarget.clear();
+        m_loadedModelSha256.clear();
         m_modelInfo->setText(tr("No preview model loaded."));
         m_selectionInfo->setText(tr("No preview product selected."));
         RefreshBindingSummary();
@@ -758,6 +770,29 @@ namespace TaintedGrailModdingSDK
                 true);
     }
 
+    bool ItemVisualSelectorWidget::LoadedModelFileMatches() const
+    {
+        if (m_modelPath->text().isEmpty())
+        {
+            return true;
+        }
+        if (m_loadedModelSha256.isEmpty())
+        {
+            return false;
+        }
+
+        QFile file(m_modelPath->text());
+        if (!file.open(QIODevice::ReadOnly)
+            || file.size() <= 0
+            || file.size() > MaximumModelBytes)
+        {
+            return false;
+        }
+        const QByteArray payload = file.readAll();
+        file.close();
+        return Sha256Hex(payload) == m_loadedModelSha256;
+    }
+
     void ItemVisualSelectorWidget::ApplySearchFilter()
     {
         const QString filter = m_search->text().trimmed();
@@ -783,10 +818,10 @@ namespace TaintedGrailModdingSDK
 
     void ItemVisualSelectorWidget::RefreshSelection()
     {
-        if (!LoadedModelMatchesActiveProfile())
+        if (!LoadedModelMatchesActiveProfile() || !LoadedModelFileMatches())
         {
             ClearLoadedModel(
-                tr("The loaded preview model no longer matches the active FoA profile or ExtractedDataPath."));
+                tr("The loaded preview model changed or no longer matches the active FoA profile and ExtractedDataPath."));
             return;
         }
 
@@ -856,10 +891,10 @@ namespace TaintedGrailModdingSDK
 
     void ItemVisualSelectorWidget::ApplySelection(bool iconBinding)
     {
-        if (!LoadedModelMatchesActiveProfile())
+        if (!LoadedModelMatchesActiveProfile() || !LoadedModelFileMatches())
         {
             ClearLoadedModel(
-                tr("The loaded preview model no longer matches the active FoA profile or ExtractedDataPath."));
+                tr("The loaded preview model changed or no longer matches the active FoA profile and ExtractedDataPath."));
             return;
         }
 

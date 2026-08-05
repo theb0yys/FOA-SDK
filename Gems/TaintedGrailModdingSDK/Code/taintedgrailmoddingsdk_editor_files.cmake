@@ -6,6 +6,9 @@
 #
 
 set(FILES
+    Source/ActorAppearancePreviewWidget.cpp
+    Source/ActorAppearancePreviewWidget.h
+    Source/ActorTroopEditorFeatureTabs.cpp
     Source/ActorTroopEditorWidget.cpp
     Source/ActorTroopEditorWidget.h
     Source/AdapterBuildManifestWidget.cpp

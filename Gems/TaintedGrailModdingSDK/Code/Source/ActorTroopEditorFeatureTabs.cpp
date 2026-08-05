@@ -7,6 +7,9 @@
 
 #include "ActorTroopEditorWidget.h"
 
+#include "ActorAppearancePreviewWidget.h"
+
+#include <QShowEvent>
 #include <QTabWidget>
 
 namespace TaintedGrailModdingSDK
@@ -19,5 +22,15 @@ namespace TaintedGrailModdingSDK
         }
         widget->setParent(m_tabs);
         m_tabs->addTab(widget, title);
+    }
+
+    void ActorTroopEditorWidget::showEvent(QShowEvent* event)
+    {
+        QWidget::showEvent(event);
+        if (!m_appearancePreviewTab)
+        {
+            m_appearancePreviewTab = new ActorAppearancePreviewWidget(this);
+            AddFeatureTab(m_appearancePreviewTab, tr("Appearance Preview"));
+        }
     }
 } // namespace TaintedGrailModdingSDK

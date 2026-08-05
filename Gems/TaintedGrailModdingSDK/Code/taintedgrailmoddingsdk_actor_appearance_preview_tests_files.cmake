@@ -7,4 +7,5 @@
 
 set(FILES
     Tests/ActorAppearancePreviewServiceTests.cpp
+    Tests/ActorAppearanceBindingServiceTests.cpp
 )

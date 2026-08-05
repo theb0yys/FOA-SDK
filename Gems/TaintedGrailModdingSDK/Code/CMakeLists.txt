@@ -14,6 +14,7 @@ ly_add_target(
     NAMESPACE Gem
     FILES_CMAKE
         taintedgrailmoddingsdk_core_files.cmake
+        taintedgrailmoddingsdk_actor_appearance_preview_core_files.cmake
     INCLUDE_DIRECTORIES
         PUBLIC
             Source
@@ -92,6 +93,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
         NO_UNITY
         FILES_CMAKE
             taintedgrailmoddingsdk_catalog_tests_files.cmake
+            taintedgrailmoddingsdk_actor_appearance_preview_tests_files.cmake
             taintedgrailmoddingsdk_population_hardening_tests_files.cmake
             taintedgrailmoddingsdk_extension_api_tests_files.cmake
             taintedgrailmoddingsdk_tainted_framework_tests_files.cmake

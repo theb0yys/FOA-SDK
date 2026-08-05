@@ -13,7 +13,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_artifact_extractor.py"
+LEGACY = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_artifact_extractor_legacy.py"
+EXTENDED = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_artifact_extractor_extended.py"
+CODECS = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_texture_codecs.py"
+CODECS_CORE = "Gems/TaintedGrailModdingSDK/Tools/foa_thumbnail_texture_codecs_core.py"
 TEST = "Gems/TaintedGrailModdingSDK/Tools/tests/test_foa_thumbnail_artifact_extractor.py"
+CODEC_TEST = "Gems/TaintedGrailModdingSDK/Tools/tests/test_foa_thumbnail_texture_codecs.py"
+EXTENDED_TEST = "Gems/TaintedGrailModdingSDK/Tools/tests/test_foa_thumbnail_artifact_extractor_extended.py"
 DOC = "docs/tainted-grail-sdk/FOA_THUMBNAIL_ARTIFACT_EXTRACTOR.md"
 
 
@@ -40,7 +46,13 @@ def reject(text: str, fragment: str, label: str) -> None:
 
 def validate() -> None:
     tool = read(TOOL)
+    legacy = read(LEGACY)
+    extended = read(EXTENDED)
+    codecs = read(CODECS)
+    codecs_core = read(CODECS_CORE)
     test = read(TEST)
+    codec_test = read(CODEC_TEST)
+    extended_test = read(EXTENDED_TEST)
     doc = read(DOC)
 
     for fragment in (
@@ -61,7 +73,53 @@ def validate() -> None:
         "RepositoryCommitAllowed",
         "Preview output root must remain inside ExtractedDataPath",
     ):
-        require(tool, fragment, "thumbnail extractor boundary")
+        require(legacy, fragment, "legacy thumbnail boundary")
+
+    for fragment in (
+        "foa_thumbnail_artifact_extractor_legacy",
+        "foa_thumbnail_texture_codecs",
+        "DECODED_TEXTURE_EXTENSIONS",
+        "local-only-bounded-tga-decode",
+        "local-only-bounded-dds-decode",
+        "Native icon source fingerprint drift",
+        "BoundedDdsTgaDecodeAvailable",
+        "DecodedWidth",
+        "DecodedHeight",
+        "SourceTextureFormat",
+        "GeneratedArtifactCount",
+        "UnsupportedArtifactCount",
+        "legacy_manifest",
+    ):
+        require(extended, fragment, "extended thumbnail boundary")
+
+    for fragment in (
+        "AssetRecord ByteSize must be a non-negative integer",
+        "foa_thumbnail_artifact_extractor_extended",
+        "_extended._read_source_payload",
+    ):
+        require(tool, fragment, "thumbnail extractor hardening facade")
+
+    for fragment in (
+        "DDS cubemaps and volume textures are outside the Alpha cohort",
+        "foa_thumbnail_texture_codecs_core",
+    ):
+        require(codecs, fragment, "thumbnail codec hardening facade")
+
+    for fragment in (
+        "def encode_png_rgba",
+        "def decode_tga",
+        "def decode_dds",
+        '"BC1"',
+        '"BC2"',
+        '"BC3"',
+        '"BC4"',
+        '"BC5"',
+        "MAX_IMAGE_DIMENSION",
+        "MAX_IMAGE_PIXELS",
+        "Color-mapped TGA images are outside the Alpha cohort",
+        "DDS arrays, cubemaps, and non-2D resources",
+    ):
+        require(codecs_core, fragment, "bounded thumbnail codecs")
 
     for fragment in (
         "test_extracts_generated_and_unsupported_thumbnail_artifacts",
@@ -71,35 +129,70 @@ def validate() -> None:
         "test_preview_output_must_remain_inside_extracted_data",
         "test_whole_second_utc_required",
     ):
-        require(test, fragment, "thumbnail extractor tests")
+        require(test, fragment, "legacy thumbnail tests")
+
+    for fragment in (
+        "test_png_encoder_is_deterministic",
+        "test_tga_raw_and_rle_origins",
+        "test_dds_bc1_and_bc3",
+        "test_dds_cubemap_and_volume_are_unsupported",
+        "test_dds_unknown_fourcc_is_explicitly_unsupported",
+        "test_bounds_and_truncation_fail_closed",
+    ):
+        require(codec_test, fragment, "thumbnail codec tests")
+
+    for fragment in (
+        "test_builds_copy_tga_and_dds_outputs",
+        "test_source_fingerprint_and_missing_size_fail_closed",
+        "test_unsupported_dds_subformat_emits_receipt",
+        "test_decoded_payload_tampering_is_rejected",
+        "test_cubemap_and_volume_dds_emit_unsupported_receipts",
+    ):
+        require(extended_test, fragment, "extended thumbnail tests")
 
     for fragment in (
         "local preview artefact",
         "foa-visual-asset-index.json",
         "foa-thumbnail-artifacts.json",
+        "bounded DDS and TGA decoder",
+        "BC1",
+        "BC3",
+        "RLE true-colour",
         "does not invoke Unity",
         "does not invoke O3DE Asset Processor",
         "FunctionCompleteAllowed` remains `false`",
+        "source fingerprint drift",
         "RepositoryCommitAllowed",
         "RedistributionAllowed",
     ):
         require(doc, fragment, "thumbnail extractor documentation")
 
+    combined_executable = tool + "\n" + extended + "\n" + codecs + "\n" + codecs_core
     for forbidden in (
         "subprocess.run",
         "Unity.exe",
         "AssetProcessorBatch",
         "Harmony.Patch",
         "Catalog/catalog.tgcatalog.json",
+        "from PIL",
+        "import PIL",
+        "ctypes",
     ):
-        reject(tool, forbidden, "thumbnail extractor executable boundary")
+        reject(
+            combined_executable,
+            forbidden,
+            "thumbnail extractor executable boundary",
+        )
 
 
 def main() -> int:
     try:
         validate()
     except ValidationError as exc:
-        print(f"FoA thumbnail artefact extractor validation failed: {exc}", file=sys.stderr)
+        print(
+            f"FoA thumbnail artefact extractor validation failed: {exc}",
+            file=sys.stderr,
+        )
         return 1
     print("FoA thumbnail artefact extractor boundary passed.")
     return 0

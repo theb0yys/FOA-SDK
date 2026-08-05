@@ -20,6 +20,7 @@ class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
 class QPushButton;
+class QShowEvent;
 class QSpinBox;
 class QString;
 class QTableWidget;
@@ -45,6 +46,7 @@ namespace TaintedGrailModdingSDK
 
     private:
         void closeEvent(QCloseEvent* event) override;
+        void showEvent(QShowEvent* event) override;
         void OnFoundationChanged() override;
 
         void RefreshAll();
@@ -88,6 +90,7 @@ namespace TaintedGrailModdingSDK
         void UpdateEnabledStates();
 
         QTabWidget* m_tabs = nullptr;
+        QWidget* m_appearancePreviewTab = nullptr;
 
         QLineEdit* m_actorFilter = nullptr;
         QComboBox* m_actorRecord = nullptr;

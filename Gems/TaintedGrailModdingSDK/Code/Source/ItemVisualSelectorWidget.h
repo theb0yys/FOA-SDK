@@ -1,25 +1,33 @@
 /*
  * Copyright (c) Contributors to the Open 3D Engine Project.
+ * For complete copyright and license terms please see the LICENSE at the root of this distribution.
+ *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
+
 #pragma once
 
 #include "FoundationNotificationBus.h"
+
 #include <AzCore/std/containers/vector.h>
+
 #include <QString>
 #include <QWidget>
 
 class QComboBox;
 class QLabel;
 class QLineEdit;
-class QListWidget;
 class QPushButton;
-class QSlider;
 class QTableWidget;
-namespace AzToolsFramework::AssetBrowser { class PreviewerFrame; }
+
+namespace AzToolsFramework::AssetBrowser
+{
+    class PreviewerFrame;
+}
 
 namespace TaintedGrailModdingSDK
 {
+    //! Explicit, editor-only visual selection step for the Item and Recipe Editor.
     class ItemVisualSelectorWidget final
         : public QWidget
         , private FoundationNotificationBus::Handler
@@ -45,6 +53,7 @@ namespace TaintedGrailModdingSDK
         };
 
         void OnFoundationChanged() override;
+
         void RefreshTargetChoices();
         void RefreshRecipeItemChoices();
         void RefreshBindingSummary();
@@ -54,21 +63,14 @@ namespace TaintedGrailModdingSDK
         void ClearLoadedModel(const QString& reason = {});
         bool LoadedModelMatchesActiveProfile() const;
         bool LoadedModelFileMatches() const;
-        void RebuildThumbnailGrid();
         void ApplySearchFilter();
-        void SyncSelectionFromGrid();
         void RefreshSelection();
         void ApplySelectionAsIcon();
         void ApplySelectionAsAsset();
         void ApplySelection(bool iconBinding);
-        void SaveSessionState();
-        void RestoreSessionState();
-        void RestoreSelectedEntry();
-        QString SettingsPrefix() const;
         QString ResolveExtractedDataRoot() const;
         QString ResolveBindingItemRecordId() const;
         const PreviewEntry* GetSelectedEntry() const;
-        int SelectedEntryIndex() const;
         void SetStatus(const QString& message, bool error = false);
 
         QComboBox* m_targetRecord = nullptr;
@@ -77,8 +79,6 @@ namespace TaintedGrailModdingSDK
         QLineEdit* m_modelPath = nullptr;
         QPushButton* m_reloadModel = nullptr;
         QLineEdit* m_search = nullptr;
-        QSlider* m_thumbnailSize = nullptr;
-        QListWidget* m_thumbnailGrid = nullptr;
         QTableWidget* m_entryTable = nullptr;
         AzToolsFramework::AssetBrowser::PreviewerFrame* m_previewer = nullptr;
         QLabel* m_modelInfo = nullptr;
@@ -94,8 +94,6 @@ namespace TaintedGrailModdingSDK
         QString m_loadedBranch;
         QString m_loadedRuntimeTarget;
         QString m_loadedModelSha256;
-        QString m_pendingEntryId;
         bool m_refreshing = false;
-        bool m_restoring = false;
     };
-}
+} // namespace TaintedGrailModdingSDK

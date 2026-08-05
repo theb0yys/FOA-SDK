@@ -31,13 +31,17 @@ namespace TaintedGrailModdingSDK
 
     //! Thin Editor client for evidence-bound actor and atomic troop authoring.
     //! The widget never writes catalog files or invokes runtime/deployment APIs.
-    class ActorTroopEditorWidget final
+    class ActorTroopEditorWidget
         : public QWidget
         , private FoundationNotificationBus::Handler
     {
     public:
         explicit ActorTroopEditorWidget(QWidget* parent = nullptr);
         ~ActorTroopEditorWidget() override;
+
+        //! Adds one directly owned feature tab to the existing editor surface.
+        //! This is deliberately explicit; no global event filter or widget discovery is used.
+        void AddFeatureTab(QWidget* widget, const QString& title);
 
     private:
         void closeEvent(QCloseEvent* event) override;

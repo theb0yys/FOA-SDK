@@ -22,6 +22,7 @@
 #include <QListWidgetItem>
 #include <QPushButton>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
 #include <QTableWidget>

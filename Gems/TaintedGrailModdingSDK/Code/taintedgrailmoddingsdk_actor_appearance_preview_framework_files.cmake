@@ -8,8 +8,10 @@
 set(FILES
     Source/ActorAppearanceBindingService.cpp
     Source/ActorAppearanceBindingService.h
+    Source/FoundationServiceActorAppearance.cpp
 )
 
 set(SKIP_UNITY_BUILD_INCLUSION_FILES
     Source/ActorAppearanceBindingService.cpp
+    Source/FoundationServiceActorAppearance.cpp
 )

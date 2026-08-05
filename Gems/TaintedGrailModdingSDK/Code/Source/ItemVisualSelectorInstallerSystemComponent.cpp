@@ -43,8 +43,7 @@ namespace TaintedGrailModdingSDK
             {
                 if (event
                     && (event->type() == QEvent::Polish
-                        || event->type() == QEvent::Show
-                        || event->type() == QEvent::ChildAdded))
+                        || event->type() == QEvent::Show))
                 {
                     TryInstall(qobject_cast<QWidget*>(watched));
                 }

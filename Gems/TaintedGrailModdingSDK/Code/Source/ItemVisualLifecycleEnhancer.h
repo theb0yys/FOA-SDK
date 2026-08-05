@@ -6,6 +6,7 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QSignalBlocker>
 #include <QString>
 
 class QComboBox;

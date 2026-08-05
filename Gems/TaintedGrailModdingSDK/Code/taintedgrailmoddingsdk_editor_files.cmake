@@ -58,6 +58,8 @@ set(FILES
     Source/ItemRecipeEditorWidget.h
     Source/ItemVisualLifecycleEnhancer.cpp
     Source/ItemVisualLifecycleEnhancer.h
+    Source/ItemVisualSelectionRestoreBridge.cpp
+    Source/ItemVisualSelectionRestoreBridge.h
     Source/ItemVisualSelectorInstallerSystemComponent.cpp
     Source/ItemVisualSelectorInstallerSystemComponent.h
     Source/ItemVisualSelectorWidget.cpp

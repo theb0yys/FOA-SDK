@@ -7,6 +7,8 @@
 
 #include "ItemVisualSelectorInstallerSystemComponent.h"
 
+#include "ItemVisualLifecycleEnhancer.h"
+#include "ItemVisualSelectionRestoreBridge.h"
 #include "ItemVisualSelectorWidget.h"
 
 #include <AzCore/Debug/Trace.h>
@@ -41,9 +43,7 @@ namespace TaintedGrailModdingSDK
         public:
             bool eventFilter(QObject* watched, QEvent* event) override
             {
-                if (event
-                    && (event->type() == QEvent::Polish
-                        || event->type() == QEvent::Show))
+                if (event && (event->type() == QEvent::Polish || event->type() == QEvent::Show))
                 {
                     TryInstall(qobject_cast<QWidget*>(watched));
                 }
@@ -58,14 +58,10 @@ namespace TaintedGrailModdingSDK
                 }
 
                 bool isItemRecipeEditor = false;
-                const QList<QLabel*> directLabels = candidate->findChildren<QLabel*>(
-                    QString(),
-                    Qt::FindDirectChildrenOnly);
+                const QList<QLabel*> directLabels = candidate->findChildren<QLabel*>(QString(), Qt::FindDirectChildrenOnly);
                 for (const QLabel* label : directLabels)
                 {
-                    if (label && label->text().contains(
-                            QStringLiteral("Item and Recipe Editor"),
-                            Qt::CaseInsensitive))
+                    if (label && label->text().contains(QStringLiteral("Item and Recipe Editor"), Qt::CaseInsensitive))
                     {
                         isItemRecipeEditor = true;
                         break;
@@ -76,9 +72,7 @@ namespace TaintedGrailModdingSDK
                     return;
                 }
 
-                QTabWidget* tabs = candidate->findChild<QTabWidget*>(
-                    QString(),
-                    Qt::FindDirectChildrenOnly);
+                QTabWidget* tabs = candidate->findChild<QTabWidget*>(QString(), Qt::FindDirectChildrenOnly);
                 if (!tabs)
                 {
                     AZ_Warning(
@@ -92,6 +86,9 @@ namespace TaintedGrailModdingSDK
                 auto* selector = new ItemVisualSelectorWidget(tabs);
                 selector->setProperty("TaintedGrail.VisualPreviewTab", true);
                 tabs->addTab(selector, QObject::tr("Visual Preview"));
+
+                new ItemVisualLifecycleEnhancer(selector);
+                new ItemVisualSelectionRestoreBridge(selector);
 
                 InstalledVisualSelectorTab installed;
                 installed.m_host = candidate;
@@ -124,31 +121,27 @@ namespace TaintedGrailModdingSDK
         private:
             QList<InstalledVisualSelectorTab> m_installedTabs;
         };
-    } // namespace
+    }
 
     void ItemVisualSelectorInstallerSystemComponent::Reflect(AZ::ReflectContext* context)
     {
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
-            serializeContext->Class<ItemVisualSelectorInstallerSystemComponent, AZ::Component>()
-                ->Version(1);
+            serializeContext->Class<ItemVisualSelectorInstallerSystemComponent, AZ::Component>()->Version(1);
         }
     }
 
-    void ItemVisualSelectorInstallerSystemComponent::GetProvidedServices(
-        AZ::ComponentDescriptor::DependencyArrayType& provided)
+    void ItemVisualSelectorInstallerSystemComponent::GetProvidedServices(AZ::ComponentDescriptor::DependencyArrayType& provided)
     {
         provided.push_back(AZ_CRC_CE("TaintedGrailItemVisualSelectorService"));
     }
 
-    void ItemVisualSelectorInstallerSystemComponent::GetIncompatibleServices(
-        AZ::ComponentDescriptor::DependencyArrayType& incompatible)
+    void ItemVisualSelectorInstallerSystemComponent::GetIncompatibleServices(AZ::ComponentDescriptor::DependencyArrayType& incompatible)
     {
         incompatible.push_back(AZ_CRC_CE("TaintedGrailItemVisualSelectorService"));
     }
 
-    void ItemVisualSelectorInstallerSystemComponent::GetRequiredServices(
-        AZ::ComponentDescriptor::DependencyArrayType& required)
+    void ItemVisualSelectorInstallerSystemComponent::GetRequiredServices(AZ::ComponentDescriptor::DependencyArrayType& required)
     {
         required.push_back(AZ_CRC_CE("TaintedGrailModdingSDKService"));
     }

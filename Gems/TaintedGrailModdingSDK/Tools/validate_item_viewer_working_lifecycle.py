@@ -15,7 +15,7 @@ def require(text: str, needle: str, label: str) -> None:
 
 
 def main() -> None:
-    enhancer = (SOURCE / "ItemVisualLifecycleEnhancer.cpp").read_text(encoding="utf-8")
+    enhancer = (SOURCE / "ItemVisualLifecycleWidget.cpp").read_text(encoding="utf-8")
     installer = (SOURCE / "ItemVisualSelectorInstallerSystemComponent.cpp").read_text(encoding="utf-8")
     selector = (SOURCE / "ItemVisualSelectorWidget.cpp").read_text(encoding="utf-8")
     manifest = (CODE / "taintedgrailmoddingsdk_editor_files.cmake").read_text(encoding="utf-8")
@@ -31,7 +31,7 @@ def main() -> None:
     require(selector, "UpsertEconomyItemProfile", "existing save path")
     require(selector, "LoadedModelFileMatches", "existing source-index drift check")
     require(selector, "LoadedModelMatchesActiveProfile", "existing exact-profile check")
-    require(manifest, "Source/ItemVisualLifecycleEnhancer.cpp", "production build registration")
+    require(manifest, "Source/ItemVisualLifecycleWidget.cpp", "production build registration")
     require(smoke, "FOAItemViewerThumbnailGrid", "Windows grid evidence")
     require(smoke, "pane.close()", "Windows close/reopen exercise")
     require(smoke, "general.open_pane(PANE_NAME)", "Windows pane reopen")

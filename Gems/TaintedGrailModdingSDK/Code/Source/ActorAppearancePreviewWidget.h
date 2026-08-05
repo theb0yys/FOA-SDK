@@ -8,6 +8,7 @@
 #pragma once
 
 #include "ActorAppearancePreviewService.h"
+#include "ActorTroopEditorWidget.h"
 #include "FoundationNotificationBus.h"
 
 #include <AzCore/std/containers/vector.h>
@@ -86,5 +87,11 @@ namespace TaintedGrailModdingSDK
         QString m_runtimeTarget;
         QString m_modelSha256;
         bool m_refreshing = false;
+    };
+
+    class ActorTroopEditorWithAppearanceWidget final : public ActorTroopEditorWidget
+    {
+    public:
+        explicit ActorTroopEditorWithAppearanceWidget(QWidget* parent = nullptr);
     };
 } // namespace TaintedGrailModdingSDK

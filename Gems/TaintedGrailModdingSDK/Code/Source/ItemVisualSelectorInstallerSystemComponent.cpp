@@ -8,6 +8,7 @@
 #include "ItemVisualSelectorInstallerSystemComponent.h"
 
 #include "ItemVisualLifecycleEnhancer.h"
+#include "ItemVisualSelectionRestoreBridge.h"
 #include "ItemVisualSelectorWidget.h"
 
 #include <AzCore/Debug/Trace.h>
@@ -86,9 +87,8 @@ namespace TaintedGrailModdingSDK
                 selector->setProperty("TaintedGrail.VisualPreviewTab", true);
                 tabs->addTab(selector, QObject::tr("Visual Preview"));
 
-                // Preserve the validated selector as the authority path and add the
-                // researched O3DE thumbnail/reopen lifecycle directly over its table.
                 new ItemVisualLifecycleEnhancer(selector);
+                new ItemVisualSelectionRestoreBridge(selector);
 
                 InstalledVisualSelectorTab installed;
                 installed.m_host = candidate;

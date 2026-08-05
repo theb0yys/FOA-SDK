@@ -44,6 +44,7 @@ ly_add_target(
     NAMESPACE Gem
     FILES_CMAKE
         taintedgrailmoddingsdk_framework_files.cmake
+        taintedgrailmoddingsdk_actor_appearance_preview_framework_files.cmake
     INCLUDE_DIRECTORIES
         PUBLIC
             Source

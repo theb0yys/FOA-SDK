@@ -87,11 +87,4 @@ namespace TaintedGrailModdingSDK
         QString m_modelSha256;
         bool m_refreshing = false;
     };
-
-    //! Directly owned Actor/Troop pane variant with one Stage 8 feature tab.
-    class ActorTroopEditorWithAppearanceWidget final : public ActorTroopEditorWidget
-    {
-    public:
-        explicit ActorTroopEditorWithAppearanceWidget(QWidget* parent = nullptr);
-    };
 } // namespace TaintedGrailModdingSDK

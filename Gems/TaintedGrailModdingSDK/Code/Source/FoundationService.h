@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "ActorAppearanceBindingService.h"
 #include "CatalogDatabase.h"
 #include "CatalogGovernanceBlockerService.h"
 #include "CatalogGovernanceService.h"
@@ -96,6 +97,9 @@ namespace TaintedGrailModdingSDK
             AZStd::string* error = nullptr);
         bool UpsertPopulationTroopMember(
             const PopulationTroopMember& member,
+            AZStd::string* error = nullptr);
+        bool BindActorAppearancePreview(
+            const ActorAppearanceBindingRequest& request,
             AZStd::string* error = nullptr);
         bool SaveCatalog(AZStd::string* error = nullptr);
         bool ReloadCatalog(AZStd::string* error = nullptr);

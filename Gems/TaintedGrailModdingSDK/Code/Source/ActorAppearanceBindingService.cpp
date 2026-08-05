@@ -34,7 +34,7 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& actorRecordId,
             ActorAppearanceBindingRole role)
         {
-            return "population.appearance." + actorRecordId + "." + RoleName(role);
+            return AZStd::string("population.appearance.") + actorRecordId + "." + RoleName(role);
         }
 
         bool ContainsDuplicate(const AZStd::vector<AZStd::string>& values)
@@ -85,35 +85,56 @@ namespace TaintedGrailModdingSDK
                 "Actor appearance binding requires an existing typed actor profile."));
         }
 
+        AZStd::string evidenceTimestamp;
         for (const AZStd::string& evidenceId : request.m_productEvidenceIds)
         {
             const EvidenceRecord* evidence = sourceRegistry.FindEvidence(evidenceId);
             if (!evidence)
             {
                 return AZ::Failure(
-                    "Actor appearance product evidence does not exist: " + evidenceId);
+                    AZStd::string("Actor appearance product evidence does not exist: ") + evidenceId);
             }
             if (evidence->m_profileId != activeProfile.m_profileId
                 || evidence->m_gameVersion != activeProfile.m_gameVersion
                 || evidence->m_branch != activeProfile.m_branch)
             {
                 return AZ::Failure(
-                    "Actor appearance product evidence is bound to a different active profile: "
+                    AZStd::string("Actor appearance product evidence is bound to a different active profile: ")
                     + evidenceId);
             }
             if (evidence->m_subjectRef != request.m_sourceAssetSubjectRef)
             {
                 return AZ::Failure(
-                    "Actor appearance product evidence subject does not match the selected source asset: "
+                    AZStd::string("Actor appearance product evidence subject does not match the selected source asset: ")
                     + evidenceId);
             }
             const SourceRecord* source = sourceRegistry.FindSource(evidence->m_sourceId);
             if (!source || source->m_fingerprint != evidence->m_sourceFingerprint)
             {
                 return AZ::Failure(
-                    "Actor appearance product evidence source fingerprint is unavailable or mismatched: "
+                    AZStd::string("Actor appearance product evidence source fingerprint is unavailable or mismatched: ")
                     + evidenceId);
             }
+            if (source->m_profileId != activeProfile.m_profileId
+                || source->m_gameVersion != activeProfile.m_gameVersion
+                || source->m_branch != activeProfile.m_branch
+                || source->m_runtimeTarget != activeProfile.m_runtimeTarget)
+            {
+                return AZ::Failure(
+                    AZStd::string("Actor appearance product source is bound to a different active profile: ")
+                    + evidenceId);
+            }
+            if (evidenceTimestamp.empty())
+            {
+                evidenceTimestamp = !evidence->m_extractedAt.empty()
+                    ? evidence->m_extractedAt
+                    : source->m_importedAt;
+            }
+        }
+        if (evidenceTimestamp.empty())
+        {
+            return AZ::Failure(AZStd::string(
+                "Actor appearance product evidence requires a deterministic extraction or import timestamp."));
         }
 
         CatalogDatabase candidate = currentCatalog;
@@ -130,7 +151,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string error;
         if (!candidate.UpsertPopulationActorProfile(updatedProfile, &error))
         {
-            return AZ::Failure("Actor appearance profile candidate failed: " + error);
+            return AZ::Failure(AZStd::string("Actor appearance profile candidate failed: ") + error);
         }
 
         CatalogRelationship relationship;
@@ -147,18 +168,17 @@ namespace TaintedGrailModdingSDK
         relationship.m_validationState = "unvalidated";
         relationship.m_stalenessState = "current";
         relationship.m_forbiddenUsages = { "no_unvalidated_runtime_use" };
-        relationship.m_createdAt = "1970-01-01T00:00:00Z";
-        relationship.m_updatedAt = "1970-01-01T00:00:00Z";
+        relationship.m_createdAt = evidenceTimestamp;
+        relationship.m_updatedAt = evidenceTimestamp;
 
         if (const CatalogRelationship* existing =
                 currentCatalog.FindRelationshipById(relationship.m_relationshipId))
         {
             relationship.m_createdAt = existing->m_createdAt;
-            relationship.m_updatedAt = existing->m_updatedAt;
         }
         if (!candidate.UpsertRelationship(relationship, &error))
         {
-            return AZ::Failure("Actor appearance provenance candidate failed: " + error);
+            return AZ::Failure(AZStd::string("Actor appearance provenance candidate failed: ") + error);
         }
 
         ActorAppearanceBindingResult result;

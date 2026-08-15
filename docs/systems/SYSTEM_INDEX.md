@@ -11,6 +11,7 @@ This registry defines canonical ownership groups and system identifiers used by 
 - `validation-and-evidence`
 - `permissions-and-risk`
 - `extension-api`
+- `artifact-ownership`
 
 ## Authoring
 
@@ -25,6 +26,7 @@ This registry defines canonical ownership groups and system identifiers used by 
 ## Toolchain And Conversion
 
 - `external-toolchain`
+- `capability-execution`
 - `unity-provider`
 - `unity-conversion-project`
 - `canonical-interchange`
@@ -38,6 +40,8 @@ This registry defines canonical ownership groups and system identifiers used by 
 - `bepinex-il2cpp-adapter`
 - `deployment-review`
 - `runtime-evidence`
+- `execution-receipts`
+- `runtime-verification`
 
 ## Integrations
 
@@ -53,3 +57,5 @@ This registry defines canonical ownership groups and system identifiers used by 
 - `release-governance`
 
 System names are governance keys, not display labels. A system entry establishes a classification target; it does not by itself authorise implementation or runtime action.
+
+`capability-execution` owns the shared preview/execute lifecycle and Build -> Package -> Deploy -> Launch -> Verify spine. `artifact-ownership` owns immutable artifact identity and custody records. `execution-receipts` and `runtime-verification` own observations only; they do not promote evidence, grant permission, or approve release.

@@ -86,10 +86,12 @@ $requiredFiles = @(
     'DECISIONS.md',
     'docs/protected-files-policy.md',
     'docs/systems/SYSTEM_INDEX.md',
+    'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md',
     '.codex/README.md',
     '.codex/skills/README.md',
     '.codex/workflows/foa_sdk_development_process.md',
     '.codex/workflows/foa_research_first_process_stack.md',
+    '.codex/workflows/foa_capability_execution_contract.md',
     '.codex/workflows/foa_professional_code_performance_gate.md',
     '.codex/workflows/foa_sdk_test_gates.md',
     '.codex/workflows/foa_artifact_deploy_gate.md',
@@ -130,6 +132,59 @@ foreach ($name in $expected) {
         Fail "Preflight did not select $name"
     }
 }
+foreach ($path in @(
+    'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md',
+    '.codex/workflows/foa_capability_execution_contract.md'
+)) {
+    if ($skillPlanText -notmatch [regex]::Escape($path)) {
+        Fail "Preflight did not select capability-execution authority $path"
+    }
+}
+
+$capabilityWorkflowPath = Join-Path $repoRoot '.codex/workflows/foa_capability_execution_contract.md'
+if (Test-Path -LiteralPath $capabilityWorkflowPath) {
+    $capabilityWorkflow = Get-Content -LiteralPath $capabilityWorkflowPath -Raw
+    foreach ($phrase in @(
+        'Build',
+        'Package',
+        'Deploy',
+        'Launch',
+        'Verify',
+        'inert V1',
+        'Preview And Execute',
+        'Deterministic Provider Resolution',
+        'Artifact Ownership And Idempotency',
+        'Rollback Before Execution',
+        'Receipts, Evidence, Assessment, And Promotion'
+    )) {
+        if ($capabilityWorkflow -notmatch [regex]::Escape($phrase)) {
+            Fail "Capability execution workflow missing $phrase"
+        }
+    }
+}
+
+$capabilityContractPath = Join-Path $repoRoot 'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md'
+if (Test-Path -LiteralPath $capabilityContractPath) {
+    $capabilityContract = Get-Content -LiteralPath $capabilityContractPath -Raw
+    foreach ($phrase in @(
+        'Existing Service Disposition',
+        'Canonical Contract Model',
+        'Lifecycle States',
+        'Deterministic Provider Resolution',
+        'Policy Separation',
+        'Shared Build -> Package -> Deploy -> Launch -> Verify Spine',
+        'Artifact Ownership',
+        'Idempotency',
+        'Rollback',
+        'Migration Batches',
+        'Acceptance Gates',
+        'Prohibited Shortcuts'
+    )) {
+        if ($capabilityContract -notmatch [regex]::Escape($phrase)) {
+            Fail "Capability execution contract missing $phrase"
+        }
+    }
+}
 
 $testPlan = & (Join-Path $repoRoot '.codex/scripts/Get-AgentTestPlan.ps1') `
     -Request 'Change Foundation UI Unity conversion and runtime adapter.' `
@@ -168,5 +223,5 @@ if ($failures.Count -gt 0) {
 }
 
 if (-not $Quiet) {
-    "PASS FOA-SDK agent skill pack validation: $($dirs.Count) skills, process integration, preflight helpers, test gates, performance gates, and artifact gates checked."
+    "PASS FOA-SDK agent skill pack validation: $($dirs.Count) skills, process integration, capability-execution contract, preflight helpers, test gates, performance gates, and artifact gates checked."
 }

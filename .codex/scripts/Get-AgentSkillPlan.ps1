@@ -60,6 +60,13 @@ if ($combined -match 'contract|schema|manifest|catalog|snapshot|command|json|xml
     Add-Unique $validation 'Run compatibility review for public contracts, schemas, persistence, interchange, dependencies, packages, and migrations.'
 }
 
+if ($combined -match 'capability execution|capability-execution|runtime adapter|adapter build|build manifest|package assembly|package preview|staging deployment|deployment work order|deploy\b|deployment\b|launch foa|game launch|post-deployment|runtime result|execution result|release assembly|release signing|process supervisor|provider resolution|provider execution|artifact ownership|execution receipt|rollback') {
+    Add-Unique $docs 'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md'
+    Add-Unique $docs '.codex/workflows/foa_capability_execution_contract.md'
+    Add-Unique $skills '.codex/skills/foa-contract-persistence-compatibility-gates/SKILL.md'
+    Add-Unique $validation 'Apply the Capability Execution Contract: preserve inert V1 contracts, preview/execute binding, per-phase provider resolution, policy separation, artifact ownership, idempotency, rollback, receipts, and the shared Build -> Package -> Deploy -> Launch -> Verify spine.'
+}
+
 if ($combined -match 'gems[\\/]|plugins[\\/]|taintedgrailmoddingeditor|foundation|extensionapi|system|service|component|bus') {
     Add-Unique $skills '.codex/skills/foa-sdk-system-intake/SKILL.md'
     Add-Unique $docs 'Relevant files under Research/ and docs/tainted-grail-sdk/'

@@ -4,54 +4,45 @@ This file records the active FOA-SDK task state so work can continue without tre
 
 ## Goal
 
-- Make the reviewed capability-execution architecture durable in repository documentation and mandatory agent process.
-- Preserve the existing planning, preview, evidence, reconciliation, and release-contract owners.
-- Establish one shared Build -> Package -> Deploy -> Launch -> Verify spine without implementing it in this task.
+- Record the repository-owner-authorised M0 governance and implementation-authority decision for the capability-execution program.
+- Authorise exactly one later implementation batch: M1 additive Core contracts.
+- Name the exact M1 owner paths, contract boundary, threat/failure analysis, migration policy, stop conditions, and required proof before product-source work begins.
 
 ## Files Currently Involved
 
 - `CURRENT_TASK.md`
 - `DECISIONS.md`
-- `docs/systems/SYSTEM_INDEX.md`
-- `docs/tainted-grail-sdk/ARCHITECTURE.md`
-- `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md`
-- `.codex/README.md`
-- `.codex/workflows/foa_capability_execution_contract.md`
-- `.codex/workflows/foa_sdk_development_process.md`
-- `.codex/workflows/foa_research_first_process_stack.md`
-- `.codex/scripts/Get-AgentSkillPlan.ps1`
-- `.codex/checklists/deep_review.md`
-- `.codex/skills/tests/Validate-AgentSkills.ps1`
+- `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md`
 
 ## Constraints
 
-- Documentation and process only; no product implementation source changes.
-- Existing inert V1 adapter, deployment, release, and external-tool-interchange contracts remain inert.
-- No `*Allowed` flag may be reinterpreted as execution authority.
-- Build, package, deployment, launch, verification, rollback, signing, publication, save mutation, catalog mutation, and evidence promotion remain unimplemented and unauthorised by this task.
-- Future implementation must use immutable preview/execute pairs, deterministic per-phase provider resolution, exact artifact ownership, idempotency, rollback planning, and result-evidence separation.
-- Work remains on `architecture/capability-execution-contract` and enters `main` only through maintainer-audited pull request.
+- Documentation and decision state only in this task; no product implementation source changes.
+- The M0 decision becomes effective only after maintainer audit and merge to `main`.
+- M1 is Core-only and additive. Existing inert V1 contracts, canonical bytes, validators, result meanings, and false authority flags remain unchanged.
+- M2 process supervision, M3 Framework orchestration, M4 planner adaptation, M5 synthetic execution, M6 heightmap runtime work, and every later batch remain unauthorised.
+- No process launch, filesystem mutation, persistence, UI, provider invocation, package assembly, deployment, game launch, runtime mutation, save write, signing, publication, catalog mutation, or evidence promotion is authorised by this documentation task.
+- Work remains on `architecture/capability-execution-m0-authority` and enters `main` only through a maintainer-audited pull request.
 
 ## Completed Work
 
-- Current capability, adapter, build-manifest, package-preview, staging-preview, deployment-work-order, runtime-result, verification, release, and external-tool-interchange services were decomposed read-only at exact `main` commit `1f4f6176e7a0b06d31600447ed70a107946645ea`.
-- The canonical Capability Execution Contract and shared production spine were defined.
-- The documented process was updated to route future affected work through the contract.
-- The stale prior continuation claim naming `governance/foa-sdk-context-port` was removed after that branch could not be found on GitHub.
+- Pull request #234 merged the canonical Capability Execution Contract and shared Build -> Package -> Deploy -> Launch -> Verify architecture into `main` at `f5d9883e24aca6b8910600fd92a809cc3aa07253`.
+- The exact M1 contract scope, owner paths, build/test ownership, threat and failure controls, compatibility policy, migration policy, required proof, acceptance mapping, and stop conditions were defined in the M0 authority record.
+- The M0 record explicitly excludes implementation and every batch after M1.
 
 ## Remaining Work
 
-- Run the agent-skill pack validator in a PowerShell-capable checkout.
-- Complete maintainer audit of the focused documentation/process pull request.
-- Authorise implementation batches separately; this documentation task grants no implementation transition.
+- Run documentation/process validation available for the final M0 branch head.
+- Complete maintainer audit and merge of the focused M0 decision pull request.
+- Only after M0 merges, create `implementation/capability-execution-m1-core-contracts` from the accepted `main` head and implement only the authorised paths.
 
 ## Do Not Change
 
-- Product implementation source.
-- Existing V1 canonical bytes or validators.
-- Current runtime, deployment, save, signing, publication, or evidence-promotion authority.
+- Product implementation source in the M0 documentation pull request.
+- Any existing V1 contract or validator.
+- Framework, Editor, ExternalToolchain, provider, plug-in, installer, runtime-adapter, game, save, signing, publication, or deployment behaviour.
+- Protected files, external build output, Unity projects, or Fall of Avalon installations.
 - Unrelated repository files.
 
 ## Next Concrete Step
 
-- Maintainer review of the capability-execution documentation/process pull request, followed by a separately authorised M0 implementation-authority decision before any source change.
+- Maintainer review of the M0 implementation-authority pull request. M1 source work remains blocked until that pull request is merged.

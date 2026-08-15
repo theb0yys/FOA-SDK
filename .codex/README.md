@@ -9,6 +9,7 @@ Process entry points:
 - `AGENTS.md`
 - `.codex/workflows/foa_sdk_development_process.md`
 - `.codex/workflows/foa_research_first_process_stack.md`
+- `.codex/workflows/foa_capability_execution_contract.md`
 - `.codex/checklists/deep_review.md`
 - `.codex/checklists/review_record_template.md`
 - `.codex/checklists/evidence_pack_template.json`
@@ -26,6 +27,8 @@ Process entry points:
 - `.codex/checklists/system_test_matrix_template.md`
 
 Before any edit, activate `foa-sdk-research-sentinel`, add narrower skills selected by preflight, follow the process stack, and complete deep review. Code changes require test and performance preflight. Build-sensitive, conversion, packaging, installer, or runtime-adapter work requires the artifact/deployment preflight.
+
+Capability, adapter, build-manifest, package, staging, deployment, launch, verification, rollback, execution-result, release-assembly, signing, provider-execution, or artifact-ownership work must also follow `.codex/workflows/foa_capability_execution_contract.md` and the canonical public contract at `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md`. Those documents do not grant implementation or runtime authority.
 
 Every action must remain on the controlling research path. If authority is missing, unclear, contradictory, outdated, or unproven, implementation stops and a Deep Research Brief is produced. Handoff ends with the next researched stop/process or states that none exists.
 

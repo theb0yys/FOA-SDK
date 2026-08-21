@@ -301,6 +301,42 @@ def validate_economy_authoring(gem_root: Path) -> None:
         if forbidden in widget:
             fail(f"Item/recipe editor must not author permission state directly: {forbidden}")
 
+    quest_widget = source_root / "QuestStateInspectorWidget.cpp"
+    quest_widget_header = source_root / "QuestStateInspectorWidget.h"
+    editor_manifest = gem_root / "Code" / "taintedgrailmoddingsdk_editor_files.cmake"
+    require_fragments(
+        editor_manifest,
+        (
+            "Source/QuestStateInspectorWidget.cpp",
+            "Source/QuestStateInspectorWidget.h",
+        ),
+    )
+    require_fragments(
+        source_root / "TaintedGrailModdingSDKSystemComponent.cpp",
+        (
+            "RegisterViewPane<QuestStateInspectorWidget>",
+            "Tainted Grail Quest and State Inspector",
+            "TaintedGrailModdingSDK.QuestStateInspector",
+        ),
+    )
+    require_fragments(
+        quest_widget_header,
+        (
+            "class QuestStateInspectorWidget",
+            "PopulateBindingRequirements",
+        ),
+    )
+    require_fragments(
+        quest_widget,
+        (
+            "ParseQuestDefinitionJsonV1",
+            "CalculateQuestDefinitionFingerprintV1",
+            "MaximumQuestDocumentBytes",
+            "QIODevice::ReadOnly",
+            "does not write files, mutate editor state, execute quests, deploy content, or touch FoA saves",
+        ),
+    )
+
 
 def validate_population_authoring(gem_root: Path) -> None:
     source_root, combined = read_sources(gem_root)
@@ -641,8 +677,8 @@ def validate_preview_and_quest_wiring(gem_root: Path, repo_root: Path) -> None:
         gem_root / "README.md",
         (
             "Tainted Grail Asset Browser Preview",
-            "27 panes",
-            "QuestDefinition contract coverage",
+            "28 panes",
+            "QuestDefinition contract coverage and inspector routing",
         ),
     )
 
@@ -692,7 +728,8 @@ def main() -> int:
     print(
         "Validated: Core/Framework/Editor ownership, public governance, workspace and pack editing, "
         "source/evidence intake, canonical catalog, typed atomic governance, item/recipe authoring, "
-        "evidence-bound population candidates, Asset Browser Preview wiring, QuestDefinition contracts, "
+        "evidence-bound population candidates, Asset Browser Preview wiring, QuestDefinition contracts "
+        "and inspector routing, "
         "the existing linked-test graph, and runtime separation."
     )
     return 0

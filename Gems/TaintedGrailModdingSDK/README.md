@@ -13,9 +13,10 @@ O3DE is the authoring host. Tainted Grail remains a separate Unity runtime targe
 5. **Independent governance engine** — reviewed maturity, confidence, operational risk, validation, staleness, named permission, prohibition, and supersession decisions for records and relationships, with durable history and validated proof requirements.
 6. **Item and Recipe Editor** — typed economy item/recipe profiles, station references, ingredient/output joins, acquisition relationships, economy blockers, and read-only governed action-lane matrices.
 7. **Asset Browser Preview** — profile-bound intake for staged asset-browser pane models, thumbnail evidence, and 3D viewport render evidence, with central viewport routing and explicit item-profile ref handoff prepared while typed binding, scene mutation, and function-complete authority remain disabled.
-8. **Validation and blocker services** — workspace, profile, pack, source, import, catalog identity, evidence, relationship, conflict, missing-reference, governance, proof, staleness, supersession, permission, and economy-domain checks that fail closed.
-9. **Foundation Status and Coverage window** — shared workspace state, coverage, counts, import issues, governance coverage, usage totals, and blockers.
-10. **FOA Development Hub** — the default read-only entry surface with live workspace/profile/pack context, blocker visibility, task-first navigation, and deep-links to the existing specialist panes.
+8. **Quest and State Inspector** — read-only inspection for local QuestDefinition V1 documents, including validation issues, deterministic fingerprints, binding requirements, and disabled authority state.
+9. **Validation and blocker services** — workspace, profile, pack, source, import, catalog identity, evidence, relationship, conflict, missing-reference, governance, proof, staleness, supersession, permission, and economy-domain checks that fail closed.
+10. **Foundation Status and Coverage window** — shared workspace state, coverage, counts, import issues, governance coverage, usage totals, and blockers.
+11. **FOA Development Hub** — the default read-only entry surface with live workspace/profile/pack context, blocker visibility, task-first navigation, and deep-links to the existing specialist panes.
 
 The verified Developer Preview entry materializes a bounded writable per-user
 project outside the checkout, prepares its local asset cache, and opens the
@@ -34,6 +35,7 @@ Available under **Tools → Tainted Grail SDK**:
 - **Tainted Grail Catalog Browser**
 - **Tainted Grail Catalog Governance**
 - **Tainted Grail Item and Recipe Editor**
+- **Tainted Grail Quest and State Inspector**
 - **Tainted Grail Actor and Troop Editor**
 - **Tainted Grail Asset Browser Preview**
 - **Tainted Grail Economy Coverage Dashboard**
@@ -42,7 +44,7 @@ Available under **Tools → Tainted Grail SDK**:
 - **Tainted Grail Road Atlas Editor** (optional authoring Tool Gem)
 - **Tainted Grail Avalon AI Editor** (optional authoring Tool Gem)
 
-The complete registered inventory contains 27 panes. The FOA Development Hub exposes every specialist pane through task routes, while each pane remains directly available from the Tools menu.
+The complete registered inventory contains 28 panes. The FOA Development Hub exposes every specialist pane through task routes, while each pane remains directly available from the Tools menu.
 
 ## Workspace documents
 
@@ -124,8 +126,8 @@ python Gems/TaintedGrailModdingSDK/Tools/validate_plugin_packages.py
 python Gems/TaintedGrailModdingSDK/Tools/validate_editor_lifecycle.py
 ```
 
-The checks validate public governance, Gem registration, exact source/test manifests, workspace and pack editing, importer contracts, source/evidence persistence, canonical catalog persistence, governance transitions, proof-backed permissions, typed economy models and joins, the Item and Recipe Editor pane, Asset Browser Preview routing, QuestDefinition contract coverage, unit-test registration, and absence of FoA runtime integration. They do not replace a full O3DE configure and compile.
+The checks validate public governance, Gem registration, exact source/test manifests, workspace and pack editing, importer contracts, source/evidence persistence, canonical catalog persistence, governance transitions, proof-backed permissions, typed economy models and joins, the Item and Recipe Editor pane, Asset Browser Preview routing, QuestDefinition contract coverage and inspector routing, unit-test registration, and absence of FoA runtime integration. They do not replace a full O3DE configure and compile.
 
 ## Current boundary
 
-All 27 editor panes have registered lifecycle and navigation contracts. The Asset Browser Preview pane consumes only staged preview evidence; the Item and Recipe Editor can copy the latest prepared preview route into pending item icon, asset, and evidence fields, while typed selector binding, scene mutation, catalog promotion, deployment, and runtime authority remain disabled. Road Atlas and Avalon AI are optional Tool Gems with validated, durable editor-owned JSON workflows. Provider retrieval and executable Mono/IL2CPP packages remain separately gated. No displayed, imported, typed, validated, or reviewed state grants runtime execution by itself.
+All 28 editor panes have registered lifecycle and navigation contracts. The Quest and State Inspector reads local QuestDefinition documents for validation and review only. The Asset Browser Preview pane consumes only staged preview evidence; the Item and Recipe Editor can copy the latest prepared preview route into pending item icon, asset, and evidence fields, while typed selector binding, scene mutation, catalog promotion, deployment, and runtime authority remain disabled. Road Atlas and Avalon AI are optional Tool Gems with validated, durable editor-owned JSON workflows. Provider retrieval and executable Mono/IL2CPP packages remain separately gated. No displayed, imported, typed, validated, or reviewed state grants runtime execution by itself.

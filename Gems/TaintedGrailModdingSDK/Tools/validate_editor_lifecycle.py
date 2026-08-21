@@ -48,6 +48,7 @@ PANES = (
     base_pane("Tainted Grail Catalog Browser", "CatalogBrowserWidget"),
     base_pane("Tainted Grail Catalog Governance", "CatalogGovernanceWidget"),
     base_pane("Tainted Grail Item and Recipe Editor", "ItemRecipeEditorWidget"),
+    base_pane("Tainted Grail Quest and State Inspector", "QuestStateInspectorWidget"),
     base_pane("Tainted Grail Actor and Troop Editor", "ActorTroopEditorWidget"),
     base_pane("Tainted Grail Economy Acquisition Coverage", "EconomyCoverageDashboardWidget"),
     base_pane("Tainted Grail Economy Cross-Pack Duplicates", "EconomyDuplicateReportWidget"),
@@ -111,8 +112,8 @@ def require(text: str, fragment: str, label: str) -> None:
 
 
 def validate_editor_lifecycle(repo_root: Path) -> None:
-    if len(PANES) != 27 or len({pane.name for pane in PANES}) != len(PANES):
-        raise EditorLifecycleError("The canonical Editor inventory must contain 27 unique pane names")
+    if len(PANES) != 28 or len({pane.name for pane in PANES}) != len(PANES):
+        raise EditorLifecycleError("The canonical Editor inventory must contain 28 unique pane names")
 
     hub = read(repo_root, HUB_SOURCE)
     source_cache: dict[str, str] = {}
@@ -165,7 +166,7 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
         for match in re.finditer(r'saveKeyName\s*=\s*QStringLiteral\("([^"]+)"\)', registration):
             save_keys.append(match.group(1))
 
-    if len(save_keys) != 27 or len(set(save_keys)) != 27:
+    if len(save_keys) != 28 or len(set(save_keys)) != 28:
         raise EditorLifecycleError(
             f"Every pane needs one unique layout save key; found {len(save_keys)} keys and {len(set(save_keys))} unique values"
         )
@@ -192,7 +193,7 @@ def main() -> int:
         print(f"TG SDK Editor lifecycle validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "TG SDK Editor lifecycle validation passed: all 27 panes have build ownership, "
+        "TG SDK Editor lifecycle validation passed: all 28 panes have build ownership, "
         "registration, deactivation, unique layout state, Hub reachability, and bounded "
         "optional-Gem persistence."
     )

@@ -39,6 +39,7 @@
 #include "FoundationStatusWidget.h"
 #include "ItemRecipeEditorWidget.h"
 #include "PackManagerWidget.h"
+#include "QuestStateInspectorWidget.h"
 #include "SourceEvidenceIntakeWidget.h"
 
 #include <AzCore/Debug/Trace.h>
@@ -63,6 +64,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogBrowserViewPaneName = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* QuestStateInspectorViewPaneName = "Tainted Grail Quest and State Inspector";
         constexpr const char* ActorTroopEditorViewPaneName = "Tainted Grail Actor and Troop Editor";
         constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
         constexpr const char* EconomyDuplicateReportViewPaneName = "Tainted Grail Economy Cross-Pack Duplicates";
@@ -153,6 +155,7 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(CatalogBrowserViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
+            AzToolsFramework::UnregisterViewPane(QuestStateInspectorViewPaneName);
             AzToolsFramework::UnregisterViewPane(ActorTroopEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyDuplicateReportViewPaneName);
@@ -279,6 +282,17 @@ namespace TaintedGrailModdingSDK
             ItemRecipeEditorViewPaneName,
             "Tainted Grail SDK",
             itemRecipeOptions);
+
+        AzToolsFramework::ViewPaneOptions questStateOptions;
+        questStateOptions.paneRect = QRect(205, 205, 1040, 900);
+        questStateOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        questStateOptions.isDeletable = true;
+        questStateOptions.isPreview = true;
+        questStateOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.QuestStateInspector");
+        AzToolsFramework::RegisterViewPane<QuestStateInspectorWidget>(
+            QuestStateInspectorViewPaneName,
+            "Tainted Grail SDK",
+            questStateOptions);
 
         AzToolsFramework::ViewPaneOptions actorTroopOptions;
         actorTroopOptions.paneRect = QRect(210, 210, 1280, 1000);

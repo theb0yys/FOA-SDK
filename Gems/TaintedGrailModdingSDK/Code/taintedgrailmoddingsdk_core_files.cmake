@@ -121,8 +121,6 @@ set(FILES
     Source/ExternalToolInterchangeContracts.h
     Source/QuestDefinitionContract.cpp
     Source/QuestDefinitionContract.h
-    Source/QuestBindingManifestContract.cpp
-    Source/QuestBindingManifestContract.h
     Source/CatalogDatabase.cpp
     Source/CatalogDatabase.h
     Source/CatalogDatabaseBase.inl

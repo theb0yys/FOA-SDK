@@ -80,7 +80,7 @@ class RepositoryStructureContractTests(unittest.TestCase):
             | {
                 ".codex/README.md",
                 ".codex/skills/foa-sdk-research-sentinel/SKILL.md",
-                ".codex/workflows/foa_sdk_development_process.md",
+                ".codex/workflows/foa_research_first_process_stack.md",
             }
         )
 

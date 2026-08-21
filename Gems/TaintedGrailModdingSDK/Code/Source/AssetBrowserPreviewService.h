@@ -71,6 +71,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_primarySourceAssetRecordId;
         AZStd::string m_fidelityState;
         AZStd::string m_viewportRouteState;
+        AZStd::vector<AZStd::string> m_evidenceRefs;
         bool m_o3deViewportMutationAllowed = false;
         bool m_typedAuthoringBindingCreated = false;
         bool m_catalogPromotionAllowed = false;

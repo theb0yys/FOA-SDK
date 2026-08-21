@@ -40,6 +40,7 @@ namespace TaintedGrailModdingSDK
         void RefreshRecordChoices();
         void LoadCurrentItem();
         void LoadCurrentRecipe();
+        void ApplyLatestPreviewRouteToItem();
         void SaveItemProfile();
         void SaveRecipeProfile();
         void SaveIngredient();

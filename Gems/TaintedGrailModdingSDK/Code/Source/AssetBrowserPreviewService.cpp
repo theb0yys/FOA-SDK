@@ -832,6 +832,7 @@ namespace TaintedGrailModdingSDK
         route.m_primarySourceAssetRecordId = entry.m_primarySourceAssetRecordId;
         route.m_fidelityState = entry.m_fidelityState;
         route.m_viewportRouteState = entry.m_viewportRouteState;
+        route.m_evidenceRefs = entry.m_evidenceRefs;
         return AZ::Success(AZStd::move(route));
     }
 

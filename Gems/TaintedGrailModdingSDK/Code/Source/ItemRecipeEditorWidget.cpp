@@ -7,6 +7,7 @@
 
 #include "ItemRecipeEditorWidget.h"
 
+#include "AssetBrowserPreviewService.h"
 #include "FoundationService.h"
 
 #include <QAbstractItemView>
@@ -71,6 +72,21 @@ namespace TaintedGrailModdingSDK
                 result.push_back(ToQString(value));
             }
             return result.join(QStringLiteral(", "));
+        }
+
+        AZStd::vector<AZStd::string> AppendUniqueValues(
+            AZStd::vector<AZStd::string> values,
+            const AZStd::vector<AZStd::string>& additions)
+        {
+            for (const AZStd::string& addition : additions)
+            {
+                if (!addition.empty()
+                    && AZStd::find(values.begin(), values.end(), addition) == values.end())
+                {
+                    values.push_back(addition);
+                }
+            }
+            return values;
         }
 
         void ConfigureTable(QTableWidget* table)
@@ -181,6 +197,8 @@ namespace TaintedGrailModdingSDK
         itemProfileLayout->addRow(tr("Asset ref"), m_itemAssetRef);
         itemProfileLayout->addRow(tr("Tags"), m_itemTags);
         itemProfileLayout->addRow(tr("Evidence IDs"), m_itemEvidence);
+        auto* usePreviewRouteButton = new QPushButton(tr("Use Latest Preview Route"), itemProfileGroup);
+        itemProfileLayout->addRow(usePreviewRouteButton);
         auto* saveItemButton = new QPushButton(tr("Save Item Profile"), itemProfileGroup);
         itemProfileLayout->addRow(saveItemButton);
         itemLayout->addWidget(itemProfileGroup);
@@ -386,6 +404,7 @@ namespace TaintedGrailModdingSDK
         connect(m_itemRecord, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { LoadCurrentItem(); });
         connect(m_recipeRecord, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { LoadCurrentRecipe(); });
         connect(m_relationshipSource, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { RefreshAcquisitionRelationships(); });
+        connect(usePreviewRouteButton, &QPushButton::clicked, this, [this]() { ApplyLatestPreviewRouteToItem(); });
         connect(saveItemButton, &QPushButton::clicked, this, [this]() { SaveItemProfile(); });
         connect(saveRecipeButton, &QPushButton::clicked, this, [this]() { SaveRecipeProfile(); });
         connect(saveIngredientButton, &QPushButton::clicked, this, [this]() { SaveIngredient(); });
@@ -621,6 +640,44 @@ namespace TaintedGrailModdingSDK
         RefreshRecipeLaneTable();
         RefreshRecipeEvidence();
         RefreshRecipeJoins();
+    }
+
+    void ItemRecipeEditorWidget::ApplyLatestPreviewRouteToItem()
+    {
+        const AZStd::string recordId = ToAzString(m_itemRecord->currentData().toString());
+        if (recordId.empty())
+        {
+            SetStatus(tr("Select a canonical item before applying preview route refs."), true);
+            return;
+        }
+
+        const AssetBrowserPreviewViewportRoute* route =
+            AssetBrowserPreviewRouteRegistry::Get().GetLatestRoute();
+        if (!route)
+        {
+            SetStatus(tr("No Asset Browser preview route has been prepared."), true);
+            return;
+        }
+        if (route->m_productAssetId.empty() || route->m_productCachePath.empty())
+        {
+            SetStatus(tr("Latest preview route is missing product asset refs."), true);
+            return;
+        }
+        if (route->m_o3deViewportMutationAllowed
+            || route->m_typedAuthoringBindingCreated
+            || route->m_catalogPromotionAllowed
+            || route->m_runtimePermissionGranted)
+        {
+            SetStatus(tr("Latest preview route attempted to grant unsupported authority."), true);
+            return;
+        }
+
+        m_itemIconRef->setText(ToQString(route->m_productAssetId));
+        m_itemAssetRef->setText(ToQString(route->m_productCachePath));
+        m_itemEvidence->setText(JoinValues(AppendUniqueValues(
+            ParseCommaSeparated(m_itemEvidence->text()),
+            route->m_evidenceRefs)));
+        SetStatus(tr("Latest preview route copied into item refs. Save the item profile to persist it."));
     }
 
     void ItemRecipeEditorWidget::SaveItemProfile()

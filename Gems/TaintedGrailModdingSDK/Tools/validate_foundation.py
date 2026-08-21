@@ -290,6 +290,8 @@ def validate_economy_authoring(gem_root: Path) -> None:
         "Recipe outputs require exactly one item record ID or unresolved item subject ref",
         "Recipe persistence mode must be unknown, native_template, runtime_append, or custom_template",
         "The canonical item record does not exist", "Economy evidence belongs to a different catalog subject",
+        "ApplyLatestPreviewRouteToItem", "AssetBrowserPreviewRouteRegistry::Get().GetLatestRoute",
+        "Latest preview route copied into item refs. Save the item profile to persist it.",
     ):
         if fragment not in combined:
             fail(f"Item/recipe editor is missing {fragment!r}")

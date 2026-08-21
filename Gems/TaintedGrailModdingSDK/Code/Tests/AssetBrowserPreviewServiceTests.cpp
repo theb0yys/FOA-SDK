@@ -276,6 +276,8 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(route.GetValue().m_profileId, ProfileId);
         EXPECT_EQ(route.GetValue().m_productAssetId, "product.pane.icon.texture");
         EXPECT_EQ(route.GetValue().m_productCachePath, "$assetcache/foa/textures/foa_inventory_icon.streamingimage");
+        ASSERT_EQ(route.GetValue().m_evidenceRefs.size(), 1);
+        EXPECT_EQ(route.GetValue().m_evidenceRefs[0], "evidence.pane.icon.texture");
         EXPECT_FALSE(route.GetValue().m_o3deViewportMutationAllowed);
         EXPECT_FALSE(route.GetValue().m_typedAuthoringBindingCreated);
         EXPECT_FALSE(route.GetValue().m_catalogPromotionAllowed);

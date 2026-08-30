@@ -237,7 +237,7 @@ jobs:
   windows-installer-smoke:
     name: Exact-head Windows installer operational smoke
     needs: static-validation
-    if: needs.static-validation.outputs.installer_windows_required == 'true'
+    if: always() && needs.static-validation.outputs.installer_windows_required == 'true'
     runs-on: windows-2022
     timeout-minutes: 60
     steps:

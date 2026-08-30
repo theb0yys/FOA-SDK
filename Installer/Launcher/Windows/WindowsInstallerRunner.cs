@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace FOA.SDK.InstallerLauncher;
 
 internal sealed record InstallerRunResult(bool Succeeded, int ExitCode, bool RebootRequired, string Message, string LogPath);
+internal sealed record InstalledEditorValidationResult(bool Succeeded, int ExitCode, string Message);
 
 internal static class WindowsInstallerRunner
 {
@@ -261,25 +264,139 @@ internal static class WindowsInstallerRunner
 
 internal static class InstalledEditorLauncher
 {
+    private const string LauncherRelativePath = "bin\\Windows\\profile\\Default\\FOA-SDK.exe";
+
+    public static async Task<InstalledEditorValidationResult> ValidateAsync(string installRoot)
+    {
+        string launcher = ResolveLauncherPath(installRoot);
+        ProcessStartInfo startInfo = new()
+        {
+            FileName = launcher,
+            Arguments = "--self-test",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(launcher)!,
+        };
+
+        using Process process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("FOA-SDK validation could not start.");
+        using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(2));
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            return new InstalledEditorValidationResult(
+                false,
+                1,
+                "FOA-SDK validation timed out. Run the installer again or repair the installation.");
+        }
+
+        if (process.ExitCode != 0)
+        {
+            return new InstalledEditorValidationResult(
+                false,
+                process.ExitCode,
+                "The installed FOA-SDK files did not pass startup validation. Run the installer again or repair the installation.");
+        }
+
+        return new InstalledEditorValidationResult(
+            true,
+            0,
+            "FOA-SDK installation validation passed.");
+    }
+
     public static void Launch(string installRoot)
     {
-        string launcher = Path.Combine(
-            installRoot,
-            "bin",
-            "Windows",
-            "profile",
-            "Default",
-            "FOA-SDK.exe");
-        if (!File.Exists(launcher))
-        {
-            throw new InvalidOperationException(
-                "FOA-SDK.exe is missing. Run Repair before starting the SDK.");
-        }
+        string launcher = ResolveLauncherPath(installRoot);
         Process.Start(new ProcessStartInfo
         {
             FileName = launcher,
             UseShellExecute = true,
             WorkingDirectory = Path.GetDirectoryName(launcher)!,
         });
+    }
+
+    public static void CreateDesktopShortcut(string installRoot)
+    {
+        string launcher = ResolveLauncherPath(installRoot);
+        string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        if (string.IsNullOrWhiteSpace(desktop))
+        {
+            throw new InvalidOperationException("Windows did not provide a desktop folder for the current user.");
+        }
+        Directory.CreateDirectory(desktop);
+
+        string shortcutPath = Path.Combine(desktop, "FOA-SDK.lnk");
+        Type? shellType = Type.GetTypeFromProgID("WScript.Shell", throwOnError: false);
+        if (shellType is null)
+        {
+            throw new InvalidOperationException("Windows shortcut support is unavailable.");
+        }
+
+        object? shell = null;
+        object? shortcut = null;
+        try
+        {
+            shell = Activator.CreateInstance(shellType)
+                ?? throw new InvalidOperationException("Windows shortcut support could not be initialized.");
+            shortcut = shellType.InvokeMember(
+                "CreateShortcut",
+                BindingFlags.InvokeMethod,
+                binder: null,
+                target: shell,
+                args: new object[] { shortcutPath })
+                ?? throw new InvalidOperationException("The desktop shortcut could not be created.");
+
+            Type shortcutType = shortcut.GetType();
+            shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { launcher });
+            shortcutType.InvokeMember(
+                "WorkingDirectory",
+                BindingFlags.SetProperty,
+                null,
+                shortcut,
+                new object[] { Path.GetDirectoryName(launcher)! });
+            shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "FOA-SDK" });
+            shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { launcher });
+            shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, Array.Empty<object>());
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new InvalidOperationException(
+                "The desktop shortcut could not be created.",
+                ex.InnerException ?? ex);
+        }
+        finally
+        {
+            ReleaseComObject(shortcut);
+            ReleaseComObject(shell);
+        }
+    }
+
+    private static string ResolveLauncherPath(string installRoot)
+    {
+        string launcher = Path.Combine(installRoot, LauncherRelativePath);
+        if (!File.Exists(launcher))
+        {
+            throw new InvalidOperationException(
+                "FOA-SDK.exe is missing. Run the installer again or repair the installation.");
+        }
+        return launcher;
+    }
+
+    private static void ReleaseComObject(object? value)
+    {
+        if (value is not null && Marshal.IsComObject(value))
+        {
+            Marshal.FinalReleaseComObject(value);
+        }
     }
 }

@@ -1,46 +1,53 @@
 # Durable Decisions
 
-Record accepted FOA-SDK architecture and process decisions here. Active work belongs in `CURRENT_TASK.md`; durable decisions belong here.
+Durable architecture and process decisions live here. Active work belongs in `CURRENT_TASK.md`.
 
-## Repository State Is Authority
+## Repository State and Current Owner Instruction
 
-- **Decision:** Repository files, governing documents, current task state, durable decisions, recent diffs, and relevant code comments are authoritative. Conversation history is background only unless the repository owner explicitly overrides it for the current task.
-- **Rationale:** This prevents context drift and preserves auditable continuation state.
-- **Scope:** All repository work.
+- **Decision:** Merged repository state is the durable source of truth. The repository owner's current explicit instruction controls the scope and authorized transitions of the current task.
+- **Constraint:** Current instructions cannot convert unexecuted validation into a pass, static evidence into runtime proof, or unsupported facts into verified facts.
 - **Status:** Accepted.
 
-## Research Authority Is Required
+## FOA-SDK Repository Identity
 
-- **Decision:** Implementation stops when exact controlling research, ownership, compatibility, validation, or next-process authority is missing, unclear, contradictory, outdated, or unproven.
-- **Rationale:** FOA-SDK must not invent game facts, runtime assumptions, native identities, permissions, or architecture.
-- **Scope:** Code, tests, documentation, process, packaging, adapters, and release work.
+- **Decision:** FOA-SDK is the product repository and is not an O3DE source fork. O3DE is a separately pinned upstream dependency identified by `o3de.lock.json`.
+- **Decision:** Source and generated output remain separate: product checkout, external O3DE checkout, and external build/evidence output.
+- **Status:** Accepted.
+
+## P0 Progressive-Rigor Engineering Process
+
+- **Decision:** `docs/tainted-grail-sdk/ENGINEERING_PROCESS.md` is the single repository engineering workflow.
+- **Decision:** Changes are classified as Routine, Significant, or Critical/Runtime before implementation.
+- **Decision:** Validation is selected from `CI_AND_LOCAL_VALIDATION.md` according to the changed surface and risk. Evidence from an unrelated layer is neither required nor accepted as a substitute.
+- **Decision:** Routine implementation inside accepted architecture does not require a design ceremony, research-sentinel stack, Deep Research brief, skill-plan script, performance plan, evidence pack, or pre/post deep-review checklist unless the specific task actually needs that evidence.
+- **Decision:** Significant changes require a short reviewed design or durable decision. Critical/Runtime changes require explicit threat/operational boundaries and exact applicable proof.
+- **Rationale:** Rigor should increase with consequence. The previous process duplicated the same authority and validation concepts across multiple mandatory stacks and obstructed ordinary implementation.
+- **Status:** Accepted by repository owner for P0 review.
+
+## Research Escalation
+
+- **Decision:** Research is required when consequential implementation claims depend on unknown external, proprietary, compatibility, licence, game-runtime, native-identity, deployment, save, signing, publication, or security facts.
+- **Decision:** Repository-known implementation work does not become a research task merely because an agent performs it.
+- **Decision:** Research, decompilation/static evidence, host execution, and live runtime evidence remain separate evidence lanes.
 - **Status:** Accepted.
 
 ## Context-Only Process Port
 
-- **Decision:** The Waning Realm agent operating model is ported to FOA-SDK without behavioural redesign. Only project-context substitutions are permitted.
-- **Rationale:** The requested outcome is process parity, not a new workflow.
-- **Scope:** Root agent policy integration and `.codex/` process assets.
-- **Status:** Accepted.
+- **Previous decision:** The Waning Realm agent operating model was ported to FOA-SDK without behavioral redesign.
+- **Status:** **Superseded by P0 Progressive-Rigor Engineering Process.**
+- **Reason:** FOA-SDK now owns a process designed around its actual product, risk classes, and validation surfaces.
 
-## Capability Execution Contract And Shared Production Spine
+## Capability Execution Contract and Shared Production Spine
 
-- **Decision:** FOA-SDK retains its existing capability assessment, work-order planning, build-manifest, package-preview, staging/deployment-preview, deployment-work-order, result-evidence, verification, reconciliation, and release metadata services as the control plane. Actual side effects must be introduced only through a separately reviewed additive execution plane governed by [`docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md`](docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md).
-- **Decision:** The canonical production path is one shared `Build -> Package -> Deploy -> Launch -> Verify` spine. Domain systems may own native materialisation and domain verification semantics, but they must not create private build, deployment, launch, rollback, receipt, or evidence-promotion paths.
-- **Decision:** Existing inert V1 contracts and their `BuildAllowed`, `ExecutionAllowed`, `DeploymentAllowed`, mutation, launch, signing, publication, and equivalent flags remain inert. Future executable contracts version forward; validators are not relaxed and flags are not flipped to activate behaviour.
-- **Decision:** Preview and execute are distinct operations over one immutable fingerprinted plan. Support, qualification, environment readiness, policy, human authorisation, execution outcome, assessment, and evidence promotion remain separate state axes.
-- **Decision:** Provider resolution is deterministic and phase-specific. Artifact identity and ownership, idempotency, rollback planning, execution receipts, candidate evidence, assessment, reconciliation, and human promotion remain explicit boundaries.
-- **Rationale:** This activates existing reviewed planning and evidence infrastructure without discarding it, prevents contract drift, and prevents terrain, roads, AI, economy, population, asset, and release tooling from developing incompatible execution systems.
-- **Scope:** Capability contracts, adapters, ExternalToolchain providers, build, package, deployment, launch, verification, rollback, results, evidence, release assembly/signing, and all future domain execution work.
-- **Status:** Accepted architecture and process direction; implementation remains batch-scoped and requires explicit current-task authority, review, validation, and maintainer merge.
+- **Decision:** FOA-SDK retains its existing capability assessment, planning, build-manifest, package-preview, deployment-preview/work-order, result-evidence, verification, reconciliation, and release metadata services as the control plane. Side effects enter only through separately reviewed execution/runtime boundaries governed by `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md`.
+- **Decision:** The shared production path is `Build -> Package -> Deploy -> Launch -> Verify`; domain systems do not invent private parallel production spines.
+- **Decision:** Existing inert V1 contracts remain inert. Executable behavior versions forward rather than flipping existing false authority flags.
+- **Decision:** Support, qualification, environment readiness, policy, human authorization, execution outcome, assessment, and evidence promotion remain distinct.
+- **Status:** Accepted architecture.
 
-## Capability Execution M0 Authority For M1 Core Contracts
+## Capability Execution M0 Authority for M1 Core Contracts
 
-- **Decision:** The repository owner authorises the M0 governance and implementation boundary recorded in [`docs/tainted-grail-sdk/CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md`](docs/tainted-grail-sdk/CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md).
-- **Decision:** After that record is merged to `main`, exactly one implementation batch is authorised: **M1 — Additive Core Contracts** on `implementation/capability-execution-m1-core-contracts`, limited to the exact paths named by the M0 record.
-- **Decision:** M1 may add Core-only value types, typed vocabularies, canonical JSON, fingerprints, pure validation, a dedicated Core-only compiled test target, static enforcement, read-only CI coverage, and matching documentation. It may not add a registry, resolver, persistence, Framework service, UI, provider invocation, process supervisor, side effect, deployment, launch, runtime action, signing, publication, or evidence promotion.
-- **Decision:** Existing adapter, deployment, release, canonical-interchange, and External Tool Interchange V1 source, canonical bytes, validators, outcomes, and false authority flags are compatibility-locked and may not change under M1.
-- **Decision:** Any need to touch an unlisted path, change V1, add persistence or a consumer, introduce another dependency, or cross into M2 or later work is a hard stop requiring an amended M0 decision.
-- **Rationale:** M1 establishes the neutral language required by every later phase while preserving the reviewed control plane, preventing premature execution authority, and ensuring later providers and executors share one contract foundation.
-- **Scope:** M1 contract, canonicalisation, validation, build ownership, Core-only tests, static validator, read-only CI, data-format documentation, compatibility proof, and exact-head evidence only.
-- **Status:** Repository-owner authorised for maintainer audit; effective as implementation authority only after the M0 decision pull request is merged to `main`.
+- **Decision:** `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md` defines the bounded M1 Additive Core Contracts implementation scope.
+- **Repository state:** M0 merged to `main` through pull request #235 on 15 August 2026 at `1b39fa63ea63e527c4f634b79898c9bda5172f87`.
+- **Decision:** M1 remains limited to the paths and product boundary recorded by that architecture decision unless the repository owner explicitly changes the current implementation scope.
+- **Status:** Effective architecture authority; no longer pending maintainer merge.

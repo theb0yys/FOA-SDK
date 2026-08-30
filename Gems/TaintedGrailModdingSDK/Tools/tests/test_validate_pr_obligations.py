@@ -19,116 +19,152 @@ validator = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = validator
 SPEC.loader.exec_module(validator)
 
-HEAD = "a" * 40
-OTHER_HEAD = "b" * 40
-
 
 def body(
     *,
-    checked: bool = True,
-    omit: str | None = None,
-    duplicate: str | None = None,
-    head: str = HEAD,
-    duplicate_head: bool = False,
+    selected: str | None = "routine",
+    status: str = "PASSED",
+    omit_section: str | None = None,
+    empty_section: str | None = None,
+    duplicate_section: str | None = None,
+    duplicate_class: str | None = None,
+    include_unknown_class: bool = False,
 ) -> str:
-    state = "x" if checked else " "
-    lines = ["## Mandatory merge obligations", "", f"<!-- merge-head:{head} -->"]
-    if duplicate_head:
-        lines.append(f"<!-- merge-head:{head} -->")
-    for identity in validator.OBLIGATION_IDS:
-        if identity == omit:
+    section_content = {
+        "Summary": "Repairs the bounded repository behavior.",
+        "Change class": "",
+        "Scope": "- affected/file.py",
+        "Out of scope": "- runtime behavior",
+        "Validation": f"Status: {status}\n- python focused_test.py",
+        "Risks and rollback": "Low risk; revert the commit.",
+    }
+
+    class_lines: list[str] = []
+    for identity in validator.CHANGE_CLASSES:
+        state = "x" if identity == selected else " "
+        line = f"- [{state}] class <!-- change-class:{identity} -->"
+        class_lines.append(line)
+        if identity == duplicate_class:
+            class_lines.append(line)
+    if include_unknown_class:
+        class_lines.append("- [ ] unknown <!-- change-class:unknown -->")
+    section_content["Change class"] = "\n".join(class_lines)
+
+    lines: list[str] = []
+    for name in validator.REQUIRED_SECTIONS:
+        if name == omit_section:
             continue
-        line = f"- [{state}] completed <!-- merge-obligation:{identity} -->"
-        lines.append(line)
-        if identity == duplicate:
-            lines.append(line)
-    lines.extend(("", "## Boundary", "text"))
+        lines.extend((f"## {name}", ""))
+        if name == empty_section:
+            lines.append("<!-- placeholder only -->")
+        else:
+            lines.append(section_content[name])
+        lines.append("")
+        if name == duplicate_section:
+            lines.extend((f"## {name}", section_content[name], ""))
+
+    lines.extend(("## Documentation", "NOT_APPLICABLE"))
     return "\n".join(lines)
 
 
-class PullRequestObligationTests(unittest.TestCase):
+class PullRequestDeclarationTests(unittest.TestCase):
     def test_draft_pull_request_may_remain_incomplete(self) -> None:
         validator.validate_body("", draft=True)
 
-    def test_ready_pull_request_requires_every_checked_obligation(self) -> None:
-        validator.validate_body(body(), draft=False, head_sha=HEAD)
+    def test_ready_pull_request_accepts_complete_routine_record(self) -> None:
+        validator.validate_body(body(), draft=False)
 
-    def test_ready_pull_request_rejects_incomplete_obligation(self) -> None:
-        with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "incomplete mandatory merge obligations",
-        ):
-            validator.validate_body(body(checked=False), draft=False, head_sha=HEAD)
+    def test_ready_pull_request_accepts_each_change_class(self) -> None:
+        for identity in validator.CHANGE_CLASSES:
+            with self.subTest(identity=identity):
+                validator.validate_body(body(selected=identity), draft=False)
 
-    def test_ready_pull_request_rejects_missing_marker(self) -> None:
+    def test_ready_pull_request_requires_every_section(self) -> None:
         with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "missing mandatory obligation markers",
+            validator.PullRequestDeclarationError,
+            "missing required sections",
         ):
             validator.validate_body(
-                body(omit="compiled-tests"), draft=False, head_sha=HEAD
+                body(omit_section="Out of scope"),
+                draft=False,
             )
 
-    def test_ready_pull_request_rejects_duplicate_marker(self) -> None:
+    def test_ready_pull_request_rejects_empty_substantive_section(self) -> None:
         with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
+            validator.PullRequestDeclarationError,
+            "has no substantive content",
+        ):
+            validator.validate_body(
+                body(empty_section="Summary"),
+                draft=False,
+            )
+
+    def test_ready_pull_request_requires_exactly_one_change_class(self) -> None:
+        with self.assertRaisesRegex(
+            validator.PullRequestDeclarationError,
+            "select exactly one change class",
+        ):
+            validator.validate_body(body(selected=None), draft=False)
+
+        multiple = body(selected="routine").replace(
+            "- [ ] class <!-- change-class:significant -->",
+            "- [x] class <!-- change-class:significant -->",
+        )
+        with self.assertRaisesRegex(
+            validator.PullRequestDeclarationError,
+            "select exactly one change class",
+        ):
+            validator.validate_body(multiple, draft=False)
+
+    def test_ready_pull_request_rejects_duplicate_class_marker(self) -> None:
+        with self.assertRaisesRegex(
+            validator.PullRequestDeclarationError,
             "appears more than once",
         ):
             validator.validate_body(
-                body(duplicate="receipt"), draft=False, head_sha=HEAD
+                body(duplicate_class="routine"),
+                draft=False,
             )
 
-    def test_ready_pull_request_rejects_missing_head_marker(self) -> None:
-        without_head = body().replace(f"<!-- merge-head:{HEAD} -->\n", "", 1)
+    def test_ready_pull_request_rejects_unknown_change_class(self) -> None:
         with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "missing its exact merge-head marker",
-        ):
-            validator.validate_body(without_head, draft=False, head_sha=HEAD)
-
-    def test_ready_pull_request_rejects_duplicate_head_marker(self) -> None:
-        with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "merge-head marker appears more than once",
+            validator.PullRequestDeclarationError,
+            "unsupported change classes",
         ):
             validator.validate_body(
-                body(duplicate_head=True), draft=False, head_sha=HEAD
+                body(include_unknown_class=True),
+                draft=False,
             )
 
-    def test_ready_pull_request_rejects_malformed_head_marker(self) -> None:
+    def test_ready_pull_request_rejects_duplicate_section(self) -> None:
         with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "malformed merge-head marker",
+            validator.PullRequestDeclarationError,
+            "section 'Scope' appears more than once",
         ):
             validator.validate_body(
-                body(head="REPLACE_WITH_HEAD"), draft=False, head_sha=HEAD
+                body(duplicate_section="Scope"),
+                draft=False,
             )
 
-    def test_ready_pull_request_rejects_stale_head_marker(self) -> None:
+    def test_validation_section_requires_exact_status(self) -> None:
         with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "merge obligations are stale",
+            validator.PullRequestDeclarationError,
+            "exact validation status",
         ):
-            validator.validate_body(body(head=OTHER_HEAD), draft=False, head_sha=HEAD)
+            validator.validate_body(body(status="complete"), draft=False)
 
-    def test_ready_event_uses_exact_head_identity(self) -> None:
+    def test_ready_event_uses_body_and_draft_state(self) -> None:
         validator.validate_event(
-            {
-                "pull_request": {
-                    "body": body(),
-                    "draft": False,
-                    "head": {"sha": HEAD},
-                }
-            }
+            {"pull_request": {"body": body(selected="significant"), "draft": False}}
         )
 
-    def test_malformed_pull_request_head_fails_closed(self) -> None:
+    def test_malformed_pull_request_payload_fails_closed(self) -> None:
         with self.assertRaisesRegex(
-            validator.PullRequestObligationError,
-            "head identity is malformed",
+            validator.PullRequestDeclarationError,
+            "body or draft state is malformed",
         ):
             validator.validate_event(
-                {"pull_request": {"body": body(), "draft": False, "head": {}}}
+                {"pull_request": {"body": body(), "draft": "false"}}
             )
 
     def test_non_pull_request_event_is_ignored(self) -> None:

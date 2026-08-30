@@ -11,6 +11,8 @@ on:
       - 'DECISIONS.md'
       - 'docs/protected-files-policy.md'
       - 'docs/systems/SYSTEM_INDEX.md'
+      - 'docs/tainted-grail-sdk/ENGINEERING_PROCESS.md'
+      - 'docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md'
       - '.github/workflows/agent-skill-validation.yml'
   workflow_dispatch:
 
@@ -20,12 +22,16 @@ permissions:
 jobs:
   validate-agent-skills:
     name: Validate agent skills
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 10
     steps:
-      - name: Check out repository
+      - name: Check out exact event commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
 
-      - name: Validate FOA-SDK agent skill pack
+      - name: Validate FOA-SDK agent helper pack
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .codex/skills/tests/Validate-AgentSkills.ps1

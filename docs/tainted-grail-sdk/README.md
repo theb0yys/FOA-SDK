@@ -1,6 +1,6 @@
 # Tainted Grail Modding Editor and SDK Documentation
 
-This directory contains the public documentation for the TG SDK layer in this O3DE fork.
+This directory contains the public documentation for the FOA-SDK product repository and its separately pinned O3DE authoring host.
 
 ## Start here
 
@@ -49,8 +49,9 @@ This directory contains the public documentation for the TG SDK layer in this O3
 ### For contributors
 
 - [Contributing](../../CONTRIBUTING.md) — contribution lifecycle and DCO requirements.
-- [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation workflow.
-- [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — automatic pull-request static validation, mandatory exact-head host and compiled-test gates, self-hosted runner boundary, and token handling.
+- [Engineering Process](ENGINEERING_PROCESS.md) — the single Routine, Significant, and Critical/Runtime workflow.
+- [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation guidance.
+- [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — applicability-based validation matrix, read-only hosted jobs, local evidence layers, and runner boundaries.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
 - [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, MSI/ZIP identity, failure, rollback, and non-release boundary.
 - [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, repair, upgrade, uninstall, and troubleshooting.
@@ -89,7 +90,7 @@ This directory contains the public documentation for the TG SDK layer in this O3
 - [Architecture](ARCHITECTURE.md) — layers, responsibilities, invariants, and data flow.
 - [Governance Reliability Baseline](GOVERNANCE_HARDENING.md) — typed transitions, shared record/relationship logic, intrinsic audit atomicity, publish-after-save persistence, and required failure tests.
 - [Code Quality](CODE_QUALITY.md) — mandatory C++, Qt, persistence, UI, testing, and evidence standards.
-- [Review and Merge Policy](REVIEW_AND_MERGE_POLICY.md) — design review, self-review, pull-request review, and merge gates.
+- [Review and Merge Policy](REVIEW_AND_MERGE_POLICY.md) — progressive review depth and applicability-based merge gates.
 - [Release Process](RELEASE_PROCESS.md) — versioning, release evidence, packaging, and rollback.
 - [Maintainer Checklist](MAINTAINER_CHECKLIST.md) — recurring repository and release responsibilities.
 - [Legal and Content Policy](LEGAL_AND_CONTENT_POLICY.md) — redistribution and proprietary-content boundaries.
@@ -97,22 +98,25 @@ This directory contains the public documentation for the TG SDK layer in this O3
 ### Project governance
 
 - [Governance](../../GOVERNANCE.md)
+- [Current Task](../../CURRENT_TASK.md)
+- [Durable Decisions](../../DECISIONS.md)
 - [Code of Conduct](../../CODE_OF_CONDUCT.md)
 - [Roadmap](../../ROADMAP.md)
 - [Changelog](../../CHANGELOG.md)
 
 ## Documentation authority
 
-When documents conflict, use this order:
+Use the authority order defined in `AGENTS.md` and `ENGINEERING_PROCESS.md`. In public documentation, the practical order is:
 
-1. security policy and licence obligations;
-2. governance and review policy;
-3. architecture and data-format contracts;
-4. code-quality standard;
-5. user and development guides;
-6. examples and issue discussions.
+1. legal, licence, security, and protected-file restrictions;
+2. governance and the engineering process;
+3. the active current task and accepted durable decisions;
+4. architecture, design, and data-format contracts;
+5. the validation policy;
+6. code-quality, development, and user guides;
+7. examples, historical records, and issue discussion.
 
-A merged architecture decision or schema migration may supersede an older section. The change must update the affected documentation in the same pull request.
+A merged decision or migration may supersede an older section. Update the owning documentation rather than adding another competing rule.
 
 ## Current product status
 
@@ -130,7 +134,7 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - ordinary optional O3DE Tool Gem packaging with exact manifest/provenance validation, deterministic project selection, cross-module ExtensionAPI registration/revocation, host-owned atomic extension documents, and registered Road Atlas and Avalon AI editor panes;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
-Automatic GitHub-hosted static validation now runs for relevant pull requests and pushes to `main`; exact-head O3DE configure, build, compiled tests, and Windows evidence remain separate mandatory gates.
+Automatic GitHub-hosted static, canonical-interchange compiled, and Windows-prerequisite jobs run for relevant events. Additional host, UI, installer, deployment, runtime, signing, or release evidence is required only when the changed surface or owning design makes that evidence applicable.
 
 The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, visual game-content browser and preview products, typed visual selector binding, and remaining specialised domain tools are not complete.
 

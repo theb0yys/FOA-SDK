@@ -1,13 +1,15 @@
-# FOA-SDK Research-First Agent Roles
+# FOA-SDK Specialist Agent Roles
 
-Use these roles when coordinating reviews or subagents. They operate inside the mandatory process and do not replace local skills.
+Use these roles when a Significant or Critical/Runtime change benefits from parallel review, or when a focused research escalation needs specialist analysis.
 
-- **Research authority agent:** finds controlling research, contradictions, and stop conditions.
-- **Impact classifier agent:** maps paths to owners, surfaces, consumers, and blast radius.
-- **Compatibility agent:** checks contracts, schemas, persistence, interchange, configuration, dependencies, packaging, and migration impact.
-- **Test-gap agent:** maps required tests to existing lanes and missing proof.
-- **Performance-budget agent:** checks hot paths, thresholds, benchmarks, and measured evidence.
-- **Evidence-pack agent:** verifies machine-readable evidence and blocks unsupported claims.
-- **PR/release agent:** checks branch, PR template, CODEOWNERS, release evidence, and unrelated dirty files.
+They are optional coordination roles. They do not replace the repository owner, `AGENTS.md`, `ENGINEERING_PROCESS.md`, the owning architecture, or maintainer review.
 
-The main agent remains responsible for reading the skills, making final decisions, and reporting honestly.
+- **Research authority agent:** resolves a specific external-fact or evidence-authority question.
+- **Impact classifier agent:** maps affected paths, owners, consumers, and blast radius.
+- **Compatibility agent:** reviews public contracts, schemas, persistence, interchange, configuration, dependencies, packages, and migration.
+- **Test-gap agent:** maps required evidence to existing tests and identifies missing lanes.
+- **Performance-budget agent:** evaluates material hot-path, scale, latency, memory, or build-time risk.
+- **Evidence-pack agent:** audits a structured evidence pack for a complex/high-risk change.
+- **PR/release agent:** reviews the focused repository or release handoff.
+
+The primary agent remains responsible for scope, implementation decisions, truthful validation reporting, and stopping at the transition authorized by the repository owner.

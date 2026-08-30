@@ -19,14 +19,14 @@ if str(TOOLS_ROOT) not in sys.path:
 import validate_pr_obligation_policy as policy
 
 
-class PullRequestObligationPolicyTests(unittest.TestCase):
+class PullRequestDeclarationPolicyTests(unittest.TestCase):
     def make_repo(self, root: Path) -> Path:
         workflow = root / policy.WORKFLOW
         workflow.parent.mkdir(parents=True, exist_ok=True)
         workflow.write_text(
             "on:\n"
             "  pull_request:\n"
-            "    types: [ready_for_review]\n"
+            "    types: [opened, synchronize, reopened, ready_for_review]\n"
             "  push:\n"
             "    branches: [main]\n"
             "  workflow_dispatch:\n"
@@ -68,34 +68,37 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
         template = root / policy.TEMPLATE
         template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(
-            "## Mandatory merge obligations\n"
-            "<!-- merge-head:REPLACE_WITH_CURRENT_40_CHARACTER_HEAD_SHA -->\n"
-            + "\n".join(
-                f"- [ ] required <!-- merge-obligation:{identity} -->"
-                for identity in policy.OBLIGATION_IDS
-            ),
+            "## Summary\nsubstantive\n\n"
+            "## Change class\n"
+            "- [ ] Routine <!-- change-class:routine -->\n"
+            "- [ ] Significant <!-- change-class:significant -->\n"
+            "- [ ] Critical <!-- change-class:critical -->\n\n"
+            "## Scope\nsubstantive\n\n"
+            "## Out of scope\nsubstantive\n\n"
+            "## Validation\nPASSED FAILED PARTIAL BLOCKED NOT_RUN NOT_APPLICABLE\n\n"
+            "## Risks and rollback\nsubstantive\n\n"
+            "Validation claims describe only commands and evidence that actually ran\n",
             encoding="utf-8",
         )
 
         runtime = root / policy.RUNTIME
         runtime.parent.mkdir(parents=True, exist_ok=True)
         runtime.write_text(
+            "REQUIRED_SECTIONS\n"
+            "CHANGE_CLASSES\n"
+            "STATUS_TOKENS\n"
             "if draft:\n"
-            "    pass\n"
-            "HEAD_MARKER_RE GIT_SHA_RE head_sha\n"
-            "missing its exact merge-head marker\n"
-            "merge-head marker appears more than once\n"
-            "malformed merge-head marker\n"
-            "merge obligations are stale\n"
-            "incomplete mandatory merge obligations\n"
-            "appears more than once\n"
-            "unsupported obligation markers\n"
-            + "\n".join(f'\"{identity}\"' for identity in policy.OBLIGATION_IDS),
+            "    return\n"
+            "missing required sections\n"
+            "select exactly one change class\n"
+            "has no substantive content\n"
+            "must include an exact validation status\n"
+            "Pull request declaration validation failed\n",
             encoding="utf-8",
         )
         return root
 
-    def test_read_only_exact_head_policy_passes(self) -> None:
+    def test_read_only_proportional_policy_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             policy.validate(self.make_repo(Path(temporary)))
 
@@ -104,8 +107,7 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
             repo = self.make_repo(Path(temporary))
             workflow = repo / policy.WORKFLOW
             workflow.write_text(
-                workflow.read_text(encoding="utf-8")
-                + "pull_request_target:\n",
+                workflow.read_text(encoding="utf-8") + "pull_request_target:\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(
@@ -119,8 +121,7 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
             repo = self.make_repo(Path(temporary))
             workflow = repo / policy.WORKFLOW
             workflow.write_text(
-                workflow.read_text(encoding="utf-8")
-                + "pull-requests: write\n",
+                workflow.read_text(encoding="utf-8") + "pull-requests: write\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(
@@ -143,6 +144,38 @@ class PullRequestObligationPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 policy.PullRequestObligationPolicyError,
                 "git diff --check",
+            ):
+                policy.validate(repo)
+
+    def test_template_requires_each_change_class_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            template = repo / policy.TEMPLATE
+            template.write_text(
+                template.read_text(encoding="utf-8").replace(
+                    "<!-- change-class:critical -->",
+                    "",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                policy.PullRequestObligationPolicyError,
+                "change-class:critical",
+            ):
+                policy.validate(repo)
+
+    def test_legacy_merge_obligation_markers_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = self.make_repo(Path(temporary))
+            template = repo / policy.TEMPLATE
+            template.write_text(
+                template.read_text(encoding="utf-8")
+                + "\n<!-- merge-obligation:receipt -->\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                policy.PullRequestObligationPolicyError,
+                "merge-obligation",
             ):
                 policy.validate(repo)
 

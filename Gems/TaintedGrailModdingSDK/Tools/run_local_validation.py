@@ -40,6 +40,7 @@ VALIDATORS = (
     "validate_repository_structure.py",
     "validate_plugin_packages.py",
     "validate_editor_lifecycle.py",
+    "validate_pr_policy.py",
     "validate_ci_runner_policy.py",
     "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",
@@ -326,9 +327,9 @@ def validation_mode(arguments: argparse.Namespace) -> str:
         return "static-only"
     if arguments.ctest_build_dir is None:
         raise ValidationConfigurationError(
-            "A successful validation claim must include compiled CTest via "
-            "--ctest-build-dir. Use --static-only only for the explicitly "
-            "non-compiled GitHub-hosted validation layer."
+            "A full validation claim must include compiled CTest via "
+            "--ctest-build-dir. Use --static-only for the explicitly "
+            "non-compiled repository validation layer."
         )
     if arguments.skip_source_policy:
         raise ValidationConfigurationError(
@@ -381,7 +382,8 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Run FOA-SDK Python tests, validators, fixtures, pinned O3DE source "
-            "policy, and mandatory compiled Catalog plus CanonicalInterchange CTest coverage."
+            "policy, and configured compiled Catalog plus CanonicalInterchange "
+            "CTest coverage when full mode is selected."
         )
     )
     parser.add_argument("--list", action="store_true")
@@ -406,16 +408,16 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--ctest-build-dir",
         type=Path,
         help=(
-            "Run the mandatory compiled TaintedGrailModdingSDK.Catalog.Tests from "
-            "this configured O3DE build root."
+            "Run compiled TaintedGrailModdingSDK Catalog and CanonicalInterchange "
+            "tests from this configured O3DE build root."
         ),
     )
     mode.add_argument(
         "--static-only",
         action="store_true",
         help=(
-            "Run the non-compiled GitHub-hosted layer only. This mode cannot be "
-            "reported as full or exact-head validation."
+            "Run the non-compiled repository layer only. This mode cannot be "
+            "reported as compiled, host, Editor/UI, or runtime validation."
         ),
     )
     return parser.parse_args(argv)
@@ -470,7 +472,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             print(
                 "FOA-SDK full validation: static checks, fixtures, pinned O3DE "
-                "source policy, and mandatory compiled Catalog CTest coverage.",
+                "source policy, and configured compiled Catalog/CanonicalInterchange "
+                "CTest coverage.",
                 flush=True,
             )
         failures = run_validation_pipeline(arguments, source_policy_engine_root)
@@ -486,12 +489,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if mode == "static-only":
         print(
-            "\nFOA-SDK static validation passed. Pinned O3DE source policy, "
-            "compiled tests, and Windows acceptance remain mandatory exact-head "
-            "gates unless explicitly included above."
+            "\nFOA-SDK static validation passed. No pinned O3DE source-policy, "
+            "compiled, Editor/UI, or Windows operational result is claimed."
         )
     else:
-        print("\nFOA-SDK full validation passed, including compiled Catalog CTest.")
+        print(
+            "\nFOA-SDK full validation passed, including configured compiled "
+            "Catalog and CanonicalInterchange CTest coverage."
+        )
     return 0
 
 

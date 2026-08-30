@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
     paths:
+      - ".codex/**"
       - ".github/**"
       - "Gems/TaintedGrailModdingSDK/**"
       - "Gems/ExternalToolchain/**"
@@ -19,6 +20,7 @@ on:
   push:
     branches: [main]
     paths:
+      - ".codex/**"
       - ".github/**"
       - "Gems/TaintedGrailModdingSDK/**"
       - "Gems/ExternalToolchain/**"
@@ -45,6 +47,9 @@ jobs:
     name: Python, validators, and reviewed range
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      host_required: ${{ steps.classify.outputs.host_required }}
+      windows_required: ${{ steps.classify.outputs.windows_required }}
     steps:
       - name: Check out exact event commit
         uses: actions/checkout@v4
@@ -59,11 +64,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate pull-request declarations
-        if: github.event_name == 'pull_request'
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligations.py --event "$GITHUB_EVENT_PATH"
-
-      - name: Verify exact reviewed range
+      - name: Verify exact reviewed range and classify affected surface
+        id: classify
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -83,10 +85,31 @@ jobs:
           fi
           git cat-file -e "${base_sha}^{commit}"
           git diff --check "$base_sha" "$head_sha" 2>&1 | tee tg-sdk-reviewed-range.log
-          printf 'event=%s\nbase=%s\nhead=%s\n' "$GITHUB_EVENT_NAME" "$base_sha" "$head_sha" > tg-sdk-reviewed-range.txt
+          git diff --name-only "$base_sha" "$head_sha" | tee tg-sdk-changed-paths.txt
 
-      - name: Validate merge-obligation policy contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_obligation_policy.py
+          host_required=false
+          windows_required=false
+          while IFS= read -r path; do
+            case "$path" in
+              o3de.lock.json|TaintedGrailModdingEditor/*|Gems/*/gem.json|Gems/*/Code/*|Plugins/*/*/Gem/*|.github/workflows/tainted-grail-sdk-pr-validation.yml)
+                host_required=true
+                ;;
+            esac
+            case "$path" in
+              o3de.lock.json|TaintedGrailModdingEditor/*|Gems/TaintedGrailModdingSDK/Tools/developer_preview*.py|Gems/TaintedGrailModdingSDK/Tools/validate_developer_preview*.py|.github/workflows/tainted-grail-sdk-pr-validation.yml)
+                windows_required=true
+                ;;
+            esac
+          done < tg-sdk-changed-paths.txt
+
+          echo "host_required=$host_required" >> "$GITHUB_OUTPUT"
+          echo "windows_required=$windows_required" >> "$GITHUB_OUTPUT"
+          printf 'event=%s\nbase=%s\nhead=%s\nhost_required=%s\nwindows_required=%s\n' \
+            "$GITHUB_EVENT_NAME" "$base_sha" "$head_sha" \
+            "$host_required" "$windows_required" > tg-sdk-reviewed-range.txt
+
+      - name: Validate pull-request policy contract
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py --event "$GITHUB_EVENT_PATH"
 
       - name: Run non-compiled TG SDK validation layer
         shell: bash
@@ -103,11 +126,14 @@ jobs:
             tg-sdk-static-validation.log
             tg-sdk-reviewed-range.log
             tg-sdk-reviewed-range.txt
+            tg-sdk-changed-paths.txt
           if-no-files-found: error
           retention-days: 7
 
   canonical-interchange-compiled:
     name: Exact-head O3DE canonical interchange build and tests
+    needs: static-validation
+    if: needs.static-validation.outputs.host_required == 'true'
     runs-on: windows-2022
     timeout-minutes: 180
     env:
@@ -163,6 +189,8 @@ jobs:
 
   windows-prerequisites:
     name: Windows O3DE prerequisites
+    needs: static-validation
+    if: needs.static-validation.outputs.windows_required == 'true'
     runs-on: windows-2022
     timeout-minutes: 30
     env:

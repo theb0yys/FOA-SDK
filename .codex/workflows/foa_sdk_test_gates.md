@@ -1,40 +1,29 @@
 # FOA-SDK Test Gates
 
-## Rule T0: No Generic Test Pass
+Use this workflow when test ownership, evidence separation, or missing coverage needs explicit analysis. The authoritative applicability matrix is `docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md`.
 
-One generic build or test command cannot prove mixed surfaces. Foundation, contracts, UI, plug-ins, interchange, conversion, external toolchain, installer, runtime adapters, migration, packaging, and harness truth require distinct evidence.
+## Rule T0: Match proof to the changed surface
 
-## Rule T1: Architecture Truth Grounding
+One generic command cannot prove mixed surfaces. Select only the evidence layers the change can affect, and keep repository/static, unit/contract, compiled host, Editor/UI, and operational/runtime evidence distinct.
 
-Tests must trace to owned truth, forbidden domains, publisher contracts, consumer boundaries, lifecycle and persistence obligations, degraded inputs, cross-system consequences, and evidence authority.
+## Rule T1: Ground tests in owned behavior
 
-## Rule T2: Critical Test Scale
+Tests should trace to the owning contract, publisher/consumer boundary, lifecycle and persistence obligations, malformed/degraded input, and failure behavior.
 
-Run the affected system-specific critical pack. Shared contracts, foundation spine, schema/migration, release, or harness-authority changes require the full governed pack when available.
+## Rule T2: Focused coverage first
 
-Missing targeted tests must be added with the change or reported as partial/blocked.
+Run the affected system's focused tests. Broader packs apply when a shared contract, foundation spine, schema/migration boundary, build graph, release surface, or harness authority actually changes.
 
-## Rule T2A: Test Executability Classes
+Missing targeted tests must be added with the change or reported as `PARTIAL` or `BLOCKED` when they are required for the claim.
 
-Separate:
+## Rule T3: Optional planning helper
 
-1. local runnable gates;
-2. O3DE configure/build/compiled-test gates;
-3. static interchange/package assertions;
-4. host-heavy or manual Editor/Unity/installer gates;
-5. exact-install Fall of Avalon runtime rows;
-6. non-runnable governed rows.
+Use `.codex/scripts/Get-AgentTestPlan.ps1` when the affected systems or available commands are unclear. Its output is guidance and does not override the engineering-process classification or validation matrix.
 
-Build success is not Editor acceptance, Unity conversion proof, installer proof, or runtime proof.
+## Rule T4: Runtime evidence
 
-## Rule T3: Immediate Commands
-
-Run `.codex/scripts/Get-AgentTestPlan.ps1` and execute its immediate commands for every affected owner system. Use `-ListSystems` when coverage is unclear.
-
-## Rule T4: Runtime Evidence
-
-Runtime-required rows need lawful evidence from the exact game profile, adapter, operation, expected result, observed result, diagnostics, and pass/fail outcome. Otherwise state `runtime sign-off not performed`.
+Runtime-required claims need lawful evidence from the exact profile, adapter, operation, expected result, observed result, diagnostics, and outcome. Otherwise state `runtime sign-off not performed`.
 
 ## Rule T5: Handoff
 
-Report required tests, commands, static assertions, manual rows, runtime rows, non-runnable rows, missing lanes, failures, and the resulting complete/partial/blocked status.
+Report the commands that actually ran, their result, required but missing lanes, and any `NOT_RUN` or `NOT_APPLICABLE` evidence layer. Do not require unrelated proof merely because a helper lists it.

@@ -1,45 +1,38 @@
 # FOA-SDK Artifact and Deployment Review Gate
 
-This workflow is mandatory after coding changes that can produce FOA-SDK Editor binaries, plug-in packages, installer artifacts, Unity conversion outputs, or runtime-adapter binaries.
+Use this workflow when a change can produce, package, install, copy, deploy, sign, or publish FOA-SDK artifacts. It is not applicable to source-only work that cannot affect artifact output.
 
-## Rule D0: Full Relevant Artifact Set Required
+## Rule D0: Identify the affected artifact set
 
-Do not stop at source edits, tests, or a touched-project build. Build the latest reviewed configuration for every affected product component and dependency lane identified by preflight.
+Build or generate the product components required by the changed surface and its owning design. Do not demand unrelated products, but do not stop at a touched subtarget when shared dependencies make a broader artifact set applicable.
 
-Generated output belongs under `FOA_BUILD_ROOT` or another reviewed external output directory. It must not become source truth.
+Generated output belongs under `FOA_BUILD_ROOT` or another reviewed external output directory. It is not source truth.
 
-## Rule D1: Build From Current Source
+## Rule D1: Build from current source
 
-Every claimed artifact must come from a fresh build of the current branch and exact pinned O3DE/toolchain state. Do not reuse stale output.
+Every claimed artifact must come from the current branch and exact pinned dependency/toolchain state. Do not reuse stale output as evidence for a changed source head.
 
-If the complete affected artifact set cannot be identified or built, report the gate as blocked or partial.
+If the required affected artifact set cannot be identified or built, report `PARTIAL` or `BLOCKED`.
 
-## Rule D2: Backup Before Any External Write
+## Rule D2: External writes require explicit authority
 
-Before any explicitly authorised write to an external Unity conversion project, installer staging area, game installation, or deployment location:
+Before any write to an external conversion project, installer staging area, game installation, deployment location, signing service, or publication target:
 
-- confirm every source and destination;
-- preserve backup or rollback paths;
-- record the approval authorising the external write;
-- do not overwrite protected external data.
+- confirm source and destination;
+- preserve backup/rollback or recovery paths where mutation can occur;
+- record the current-task authority for the external operation;
+- protect external/proprietary data.
 
-No editor, plug-in, installer selection, or work order grants deployment authority by itself.
+A preview, manifest, plan, installer selection, or work order does not itself grant deployment authority.
 
-## Rule D3: Verify Artifacts
+## Rule D3: Verify applicable artifacts
 
-Record artifact paths, SHA256 hashes, timestamps, configuration, source commit, pinned dependency identity, and validation receipts. After an authorised copy, compare source and destination hashes and timestamps.
+Record applicable artifact paths, identities/hashes, configuration, source commit, dependency identity, and validation result. After an authorized copy or deployment, compare the evidence required by the owning design.
 
-## Rule D4: Outside-Repository Writes Need Explicit Approval
+## Rule D4: Optional planning helper
 
-External writes require explicit current-task permission and any environment escalation. If approval or access is absent, report deployment as not run, blocked, or partial.
+Use `.codex/scripts/Get-AgentBuildDeployPlan.ps1` when artifact ownership, required products, destinations, or evidence are unclear. Its output is guidance, not authority to create or deploy unrelated artifacts.
 
 ## Rule D5: Handoff
 
-Every final response after an artifact-producing change states:
-
-- full relevant build commands;
-- artifact paths;
-- reviewed external destinations, if any;
-- backup/rollback paths;
-- hash/timestamp verification;
-- whether Editor, Unity conversion, installer, or Fall of Avalon runtime sign-off was performed.
+Report the applicable build/generation commands, resulting artifacts, external destinations and rollback/recovery evidence when an external operation ran, and every `NOT_RUN` or `NOT_APPLICABLE` operational lane.

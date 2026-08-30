@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Fail a ready pull request when mandatory merge obligations remain incomplete."""
+"""Validate that a ready pull request contains a clear, proportional review record."""
 
 from __future__ import annotations
 
@@ -17,113 +17,125 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
-SECTION_HEADING = "## Mandatory merge obligations"
-OBLIGATION_IDS = (
-    "static",
-    "reviewed-range",
-    "host-build",
-    "compiled-tests",
-    "receipt",
-    "ui-evidence",
-    "review",
+REQUIRED_SECTIONS = (
+    "Summary",
+    "Change class",
+    "Scope",
+    "Out of scope",
+    "Validation",
+    "Risks and rollback",
 )
-CHECKBOX_RE = re.compile(
+CHANGE_CLASSES = ("routine", "significant", "critical")
+STATUS_TOKENS = (
+    "PASSED",
+    "FAILED",
+    "PARTIAL",
+    "BLOCKED",
+    "NOT_RUN",
+    "NOT_APPLICABLE",
+)
+SECTION_RE = re.compile(r"^##\s+(?P<name>.+?)\s*$")
+CLASS_RE = re.compile(
     r"^\s*-\s*\[(?P<state>[ xX])\].*?"
-    r"<!--\s*merge-obligation:(?P<identity>[a-z0-9-]+)\s*-->\s*$"
+    r"<!--\s*change-class:(?P<identity>[a-z0-9-]+)\s*-->\s*$"
 )
-HEAD_MARKER_RE = re.compile(
-    r"^\s*<!--\s*merge-head:(?P<sha>[0-9a-f]{40})\s*-->\s*$"
+COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+STATUS_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(token) for token in STATUS_TOKENS) + r")\b"
 )
-GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
-class PullRequestObligationError(RuntimeError):
-    """Raised when a ready pull request is not merge-complete."""
+class PullRequestDeclarationError(RuntimeError):
+    """Raised when a ready pull request lacks a usable review declaration."""
 
 
-def extract_section(body: str) -> list[str]:
-    lines = body.splitlines()
-    try:
-        start = lines.index(SECTION_HEADING) + 1
-    except ValueError as exc:
-        raise PullRequestObligationError(
-            f"Ready pull request body is missing {SECTION_HEADING!r}."
-        ) from exc
-
-    section: list[str] = []
-    for line in lines[start:]:
-        if line.startswith("## "):
-            break
-        section.append(line)
-    return section
-
-
-def validate_body(body: str, *, draft: bool, head_sha: str = "") -> None:
-    if draft:
-        return
-    if GIT_SHA_RE.fullmatch(head_sha) is None:
-        raise PullRequestObligationError(
-            "Ready pull request event is missing a valid 40-character head SHA."
-        )
-
-    records: dict[str, bool] = {}
-    recorded_heads: list[str] = []
-    malformed_head_marker = False
-    for line in extract_section(body):
-        head_match = HEAD_MARKER_RE.match(line)
-        if head_match:
-            recorded_heads.append(head_match.group("sha"))
+def parse_sections(body: str) -> dict[str, list[str]]:
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in body.splitlines():
+        match = SECTION_RE.match(line)
+        if match:
+            current = match.group("name").strip()
+            if current in sections:
+                raise PullRequestDeclarationError(
+                    f"Ready pull request section {current!r} appears more than once."
+                )
+            sections[current] = []
             continue
-        if "merge-head:" in line:
-            malformed_head_marker = True
+        if current is not None:
+            sections[current].append(line)
+    return sections
 
-        match = CHECKBOX_RE.match(line)
+
+def meaningful_text(lines: list[str]) -> str:
+    text = "\n".join(lines)
+    text = COMMENT_RE.sub("", text)
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+
+
+def validate_change_class(lines: list[str]) -> None:
+    records: dict[str, bool] = {}
+    for line in lines:
+        match = CLASS_RE.match(line)
         if not match:
             continue
         identity = match.group("identity")
         if identity in records:
-            raise PullRequestObligationError(
-                f"Mandatory merge obligation {identity!r} appears more than once."
+            raise PullRequestDeclarationError(
+                f"Ready pull request change class {identity!r} appears more than once."
             )
         records[identity] = match.group("state").lower() == "x"
 
-    if malformed_head_marker:
-        raise PullRequestObligationError(
-            "Ready pull request body contains a malformed merge-head marker."
-        )
-    if not recorded_heads:
-        raise PullRequestObligationError(
-            "Ready pull request body is missing its exact merge-head marker."
-        )
-    if len(recorded_heads) != 1:
-        raise PullRequestObligationError(
-            "Ready pull request merge-head marker appears more than once."
-        )
-    if recorded_heads[0] != head_sha:
-        raise PullRequestObligationError(
-            "Ready pull request merge obligations are stale: recorded head "
-            f"{recorded_heads[0]} does not match current head {head_sha}."
-        )
-
-    missing = [identity for identity in OBLIGATION_IDS if identity not in records]
+    missing = [identity for identity in CHANGE_CLASSES if identity not in records]
     if missing:
-        raise PullRequestObligationError(
-            "Ready pull request body is missing mandatory obligation markers: "
-            + ", ".join(missing)
+        raise PullRequestDeclarationError(
+            "Ready pull request is missing change-class markers: " + ", ".join(missing)
         )
 
-    unknown = sorted(set(records) - set(OBLIGATION_IDS))
+    unknown = sorted(set(records) - set(CHANGE_CLASSES))
     if unknown:
-        raise PullRequestObligationError(
-            "Ready pull request body contains unsupported obligation markers: "
+        raise PullRequestDeclarationError(
+            "Ready pull request contains unsupported change classes: "
             + ", ".join(unknown)
         )
 
-    incomplete = [identity for identity in OBLIGATION_IDS if not records[identity]]
-    if incomplete:
-        raise PullRequestObligationError(
-            "Ready pull request has incomplete mandatory merge obligations: "
-            + ", ".join(incomplete)
+    selected = [identity for identity in CHANGE_CLASSES if records[identity]]
+    if len(selected) != 1:
+        raise PullRequestDeclarationError(
+            "Ready pull request must select exactly one change class."
+        )
+
+
+def validate_body(body: str, *, draft: bool, head_sha: str = "") -> None:
+    """Validate a pull-request body.
+
+    `head_sha` is retained for caller compatibility. Hosted checks already bind the
+    validation run to the event head, so the PR body no longer duplicates that SHA.
+    """
+
+    del head_sha
+    if draft:
+        return
+
+    sections = parse_sections(body)
+    missing = [name for name in REQUIRED_SECTIONS if name not in sections]
+    if missing:
+        raise PullRequestDeclarationError(
+            "Ready pull request is missing required sections: " + ", ".join(missing)
+        )
+
+    validate_change_class(sections["Change class"])
+
+    for name in ("Summary", "Scope", "Out of scope", "Validation", "Risks and rollback"):
+        if not meaningful_text(sections[name]):
+            raise PullRequestDeclarationError(
+                f"Ready pull request section {name!r} has no substantive content."
+            )
+
+    validation = meaningful_text(sections["Validation"])
+    if STATUS_RE.search(validation) is None:
+        raise PullRequestDeclarationError(
+            "Ready pull request Validation section must include an exact validation status."
         )
 
 
@@ -132,22 +144,18 @@ def validate_event(event: Mapping[str, object]) -> None:
     if pull_request is None:
         return
     if not isinstance(pull_request, dict):
-        raise PullRequestObligationError("pull_request event payload is malformed.")
+        raise PullRequestDeclarationError("pull_request event payload is malformed.")
+
     body = pull_request.get("body")
     draft = pull_request.get("draft")
-    head = pull_request.get("head")
     if body is None:
         body = ""
-    if (
-        not isinstance(body, str)
-        or not isinstance(draft, bool)
-        or not isinstance(head, dict)
-        or not isinstance(head.get("sha"), str)
-    ):
-        raise PullRequestObligationError(
-            "pull_request body, draft state, or head identity is malformed."
+    if not isinstance(body, str) or not isinstance(draft, bool):
+        raise PullRequestDeclarationError(
+            "pull_request body or draft state is malformed."
         )
-    validate_body(body, draft=draft, head_sha=head["sha"])
+
+    validate_body(body, draft=draft)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -161,14 +169,19 @@ def main() -> int:
     try:
         event = json.loads(arguments.event.read_text(encoding="utf-8", errors="strict"))
         if not isinstance(event, dict):
-            raise PullRequestObligationError("GitHub event payload must be an object.")
+            raise PullRequestDeclarationError("GitHub event payload must be an object.")
         validate_event(event)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, PullRequestObligationError) as exc:
-        print(f"Pull request obligation validation failed: {exc}", file=sys.stderr)
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        PullRequestDeclarationError,
+    ) as exc:
+        print(f"Pull request declaration validation failed: {exc}", file=sys.stderr)
         return 1
+
     print(
-        "Pull request mandatory merge obligations are complete for the exact head "
-        "or the pull request remains draft."
+        "Pull request declaration is complete and proportionate, or the pull request remains draft."
     )
     return 0
 

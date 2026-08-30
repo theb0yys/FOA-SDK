@@ -1,75 +1,92 @@
 # System Test Matrix Template
 
-Use when a code change needs a written test plan. Do not commit a filled matrix unless requested or required.
+Use this optional template when a change needs a written test plan. Do not commit a filled matrix unless requested or required by the owning design.
+
+Select evidence by changed surface and risk. Do not populate unrelated host, UI, runtime, installer, or release rows merely because the template contains them.
 
 ## Change Scope
+
 - Request:
+- Classification:
 - Target paths:
 - Changed surface:
 - Owner system:
 - Shared contracts/routes affected:
-- Impact classification and blast radius:
+- Out of scope:
+- Blast radius:
 
-## Architecture Truth Basis
-- Research read:
+## Owned Behavior
+
+- Governing contract/design:
 - Owned truth:
 - Forbidden domain:
-- Publisher contracts:
-- Consumer boundaries:
+- Publishers and consumers:
 - Lifecycle/persistence obligations:
-- Consequence manifestation:
-- Degraded/fault obligations:
-- Soak/regression risk:
+- Failure/degraded-dependency obligations:
+- Existing focused tests:
+- Consequence if the behavior regresses:
 
-## Required Test Pack
-- Immediate commands:
-- O3DE configure/build/compiled tests:
-- Static interchange/package assertions:
-- Manual Editor/Unity/installer rows:
-- Exact-install runtime rows:
-- Non-runnable governed rows:
+## Applicable Evidence Matrix
+
+| Evidence layer | Applicable? | Command or procedure | Expected proof | Result |
+| --- | --- | --- | --- | --- |
+| L0 repository/static |  |  |  |  |
+| L1 focused unit/contract |  |  |  |  |
+| L2 configure/build/compiled host |  |  |  |  |
+| L3 Editor/UI/manual host |  |  |  |  |
+| L4 installer/deployment/runtime/signing/release |  |  |  |  |
+
+## Focused Test Plan
+
+- Positive behavior:
+- Negative/malformed input:
+- Boundary and ownership:
+- Persistence/migration/round trip:
+- Lifecycle/cleanup:
+- Degraded dependencies:
+- Determinism/idempotency:
 - Existing lanes:
-- Missing lanes:
-- Full governed pack required:
+- Missing lanes to add now:
+- Required but blocked lanes:
+- Explicitly `NOT_APPLICABLE` lanes:
 
-## Test Gap Status
-- Missing foundation lanes:
-- Missing UI lanes:
-- Missing plug-in lanes:
-- Missing conversion/toolchain lanes:
-- Missing installer lanes:
-- Missing runtime-adapter lanes:
-- Missing migration/release lanes:
-- Missing harness lanes:
-- Add-now lanes:
-- Blocked/partial lanes:
+## Compatibility Guard — If Applicable
 
-## Performance Guard Pack
-- Risk/surfaces/hot paths/cardinality:
-- Forbidden shortcuts:
+- Contract/schema/persistence/interchange/configuration/dependency/package impact:
+- Producers/consumers/loaders:
+- Compatibility status:
+- Migration or rejection policy:
+- Static assertions:
+- Runtime loader proof, when the claim requires it:
+
+## Performance Guard — If Applicable
+
+- Material risk and hot path:
+- Representative cardinality:
+- Baseline and threshold:
 - Guard command:
-- Baseline/threshold/result:
 - Configuration/context:
+- Measured result:
 - Missing measurements:
 
-## Compatibility Guard Pack
-- Contract/schema/persistence/interchange/config/dependency/package impact:
-- Producers/consumers/loaders:
-- Status and migration policy:
-- Static assertions:
-- Runtime loader proof:
+## Artifacts and Operational Proof — If Applicable
 
-## Commands and Evidence
-- Commands required/run:
-- Results by executability class:
-- Performance evidence:
-- Artifact/deployment result:
-- Runtime proof:
-- Evidence-pack status:
-- Failed/skipped checks and reasons:
+- Artifacts affected:
+- Build/generation result:
+- External destination:
+- Backup/rollback or recovery:
+- Exact operational procedure:
+- Runtime/installer/release result:
+- Protected-data boundary:
 
-## Verdict
-- Complete:
-- Partial:
-- Blocked:
+## Results
+
+- Exact source head:
+- Commands/procedures actually run:
+- `PASSED`:
+- `FAILED`:
+- `PARTIAL`:
+- `BLOCKED`:
+- `NOT_RUN`:
+- `NOT_APPLICABLE`:
 - Remaining risk:

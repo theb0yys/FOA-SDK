@@ -9,9 +9,33 @@ function Fail([string]$Message) {
     [void]$failures.Add($Message)
 }
 
-$dirs = Get-ChildItem -LiteralPath $skillRoot -Directory |
-    Where-Object { $_.Name -ne 'tests' } |
-    Sort-Object Name
+function Require-Text([string]$RelativePath, [string[]]$Fragments) {
+    $path = Join-Path $repoRoot $RelativePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Fail "Missing required process file: $RelativePath"
+        return
+    }
+    $content = Get-Content -LiteralPath $path -Raw
+    foreach ($fragment in $Fragments) {
+        if ($content -notmatch [regex]::Escape($fragment)) {
+            Fail "$RelativePath missing required text: $fragment"
+        }
+    }
+}
+
+function Forbid-Text([string]$RelativePath, [string[]]$Fragments) {
+    $path = Join-Path $repoRoot $RelativePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Fail "Missing required process file: $RelativePath"
+        return
+    }
+    $content = Get-Content -LiteralPath $path -Raw
+    foreach ($fragment in $Fragments) {
+        if ($content -match [regex]::Escape($fragment)) {
+            Fail "$RelativePath retains prohibited text: $fragment"
+        }
+    }
+}
 
 $expected = @(
     'foa-sdk-research-sentinel',
@@ -29,6 +53,10 @@ $expected = @(
     'foa-migration-release-gates'
 )
 
+$dirs = Get-ChildItem -LiteralPath $skillRoot -Directory |
+    Where-Object { $_.Name -ne 'tests' } |
+    Sort-Object Name
+
 foreach ($name in $expected) {
     if (-not ($dirs.Name -contains $name)) {
         Fail "Missing skill $name"
@@ -39,7 +67,7 @@ foreach ($dir in $dirs) {
     $skill = Join-Path $dir.FullName 'SKILL.md'
     $eval = Join-Path $dir.FullName 'evals/evals.json'
 
-    if (-not (Test-Path -LiteralPath $skill)) {
+    if (-not (Test-Path -LiteralPath $skill -PathType Leaf)) {
         Fail "$($dir.Name): missing SKILL.md"
         continue
     }
@@ -48,13 +76,12 @@ foreach ($dir in $dirs) {
     if ($content -notmatch '^---\r?\n') {
         Fail "$($dir.Name): missing YAML frontmatter"
     }
-
     $namePattern = "(?m)^name:\s*$([regex]::Escape($dir.Name))\s*$"
     if ($content -notmatch $namePattern) {
         Fail "$($dir.Name): name mismatch"
     }
 
-    if (-not (Test-Path -LiteralPath $eval)) {
+    if (-not (Test-Path -LiteralPath $eval -PathType Leaf)) {
         Fail "$($dir.Name): missing evals"
         continue
     }
@@ -86,6 +113,8 @@ $requiredFiles = @(
     'DECISIONS.md',
     'docs/protected-files-policy.md',
     'docs/systems/SYSTEM_INDEX.md',
+    'docs/tainted-grail-sdk/ENGINEERING_PROCESS.md',
+    'docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md',
     'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md',
     '.codex/README.md',
     '.codex/skills/README.md',
@@ -97,121 +126,123 @@ $requiredFiles = @(
     '.codex/workflows/foa_artifact_deploy_gate.md',
     '.codex/checklists/deep_review.md',
     '.codex/checklists/review_record_template.md',
+    '.codex/checklists/system_test_matrix_template.md',
     '.codex/checklists/deep_research_brief_template.md',
     '.codex/checklists/evidence_pack_template.json',
-    '.codex/checklists/system_test_matrix_template.md',
-    '.codex/agents/foa_research_first_agents.md',
     '.codex/scripts/Get-AgentSkillPlan.ps1',
     '.codex/scripts/Get-AgentTestPlan.ps1',
     '.codex/scripts/Get-AgentPerformancePlan.ps1',
     '.codex/scripts/Get-AgentBuildDeployPlan.ps1'
 )
-
 foreach ($file in $requiredFiles) {
-    if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $file))) {
+    if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $file) -PathType Leaf)) {
         Fail "Missing required process file: $file"
     }
 }
 
-$allCodexText = (
-    Get-ChildItem -LiteralPath (Join-Path $repoRoot '.codex') -Recurse -File |
-        Get-Content -Raw
-) -join "`n"
+Require-Text 'AGENTS.md' @(
+    'FOA-SDK Agent Execution Policy',
+    'Research is a tool, not a universal precondition.',
+    'Routine implementation inside accepted architecture does not require'
+)
+Require-Text 'docs/tainted-grail-sdk/ENGINEERING_PROCESS.md' @(
+    'single engineering workflow',
+    '### Routine',
+    '### Significant',
+    '### Critical/Runtime'
+)
+Require-Text '.codex/README.md' @(
+    'not a universal pre-edit gate',
+    'Routine implementation inside accepted architecture does not require'
+)
+Require-Text '.codex/skills/README.md' @(
+    'focused helpers selected by the current task',
+    'optional planning helper'
+)
+Require-Text '.codex/skills/foa-sdk-research-sentinel/SKILL.md' @(
+    'Do not use as a universal gate',
+    'The task needs research escalation'
+)
+Require-Text '.codex/workflows/foa_research_first_process_stack.md' @(
+    'This workflow is **conditional**',
+    'Do not invoke this workflow merely because'
+)
+Require-Text '.codex/workflows/foa_sdk_development_process.md' @(
+    'The public engineering workflow is',
+    'Do not automatically turn a Routine change'
+)
+Require-Text '.codex/scripts/Get-AgentSkillPlan.ps1' @(
+    'Optional helper: selections are based on the current request and target paths.',
+    'Routine work may require no selected skills',
+    'Codex helper selection',
+    'Suggested validation:'
+)
+Forbid-Text '.codex/scripts/Get-AgentSkillPlan.ps1' @(
+    'Complete pre-edit and post-edit deep review.',
+    'Map exact research authority, impact classification, and evidence-pack requirements.',
+    'Required skills:',
+    'Required docs:'
+)
+Require-Text '.codex/scripts/Get-AgentTestPlan.ps1' @(
+    'Optional helper: map test evidence only when ownership or applicability is unclear.',
+    '--keep-going --static-only --skip-source-policy',
+    'This helper may be `NOT_APPLICABLE`',
+    'Suggested tests:',
+    'Suggested commands:'
+)
+Forbid-Text '.codex/scripts/Get-AgentTestPlan.ps1' @(
+    'Immediate Codex commands:',
+    'Required tests:'
+)
+Require-Text '.codex/checklists/deep_review.md' @(
+    'optional checklist',
+    'Do not use it as a universal pre-edit or post-edit gate',
+    'Research only when consequential external facts are unresolved',
+    'Do not invent or execute a follow-on task'
+)
+Forbid-Text '.codex/checklists/deep_review.md' @(
+    'before and after every agent edit',
+    'universal and narrower skills loaded',
+    'next researched stop/process'
+)
+Require-Text '.codex/checklists/review_record_template.md' @(
+    'Complete only the sections applicable to the current change.',
+    'Research Escalation — Only If Triggered',
+    'Maintainer-only transition remaining'
+)
+Forbid-Text '.codex/checklists/review_record_template.md' @(
+    'Next researched stop/process'
+)
+Require-Text '.codex/checklists/system_test_matrix_template.md' @(
+    'Select evidence by changed surface and risk.',
+    'Applicable Evidence Matrix',
+    'Explicitly `NOT_APPLICABLE` lanes'
+)
+Forbid-Text '.codex/checklists/system_test_matrix_template.md' @(
+    'Full governed pack required'
+)
+
+# Check the governing process authorities for imported project context. Optional
+# examples, evaluation prompts, and specialist records are not authority and are
+# intentionally excluded from this semantic check.
+$coreContextFiles = @(
+    '.codex/README.md',
+    '.codex/agents/foa_research_first_agents.md',
+    '.codex/skills/README.md',
+    '.codex/skills/foa-sdk-research-sentinel/SKILL.md',
+    '.codex/workflows/foa_research_first_process_stack.md',
+    '.codex/workflows/foa_sdk_development_process.md',
+    '.codex/scripts/Get-AgentSkillPlan.ps1',
+    '.codex/checklists/deep_review.md',
+    '.codex/checklists/review_record_template.md',
+    '.codex/checklists/system_test_matrix_template.md'
+)
+$coreContextText = ($coreContextFiles | ForEach-Object {
+    Get-Content -LiteralPath (Join-Path $repoRoot $_) -Raw
+}) -join "`n"
 foreach ($forbidden in @('Bannerlord', 'TAOM', 'The Waning Realm', 'TaleWorlds')) {
-    if ($allCodexText -match [regex]::Escape($forbidden)) {
-        Fail "Forbidden source context remains: $forbidden"
-    }
-}
-
-$skillPlan = & (Join-Path $repoRoot '.codex/scripts/Get-AgentSkillPlan.ps1') `
-    -Request 'Change O3DE UI, Unity conversion, runtime adapter, installer, migration, PR and performance gates.' `
-    -TargetPath @('Gems/TaintedGrailModdingSDK/Code/Source/Test.cpp', 'Plugins/RuntimeAdapters/Mono/Test.cs', 'Installer/Test.wxs')
-$skillPlanText = $skillPlan -join "`n"
-foreach ($name in $expected) {
-    if ($skillPlanText -notmatch [regex]::Escape($name)) {
-        Fail "Preflight did not select $name"
-    }
-}
-foreach ($path in @(
-    'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md',
-    '.codex/workflows/foa_capability_execution_contract.md'
-)) {
-    if ($skillPlanText -notmatch [regex]::Escape($path)) {
-        Fail "Preflight did not select capability-execution authority $path"
-    }
-}
-
-$capabilityWorkflowPath = Join-Path $repoRoot '.codex/workflows/foa_capability_execution_contract.md'
-if (Test-Path -LiteralPath $capabilityWorkflowPath) {
-    $capabilityWorkflow = Get-Content -LiteralPath $capabilityWorkflowPath -Raw
-    foreach ($phrase in @(
-        'Build',
-        'Package',
-        'Deploy',
-        'Launch',
-        'Verify',
-        'inert V1',
-        'Preview And Execute',
-        'Deterministic Provider Resolution',
-        'Artifact Ownership And Idempotency',
-        'Rollback Before Execution',
-        'Receipts, Evidence, Assessment, And Promotion'
-    )) {
-        if ($capabilityWorkflow -notmatch [regex]::Escape($phrase)) {
-            Fail "Capability execution workflow missing $phrase"
-        }
-    }
-}
-
-$capabilityContractPath = Join-Path $repoRoot 'docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md'
-if (Test-Path -LiteralPath $capabilityContractPath) {
-    $capabilityContract = Get-Content -LiteralPath $capabilityContractPath -Raw
-    foreach ($phrase in @(
-        'Existing Service Disposition',
-        'Canonical Contract Model',
-        'Lifecycle States',
-        'Deterministic Provider Resolution',
-        'Policy Separation',
-        'Shared Build -> Package -> Deploy -> Launch -> Verify Spine',
-        'Artifact Ownership',
-        'Idempotency',
-        'Rollback',
-        'Migration Batches',
-        'Acceptance Gates',
-        'Prohibited Shortcuts'
-    )) {
-        if ($capabilityContract -notmatch [regex]::Escape($phrase)) {
-            Fail "Capability execution contract missing $phrase"
-        }
-    }
-}
-
-$testPlan = & (Join-Path $repoRoot '.codex/scripts/Get-AgentTestPlan.ps1') `
-    -Request 'Change Foundation UI Unity conversion and runtime adapter.' `
-    -TargetPath @('Gems/TaintedGrailModdingSDK', 'Plugins/RuntimeAdapters')
-$testPlanText = $testPlan -join "`n"
-foreach ($phrase in @('Immediate Codex commands', 'Static package assertions', 'Manual host rows', 'Runtime rows', 'Non-runnable governed rows')) {
-    if ($testPlanText -notmatch [regex]::Escape($phrase)) {
-        Fail "Test plan missing $phrase"
-    }
-}
-
-$performancePlan = & (Join-Path $repoRoot '.codex/scripts/Get-AgentPerformancePlan.ps1') `
-    -Request 'Scan every asset on editor tick and bind UI.'
-$performancePlanText = $performancePlan -join "`n"
-foreach ($phrase in @('Performance risk: High', 'Forbidden shortcuts', 'Required hard performance checks')) {
-    if ($performancePlanText -notmatch [regex]::Escape($phrase)) {
-        Fail "Performance plan missing $phrase"
-    }
-}
-
-$buildPlan = & (Join-Path $repoRoot '.codex/scripts/Get-AgentBuildDeployPlan.ps1') `
-    -Request 'Build O3DE editor Unity conversion installer and runtime adapter.' `
-    -TargetPath @('Gems/TaintedGrailModdingSDK', 'Installer', 'Plugins/RuntimeAdapters')
-$buildPlanText = $buildPlan -join "`n"
-foreach ($phrase in @('Build root', 'Products', 'Required steps')) {
-    if ($buildPlanText -notmatch [regex]::Escape($phrase)) {
-        Fail "Artifact plan missing $phrase"
+    if ($coreContextText -match [regex]::Escape($forbidden)) {
+        Fail "Forbidden inherited source context remains in core process authority: $forbidden"
     }
 }
 
@@ -223,5 +254,5 @@ if ($failures.Count -gt 0) {
 }
 
 if (-not $Quiet) {
-    "PASS FOA-SDK agent skill pack validation: $($dirs.Count) skills, process integration, capability-execution contract, preflight helpers, test gates, performance gates, and artifact gates checked."
+    "PASS FOA-SDK agent helper pack validation: $($dirs.Count) focused skills and progressive-process integration checked."
 }

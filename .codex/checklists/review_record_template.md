@@ -1,97 +1,114 @@
 # Review Record Template
 
-Use internally for complex tasks. Do not commit a filled record unless requested or required.
+Use this optional internal record for Significant or Critical/Runtime work, or for a focused review whose impact cannot be captured clearly in the pull request. Do not commit a filled record unless requested or required by the owning design.
 
-## Request
+Complete only the sections applicable to the current change.
+
+## Request and Classification
+
 - User request:
+- Desired outcome:
+- Classification and rationale:
 - Out of scope:
 - Target paths:
+- Authorized repository transition:
 
-## Skill Preflight
-- Command:
-- Required skills:
-- Warnings:
+## Owning Authority
 
-## Research Read
-- Core docs:
-- Domain research:
+- Owner system:
+- Governing architecture/design/schema:
+- Current task or durable decision:
 - Existing implementation:
-- Existing tests/gates:
+- Existing focused tests:
+- Contradictions or stale instructions affecting this change:
 
-## Research Path
-- Controlling path:
-- Process path:
-- Validation/artifact path:
-- Next researched stop/process:
+## Selected Helpers
 
-## Research Authority
-- Controlling files:
-- Supporting context:
-- Contradictions:
-- Missing/stale authority:
-- Stop conditions:
+- Optional helper command, if used:
+- Selected skills:
+- Relevant warnings:
+- Helpers considered but not applicable:
 
-## Impact Classification
-- Systems:
-- Surfaces:
+## Research Escalation — Only If Triggered
+
+- Exact unanswered consequential claim:
+- Required evidence lane:
+- Method explicitly requested or selected:
+- Sources/evidence inspected:
+- Contradictions or missing proof:
+- Result and confidence:
+- Implementation claim still blocked:
+- Deep Research report/brief path, if applicable:
+
+## Impact
+
+- Systems and owners:
+- Producers and consumers:
 - Public contracts/schemas:
-- Persistence/config/build/runtime/UI impact:
-- Consumers and chains:
+- Persistence/configuration/build/UI/runtime/release impact:
 - Blast radius:
+- Protected-data or security boundary:
 
-## Protected Files
-- Nearby:
-- Avoided:
-- Permission needed:
+## Compatibility and Migration — If Applicable
 
-## Compatibility Plan
-- Producers/readers/writers/loaders:
-- Compatibility status:
-- Migration policy:
-- Static assertions:
-- Runtime loader proof:
+- Readers/writers/loaders:
+- Backward/forward compatibility:
+- Migration or unsupported-version rejection:
+- Downgrade/rollback behavior:
+- Malformed/degraded dependency behavior:
+- Required negative coverage:
 
-## Test Plan
-- Immediate commands:
-- O3DE build/test commands:
-- Static assertions:
-- Manual Editor/Unity/installer rows:
-- Runtime rows:
-- Non-runnable rows:
-- Missing lanes:
+## Test and Validation Plan
 
-## Performance Plan
-- Risk and surfaces:
-- Forbidden shortcuts:
-- Hot paths/cardinality:
-- Guard/baseline/threshold/result:
+- Applicable evidence layers:
+- Focused commands:
+- Broader configure/build/compiled commands, if applicable:
+- Manual Editor/UI rows, if applicable:
+- Operational/runtime/installer/release rows, if applicable:
+- Non-runnable or blocked rows:
+- `NOT_APPLICABLE` rows:
+- Exact results:
+
+## Performance Review — If Applicable
+
+- Material risk and hot path:
+- Representative cardinality:
+- Baseline and threshold:
 - Command/configuration/context:
+- Measured result:
 - Missing proof:
 
-## Evidence Pack
+## Evidence Pack — If Applicable
+
 - Template/path:
-- Static/local/manual/runtime evidence:
-- Skipped/failed/blocked gates:
+- Claim and exact source head:
+- Evidence by layer:
+- Failed, skipped, stale, or blocked evidence:
+- Independent review/promotion boundary:
 
-## Artifact and Deployment Plan
-- Products to build:
-- Commands:
-- Artifact paths:
-- External destinations:
-- Approval/backup/hash/timestamp:
+## Artifact or External Operation — If Applicable
 
-## GitHub Plan
-- Branch/commit/PR scope:
-- PR template:
-- CODEOWNERS:
+- Affected products:
+- Build/generation commands:
+- Artifact paths and identities:
+- External destination:
+- Current-task authority:
+- Backup/rollback or recovery:
+- Hash/timestamp/verification evidence:
+
+## Repository Handoff
+
+- Branch:
+- Commits:
+- Pull request:
+- Changed files:
 - Unrelated files excluded:
-
-## Implementation
-- Smallest safe change:
-- Files expected:
-- Files changed:
+- Requested transition completed:
+- Maintainer-only transition remaining:
 
 ## Verdict
-- Complete/partial/blocked:
+
+- Status (`PASSED`, `FAILED`, `PARTIAL`, `BLOCKED`, `NOT_RUN`, or `NOT_APPLICABLE`):
 - Remaining uncertainty:
-- Next researched stop/process:
+- Protected-data impact:
+- Final authorized next action:

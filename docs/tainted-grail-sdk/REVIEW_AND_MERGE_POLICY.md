@@ -2,207 +2,101 @@
 
 ## Purpose
 
-Review is a safety, quality, and governance control—not a ceremonial step. This
-policy defines what must be proven before implementation, commit, review, and
-merge.
+Review proves that a change is correctly scoped, appropriately validated, and safe to integrate. Review depth follows the change classification in `ENGINEERING_PROCESS.md`.
 
-The validation boundary is defined by
-[CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md): GitHub
-provides an automatic PR static-validation check, while exact-head Windows/O3DE
-configure, build, compiled tests, and UI evidence remain separately recorded host
-gates.
+Command-level validation requirements live in `CI_AND_LOCAL_VALIDATION.md`.
 
-## Gate 1 — Design review before implementation
+## Routine changes
 
-Significant changes require an approved design before code is written, including:
+Routine changes require:
 
-- new editor tools, services, public APIs, or domain systems;
-- schema, identifier, migration, or persistence changes;
-- adapter contracts or runtime-facing work;
-- build, packaging, deployment, save, or rollback behavior;
-- security-sensitive changes or new dependencies;
-- imported upstream systems or licensed assets.
+- focused scope;
+- self-review of the complete diff;
+- DCO-signed commits;
+- automatic/read-only repository validation applicable to the changed paths;
+- focused tests for changed behavior;
+- documentation updates when public behavior or instructions changed;
+- maintainer review before merge.
 
-The design must define the user problem, owning layer, identity and evidence
-rules, persisted data, failure behavior, rollback, security/legal impact, and the
-test plan. Approval authorizes the direction, not the final implementation.
+Routine changes do **not** require an O3DE host build, exact-head receipt, Windows UI evidence, runtime proof, installer evidence, or release evidence unless the changed surface actually requires that layer.
 
-## Gate 2 — Pre-commit self-review
+## Significant changes
 
-Before every commit, review the complete staged diff and confirm:
+Significant changes require all applicable Routine requirements plus:
 
-- the change is scoped and understandable;
-- no secrets, private paths, tokens, proprietary data, or accidental generated
-  output are present;
-- includes and build ownership are explicit;
-- failure paths are fail-closed;
-- stable IDs, exact references, schema versions, and ownership remain correct;
-- documentation and regression tests are included;
-- the applicable validation layer has been run;
-- DCO sign-off is present.
+- a short reviewed design or durable decision before implementation;
+- compatibility and migration/rejection behavior when public contracts or durable data change;
+- configure/build/compiled evidence when the changed surface participates in those layers;
+- expanded negative/malformed/failure coverage appropriate to the contract;
+- explicit dependency/licence review for new dependencies.
 
-For a fast pre-commit/static pass:
+## Critical/Runtime changes
 
-```shell
-git diff --cached --check
-python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
-  --keep-going --static-only --skip-source-policy
-git commit -s -m "Describe the change"
-```
+Critical/Runtime changes require all applicable Significant requirements plus:
 
-The quick static-only command deliberately omits external O3DE source-policy
-validation.
+- explicit threat, permission, and operational boundaries;
+- rollback/recovery design where mutation can occur;
+- exact-head operational evidence from every affected execution layer;
+- runtime/deployment/installer/signing/release evidence only for operations actually affected;
+- an explicit maintainer merge decision.
 
-A full validation claim requires:
+Static inspection or compilation cannot satisfy live operational evidence.
 
-```shell
-python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
-  --keep-going \
-  --engine-root ../o3de \
-  --ctest-build-dir ../foa-build/tg-sdk-developer-preview-0-windows-profile
-```
+## Pull-request requirements
 
-The static-only command must never be described as a source-policy, compiled, or
-exact-head pass.
+Every pull request should state:
 
-## Gate 3 — Pull-request review before merge
+- one change classification;
+- summary;
+- scope and out-of-scope behavior;
+- design/architecture impact where applicable;
+- compatibility/data/rollback impact where applicable;
+- exact validation that actually ran;
+- security/protected-data impact;
+- documentation changes.
 
-Every change to `main` uses a pull request from the existing `foa-development`
-branch or an explicitly maintainer-authorised focused non-`main` branch based on
-the current `main` head.
-
-The pull request must include:
-
-- linked issue or approved design where required;
-- summary, scope, and explicit out-of-scope behavior;
-- architecture and runtime-boundary impact;
-- identity, evidence, schema, persistence, security, privacy, and legal impact;
-- exact commands and results for every relevant test layer;
-- rollback or revert plan;
-- updated documentation.
-
-## Automated-agent path
-
-`AGENTS.md` is the binding authority for repository agents. Agents make only the
-user-requested, researched, validated, DCO-signed file changes on a non-`main`
-working branch, submit the work to `main` by pull request for maintainer audit,
-and leave approval and merge to the maintainer. Agents do not commit directly to
-`main`, control workflows, or mutate branches, refs, pull requests, issues,
-reviews, comments, repository settings, or protected process records unless the
-repository owner explicitly authorises that exact action for the current task.
+The PR template is a communication aid. Read-only CI validates the repository and reviewed range; it does not infer that every possible validation layer applies to every PR.
 
 ## Required merge conditions
 
-A pull request may merge only when all of the following are true:
+A pull request may merge when:
 
-- it is marked ready for review;
-- all commits satisfy DCO requirements;
-- the automatic PR static-validation check completed successfully for the exact
-  reviewed head;
-- the reviewed-range whitespace gate passed;
-- applicable host prerequisites, O3DE configure, and O3DE build passed;
-- the compiled `TaintedGrailModdingSDK.Catalog.Tests` target executed and passed
-  with zero-test matching treated as failure;
-- a merge-ready exact-head validation receipt is verified with
-  `validation_receipt.py verify --require-merge-ready`, its receipt source commit matches the reviewed head,
-  and the verified summary is included in the pull request;
-- the Windows UI gate passed, or the one permitted explicit local maintainer risk
-  acceptance is recorded with a concrete rationale;
-- requested changes and blocking review threads are resolved;
-- documentation, migration behavior, and rollback are current;
-- at least one maintainer approval is recorded;
-- no unresolved security, legal, data-loss, or architectural concern remains.
+- classification and scope are correct;
+- all **applicable** validation for the changed surface passed;
+- DCO requirements are met;
+- blocking review findings are resolved;
+- relevant documentation and migration/rollback notes are current;
+- no unresolved security, legal, data-loss, or architecture concern remains;
+- a maintainer approves.
 
-The automatic static check complements the receipt; it does not replace host
-proof. Host configure, host build, and compiled-test gates remain mandatory.
+Pending, queued, skipped, absent, stale-head, wrong-event, wrong-commit, or zero-test results are not passes.
 
-Pending is not passing. Queued, waiting, skipped, approval-blocked, cancelled,
-missing, stale-head, and zero-test runs are not successful evidence.
+## Exact-head evidence
 
-## Review depth by risk
+Exact-head receipts are required for Critical/Runtime changes and for Significant changes whose owning design explicitly requires them. They are optional evidence for Routine work.
 
-### Low risk
+A receipt records executed evidence. It is not a signature, maintainer approval, or runtime proof beyond the commands it contains.
 
-Examples include documentation corrections, test-only hardening, and internal
-refactors without behavior or schema changes. Review correctness, scope,
-validation, and documentation consistency.
+## Review focus by risk
 
-### Medium risk
+### Routine
 
-Examples include UI workflows, new validation rules, importers, and
-backward-compatible persistence fields. Also review malformed input, failure
-states, accessibility, serialization round trips, and compatibility.
+Review correctness, scope, focused regression coverage, and documentation.
 
-### High risk
+### Significant
 
-Examples include permissions, deployment, process launch, save mutation, runtime
-adapters, breaking schemas, security boundaries, and new dependencies. These
-require an approved design, threat/failure analysis, negative tests, migration
-and rollback proof, and an explicit maintainer merge decision.
+Also review contract boundaries, compatibility/migration, failure behavior, dependencies, and build/test integration.
 
-## Reviewer responsibilities
+### Critical/Runtime
 
-Reviewers must:
-
-- inspect the complete diff and its design context;
-- check code, tests, schemas, build ownership, and documentation together;
-- reason through failure paths and adversarial input;
-- distinguish blockers from optional preferences;
-- verify that every claimed result belongs to the exact reviewed head;
-- confirm the automatic static check and exact-head receipt prove different,
-  complementary layers;
-- revisit approval after material changes;
-- avoid approving code they do not understand.
-
-## Author responsibilities
-
-Authors must:
-
-- keep changes reviewable and focused;
-- respond to every blocking comment;
-- add regression tests for repaired defects;
-- avoid suppressions or broad exceptions used only to obtain a green result;
-- request re-review after material changes;
-- update the PR description when the review scope or evidence changes;
-- never present a syntax-only, static-only, queued, absent, or zero-test result as
-  a successful full repository build.
-
-## Self-authored maintainer changes
-
-Maintainers follow the same gates. Independent review is preferred. When no
-second qualified reviewer is available, document that limitation and provide
-stronger exact-head evidence. High-risk changes must not be merged without
-external review unless an active security or data-loss emergency requires a
-scoped mitigation.
-
-## Emergency exceptions
-
-An emergency exception is limited to an active vulnerability, data-loss defect,
-or unsafe release. The mitigation must be minimal, the exception recorded, and
-normal review and validation completed immediately afterward.
-
-## Merge method
-
-For pull requests, use a normal merge commit unless squash or rebase has a
-documented reason. The selected method must preserve DCO and useful attribution.
-
-## After merge
-
-1. Confirm `main` points to the accepted merge commit.
-2. Synchronize `foa-development` to that commit when it remains the active development branch.
-3. Confirm the push-to-main static workflow ran for the merge commit.
-4. Record post-merge exact-head validation only when it actually ran.
-5. Revert promptly if the merged result violates an accepted gate.
+Also review threat model, permissions, adversarial input, rollback/recovery, protected data, exact operational evidence, and failure containment.
 
 ## Prohibited merge behavior
 
-- direct human push to `main`, or automated direct commits outside an exact
-  repository-owner exception for the current task;
-- merge while an enabled required check is pending or failing;
-- merge without an executed compiled test target;
-- merge with a missing or stale exact-head receipt;
-- describe static-only, queued, skipped, absent, or zero-test runs as full passes;
-- merge by deleting tests or weakening validation solely to obtain green status;
-- merge unresolved requested changes, undocumented schema breaks, or legally
-  restricted material;
-- grant runtime permission based only on imported or decompiled information.
+Do not:
+
+- merge failing required checks;
+- describe static-only, queued, skipped, absent, stale, or zero-test evidence as a pass;
+- delete tests or weaken validation solely to obtain green status;
+- merge unresolved security/legal/data-loss issues;
+- infer runtime compatibility or permission from research, source inspection, or compilation alone.

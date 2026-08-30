@@ -1,39 +1,40 @@
 # Root Codex Pack
 
-This directory holds repository-scoped Codex workflow assets for FOA-SDK.
+This directory contains optional repository-scoped helpers for FOA-SDK agents and maintainers.
 
-Skills are mandatory process gates, not optional notes. They package the research-first instructions, protected-files policy, ownership model, compatibility gates, validation, performance, artifact/deployment review, evidence, and handoff rules.
+The authoritative engineering workflow is [`docs/tainted-grail-sdk/ENGINEERING_PROCESS.md`](../docs/tainted-grail-sdk/ENGINEERING_PROCESS.md). Agent repository transitions are governed by [`AGENTS.md`](../AGENTS.md). Validation applicability is governed by [`docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md`](../docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md).
 
-Process entry points:
+## How this pack is used
 
-- `AGENTS.md`
-- `.codex/workflows/foa_sdk_development_process.md`
-- `.codex/workflows/foa_research_first_process_stack.md`
-- `.codex/workflows/foa_capability_execution_contract.md`
-- `.codex/checklists/deep_review.md`
-- `.codex/checklists/review_record_template.md`
-- `.codex/checklists/evidence_pack_template.json`
-- `.codex/checklists/deep_research_brief_template.md`
-- `CURRENT_TASK.md`
-- `DECISIONS.md`
-- `.codex/agents/foa_research_first_agents.md`
-- `.codex/scripts/Get-AgentSkillPlan.ps1`
-- `.codex/scripts/Get-AgentTestPlan.ps1`
-- `.codex/scripts/Get-AgentPerformancePlan.ps1`
-- `.codex/scripts/Get-AgentBuildDeployPlan.ps1`
-- `.codex/workflows/foa_professional_code_performance_gate.md`
-- `.codex/workflows/foa_sdk_test_gates.md`
-- `.codex/workflows/foa_artifact_deploy_gate.md`
-- `.codex/checklists/system_test_matrix_template.md`
+The files under `.codex/` are selected when they fit the current change; they are not a universal pre-edit gate.
 
-Before any edit, activate `foa-sdk-research-sentinel`, add narrower skills selected by preflight, follow the process stack, and complete deep review. Code changes require test and performance preflight. Build-sensitive, conversion, packaging, installer, or runtime-adapter work requires the artifact/deployment preflight.
+- Research skills and workflows apply when consequential external facts are unresolved or research is explicitly requested.
+- Test helpers apply when a change needs system-specific test mapping.
+- Performance helpers apply when the changed path has a material performance risk.
+- Artifact/deployment helpers apply when a change can produce or move artifacts.
+- Capability-execution helpers apply to the accepted Build -> Package -> Deploy -> Launch -> Verify architecture.
+- Checklists and evidence templates are available for complex or high-risk work.
 
-Capability, adapter, build-manifest, package, staging, deployment, launch, verification, rollback, execution-result, release-assembly, signing, provider-execution, or artifact-ownership work must also follow `.codex/workflows/foa_capability_execution_contract.md` and the canonical public contract at `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_CONTRACT.md`. Those documents do not grant implementation or runtime authority.
+Routine implementation inside accepted architecture does not require the complete skill pack, every preflight script, a Deep Research brief, an evidence pack, or a deep-review ceremony.
 
-Every action must remain on the controlling research path. If authority is missing, unclear, contradictory, outdated, or unproven, implementation stops and a Deep Research Brief is produced. Handoff ends with the next researched stop/process or states that none exists.
+## Main resources
 
-Validation:
+- `.codex/workflows/foa_sdk_development_process.md` — agent adapter for the public engineering process.
+- `.codex/workflows/foa_research_first_process_stack.md` — conditional research escalation workflow.
+- `.codex/workflows/foa_capability_execution_contract.md` — capability-execution architecture helper.
+- `.codex/workflows/foa_sdk_test_gates.md` — system-specific test evidence guidance.
+- `.codex/workflows/foa_professional_code_performance_gate.md` — performance-risk guidance.
+- `.codex/workflows/foa_artifact_deploy_gate.md` — artifact and deployment guidance.
+- `.codex/scripts/` — optional planning helpers.
+- `.codex/checklists/` — optional complex-review and evidence templates.
+- `.codex/skills/` — focused conditional skills.
+
+## Validation
+
+The pack structure can be checked with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .codex/skills/tests/Validate-AgentSkills.ps1
 ```
+
+That command validates the helper pack. It does not make every helper mandatory for every repository task.

@@ -309,20 +309,12 @@ function Invoke-GuidedInstallerUserFlow {
 
             $ReadyText = Find-AutomationControl -Root $Window -Name "FOA-SDK is ready" -ControlType ([System.Windows.Automation.ControlType]::Text)
             $FinishButton = Find-AutomationControl -Root $Window -Name "Finish" -ControlType ([System.Windows.Automation.ControlType]::Button)
-            if ($null -ne $ReadyText
-                -and -not $ReadyText.Current.IsOffscreen
-                -and $null -ne $FinishButton
-                -and -not $FinishButton.Current.IsOffscreen
-                -and $FinishButton.Current.IsEnabled) {
+            if ($null -ne $ReadyText -and -not $ReadyText.Current.IsOffscreen -and $null -ne $FinishButton -and -not $FinishButton.Current.IsOffscreen -and $FinishButton.Current.IsEnabled) {
                 break
             }
             Start-Sleep -Milliseconds 250
         }
-        if ($null -eq $ReadyText
-            -or $ReadyText.Current.IsOffscreen
-            -or $null -eq $FinishButton
-            -or $FinishButton.Current.IsOffscreen
-            -or -not $FinishButton.Current.IsEnabled) {
+        if ($null -eq $ReadyText -or $ReadyText.Current.IsOffscreen -or $null -eq $FinishButton -or $FinishButton.Current.IsOffscreen -or -not $FinishButton.Current.IsEnabled) {
             throw "The guided installer did not reach the FOA-SDK ready finish screen: $(Describe-AutomationWindow $Window)"
         }
 

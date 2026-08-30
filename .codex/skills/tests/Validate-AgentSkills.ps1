@@ -156,12 +156,23 @@ Require-Text '.codex/workflows/foa_sdk_development_process.md' @(
     'Do not automatically turn a Routine change'
 )
 
-$contextFiles = Get-ChildItem -LiteralPath (Join-Path $repoRoot '.codex') -Recurse -File |
-    Where-Object { $_.FullName -ne $PSCommandPath }
-$allCodexText = ($contextFiles | Get-Content -Raw) -join "`n"
+# Check the governing process authorities for imported project context. Optional
+# examples, evaluation prompts, and specialist records are not authority and are
+# intentionally excluded from this semantic check.
+$coreContextFiles = @(
+    '.codex/README.md',
+    '.codex/agents/foa_research_first_agents.md',
+    '.codex/skills/README.md',
+    '.codex/skills/foa-sdk-research-sentinel/SKILL.md',
+    '.codex/workflows/foa_research_first_process_stack.md',
+    '.codex/workflows/foa_sdk_development_process.md'
+)
+$coreContextText = ($coreContextFiles | ForEach-Object {
+    Get-Content -LiteralPath (Join-Path $repoRoot $_) -Raw
+}) -join "`n"
 foreach ($forbidden in @('Bannerlord', 'TAOM', 'The Waning Realm', 'TaleWorlds')) {
-    if ($allCodexText -match [regex]::Escape($forbidden)) {
-        Fail "Forbidden inherited source context remains outside the validator: $forbidden"
+    if ($coreContextText -match [regex]::Escape($forbidden)) {
+        Fail "Forbidden inherited source context remains in core process authority: $forbidden"
     }
 }
 

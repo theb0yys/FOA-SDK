@@ -4,7 +4,7 @@
 
 This document is the single validation matrix for FOA-SDK. Validation requirements are selected by changed surface and risk, not by a universal checklist.
 
-Automated validation is read-only.
+Automated validation is read-only with respect to repository state and external protected systems. A bounded installer smoke may mutate only its disposable hosted-runner installation/temp state; it must not touch game files, saves, user machines, releases, or repository state.
 
 ## Evidence layers
 
@@ -35,7 +35,8 @@ Examples include:
 
 - Developer Preview prerequisites/configure;
 - affected O3DE build targets;
-- focused CTest with `--no-tests=error`.
+- focused CTest with `--no-tests=error`;
+- exact-head compilation of the Windows installer front door.
 
 A missing executable or zero matching tests is a failure.
 
@@ -49,7 +50,7 @@ Screenshots and logs must exclude private paths and protected/proprietary conten
 
 Proves an operation that leaves the authoring host or can mutate external state: installer lifecycle, deployment, rollback, save behavior, runtime adapter behavior, Fall of Avalon launch/verification, signing, or publication.
 
-L4 evidence is operation-specific. One L4 lane does not prove another.
+L4 evidence is operation-specific. One L4 lane does not prove another. A disposable-runner installer fixture can prove the installer control path and guided finish actions while still not proving the complete packaged O3DE payload, manual visual-quality inspection, signing, or release publication.
 
 ## Validation matrix
 
@@ -91,24 +92,42 @@ There is no `pull_request_target` trigger. Validation must not push commits, mov
 - runs `git diff --check`;
 - validates the pull-request policy contract;
 - runs the non-compiled repository validation layer;
-- classifies whether the changed paths can affect the O3DE host/build or Windows prerequisite surfaces.
+- classifies whether the changed paths can affect the O3DE host/build, Windows prerequisite, or Windows installer surfaces.
 
 ### Conditional host jobs
 
 The host/build jobs are conditional:
 
 - `canonical-interchange-compiled` runs only when C++/CMake/Gem/project/O3DE-lock or validation-workflow paths can affect the compiled host surface;
-- `windows-prerequisites` runs only when Developer Preview, project, O3DE-lock, or validation-workflow paths can affect Windows prerequisites.
+- `windows-prerequisites` runs only when Developer Preview, project, O3DE-lock, or validation-workflow paths can affect Windows prerequisites;
+- `windows-installer-smoke` runs only when Windows installer launcher, packaging, installer-test, or validation-workflow paths can affect the installer front door.
 
-Documentation-only, governance-only, `.codex` helper-only, PR-template-only, and unrelated Python-policy changes do not wait on O3DE configure/build jobs merely for ceremony.
+Documentation-only, governance-only, `.codex` helper-only, PR-template-only, and unrelated Python-policy changes do not wait on O3DE configure/build or installer jobs merely for ceremony.
 
 When selected, the canonical-interchange job uses pinned `windows-2022`, checks out the exact pinned O3DE commit, builds with bounded `--parallel 2`, and executes CTest with `--no-tests=error`.
 
 When selected, the Windows-prerequisite job checks the pinned O3DE policy surface and Developer Preview prerequisites. It does not claim a full Editor build.
 
+When selected, `windows-installer-smoke` uses a disposable `windows-2022` runner and `Installer/Tests/WindowsInstallerLauncher/Invoke-FoaInstallerWindowsSmoke.ps1`. The smoke:
+
+- builds a bounded self-contained `FOA-SDK.exe` fixture whose `--self-test` is deterministic;
+- creates an MSI fixture with `INSTALL_MANIFEST.json`, `SHA256SUMS`, and the launcher;
+- builds the exact event-head self-contained `FOA-SDK-Installer.exe` with that MSI embedded;
+- constructs the normal WinForms wizard through `--smoke-test`;
+- performs a real Windows Installer clean install;
+- requires installed-file SHA-256 validation followed by startup self-test validation;
+- deliberately damages the installed launcher and proves Repair restores the reviewed bytes;
+- builds a bad-integrity MSI fixture and proves the installer refuses to report success;
+- uses Windows UI Automation to open the real `FOA-SDK Setup` window, select **Install**, and wait for the **FOA-SDK is ready** finish screen;
+- verifies **Open FOA-SDK** and **Create desktop shortcut** are selected by default, selects **Finish**, proves the installed entry point was launched, and verifies the desktop shortcut targets that installed `FOA-SDK.exe`;
+- uninstalls every fixture installation and proves an external workspace sentinel survives;
+- preserves a machine-readable smoke summary and installer logs as hosted-runner evidence.
+
+This automatic smoke proves the exact installer executable/control path and the guided finish actions on Windows against the bounded fixture payload. It does **not** prove the complete multi-GB O3DE product payload, the canonical MSI's Start Menu registration, manual visual quality, code signing, distribution provenance, or public release behavior.
+
 A skipped conditional job is `NOT_APPLICABLE` for that reviewed path set, not a pass or failure.
 
-The installer workflow builds the compiled Catalog test target, the O3DE
+The canonical installer workflow builds the compiled Catalog test target, the O3DE
 `INSTALL` target, and the installed `FOA-SDK.exe` launcher with `--parallel 2`.
 It copies that launcher into the install layout, hash-compares it with the
 reviewed build output, and inventories only the O3DE install root. Inventory
@@ -150,7 +169,9 @@ Receipts must be stored outside the repository. A receipt hash detects modificat
 
 ## Manual workflows
 
-Host-heavy Editor, repository-hygiene, foundation, and installer workflows remain manual/read-only where currently configured. They must not write repository state.
+Host-heavy Editor, repository-hygiene, foundation, and the **canonical full-product installer/package workflow** remain manual/read-only where currently configured. They must not write repository state.
+
+The bounded automatic `windows-installer-smoke` is not a release/package workflow and cannot supply redistribution review metadata, sign, publish, deploy, or operate on protected game data.
 
 A general-purpose self-hosted runner must not execute public pull-request code. Any future self-hosted design requires isolated disposable infrastructure, no personal data or unrelated credentials, restricted triggers, and explicit operator ownership.
 

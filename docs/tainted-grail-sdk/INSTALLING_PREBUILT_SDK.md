@@ -1,160 +1,61 @@
-# Installing the Prebuilt Windows SDK
+# Installing FOA-SDK on Windows
 
 ## Current availability
 
-The prebuilt installer is a development-channel capability and is not yet a
-supported public release. Use only an artifact supplied from an exact reviewed
-repository commit. Current artifacts are unsigned, so Windows may display an
-unrecognized-app warning. Do not treat that warning as proof of either safety or
-malice; verify the supplied checksums and provenance before deciding to run it.
+FOA-SDK is still in development. Use the installer artifact supplied for the build you intend to test.
 
 ## Requirements
 
 - Windows 64-bit;
-- sufficient space for the prebuilt O3DE Editor and SDK;
-- a writable location for TG SDK workspaces and generated data;
-- no Git, Python, CMake, Visual Studio, or O3DE source build.
+- enough free disk space for FOA-SDK;
+- a writable installation location.
 
-A legitimate FoA installation is needed only when you configure a real game
-profile. The installer does not discover, modify, launch, or deploy to FoA.
+No Git, Python, CMake, Visual Studio, engine checkout, separate editor installation, or source build is required for the normal prebuilt install.
 
-## Verify the artifact
+## Install
 
-The standard artifact is the `installer` folder containing `FOA-SDK-Installer.exe`
-and `FOA-SDK-Installer.exe.sha256`. Compare the executable SHA-256 with the
-sidecar before running it. The checksum verifies the downloaded bytes against
-the reviewed artifact metadata; current development artifacts remain unsigned,
-so it is not a publisher signature.
+1. Run `FOA-SDK-Installer.exe`.
+2. Choose the folder where FOA-SDK should be installed.
+3. Select **Install**.
+4. Wait while the installer copies and registers FOA-SDK.
+5. Wait for the automatic **Validating installation** stage. The installer checks the installed files and startup requirements before it reports success.
+6. On the finish screen, choose whether to keep **Open FOA-SDK** and **Create desktop shortcut** selected.
+7. Select **Finish**.
 
-For a portable ZIP, compare its SHA-256 value with the adjacent `.sha256` file.
-After extraction, retain these files at the product root:
+The Start Menu entry is created automatically. The optional desktop shortcut points to the installed `FOA-SDK.exe` application.
 
-- `INSTALL_MANIFEST.json` — exact product, commit, review, and file inventory;
-- `SHA256SUMS` — checksums for every manifest payload file and the manifest;
-- `BUILD_PROVENANCE.json` — source and inventory binding;
-- `SBOM.spdx.json` — SPDX 2.3 file inventory;
-- `NOTICES.txt` and `THIRD_PARTY_PACKAGES.json` — redistribution-review inputs.
+That is the complete normal setup flow. The installer does not ask for engine paths, project files, tool profiles, game paths, package fingerprints, or internal configuration files.
 
-Missing or mismatched metadata is a failed artifact. Do not substitute files
-from another build or copy raw files into the installation.
+## Opening FOA-SDK
 
-## Executable wizard installation
+Open FOA-SDK from any of these user-facing entry points:
 
-1. Close any running O3DE Editor and Asset Processor instances.
-2. Open the `installer` folder.
-3. Run the reviewed `FOA-SDK-Installer.exe`.
-4. Select **Install or upgrade the complete FOA-SDK**.
-5. Choose the default per-user location or another absolute writable location.
-6. Review the displayed MSI SHA-256 and external-workspace boundary, then select
-   **Apply**.
-7. Leave **Open Tool Wizard** selected to configure the local workspace and
-   optional tool paths.
-8. Leave **Launch FOA-SDK** selected, or open `FOA-SDK.exe` later from the
-   **Tainted Grail FoA SDK** Start Menu folder or the installed SDK `bin` folder.
+- the Start Menu;
+- the optional desktop shortcut;
+- the installed `FOA-SDK.exe`.
 
-The executable contains the reviewed MSI and verifies its captured bytes before
-starting Windows Installer. No Python, Git, CMake, Visual Studio, source checkout,
-or separately installed .NET runtime is required.
+`FOA-SDK.exe` is the application entry point. The bundled editor/runtime implementation is internal to the installed product and should not be launched or configured separately.
 
-The installed Editor is always started by the installed launcher, not by a
-user-selected engine binary. The Start Menu entry targets:
+On first launch, FOA-SDK prepares the writable per-user application state it needs automatically. Users should not need to correlate or edit internal JSON files to start the application.
 
-```text
-<install-root>\bin\Windows\profile\Default\FOA-SDK.exe
-```
+## Installation validation
 
-`FOA-SDK.exe` resolves the self-contained install root by walking upward from
-its own path until it finds `INSTALL_MANIFEST.json` and
-root `engine.json` plus `TaintedGrailModdingEditor\project.json`. It then starts the bundled
-`Editor.exe` from `bin\Windows\profile\Default` with:
+A successful file-copy stage is not enough for the installer to show **FOA-SDK is ready**.
 
-```text
---engine-path <install-root>
---project-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project
---project-cache-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\Cache
---project-user-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\user
---project-log-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\user\log
-%LOCALAPPDATA%\O3DE\TGEditor\installed\project\Levels\DefaultLevel\DefaultLevel.prefab
-```
+After Windows installation completes, setup automatically runs the installed product's self-test. That check verifies the required self-contained product layout and the writable startup state needed to open FOA-SDK. If validation fails, setup reports the installation as incomplete instead of launching a broken editor.
 
-`FOA-SDK.exe --self-test` checks the manifest, engine metadata, bundled project,
-Editor, startup level, and writable local app-data launch paths without
-launching the Editor. An actionable error asks you to repair or reinstall when
-that layout is incomplete, or to fix the Windows user profile when local
-app-data cannot host Editor state. The launcher copies the packaged `External`
-Gem roots and project into `%LOCALAPPDATA%\O3DE\TGEditor\installed`, including
-`asset_processor.setreg`, so Asset Processor can update its branch token outside
-the installed payload and on the same drive as the launched project.
+## Updating, repairing, or uninstalling
 
-The Tool Wizard is separate from Windows Installer. It creates or records an
-external workspace, optional O3DE Editor path, optional Unity Editor and
-conversion project paths, and optional local Tainted Grail install path. It saves
-`%LOCALAPPDATA%\FOA-SDK\ToolWizard\tool-profile.local.json`. Conversion and
-deployment remain preview/readiness states only; the Tool Wizard does not run
-Unity conversion, deploy adapters, or write into the game.
+For normal users, Windows **Settings → Apps → Installed apps** is the maintenance surface for uninstalling the product.
 
-Keep real workspaces, imported evidence, generated output, staging, deployment,
-and FoA diagnostic data outside the installation directory. Those external
-locations are not installer-owned and must survive repair, upgrade, and
-uninstall.
-
-## Repair, upgrade, and uninstall
-
-Run the same reviewed executable and select **Repair** or **Uninstall**. Windows
-**Settings → Apps → Installed apps → Tainted Grail FoA Modding SDK** remains the
-standard fallback for uninstall.
-
-To update an installed SDK, run a newer reviewed `FOA-SDK-Installer.exe` whose
-embedded MSI uses the same Upgrade Code and a newer version. That is a Windows
-Installer major upgrade: it replaces product-owned files and keeps external
-workspaces outside the install root. Do not rename a rebuild to impersonate a
-new version, install an older version over a newer one, or copy raw build output
-into an installed product.
-
-Repair restores product-owned files from the exact MSI. It does not validate or
-repair external workspaces. Uninstall removes product-owned files and leaves
-external workspace data untouched.
-
-## Direct MSI recovery
-
-The reviewed MSI is retained as a separate development artifact for Windows
-Installer recovery and operator diagnosis. Running it directly provides the
-same product payload and lifecycle registration, but the standard user path is
-the executable wizard. Never pair the executable with an MSI or checksum from a
-different reviewed build.
-
-## Portable ZIP
-
-Extract the ZIP to a new empty directory; do not overlay another version. Run:
-
-```text
-bin\Windows\profile\Default\FOA-SDK.exe
-```
-
-The ZIP and MSI contain the same staged manifest payload. The ZIP has no Windows
-Installer repair or uninstall registration; remove its extraction directory
-manually only after confirming that no workspace was placed inside it.
-
-Update a portable ZIP by extracting the newer reviewed ZIP to a new empty
-directory and moving only external workspace references as needed; do not merge
-two product roots.
+Running a newer FOA-SDK installer performs the supported update path for the installed application. Repair, uninstall, quiet setup, diagnostic logging, and development tool configuration remain available to maintainers and automated readiness tests, but are intentionally not part of the normal setup screens.
 
 ## Troubleshooting
 
-- **Need evidence for a failing setup path:** rerun the reviewed installer with
-  the Windows readiness smoke from
-  `Installer\Tests\WindowsFunctionalReadiness\Invoke-FoaWindowsFunctionalReadiness.ps1`.
-  It captures MSI logs, command logs, the Tool Wizard profile copy, and
-  `functional-readiness-summary.json`.
-- **Executable checksum mismatch:** stop and obtain a new reviewed artifact.
-- **Manifest missing:** run the executable's Repair operation or obtain the complete artifact.
-- **Editor/project missing:** run Repair; do not point the launcher at an
-  arbitrary `Editor.exe`.
-- **Checksum mismatch:** stop and obtain a new reviewed artifact.
-- **Editor opens without TG SDK panes:** record the exact artifact version,
-  source commit, launcher error/log, and complete manual Editor UI checklist.
-- **Upgrade refused:** retain the installer log, uninstall the conflicting development build, preserve
-  external workspaces, then install the reviewed replacement.
+- **Setup fails during installation:** close the installer, make sure the selected folder is writable, and run setup again.
+- **Validation fails:** run the installer again or repair/reinstall FOA-SDK. Do not copy individual internal files from another build into the installation.
+- **FOA-SDK does not open after a successful install:** launch it from the Start Menu or desktop shortcut. If it still fails, record the exact FOA-SDK build and the error shown by the application.
+- **Desktop shortcut was not created:** FOA-SDK remains installed; open it from the Start Menu. The shortcut can be recreated by running setup again.
+- **Updating an older development build fails:** uninstall the conflicting development build through Windows Installed apps, then install the replacement build.
 
-See [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md)
-for the build, review, trust, and non-release boundary.
+The goal of the prebuilt package is that installing and opening FOA-SDK behaves like a normal self-contained Windows application. Internal package, engine, project, and validation machinery must remain implementation details rather than setup requirements.

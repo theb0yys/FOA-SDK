@@ -35,7 +35,7 @@ internal sealed record InstallerOptions(
         bool quiet = false;
         bool smokeTest = false;
         bool launchAfterInstall = false;
-        bool openToolWizardAfterInstall = true;
+        bool openToolWizardAfterInstall = false;
         bool toolWizardOnly = false;
         bool noDialog = false;
         bool saveToolProfile = false;
@@ -169,7 +169,7 @@ internal sealed record InstallerOptions(
     public static string DefaultInstallRoot() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Programs",
-        "Tainted Grail FoA SDK");
+        "FOA-SDK");
 
     public static string HelpText() =>
         "Usage: FOA-SDK-Installer.exe [--msi <reviewed.msi>] "

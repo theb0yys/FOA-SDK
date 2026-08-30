@@ -358,14 +358,14 @@ namespace TaintedGrailModdingSDK
         }
 
         const bool explicitSelection = !explicitInstallPath.empty();
-        if (detected.m_changed && (!currentProfileReady || explicitSelection))
+        if (detected.m_gameProfileComplete
+            && detected.m_changed
+            && (!currentProfileReady || explicitSelection))
         {
             if (PersistDetectedWorkspace(detected.m_workspace))
             {
                 m_persistenceStatus->setText(
-                    detected.m_gameProfileComplete
-                        ? tr("Setup is ready. FOA-SDK detected and saved the local configuration automatically.")
-                        : tr("Workspace defaults were saved. Fall of Avalon still needs to be located."));
+                    tr("Setup is ready. FOA-SDK detected and saved the local configuration automatically."));
             }
         }
         else if (detected.m_gameProfileComplete)
@@ -498,6 +498,14 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationStatusWidget::PersistDetectedWorkspace(const WorkspaceModel& workspace)
     {
+        const GameProfile* profile = workspace.FindActiveGameProfile();
+        if (!profile || !profile->IsConfigured())
+        {
+            m_persistenceStatus->setText(
+                tr("Automatic setup is waiting for a complete Fall of Avalon profile before saving."));
+            return false;
+        }
+
         if (!EnsureWorkspaceDirectories(workspace))
         {
             m_persistenceStatus->setText(

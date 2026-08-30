@@ -36,6 +36,15 @@ internal static class Program
                 return RunQuietAsync(payload, options).GetAwaiter().GetResult();
             }
 
+            if (args.Length == 0)
+            {
+                int? expressResult = RunExpressInstallAsync(payload, options).GetAwaiter().GetResult();
+                if (expressResult.HasValue)
+                {
+                    return expressResult.Value;
+                }
+            }
+
             using InstallerWizardForm form = new(payload, options);
             Application.Run(form);
             return form.ExitCode;
@@ -68,6 +77,62 @@ internal static class Program
             }
             return 1;
         }
+    }
+
+    private static async Task<int?> RunExpressInstallAsync(InstallerPayload payload, InstallerOptions options)
+    {
+        string message = "Install the complete FOA-SDK now?"
+            + Environment.NewLine + Environment.NewLine
+            + "The reviewed SDK package has already been SHA-256 verified by this installer."
+            + Environment.NewLine + Environment.NewLine
+            + $"Install location:{Environment.NewLine}{options.InstallRoot}"
+            + Environment.NewLine + Environment.NewLine
+            + $"Reviewed MSI SHA-256:{Environment.NewLine}{payload.Sha256}"
+            + Environment.NewLine + Environment.NewLine
+            + "This installs the SDK, bundled editor project, and FOA-SDK.exe for the current Windows user. "
+            + "External workspaces and Tainted Grail game files are not changed."
+            + Environment.NewLine + Environment.NewLine
+            + "Yes = Install now    No = Advanced options    Cancel = Exit";
+
+        DialogResult choice = MessageBox.Show(
+            message,
+            Title,
+            MessageBoxButtons.YesNoCancel,
+            MessageBoxIcon.Information,
+            MessageBoxDefaultButton.Button1);
+
+        if (choice == DialogResult.No)
+        {
+            return null;
+        }
+        if (choice != DialogResult.Yes)
+        {
+            return 0;
+        }
+
+        InstallerRunResult result = await WindowsInstallerRunner.RunAsync(payload, options);
+        if (!result.Succeeded)
+        {
+            MessageBox.Show(
+                result.Message + Environment.NewLine + Environment.NewLine + $"MSI log: {result.LogPath}",
+                Title,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return result.ExitCode == 0 ? 1 : result.ExitCode;
+        }
+
+        MessageBox.Show(
+            "FOA-SDK installation completed."
+                + Environment.NewLine + Environment.NewLine
+                + $"Installed to:{Environment.NewLine}{options.InstallRoot}"
+                + Environment.NewLine + Environment.NewLine
+                + "FOA-SDK.exe will open the installed SDK editor now.",
+            Title,
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+
+        InstalledEditorLauncher.Launch(options.InstallRoot);
+        return 0;
     }
 
     private static int RunToolWizard(InstallerOptions options)

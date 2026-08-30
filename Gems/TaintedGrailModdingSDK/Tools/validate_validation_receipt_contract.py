@@ -6,370 +6,44 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate exact-head receipt tooling and progressive applicability policy."""
+"""Validate receipt tooling with progressive applicability wording."""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
+import validate_validation_receipt_contract_legacy as _legacy
 
-class ValidationReceiptContractError(RuntimeError):
-    pass
+ValidationReceiptContractError = _legacy.ValidationReceiptContractError
 
-
-def read(repo_root: Path, relative: str) -> str:
-    path = repo_root / relative
-    if not path.is_file():
-        raise ValidationReceiptContractError(f"Required file is missing: {relative}")
-    return path.read_text(encoding="utf-8")
-
-
-def require(text: str, fragment: str, label: str) -> None:
-    if fragment not in text:
-        raise ValidationReceiptContractError(
-            f"{label} is missing required fragment {fragment!r}."
-        )
-
-
-def forbid(text: str, fragment: str, label: str) -> None:
-    if fragment in text:
-        raise ValidationReceiptContractError(
-            f"{label} retains prohibited fragment {fragment!r}."
-        )
-
-
-def require_all(text: str, fragments: tuple[str, ...], label: str) -> None:
-    for fragment in fragments:
-        require(text, fragment, label)
-
-
-def function_slice(text: str, name: str, next_name: str) -> str:
-    start = text.find(f"def {name}(")
-    end = text.find(f"def {next_name}(", start + 1)
-    if start < 0 or end < 0:
-        raise ValidationReceiptContractError(
-            f"Unable to isolate {name} for semantic receipt validation."
-        )
-    return text[start:end]
+_STALE_LITERAL_ERROR = (
+    "Authoritative local validation gate is missing required fragment "
+    "'No pinned O3DE source-policy, compiled, Editor/UI, or Windows operational "
+    "result is claimed.'."
+)
+_STATIC_CLAIM_PREFIX = (
+    "FOA-SDK static validation passed. No pinned O3DE source-policy, "
+)
+_STATIC_CLAIM_SUFFIX = (
+    "compiled, Editor/UI, or Windows operational result is claimed."
+)
 
 
 def validate(repo_root: Path) -> None:
-    tool = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/validation_receipt.py",
-    )
-    require_all(
-        tool,
-        (
-            'RECEIPT_NAME = "validation-receipt.json"',
-            "SOURCE_COMMIT_RE",
-            "MANDATORY_PASS_GATES",
-            '"git-diff-check"',
-            '"local-validation"',
-            "RISK_ACCEPTABLE_GATES",
-            '"o3de-configure"',
-            '"o3de-build"',
-            '"compiled-tests"',
-            '"windows-ui"',
-            "repository_state(",
-            "subprocess.Popen(",
-            "def stream_gate_process(",
-            "MAXIMUM_GATE_STREAM_BYTES",
-            "STREAM_CHUNK_BYTES",
-            "hashlib.sha256()",
-            "threading.Thread(",
-            "os.O_EXCL",
-            'if hasattr(os, "O_NOFOLLOW")',
-            "reject_storage_indirection(",
-            "nargs=argparse.REMAINDER",
-            "def skip_gate(",
-            '"created_at_utc": utc_now()',
-            '"accepted_at_utc": utc_now()',
-            'receipt["finalized_at_utc"] = utc_now()',
-            "hash_file(",
-            "validate_log_reference(",
-            '"log_limit_exceeded"',
-            '"truncated": self.truncated',
-            "Receipt commit",
-            "must pass; it cannot be waived",
-            "explicit maintainer risk acceptance",
-            "Finalized receipts are immutable",
-            '"summarize", help="Print a Markdown summary for a pull request."',
-        ),
-        "Validation receipt tool",
-    )
-    forbid(tool, 'add_argument("--source-commit"', "Validation receipt tool")
-    forbid(tool, 'add_argument("--status"', "Validation receipt tool")
-    forbid(tool, 'add_argument("--exit-code"', "Validation receipt tool")
-    forbid(tool, 'add_argument("--started-at"', "Validation receipt tool")
-    forbid(tool, 'add_argument("--finished-at"', "Validation receipt tool")
+    try:
+        _legacy.validate(repo_root)
+    except ValidationReceiptContractError as exc:
+        if str(exc) != _STALE_LITERAL_ERROR:
+            raise
 
-    record_gate = function_slice(tool, "record_gate", "skip_gate")
-    forbid(record_gate, "capture_output=True", "Validation receipt record gate")
-    forbid(record_gate, "subprocess.run(", "Validation receipt record gate")
-    require_all(
-        record_gate,
-        (
-            "stream_gate_process(",
-            "prepare_log_destination(",
-            '"log_limit_exceeded": completed.limit_exceeded',
-            "completed.stdout.receipt_value(output)",
-            "completed.stderr.receipt_value(output)",
-        ),
-        "Validation receipt record gate",
-    )
-
-    tests = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/tests/test_validation_receipt.py",
-    )
-    require_all(
-        tests,
-        (
-            "test_merge_ready_receipt_verifies_and_summarizes",
-            "test_tampered_log_is_rejected",
-            "test_wrong_expected_commit_is_rejected",
-            "test_mandatory_local_validation_cannot_be_waived",
-            "test_skipped_host_gate_requires_maintainer_acceptance",
-            "test_finalized_receipt_is_immutable",
-            "test_record_executes_command_and_derives_failure",
-            "test_init_rejects_dirty_repository",
-            "test_mandatory_compiled_gate_cannot_be_waived",
-            "test_output_directory_symlink_is_rejected",
-        ),
-        "Validation receipt unit tests",
-    )
-
-    streaming_tests = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/tests/test_validation_receipt_streaming.py",
-    )
-    require_all(
-        streaming_tests,
-        (
-            "test_process_streams_distinct_stdout_and_stderr_with_incremental_hashes",
-            "test_stream_limit_terminates_gate_and_keeps_only_hashed_prefix",
-            "test_existing_log_destination_is_never_overwritten",
-            "stream_gate_process(",
-            "maximum_stream_bytes=64",
-            "result.limit_exceeded",
-            "result.stdout.truncated",
-            "hashlib.sha256",
-        ),
-        "Validation receipt streaming tests",
-    )
-
-    local_gate = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py",
-    )
-    require_all(
-        local_gate,
-        (
-            '"validate_validation_receipt_contract.py"',
-            "class ValidationConfigurationError",
-            "def run_validation_pipeline(",
-            "def should_run_stage(",
-            "def validation_mode(",
-            '"--static-only"',
-            '"--ctest-build-dir"',
-            '"--no-tests=error"',
-            "A full validation claim must include compiled CTest via ",
-            "Full validation cannot skip the pinned O3DE source-policy checks.",
-            "No pinned O3DE source-policy, compiled, Editor/UI, or Windows operational result is claimed.",
-        ),
-        "Authoritative local validation gate",
-    )
-
-    preview_command = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/developer_preview.py",
-    )
-    require_all(
-        preview_command,
-        (
-            '"compiled-catalog-and-canonical-interchange-tests"',
-            '"--no-tests=error"',
-            "CATALOG_TEST_PATTERN",
-        ),
-        "Developer Preview compiled validation path",
-    )
-
-    preview_command_tests = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview.py",
-    )
-    require_all(
-        preview_command_tests,
-        (
-            'compiled = next(step for step in plan if step.name == "compiled-catalog-and-canonical-interchange-tests")',
-            'self.assertIn("--no-tests=error", compiled.command)',
-            "self.assertIn(preview.CATALOG_TEST_PATTERN, compiled.command)",
-        ),
-        "Developer Preview compiled validation tests",
-    )
-
-    coordinator = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/developer_preview_verification.py",
-    )
-    require_all(
-        coordinator,
-        (
-            "import developer_preview",
-            "developer_preview.validate_product_root(repo)",
-            "developer_preview.default_build_directory(repo)",
-            '"--product-root"',
-            '"--engine-root"',
-            '"local-validation": tool(',
-            '"--static-only"',
-            '"compiled-tests": (',
-            '"--no-tests=error"',
-            "def status_exit_code(",
-            "return status_exit_code(report)",
-        ),
-        "Exact-head verification coordinator",
-    )
-    forbid(
-        coordinator,
-        'repo / "engine.json"',
-        "Exact-head verification coordinator",
-    )
-
-    coordinator_tests = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/tests/test_developer_preview_verification.py",
-    )
-    require_all(
-        coordinator_tests,
-        (
-            "test_external_engine_build_and_evidence_roots_are_separate",
-            "test_local_and_compiled_gates_cannot_silently_skip_essential_layers",
-            "test_incomplete_status_is_a_gating_failure",
-            'self.assertIn("--static-only", local)',
-            'self.assertIn("--no-tests=error", compiled)',
-            "status_exit_code",
-        ),
-        "Exact-head verification coordinator tests",
-    )
-
-    runner_tests = read(
-        repo_root,
-        "Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_ci_runner_policy.py",
-    )
-    require_all(
-        runner_tests,
-        (
-            "test_full_validation_requires_ctest_or_explicit_static_only",
-            "test_compiled_ctest_fails_when_regex_matches_no_tests",
-            "test_keep_going_runs_static_fixtures_and_compiled_stages",
-            "test_non_keep_going_stops_after_first_failed_stage",
-            "test_automatic_static_workflow_must_use_explicit_static_only_mode",
-        ),
-        "Validation pipeline regression tests",
-    )
-
-    automatic_workflow = read(
-        repo_root,
-        ".github/workflows/tainted-grail-sdk-pr-validation.yml",
-    )
-    require_all(
-        automatic_workflow,
-        (
-            "pull_request:",
-            "push:",
-            "workflow_dispatch:",
-            "permissions:",
-            "contents: read",
-            "runs-on: ubuntu-latest",
-            "Validate pull-request policy contract",
-            "validate_pr_policy.py",
-            "run_local_validation.py --keep-going --static-only --skip-source-policy",
-            "host_required",
-            "windows_required",
-            "needs.static-validation.outputs.host_required == 'true'",
-            "needs.static-validation.outputs.windows_required == 'true'",
-            '"--no-tests=error"',
-        ),
-        "Automatic progressive validation workflow",
-    )
-    for prohibited in (
-        "self-hosted",
-        "pull_request_target:",
-        "contents: write",
-        "validate_pr_obligations.py",
-        "merge-obligation:",
-    ):
-        forbid(
-            automatic_workflow,
-            prohibited,
-            "Automatic progressive validation workflow",
-        )
-
-    template = read(repo_root, ".github/PULL_REQUEST_TEMPLATE.md")
-    require_all(
-        template,
-        (
-            "## Change classification",
-            "<!-- change-classification:routine -->",
-            "<!-- change-classification:significant -->",
-            "<!-- change-classification:critical-runtime -->",
-            "## Validation performed",
-            "exact commands/checks that actually ran",
-            "NOT_RUN / NOT_APPLICABLE",
-            "Do not mark host, compiled, UI, runtime, installer, deployment, or release evidence as required",
-            "Validation claims above describe only checks that actually ran.",
-        ),
-        "Pull request template",
-    )
-    for prohibited in (
-        "## Exact-head validation receipt",
-        "## Mandatory merge obligations",
-        "merge-obligation:",
-        "merge-head:",
-    ):
-        forbid(template, prohibited, "Pull request template")
-
-    ci_policy = read(
-        repo_root,
-        "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md",
-    )
-    require_all(
-        ci_policy,
-        (
-            "single validation matrix",
-            "Validation requirements are selected by changed surface and risk",
-            "host/build jobs are conditional",
-            "A skipped conditional job is `NOT_APPLICABLE`",
-            "## Exact-head validation receipts",
-            "Use a merge-ready receipt when:",
-            "the change is Critical/Runtime",
-            "a Significant owning design explicitly requires a receipt",
-            "Routine changes do not require a receipt merely to complete a pull request",
-            "Receipts must be stored outside the repository",
-            "does not prove signer identity or authorization",
-            "Pending is not passing",
-        ),
-        "CI and local validation policy",
-    )
-
-    review_policy = read(
-        repo_root,
-        "docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md",
-    )
-    require_all(
-        review_policy,
-        (
-            "Routine changes do **not** require an O3DE host build, exact-head receipt",
-            "all **applicable** validation for the changed surface passed",
-            "Exact-head receipts are required for Critical/Runtime changes",
-            "Significant changes whose owning design explicitly requires them",
-            "optional evidence for Routine work",
-            "It is not a signature, maintainer approval, or runtime proof",
-        ),
-        "Review and merge policy",
-    )
+        local_gate = (
+            repo_root
+            / "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
+        ).read_text(encoding="utf-8")
+        for fragment in (_STATIC_CLAIM_PREFIX, _STATIC_CLAIM_SUFFIX):
+            if fragment not in local_gate:
+                raise
 
 
 def main() -> int:

@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate exact-head receipt tooling, tests, template, and merge policy wiring."""
+"""Validate exact-head receipt tooling and progressive applicability policy."""
 
 from __future__ import annotations
 
@@ -279,32 +279,56 @@ def validate(repo_root: Path) -> None:
             "pull_request:",
             "push:",
             "workflow_dispatch:",
+            "permissions:",
+            "contents: read",
             "runs-on: ubuntu-latest",
+            "Validate pull-request policy contract",
+            "validate_pr_policy.py",
             "run_local_validation.py --keep-going --static-only --skip-source-policy",
+            "host_required",
+            "windows_required",
+            "needs.static-validation.outputs.host_required == 'true'",
+            "needs.static-validation.outputs.windows_required == 'true'",
+            '"--no-tests=error"',
         ),
-        "Automatic static validation workflow",
+        "Automatic progressive validation workflow",
     )
-    forbid(
-        automatic_workflow,
+    for prohibited in (
         "self-hosted",
-        "Automatic static validation workflow",
-    )
+        "pull_request_target:",
+        "contents: write",
+        "validate_pr_obligations.py",
+        "merge-obligation:",
+    ):
+        forbid(
+            automatic_workflow,
+            prohibited,
+            "Automatic progressive validation workflow",
+        )
 
     template = read(repo_root, ".github/PULL_REQUEST_TEMPLATE.md")
     require_all(
         template,
         (
-            "## Exact-head validation receipt",
-            "automatic PR static-validation workflow",
-            "compiled `TaintedGrailModdingSDK.Catalog.Tests`",
-            "validation_receipt.py verify",
-            "--require-merge-ready",
-            "validation_receipt.py summarize",
-            "Do not commit the receipt or logs",
-            "tester-supplied evidence",
+            "## Change classification",
+            "<!-- change-classification:routine -->",
+            "<!-- change-classification:significant -->",
+            "<!-- change-classification:critical-runtime -->",
+            "## Validation performed",
+            "exact commands/checks that actually ran",
+            "NOT_RUN / NOT_APPLICABLE",
+            "Do not mark host, compiled, UI, runtime, installer, deployment, or release evidence as required",
+            "Validation claims above describe only checks that actually ran.",
         ),
         "Pull request template",
     )
+    for prohibited in (
+        "## Exact-head validation receipt",
+        "## Mandatory merge obligations",
+        "merge-obligation:",
+        "merge-head:",
+    ):
+        forbid(template, prohibited, "Pull request template")
 
     ci_policy = read(
         repo_root,
@@ -313,25 +337,18 @@ def validate(repo_root: Path) -> None:
     require_all(
         ci_policy,
         (
-            "automatic pull-request static validation",
-            "--static-only",
-            "--ctest-build-dir",
-            "compiled Catalog CTest",
-            "does not claim an O3DE build",
+            "single validation matrix",
+            "Validation requirements are selected by changed surface and risk",
+            "host/build jobs are conditional",
+            "A skipped conditional job is `NOT_APPLICABLE`",
+            "## Exact-head validation receipts",
+            "Use a merge-ready receipt when:",
+            "the change is Critical/Runtime",
+            "a Significant owning design explicitly requires a receipt",
+            "Routine changes do not require a receipt merely to complete a pull request",
+            "Receipts must be stored outside the repository",
+            "does not prove signer identity or authorization",
             "Pending is not passing",
-            "## Exact-head validation receipt",
-            "validation_receipt.py init",
-            "validation_receipt.py record",
-            "validation_receipt.py accept-risk",
-            "validation_receipt.py finalize",
-            "validation_receipt.py verify",
-            "validation_receipt.py summarize",
-            "derives the 40-character",
-            "runs that command",
-            "must all have an executed, zero-exit result",
-            "waived. A Windows UI pass",
-            "not a signature",
-            "must not be committed",
         ),
         "CI and local validation policy",
     )
@@ -343,14 +360,12 @@ def validate(repo_root: Path) -> None:
     require_all(
         review_policy,
         (
-            "automatic PR static-validation check",
-            "merge-ready exact-head validation receipt",
-            "validation_receipt.py verify",
-            "--require-merge-ready",
-            "its receipt source",
-            "commit matches the reviewed head",
-            "compiled-test gates remain mandatory",
-            "foa-development",
+            "Routine changes do **not** require an O3DE host build, exact-head receipt",
+            "all **applicable** validation for the changed surface passed",
+            "Exact-head receipts are required for Critical/Runtime changes",
+            "Significant changes whose owning design explicitly requires them",
+            "optional evidence for Routine work",
+            "It is not a signature, maintainer approval, or runtime proof",
         ),
         "Review and merge policy",
     )
@@ -364,8 +379,8 @@ def main() -> int:
         print(f"Validation-receipt contract failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "Validation-receipt contract passed: automatic static checks, mandatory "
-        "compiled gates, bounded logs, and exact-head status all fail closed."
+        "Validation-receipt contract passed: receipt tooling remains fail-closed, "
+        "while receipt requirements follow the reviewed change classification."
     )
     return 0
 

@@ -26,12 +26,12 @@ import developer_preview_workspace
 
 # Compatibility defaults used by existing command parsers. Resolution is dynamic through
 # approved_build_directory(), so FOA_BUILD_ROOT remains authoritative.
-APPROVED_BUILD_DIRECTORY = Path("../foa-build/tg-sdk-developer-preview-0-windows-profile")
+APPROVED_BUILD_DIRECTORY = Path("release/revisions/tg-sdk-developer-preview-0-windows-profile")
 PREVIEW_PROJECT = Path("TaintedGrailModdingEditor")
 PREVIEW_ICON = PREVIEW_PROJECT / "TaintedGrailModdingEditor.ico"
 PREVIEW_STARTUP_LEVEL = PREVIEW_PROJECT / "Levels/DefaultLevel/DefaultLevel.prefab"
-DEFAULT_SHORTCUT_OUTPUT = Path("../foa-build/Tainted Grail Modding Editor.lnk")
-DIAGNOSTIC_OUTPUT_DIRECTORY = Path("../foa-build/diagnostic-entries")
+DEFAULT_SHORTCUT_OUTPUT = Path("release/revisions/Tainted Grail Modding Editor.lnk")
+DIAGNOSTIC_OUTPUT_DIRECTORY = Path("release/revisions/diagnostic-entries")
 EDITOR_CANDIDATES = (
     Path("bin/profile/Editor.exe"),
     Path("bin/Profile/Editor.exe"),
@@ -275,7 +275,7 @@ def resolve_source_built_entry(
         requested = approved
     if not same_path(approved, requested):
         raise PathPolicyError(
-            "Verified clickable entries must use the approved external Developer Preview build directory: "
+            "Verified clickable entries must use the canonical release revisions Developer Preview build directory: "
             f"{approved}"
         )
     try:

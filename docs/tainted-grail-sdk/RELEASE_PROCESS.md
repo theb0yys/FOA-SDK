@@ -196,12 +196,21 @@ of build-to-artifact copying and archive/MSI assembly for the **TG SDK product**
 It consumes O3DE's `INSTALL` target, binds a human redistribution review to the
 exact inventory fingerprint, creates a new verified staging root, and produces
 an unsigned development MSI and deterministic portable ZIP from that same root.
+The staged payload must include `bin/Windows/profile/Default/FOA-SDK.exe`; that
+launcher must pass `--self-test` from the staged self-contained layout before
+ZIP/MSI assembly, and installed startup must resolve the bundled Editor,
+root `engine.json`, installed `TaintedGrailModdingEditor` project, and packaged
+default level from the install root, then materialize packaged `External` Gem
+roots and the launched project beneath `%LOCALAPPDATA%/O3DE/TGEditor/installed`.
 
 This implementation does not consume or execute an FoA adapter package-preview,
 deployment work order, or release-artifact envelope. It grants no FoA package,
 deployment, signing, upload, or publication authority. Public release remains
 blocked until automatic hosted CI, exact reviewed `main`, Windows Editor UI,
 legal, security, upgrade, checksum, and signing gates pass.
+Prebuilt SDK updates are newer reviewed MSI packages delivered by
+`FOA-SDK-Installer.exe`; the installer does not implement an automatic updater
+or background service.
 
 ## Package and deployment boundaries
 

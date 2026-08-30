@@ -126,7 +126,17 @@ namespace ExternalToolchain
         if (AZ::SettingsRegistryInterface* registry =
                 AZ::Interface<AZ::SettingsRegistryInterface>::Get())
         {
-            return registry->Get(value, path);
+            if (registry->Get(value, path))
+            {
+                return true;
+            }
+
+            AZ::s64 signedValue = 0;
+            if (registry->Get(signedValue, path) && signedValue >= 0)
+            {
+                value = static_cast<AZ::u64>(signedValue);
+                return true;
+            }
         }
         return false;
     }
@@ -152,10 +162,12 @@ namespace ExternalToolchain
         case AZ::SettingsRegistryInterface::Type::Boolean:
             return ExternalToolchainSettingValueType::Boolean;
         case AZ::SettingsRegistryInterface::Type::Integer:
-            return type.m_signedness
-                    == AZ::SettingsRegistryInterface::Signedness::Unsigned
+        {
+            AZ::u64 ignored = 0;
+            return GetUInt64(path, ignored)
                 ? ExternalToolchainSettingValueType::UnsignedInteger
                 : ExternalToolchainSettingValueType::Other;
+        }
         case AZ::SettingsRegistryInterface::Type::Null:
         case AZ::SettingsRegistryInterface::Type::FloatingPoint:
         case AZ::SettingsRegistryInterface::Type::Array:

@@ -54,6 +54,28 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
         self.assertEqual(candidates[0], Path("C:/build/bin/profile/Editor.exe"))
         self.assertEqual(candidates[1], Path("C:/build/bin/Profile/Editor.exe"))
 
+    def test_default_build_directory_uses_release_revisions(self) -> None:
+        repo = Path("C:/repo/FOA-SDK")
+        self.assertEqual(
+            launch.default_build_directory(repo),
+            repo / "release/revisions/tg-sdk-developer-preview-0-windows-profile",
+        )
+
+    def test_default_project_directory_uses_dedicated_editor_project(self) -> None:
+        repo = Path("C:/repo/FOA-SDK")
+        self.assertEqual(
+            launch.default_project_directory(repo),
+            repo / "TaintedGrailModdingEditor",
+        )
+
+    def test_build_directory_inside_repo_must_be_central_revision_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"
+            repo.mkdir()
+            launch.validate_build_directory(repo, launch.default_build_directory(repo))
+            with self.assertRaisesRegex(RuntimeError, "canonical release revisions"):
+                launch.validate_build_directory(repo, repo / "build")
+
     def test_explicit_editor_must_be_editor_exe(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -180,6 +202,27 @@ class DeveloperPreviewLaunchTests(unittest.TestCase):
             )
             self.assertEqual(code, 0)
             self.assertFalse(log_dir.exists())
+
+    def test_cli_dry_run_defaults_to_dedicated_project(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            editor = self.make_editor(root)
+            result_path = root / "result.json"
+            code = launch.main(
+                [
+                    "--repo-root",
+                    str(root),
+                    "--editor",
+                    str(editor),
+                    "--result",
+                    str(result_path),
+                    "--dry-run",
+                ]
+            )
+            self.assertEqual(code, 0)
+            payload = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["project"], str(root / "TaintedGrailModdingEditor"))
+            self.assertIn("--project-path", payload["command"])
 
     def test_real_launch_requires_windows_x64(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

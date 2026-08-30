@@ -8,6 +8,26 @@ The wizard runs as the current user. The MSI is per-user and does not require ad
 
 After a successful install or repair, the result page can open the separate Tool Wizard. The Tool Wizard is a local readiness step for the user workspace, O3DE Editor, Unity conversion project, and local Tainted Grail install path. It is not part of the MSI lifecycle and can be opened directly with `--tool-wizard` without resolving an MSI.
 
+The installed Editor entry point is a separate native launcher named
+`FOA-SDK.exe`. It lives in the installed SDK payload at:
+
+```text
+<install-root>\bin\Windows\profile\Default\FOA-SDK.exe
+```
+
+The Start Menu entry targets that installed launcher. `FOA-SDK.exe` walks upward
+from its own path to find the product root, requires `INSTALL_MANIFEST.json`,
+root `engine.json`, and `TaintedGrailModdingEditor\project.json`, resolves the
+bundled `Editor.exe` from the same `bin\Windows\profile\Default` layout, and
+starts it with `--engine-path <install-root>`,
+`--project-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project`, writable
+`--project-cache-path`, `--project-user-path`, and `--project-log-path` folders
+beneath that materialized project, plus the packaged
+`Levels\DefaultLevel\DefaultLevel.prefab`. `FOA-SDK.exe --self-test` performs
+those layout and writable-user-root checks without launching the Editor, and
+copies the packaged `External` Gem roots and project into LocalAppData with its
+`asset_processor.setreg` seed.
+
 ## Build
 
 The packaging workflow is the authoritative producer because it binds the exact reviewed MSI:

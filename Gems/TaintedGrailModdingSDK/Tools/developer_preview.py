@@ -40,6 +40,8 @@ PREVIEW_PROJECT_DIRECTORY = "TaintedGrailModdingEditor"
 ENGINE_LOCK_FILENAME = "o3de.lock.json"
 ENGINE_ROOT_ENVIRONMENT_VARIABLE = "FOA_O3DE_ROOT"
 BUILD_ROOT_ENVIRONMENT_VARIABLE = "FOA_BUILD_ROOT"
+PREVIEW_BUILD_DIRECTORY_NAME = "tg-sdk-developer-preview-0-windows-profile"
+RELEASE_REVISIONS_DIRECTORY = Path("release") / "revisions"
 EDITOR_TARGET = "Editor"
 ASSET_PROCESSOR_BATCH_TARGET = "AssetProcessorBatch"
 CATALOG_TEST_TARGET = "TaintedGrailModdingSDK.Catalog.Tests"
@@ -190,8 +192,14 @@ def default_build_directory(product_root: Path) -> Path:
     if configured:
         build_root = resolve_path(Path(configured), Path.cwd())
     else:
-        build_root = product_root.parent / "foa-build"
-    return build_root / "tg-sdk-developer-preview-0-windows-profile"
+        build_root = product_root / RELEASE_REVISIONS_DIRECTORY
+    return build_root / PREVIEW_BUILD_DIRECTORY_NAME
+
+
+def canonical_release_revision_build_directory(product_root: Path) -> Path:
+    return (product_root / RELEASE_REVISIONS_DIRECTORY / PREVIEW_BUILD_DIRECTORY_NAME).resolve(
+        strict=False
+    )
 
 
 def read_engine_descriptor(engine_root: Path) -> dict:
@@ -274,8 +282,13 @@ def validate_build_directory(
         raise RuntimeError("The build directory must be separate from product_root and engine_root.")
     if is_relative_to(product_root, build_dir):
         raise RuntimeError("The build directory must not contain the FOA-SDK checkout.")
-    if is_relative_to(build_dir, product_root):
-        raise RuntimeError("The build directory must not be inside the FOA-SDK checkout.")
+    if is_relative_to(build_dir, product_root) and (
+        build_dir != canonical_release_revision_build_directory(product_root)
+    ):
+        raise RuntimeError(
+            "The build directory must not be inside the FOA-SDK checkout unless it is the "
+            "canonical release revisions Developer Preview build directory."
+        )
     if is_relative_to(engine_root, build_dir):
         raise RuntimeError("The build directory must not contain the O3DE checkout.")
     if is_relative_to(build_dir, engine_root):

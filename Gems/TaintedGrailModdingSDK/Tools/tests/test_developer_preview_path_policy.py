@@ -91,7 +91,7 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        build = root / "foa-build/tg-sdk-developer-preview-0-windows-profile"
+        build = product / "release/revisions/tg-sdk-developer-preview-0-windows-profile"
         editor = build / policy.EDITOR_CANDIDATES[0]
         editor.parent.mkdir(parents=True)
         write_test_editor(editor)
@@ -138,14 +138,14 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
                 with self.assertRaisesRegex(policy.PathPolicyError, "product checkout"):
                     policy._product_paths(product)
 
-    def test_source_build_must_use_exact_external_build_directory(self) -> None:
+    def test_source_build_must_use_exact_release_revision_build_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             product, engine, _, _ = self.make_layout(root)
             with self.engine_environment(engine), self.pin_mock(), mock.patch.object(
                 policy, "_workspace_paths", return_value=self.workspace(root)
             ):
-                with self.assertRaisesRegex(policy.PathPolicyError, "approved external"):
+                with self.assertRaisesRegex(policy.PathPolicyError, "canonical release revisions"):
                     policy.resolve_source_built_entry(
                         product,
                         product / "build/other",
@@ -153,7 +153,7 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
                         require_configured=False,
                     )
 
-    def test_source_build_uses_separate_product_engine_and_build_roots(self) -> None:
+    def test_source_build_uses_separate_engine_and_central_revision_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             product, engine, build, editor = self.make_layout(root)
@@ -172,7 +172,9 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
             self.assertEqual(paths.build_directory, build.resolve())
             self.assertEqual(paths.editor, editor.resolve())
             self.assertEqual(paths.project, workspace.project)
-            self.assertFalse(policy.is_contained(product.resolve(), paths.build_directory))
+            self.assertTrue(
+                policy.is_contained((product / "release/revisions").resolve(), paths.build_directory)
+            )
             self.assertFalse(policy.is_contained(engine.resolve(), paths.build_directory))
 
     def test_source_build_rejects_cache_bound_to_product_as_engine(self) -> None:
@@ -247,18 +249,18 @@ class DeveloperPreviewPathPolicyTests(unittest.TestCase):
             self.assertEqual(paths.trust_mode, policy.TRUST_MODE_DIAGNOSTIC_OVERRIDE)
             self.assertEqual(paths.engine, engine.resolve())
 
-    def test_shortcut_outputs_are_outside_product_checkout(self) -> None:
+    def test_shortcut_outputs_use_release_revision_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             product, _, _, _ = self.make_layout(root)
-            output = root / "foa-build/Tainted Grail Modding Editor.lnk"
+            output = product / "release/revisions/Tainted Grail Modding Editor.lnk"
             resolved = policy.resolve_shortcut_output(product, output, diagnostic_override=False)
             self.assertEqual(resolved, output.resolve())
-            self.assertFalse(policy.is_contained(product.resolve(), resolved))
+            self.assertTrue(policy.is_contained((product / "release/revisions").resolve(), resolved))
             with self.assertRaisesRegex(policy.PathPolicyError, "must not replace"):
                 policy.resolve_shortcut_output(product, output, diagnostic_override=True)
 
-    def test_shortcut_output_cannot_escape_external_build_root(self) -> None:
+    def test_shortcut_output_cannot_escape_release_revision_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             product, _, _, _ = self.make_layout(root)

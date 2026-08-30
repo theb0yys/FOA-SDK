@@ -1,21 +1,21 @@
-# FOA-SDK installer
+# FOA-SDK Windows Installer
 
-`Installer/` owns the source needed to turn one reviewed prebuilt FOA-SDK payload into a simple user-facing Windows setup wizard. End users run `FOA-SDK-Installer.exe`; the wizard stores the SDK locally, installs the bundled editor project, and gives the user `FOA-SDK.exe` as the launcher that opens the SDK editor. The user workflow requires no Git, Python, CMake, Visual Studio, repository checkout, or O3DE source build.
+`Installer/` owns the source needed to turn one reviewed prebuilt FOA-SDK payload into a user-facing Windows setup wizard. End users run `FOA-SDK-Installer.exe`; after installation or portable extraction, they run the installed `FOA-SDK.exe` to open the SDK Editor. The user workflow requires no Git, Python, CMake, Visual Studio, repository checkout, or O3DE source build.
 
-Generated MSI files, portable ZIP archives, staged payloads, build caches, logs, screenshots, signing material, and release uploads belong under the external `foa-build/` root or another reviewed output directory, never in this source tree.
+Generated MSI files, portable ZIP archives, retained installer EXEs, staged payloads, build caches, logs, screenshots, signing material, and release uploads belong under the external `foa-build/` root or another reviewed output directory, never in this source tree.
 
 ## Layout
 
 ```text
 Installer/
-├── Launcher/    installer-wizard and installed-Editor launcher source
+├── Launcher/    installer wizard and installed-Editor launcher source
 ├── Packaging/   MSI packaging source for a verified staging payload
-└── Tests/       installer contract tests
+└── Tests/       installer contract and functional-readiness tests
 ```
 
 The removed suite catalogue, receipt, capability-token, and Python bootstrapper lanes were non-installing review prototypes. They are not part of the approved prebuilt SDK delivery path and must not be restored as an alternative installer.
 
-## User flow
+## Installer lifecycle
 
 The package workflow builds the canonical O3DE `INSTALL` target once, records and reviews its exact inventory, stages and re-hashes those captured bytes, and produces an internal MSI and portable ZIP from that same staging root. It then embeds the reviewed MSI and its SHA-256 sidecar into a self-contained `FOA-SDK-Installer.exe`.
 
@@ -28,11 +28,36 @@ The executable wizard:
 5. records the verbose Windows Installer log; and
 6. optionally launches the installed `FOA-SDK.exe` after success.
 
-The installed product includes `FOA-SDK.exe` as the user entry point. Clicking that executable starts the bundled SDK editor against the installed project. The longer generated O3DE launcher name may remain as internal compatibility detail, but it is not the user contract.
-
 An explicitly supplied or adjacent development MSI is accepted only with its `.sha256` sidecar. The launcher captures those bytes into its private temporary root and verifies the captured copy before execution, preventing a path from being changed between validation and Windows Installer startup.
 
 The MSI is the lifecycle authority. It owns product files, Programs and Features registration, Start Menu integration, repair, major upgrade, and uninstall. Workspaces, FoA diagnostics, imported evidence, generated output, staging, deployment roots, and game files stay outside the installation directory and are never installer-owned.
+
+## Installed Editor startup
+
+The installed product includes this user entry point:
+
+```text
+<install-root>\bin\Windows\profile\Default\FOA-SDK.exe
+```
+
+The Start Menu entry targets that installed launcher. `FOA-SDK.exe` resolves the self-contained install root by walking upward from its own executable path until it finds `INSTALL_MANIFEST.json`, `engine.json`, and `TaintedGrailModdingEditor\project.json`. It then starts the bundled `Editor.exe` from the same `bin\Windows\profile\Default` layout with:
+
+```text
+--engine-path <install-root>
+--project-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project
+--project-cache-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\Cache
+--project-user-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\user
+--project-log-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\user\log
+%LOCALAPPDATA%\O3DE\TGEditor\installed\project\Levels\DefaultLevel\DefaultLevel.prefab
+```
+
+`FOA-SDK.exe --self-test` performs those layout and writable-user-root checks without launching the Editor. The launcher materializes the packaged `External` Gem roots and project under `%LOCALAPPDATA%\O3DE\TGEditor\installed`, including the project `user\Registry\asset_processor.setreg` seed, so Asset Processor can update its branch token outside the installed payload and on the same drive as the launched project. Missing manifest, engine metadata, project, `External` Gem roots, Editor, startup level, registry seed, or local app-data access means the payload is incomplete or the user profile cannot host Editor state, and must be repaired, reinstalled, or replaced with a complete reviewed artifact. The installed launcher must not be copied alone into a raw build directory or pointed at an arbitrary `Editor.exe`.
+
+The installed `TaintedGrailModdingEditor\project.json` is generated during staging. Its `external_subdirectories` point at packaged `External\...` Gem roots that the launcher materializes beside the LocalAppData project, not source-checkout `..\Gems` or `..\Plugins` folders.
+
+## Updates and repair
+
+Repair uses the same reviewed `FOA-SDK-Installer.exe` to restore product-owned files from the embedded MSI. Updating a prebuilt install means running a newer reviewed `FOA-SDK-Installer.exe` whose MSI uses the same Upgrade Code and a newer version. There is no automatic updater or background service. Portable ZIP updates are made by extracting a newer reviewed ZIP into a new empty directory, not by overlaying two product roots.
 
 ## Boundaries
 
@@ -49,14 +74,10 @@ Installer changes require, as applicable:
 3. exact inventory, provenance, licence, notice, SBOM, and redistribution review;
 4. successful MSI and portable ZIP creation from one verified stage;
 5. executable-wizard construction with the exact reviewed MSI and checksum embedded;
-6. clean install, Tool Wizard profile save, `FOA-SDK.exe` self-test, repair, and
-   uninstall through the executable;
-7. retained Windows readiness evidence, including MSI logs, command logs,
-   `tool-profile.local.json`, `functional-readiness-summary.json`, and proof that
-   an external workspace sentinel survives repair and uninstall;
+6. clean install, Tool Wizard profile save, staged and installed `FOA-SDK.exe --self-test`, repair, and uninstall through the executable;
+7. retained Windows readiness evidence, including MSI logs, command logs, `tool-profile.local.json`, `functional-readiness-summary.json`, and proof that an external workspace sentinel survives repair and uninstall;
 8. an independently reviewed second version before claiming actual upgrade coverage;
 9. Windows Editor UI validation; and
-10. the repository's exact-head validation and current branch-to-pull-request
-    maintainer-audit path defined by `AGENTS.md`.
+10. the repository's exact-head validation and current branch-to-pull-request maintainer-audit path defined by `AGENTS.md`.
 
 See [Windows Installer and Prebuilt Artifact Workflow Design](../docs/tainted-grail-sdk/WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) for the governing design and [Installing the Prebuilt Windows SDK](../docs/tainted-grail-sdk/INSTALLING_PREBUILT_SDK.md) for the user workflow.

@@ -171,10 +171,41 @@ jobs:
           if ($sourceHash -cne $targetHash) {
             throw "FOA-SDK.exe does not match the reviewed installed launcher build."
           }
-          & $target --self-test
-          if ($LASTEXITCODE -ne 0) {
-            throw "FOA-SDK.exe installed launcher self-test failed before inventory review."
+
+      - name: Install hash-pinned CMake runtime into SDK payload
+        shell: pwsh
+        run: |
+          $archiveName = "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64.zip"
+          $archive = Join-Path $env:RUNNER_TEMP $archiveName
+          $uri = "https://cmake.org/files/v4.3/$archiveName"
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+          $actualHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256) {
+            throw "CMake runtime hash mismatch: expected $env:SDK_PACKAGE_CMAKE_SHA256; actual $actualHash"
           }
+          New-Item -ItemType Directory -Path $env:SDK_PACKAGE_CMAKE_ROOT -Force | Out-Null
+          Expand-Archive -LiteralPath $archive -DestinationPath $env:SDK_PACKAGE_CMAKE_ROOT -Force
+          $toolRoot = Join-Path $env:SDK_PACKAGE_CMAKE_ROOT `
+            "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64"
+          $runtimeCmake = Join-Path $toolRoot "bin/cmake.exe"
+          $runtimeCpack = Join-Path $toolRoot "bin/cpack.exe"
+          foreach ($tool in @($runtimeCmake, $runtimeCpack)) {
+            if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) {
+              throw "Pinned SDK runtime tool is missing: $tool"
+            }
+            if ((Get-Item -LiteralPath $tool).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+              throw "Pinned SDK runtime tool must not be a reparse point: $tool"
+            }
+          }
+          $cmakeVersion = (& $runtimeCmake --version | Select-Object -First 1)
+          if ($cmakeVersion -cne "cmake version $env:SDK_PACKAGE_CMAKE_VERSION") {
+            throw "Unexpected SDK runtime CMake version: $cmakeVersion"
+          }
+          $sdkCmakeRuntime = Join-Path $env:SDK_INSTALL "cmake/runtime"
+          New-Item -ItemType Directory -Path $sdkCmakeRuntime | Out-Null
+          Copy-Item -Path (Join-Path $toolRoot "*") -Destination $sdkCmakeRuntime -Recurse -Force
+          "SDK_PACKAGE_CMAKE=$runtimeCmake" >> $env:GITHUB_ENV
+          "SDK_PACKAGE_CPACK=$runtimeCpack" >> $env:GITHUB_ENV
 
       - name: Generate notices and third-party package inventory
         run: >-
@@ -226,7 +257,7 @@ jobs:
             throw "Approved inventory does not match this exact build: expected $env:SDK_INVENTORY_SHA256"
           }
 
-      - name: Stage reviewed payload and create portable ZIP
+      - name: Stage reviewed payload, self-test launcher, and create portable ZIP
         if: inputs.mode == 'package'
         shell: pwsh
         env:
@@ -250,6 +281,11 @@ jobs:
             --output $env:SDK_STAGE
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py verify-stage `
             --stage-root $env:SDK_STAGE
+          $stagedLauncher = Join-Path $env:SDK_STAGE "bin/Windows/profile/Default/FOA-SDK.exe"
+          & $stagedLauncher --self-test
+          if ($LASTEXITCODE -ne 0) {
+            throw "FOA-SDK.exe staged self-contained launcher self-test failed."
+          }
           $zip = Join-Path $env:SDK_ARTIFACTS `
             "Tainted-Grail-FoA-SDK-${{ inputs.version }}-windows-x64.zip"
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview_installer.py archive `
@@ -277,8 +313,8 @@ jobs:
           if ($actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256) {
             throw "CMake packaging toolchain hash mismatch: expected $env:SDK_PACKAGE_CMAKE_SHA256; actual $actualHash"
           }
-          New-Item -ItemType Directory -Path $env:SDK_PACKAGE_CMAKE_ROOT | Out-Null
-          Expand-Archive -LiteralPath $archive -DestinationPath $env:SDK_PACKAGE_CMAKE_ROOT
+          New-Item -ItemType Directory -Path $env:SDK_PACKAGE_CMAKE_ROOT -Force | Out-Null
+          Expand-Archive -LiteralPath $archive -DestinationPath $env:SDK_PACKAGE_CMAKE_ROOT -Force
           $toolRoot = Join-Path $env:SDK_PACKAGE_CMAKE_ROOT `
             "cmake-$env:SDK_PACKAGE_CMAKE_VERSION-windows-x86_64"
           $packageCmake = Join-Path $toolRoot "bin/cmake.exe"

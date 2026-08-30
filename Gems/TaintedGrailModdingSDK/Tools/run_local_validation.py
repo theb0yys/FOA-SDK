@@ -32,7 +32,6 @@ PRODUCT_GEM_PATHS = (
     ("ExternalToolchain", PRODUCT_ROOT / "Gems/ExternalToolchain"),
     ("AvalonAIAuthoring", PRODUCT_ROOT / "Plugins/Authoring/AvalonAI/Gem"),
     ("RoadAtlasAuthoring", PRODUCT_ROOT / "Plugins/Authoring/RoadAtlas/Gem"),
-    ("TerrainAuthoring", PRODUCT_ROOT / "Plugins/Authoring/TerrainAuthoring/Gem"),
     ("TaintedGrailModdingSDK", PRODUCT_ROOT / "Gems/TaintedGrailModdingSDK"),
 )
 

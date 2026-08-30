@@ -11,10 +11,12 @@
 #include "FoundationNotificationBus.h"
 
 #include <QFont>
+#include <QString>
 #include <QWidget>
 
 class QCheckBox;
 class QComboBox;
+class QGroupBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -32,6 +34,13 @@ namespace TaintedGrailModdingSDK
 
     private:
         void OnFoundationChanged() override;
+        void OpenWorkspace();
+        void AutoLoadStartupWorkspace();
+        bool LoadWorkspaceFile(
+            const QString& filePath,
+            const QString& successMessage,
+            bool showFailureDialog = true);
+        QString FindStartupWorkspacePath() const;
         void ReloadForWorkspaceIfNeeded();
         void RefreshChoices();
         void RunSearch();
@@ -57,8 +66,10 @@ namespace TaintedGrailModdingSDK
         QComboBox* m_validationFilter = nullptr;
         QComboBox* m_stalenessFilter = nullptr;
         QLineEdit* m_permissionFilter = nullptr;
+        QCheckBox* m_itemsOnly = nullptr;
         QCheckBox* m_blockedOnly = nullptr;
         QCheckBox* m_includeSuperseded = nullptr;
+        QGroupBox* m_filterGroup = nullptr;
         QTableWidget* m_resultsTable = nullptr;
 
         QLabel* m_catalogPathValue = nullptr;

@@ -51,17 +51,49 @@ namespace ExternalToolchain
                 AZ::u64& value) const override
             {
                 const auto found = m_uint64.find(path);
-                if (found == m_uint64.end())
+                if (found != m_uint64.end())
                 {
-                    return false;
+                    value = found->second;
+                    return true;
                 }
-                value = found->second;
-                return true;
+                const auto signedFound = m_int64.find(path);
+                if (signedFound != m_int64.end() && signedFound->second >= 0)
+                {
+                    value = static_cast<AZ::u64>(signedFound->second);
+                    return true;
+                }
+                return false;
+            }
+
+            ExternalToolchainSettingValueType GetValueType(
+                const AZStd::string& path) const override
+            {
+                if (m_strings.find(path) != m_strings.end())
+                {
+                    return ExternalToolchainSettingValueType::String;
+                }
+                if (m_bools.find(path) != m_bools.end())
+                {
+                    return ExternalToolchainSettingValueType::Boolean;
+                }
+                if (m_uint64.find(path) != m_uint64.end())
+                {
+                    return ExternalToolchainSettingValueType::UnsignedInteger;
+                }
+                const auto signedFound = m_int64.find(path);
+                if (signedFound != m_int64.end())
+                {
+                    return signedFound->second >= 0
+                        ? ExternalToolchainSettingValueType::UnsignedInteger
+                        : ExternalToolchainSettingValueType::Other;
+                }
+                return ExternalToolchainSettingValueType::Missing;
             }
 
             AZStd::unordered_map<AZStd::string, AZStd::string> m_strings;
             AZStd::unordered_map<AZStd::string, bool> m_bools;
             AZStd::unordered_map<AZStd::string, AZ::u64> m_uint64;
+            AZStd::unordered_map<AZStd::string, AZ::s64> m_int64;
         };
 
         class FakePathProbe final
@@ -417,6 +449,30 @@ namespace ExternalToolchain
             discovery.GetResults().front().m_status,
             DiscoveryStatus::Misconfigured);
         EXPECT_EQ(paths.m_inspectionCount, 0);
+    }
+
+    TEST(ExternalToolchainDiscoveryTests, SignedJsonHostLimitsAreAccepted)
+    {
+        FakeSettingsSource settings;
+        settings.m_int64[
+            "/O3DE/ExternalToolchain/Host/Discovery/MaximumProviders"] = 64;
+        settings.m_int64[
+            "/O3DE/ExternalToolchain/Host/Discovery/MaximumProbesPerProvider"] = 16;
+        settings.m_int64[
+            "/O3DE/ExternalToolchain/Host/Discovery/ProviderBudgetMilliseconds"] = 250;
+        FakePathProbe paths;
+        paths.m_observations["C:/Tools/tool.exe"] = {
+            true,
+            false,
+            "File exists." };
+        ProviderOperationResult operation;
+
+        const ExternalToolDiscoveryResult result =
+            RefreshOne(MakeProvider(), settings, paths, &operation);
+
+        EXPECT_TRUE(operation.m_success);
+        EXPECT_EQ(result.m_status, DiscoveryStatus::Installed);
+        EXPECT_EQ(paths.m_inspectionCount, 1);
     }
 
     TEST(ExternalToolchainDiscoveryTests, WrongTypedProviderEnabledSettingFailsClosed)

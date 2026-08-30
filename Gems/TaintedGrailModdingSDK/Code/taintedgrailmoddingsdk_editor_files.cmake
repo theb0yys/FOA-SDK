@@ -42,6 +42,8 @@ set(FILES
     Source/AdapterVerifierEvidenceReconciliationWidget.h
     Source/AdapterWorkOrderPlanWidget.cpp
     Source/AdapterWorkOrderPlanWidget.h
+    Source/AssetBrowserPreviewWidget.cpp
+    Source/AssetBrowserPreviewWidget.h
     Source/CatalogBrowserWidget.cpp
     Source/CatalogBrowserWidget.h
     Source/CatalogGovernanceWidget.cpp
@@ -56,16 +58,10 @@ set(FILES
     Source/FoundationStatusWidget.h
     Source/ItemRecipeEditorWidget.cpp
     Source/ItemRecipeEditorWidget.h
-    Source/ItemVisualLifecycleWidget.cpp
-    Source/ItemVisualLifecycleEnhancer.h
-    Source/ItemVisualSelectionRestoreWidget.cpp
-    Source/ItemVisualSelectionRestoreBridge.h
-    Source/ItemVisualSelectorInstallerSystemComponent.cpp
-    Source/ItemVisualSelectorInstallerSystemComponent.h
-    Source/ItemVisualSelectorWidget.cpp
-    Source/ItemVisualSelectorWidget.h
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
+    Source/QuestStateInspectorWidget.cpp
+    Source/QuestStateInspectorWidget.h
     Source/SourceEvidenceIntakeWidget.cpp
     Source/SourceEvidenceIntakeWidget.h
     Source/TaintedGrailModdingSDKEditorModule.cpp

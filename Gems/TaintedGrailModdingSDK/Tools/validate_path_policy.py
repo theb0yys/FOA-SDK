@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate canonical workspace paths and the external-engine Editor-entry contract."""
+"""Validate canonical workspace paths and the canonical Editor-entry contract."""
 
 from __future__ import annotations
 
@@ -177,6 +177,7 @@ def validate_path_policy(repo_root: Path) -> None:
             "configured_source != engine_root",
             "required_project = (product_root / PREVIEW_PROJECT_DIRECTORY)",
             "The build directory must not be inside the FOA-SDK checkout",
+            "canonical release revisions Developer Preview build directory",
             "The build directory must not be inside the O3DE checkout",
         ),
     )
@@ -199,7 +200,7 @@ def validate_path_policy(repo_root: Path) -> None:
             "required_project",
             "must resolve inside the FOA-SDK product checkout",
             "FOA-SDK product_root and O3DE engine_root must be separate checkouts",
-            "approved external Developer Preview build directory",
+            "canonical release revisions Developer Preview build directory",
             "validate_source_editor_binary",
             "PE_MACHINE_AMD64",
             "PE_SUBSYSTEM_WINDOWS_GUI",
@@ -238,14 +239,14 @@ def validate_path_policy(repo_root: Path) -> None:
         (
             "test_component_containment_does_not_use_string_prefixes",
             "test_product_project_symlink_escape_is_rejected",
-            "test_source_build_must_use_exact_external_build_directory",
-            "test_source_build_uses_separate_product_engine_and_build_roots",
+            "test_source_build_must_use_exact_release_revision_build_directory",
+            "test_source_build_uses_separate_engine_and_central_revision_root",
             "test_source_build_rejects_cache_bound_to_product_as_engine",
             "test_source_build_requires_foa_project_binding",
             "test_source_build_rejects_arbitrary_editor_contents",
             "test_diagnostic_override_keeps_external_engine_identity",
-            "test_shortcut_outputs_are_outside_product_checkout",
-            "test_shortcut_output_cannot_escape_external_build_root",
+            "test_shortcut_outputs_use_release_revision_root",
+            "test_shortcut_output_cannot_escape_release_revision_root",
         ),
     )
     require_fragments(

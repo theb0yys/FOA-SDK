@@ -45,6 +45,7 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         constexpr size_t MaximumAliases = 16;
         constexpr size_t MaximumRelativePathLength = 260;
         constexpr qint64 MaximumRawSidecarBytes = 1024 * 1024;
+        constexpr AZ::u64 MaximumImageContainerOverheadBytes = 16ull * 1024ull * 1024ull;
 
         struct FileSnapshot
         {
@@ -1128,6 +1129,14 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             {
                 return AZ::Failure(AZStd::string(
                     "Terrain image dimensions exceed the schema sample-count bound."));
+            }
+            const AZ::u64 canonicalPayloadBytes = totalSamples * 2u;
+            const AZ::u64 maximumContainerBytes =
+                canonicalPayloadBytes + MaximumImageContainerOverheadBytes;
+            if (static_cast<AZ::u64>(snapshot.m_size) > maximumContainerBytes)
+            {
+                return AZ::Failure(AZStd::string(
+                    "Terrain image metadata or container overhead exceeds the bounded importer limit."));
             }
 
             QImage image;

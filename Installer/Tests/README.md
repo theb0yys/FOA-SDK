@@ -6,4 +6,4 @@ The focused tests require a Windows Forms single-file project, optional reviewed
 
 Generated MSI files, installer executables, portable ZIP archives, logs, staging trees, registry captures, screenshots, and workspace sentinels belong beneath the external build/evidence root.
 
-Static source-contract coverage does not replace a real Windows lifecycle smoke. A package candidate still requires executable-wizard construction from the reviewed MSI, clean install, installed-launcher self-test, repair, uninstall, and proof that an external workspace sentinel survives.
+Static source-contract coverage does not replace a real Windows lifecycle smoke. A package candidate still requires executable-wizard construction from the reviewed MSI, staged and installed `bin\Windows\profile\Default\FOA-SDK.exe --self-test`, repair, uninstall, and proof that an external workspace sentinel survives.

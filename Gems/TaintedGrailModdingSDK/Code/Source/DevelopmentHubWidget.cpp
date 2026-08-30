@@ -20,20 +20,25 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QString>
+#include <QTimer>
 #include <QVBoxLayout>
 
+#include <cstring>
 #include <initializer_list>
 
 namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        constexpr const char* DevelopmentHubPane = "FOA Development Hub";
         constexpr const char* FoundationStatusPane = "Tainted Grail SDK Status";
         constexpr const char* PackManagerPane = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakePane = "Tainted Grail Source Intake";
+        constexpr const char* AssetBrowserPreviewPane = "Tainted Grail Asset Browser Preview";
         constexpr const char* CatalogBrowserPane = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernancePane = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorPane = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* QuestStateInspectorPane = "Tainted Grail Quest and State Inspector";
         constexpr const char* ActorTroopEditorPane = "Tainted Grail Actor and Troop Editor";
         constexpr const char* RoadAtlasEditorPane = "Tainted Grail Map Editor (Road Atlas)";
         constexpr const char* AvalonAIEditorPane = "Tainted Grail Avalon AI Editor";
@@ -93,6 +98,13 @@ namespace TaintedGrailModdingSDK
             QObject::connect(button, &QPushButton::clicked, parent, [paneName]()
             {
                 AzToolsFramework::OpenViewPane(paneName);
+                if (std::strcmp(paneName, AssetBrowserPreviewPane) == 0)
+                {
+                    QTimer::singleShot(0, []()
+                    {
+                        AzToolsFramework::CloseViewPane(DevelopmentHubPane);
+                    });
+                }
             });
             return button;
         }
@@ -136,6 +148,9 @@ namespace TaintedGrailModdingSDK
         : QWidget(parent)
     {
         FoundationNotificationBus::Handler::BusConnect();
+
+        setMinimumWidth(320);
+        setMaximumWidth(560);
 
         auto* rootLayout = new QVBoxLayout(this);
         auto* scrollArea = new QScrollArea(this);
@@ -235,9 +250,11 @@ namespace TaintedGrailModdingSDK
             tr("Move from fingerprinted source material to reviewed canonical records and typed economy authoring."),
             {
                 { tr("Asset import and evidence intake"), tr("Browse, fingerprint, import, and inspect local source or preview-asset artifacts without inferring facts."), SourceIntakePane },
+                { tr("Asset Browser preview"), tr("Review categorized preview products, thumbnail evidence, fidelity state, blockers, and central viewport route readiness."), AssetBrowserPreviewPane },
                 { tr("Catalog browser"), tr("Inspect canonical identities, relationships, evidence, and blockers."), CatalogBrowserPane },
                 { tr("Catalog governance"), tr("Record reviewed validation, permission, prohibition, and staleness decisions."), CatalogGovernancePane },
                 { tr("Item and recipe editor"), tr("Author typed economy profiles against existing canonical identities."), ItemRecipeEditorPane },
+                { tr("Quest and state inspector"), tr("Load and inspect local QuestDefinition V1 documents without runtime, deployment, save, or editor-mutation authority."), QuestStateInspectorPane },
                 { tr("Actor and troop editor"), tr("Author evidence-bound population profiles and troop composition without runtime spawn authority."), ActorTroopEditorPane },
                 { tr("Map editor (Road Atlas)"), tr("Author and validate exact-profile planning-only map road topology snapshots."), RoadAtlasEditorPane },
                 { tr("Avalon AI editor"), tr("Author API 2.0 packages and deterministic inert AI plans."), AvalonAIEditorPane },

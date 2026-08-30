@@ -1,9 +1,191 @@
-# FOA-SDK Documentation
+# FOA-SDK
 
-Choose the documentation route that matches the work:
+FOA-SDK is an unofficial, open-source world-authoring and mod-development platform for **Tainted Grail: The Fall of Avalon**.
 
-- [Tainted Grail Modding Knowledge Hub](tainted-grail-modding/README.md) — learn how to create, research, validate, package, maintain, and troubleshoot mods; find game-system and hook coverage; and see the outstanding research programme.
-- [FOA-SDK Product Documentation](tainted-grail-sdk/README.md) — architecture, implemented editor tools, schemas, governance, validation, installer, plug-ins, providers, runtime-adapter contracts, and contributor guidance.
-- [`../Research/`](../Research/) — preserved research inputs, exact source and claim registers, unresolved investigations, and gated system-port work.
+The project uses O3DE as a governed authoring host while keeping the target game and its Unity runtime outside the editor repository. Editor tooling, content schemas, validation, packaging, AI-assisted authoring, external conversion, and runtime adapters are separated into reviewable systems.
 
-The handbook explains how to use and reason about the product and research records. Canonical schemas, identities, evidence, relationships, permissions, package manifests, and operational authority remain with their owning FOA-SDK systems.
+> **Status:** pre-alpha development. This repository is not a finished SDK, does not provide a supported public release, and does not grant runtime compatibility or deployment authority.
+
+## Repository identity
+
+FOA-SDK is the product repository. It is **not** an O3DE source fork.
+
+The supported checkout layout is:
+
+```text
+Development/
+├── FOA-SDK/      product source
+│   └── release/revisions/
+│       └── tg-sdk-developer-preview-0-windows-profile/
+│           canonical local source-built Editor revision output
+├── o3de/         exact upstream engine checkout
+└── foa-build/    generated evidence, fixtures and non-Editor build output
+```
+
+The exact O3DE repository, engine identity, version, and commit are recorded in [`o3de.lock.json`](o3de.lock.json). Tooling fails closed when the selected checkout does not match that lock.
+
+The standard source-built Tainted Grail Modding Editor revision is the one approved generated-output exception inside the product checkout. It belongs under `release/revisions/tg-sdk-developer-preview-0-windows-profile/`, with the clickable entry at `release/revisions/Tainted Grail Modding Editor.lnk`. That directory is local revision output, not source truth or a public release. Other generated builds, caches, diagnostics, screenshots, installers, packages, and validation receipts belong under `foa-build/` or another reviewed output directory.
+
+Editor startup has two supported entry points. Contributors using a source-built checkout launch `release/revisions/Tainted Grail Modding Editor.lnk` or `Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py`; those routes start the source-built `Editor.exe` with the per-user materialized project beneath `%LOCALAPPDATA%\O3DE\TGEditor`. Users of a reviewed prebuilt MSI or ZIP launch `<install-root>/bin/Windows/profile/Default/FOA-SDK.exe`; that installed launcher resolves the self-contained product root, verifies `INSTALL_MANIFEST.json`, `engine.json`, and `TaintedGrailModdingEditor/project.json`, materializes packaged `External` Gem roots and the packaged project beneath `%LOCALAPPDATA%\O3DE\TGEditor\installed`, then starts the bundled `Editor.exe` with `--engine-path <install-root>`, `--project-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project`, the matching `--project-cache-path`, `--project-user-path`, `--project-log-path`, and the packaged default startup level from that materialized project. Update a source-built revision by rebuilding/regenerating that revision; update a prebuilt install only with a newer reviewed `FOA-SDK-Installer.exe`, or repair it with the same reviewed installer.
+
+## Product structure
+
+```text
+.github/                              FOA issue forms, ownership and manual workflows
+Gems/
+├── ExternalToolchain/                bounded external-tool discovery and provider contracts
+└── TaintedGrailModdingSDK/           required editor foundation, schemas, services and tests
+Installer/                            native installer wizard, installed launcher and packaging source
+Plugins/                              optional product extension packages
+├── Authoring/                        Avalon AI, UI Framework, Road Atlas and future authoring systems
+├── Integrations/                     Merlin's Workshop and acquisition/tool providers
+└── RuntimeAdapters/                  separate Mono and IL2CPP adapter packages
+Research/                             preserved research inputs and reviewed conclusions
+TaintedGrailModdingEditor/            dedicated O3DE Editor project
+
+docs/tainted-grail-sdk/               public architecture, user and contributor documentation
+
+o3de.lock.json                        exact external engine dependency
+README.md                              product overview
+ROADMAP.md                             planned capability sequence
+CHANGELOG.md                           reviewed capability history
+GOVERNANCE.md                         project governance
+CONTRIBUTING.md                        contribution requirements
+SECURITY.md                            vulnerability reporting policy
+SUPPORT.md                             support boundaries
+LICENSE.txt                            repository licence
+```
+
+`Gems/` contains the two always-present product foundations. `Plugins/` contains optional, independently governed packages. Every plug-in package requires a schema-valid `plugin.json`, deterministic ExtensionAPI registration, explicit compatibility and capabilities, provenance, licence state, and focused tests. A plug-in declaration never grants runtime, deployment, save, signing, publication, catalog-mutation, or evidence-promotion authority.
+
+`Installer/` owns the self-contained Windows installer wizard, installed-Editor launcher, platform packaging project, and installer tests. The wizard verifies and executes one reviewed MSI; generated EXE/MSI files, portable ZIPs, staged payloads, logs, signing material, and release uploads remain outside the source checkout.
+
+See [`Plugins/README.md`](Plugins/README.md), [`Plugins/plugin.schema.json`](Plugins/plugin.schema.json), and [`Installer/README.md`](Installer/README.md) for the extension and distribution contracts.
+
+Stock O3DE source, engine Gems, templates, scripts, assets, registries, and build files are deliberately absent. They are supplied by the separately pinned engine checkout.
+
+## Obtain the pinned engine
+
+From the directory that contains FOA-SDK:
+
+```powershell
+git clone https://github.com/o3de/o3de.git o3de
+git -C o3de checkout 68683f23fb747380d3efa2424bd5f30242e9c5a2
+```
+
+Do not substitute a branch tip. Engine changes require a reviewed update to `o3de.lock.json` with configure, build, compiled-test, and Editor acceptance evidence.
+
+Set `FOA_O3DE_ROOT` only when the engine is not the sibling `o3de/` checkout. The default source-built Editor revision uses `release/revisions/`; set `FOA_BUILD_ROOT` only for a controlled alternate build root such as CI or disposable diagnostics.
+
+## Developer Preview command path
+
+Run commands from the FOA-SDK product checkout.
+
+### Check prerequisites
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `
+  --engine-root ..\o3de `
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
+```
+
+### Configure
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
+  --engine-root ..\o3de `
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
+```
+
+The generated command uses the external engine as the CMake source and the product-owned project as `LY_PROJECTS`:
+
+```text
+-S <engine-root>
+-B <build-root>
+-DLY_PROJECTS=<product-root>/TaintedGrailModdingEditor
+```
+
+### Build
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py build `
+  --engine-root ..\o3de `
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
+```
+
+The current command-layer targets are:
+
+```text
+Editor
+AssetProcessorBatch
+TaintedGrailModdingSDK.Catalog.Tests
+```
+
+### Validate
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
+  --engine-root ..\o3de `
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
+```
+
+For the complete local gate, including both custom Gems and O3DE source-policy validation:
+
+```powershell
+python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
+  --engine-root ..\o3de `
+  --ctest-build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
+```
+
+The local gate does not claim a hosted CI result. Read-only static,
+canonical-interchange, and Windows-prerequisite jobs run automatically on their
+documented pull-request and `main` push events. Host-heavy exact-head,
+installer, and Editor evidence workflows remain manual and require their own
+recorded results.
+
+## Architecture boundary
+
+FOA-SDK owns authoring data, Editor panes, typed contracts, validation, evidence, packaging previews, governed work-order planning, optional plug-in packages, and installer source.
+
+Required host integration remains in the two product Gems. Optional AI, UI, road, integration, acquisition, and runtime-adapter systems live beneath `Plugins/` and register through the public ExtensionAPI rather than acquiring mutable Foundation internals.
+
+The installer may install, repair, upgrade, or uninstall the complete reviewed prebuilt SDK through Windows Installer. `FOA-SDK-Installer.exe` owns MSI lifecycle selection; installed `FOA-SDK.exe` owns only Editor startup from the self-contained install layout. Neither executable grants runtime, deployment, save, signing, publication, catalog-mutation, or evidence-promotion authority. Generated installer artifacts remain reviewed output, not source.
+
+O3DE owns engine and host functionality. The target Unity game owns final runtime interpretation. Cross-engine conversion is performed through deterministic, reviewable file handoff; Unity-native files remain Unity-owned.
+
+No editor, plug-in declaration, or installer selection silently promotes evidence, mutates a game installation, launches FoA, injects code, modifies saves, signs artifacts, or publishes a release. Mono and IL2CPP runtime support remain separate adapter paths and require exact-install evidence.
+
+## Documentation
+
+Start with:
+
+- [FOA-SDK documentation index](docs/tainted-grail-sdk/README.md)
+- [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
+- [Plug-in package root](Plugins/README.md)
+- [Installer root](Installer/README.md)
+- [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
+- [Developer Preview 0](docs/tainted-grail-sdk/DEVELOPER_PREVIEW_0.md)
+- [External O3DE dependency boundary](docs/tainted-grail-sdk/EXTERNAL_O3DE_DEPENDENCY.md)
+- [Open and test the Editor](docs/tainted-grail-sdk/OPEN_AND_TEST_EDITOR.md)
+- [CI and local validation](docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md)
+- [Review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md)
+- [Legal and content policy](docs/tainted-grail-sdk/LEGAL_AND_CONTENT_POLICY.md)
+
+## Branch and review model
+
+- `main` is reviewed integrated product state.
+- Human contributions use the existing `foa-development` branch and enter
+  `main` through pull requests.
+- Repository agents follow `AGENTS.md`: focused, DCO-signed changes are made on
+  a non-`main` branch, submitted to `main` by pull request for maintainer audit,
+  and left for maintainer approval and merge.
+- Significant changes require design review, focused validation, exact-head evidence where applicable, and maintainer approval.
+- Direct runtime authority, automatic evidence promotion, and unreviewed generated artifacts are prohibited.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), and the [review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md).
+
+## Legal status
+
+Tainted Grail: The Fall of Avalon and related names, assets, and marks belong to their respective rights holders. FOA-SDK is an independent community project and is not affiliated with or endorsed by the game’s developers or publishers.
+
+Do not contribute proprietary game source, copyrighted assets without permission, credentials, private paths, saves, extracted commercial content, or material whose redistribution status is unknown.

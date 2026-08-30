@@ -6,6 +6,7 @@ This directory contains the public documentation for the FOA-SDK product reposit
 
 ### For users
 
+- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, installed `FOA-SDK.exe` startup, repair, upgrade, uninstall, and troubleshooting.
 - [Open and Test the Actual Editor](OPEN_AND_TEST_EDITOR.md) — shortest Windows path from a fresh pull to the dedicated O3DE project, source build, trusted clickable entry, native log, and synthetic workspace.
 - [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, manual UI evidence tooling, and current limitations.
 - [Developer Preview Exact-Head Verification](DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md) — reviewed-range whitespace checking, external receipts, O3DE configure/build, compiled tests, authoritative receipt/UI re-verification, and Windows evidence finalization.
@@ -53,8 +54,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation guidance.
 - [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — applicability-based validation matrix, read-only hosted jobs, local evidence layers, and runner boundaries.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
-- [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, MSI/ZIP identity, failure, rollback, and non-release boundary.
-- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, repair, upgrade, uninstall, and troubleshooting.
+- [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, installed launcher behavior, MSI/ZIP identity, repair, upgrade, rollback, and non-release boundary.
+- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, installed `FOA-SDK.exe` startup, repair, upgrade, uninstall, and troubleshooting.
 - [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — approved population design and implementation history. The completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source, immutable action-lane, and registered Actor/Troop pane units are recorded here with deterministic fixture, validation, and deferred runtime scope.
 - [Actor and Troop Architecture and Data Formats](ACTOR_TROOP_ARCHITECTURE_AND_DATA_FORMATS.md) — Core/Framework/Editor ownership, schema-2 actor/troop/member shapes, identity, evidence, governance, ordering, fixture format, and deferred contracts.
 - [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE build, compiled-test and Windows evidence requirements, release claims, rollback, and next population work.
@@ -67,8 +68,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [O3DE-to-Unity Bridge Research Archive](../../Research/o3de-to-unity-conversion-and-runtime-bridge/README.md) — supplied report, durable source and claim registers, research areas, and gate reconciliation.
 - [Tainted Grail System Ports](../../Research/tainted-grail-system-ports/README.md) — exact-commit inventory and
   gated selective ports for the user's Tainted Grail frameworks, UI, diagnostics, roads, AI, and providers.
-- [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, and separation from engine testing projects.
-- [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, and diagnostic overrides.
+- [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, installed package entry distinction, and separation from engine testing projects.
+- [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, diagnostic overrides, and installed prebuilt launcher trust.
 - [Atomic Workspace Transition and Schema Contract](WORKSPACE_ATOMICITY_AND_SCHEMA.md) — schema-0 migration, durable schema 1, candidate construction, cross-binding validation, atomic publication, rollback, and failure-stage tests.
 - [Core and Framework Build Graph](CORE_FRAMEWORK_BUILD_GRAPH.md) — internal static targets, unique source ownership, dependency direction, test linkage, enforcement, and runtime boundary.
 - [Economy Acquisition Coverage Contract](ECONOMY_ACQUISITION_COVERAGE.md) — Core analysis ownership, lane/status semantics, evidence and blocker handling, determinism, non-mutation, and runtime boundary.
@@ -131,12 +132,14 @@ The project is pre-alpha. Current implemented editor workflows cover:
 - pinned Tainted Interface `0.2.6` semantic UI metadata, deterministic style/metric/layout utilities, an exact nineteen-ID curated catalog, blocked `NOASSERTION` upstream payloads, and verified project-owned SVG fallbacks without renderer or runtime authority;
 - typed transient adapter declarations, capability compatibility, deterministic work-order plans, runtime-result evidence, build manifests, package/deployment previews, deployment work orders/results, verification/reconciliation, typed transient release-signing result envelopes, and release metadata contracts with operational permissions disabled;
 - public read-only ExtensionAPI contracts plus provider-neutral game-information observations, Road Atlas schema/geometry validation, Avalon AI API 2.0 authoring plans, and distinct inert Mono/IL2CPP adapter routes, all pinned to exact upstream evidence;
+- inert QuestDefinition V1 contracts and the read-only Quest and State Inspector, with stable quest IDs, deterministic canonical JSON and fingerprints, malformed-input rejection, unsafe reference blocking, binding requirement visibility, and explicit no-runtime/no-editor-mutation/no-deployment authority;
+- staged visual preview evidence from discovery, thumbnail artifacts, neutral/O3DE preview conversion, Asset Browser pane models, UI render evidence, 3D viewport render evidence, the registered Asset Browser Preview pane, and explicit latest-route copy into pending item visual refs, with `FunctionCompleteAllowed=false` and typed selector binding still blocked;
 - ordinary optional O3DE Tool Gem packaging with exact manifest/provenance validation, deterministic project selection, cross-module ExtensionAPI registration/revocation, host-owned atomic extension documents, and registered Road Atlas and Avalon AI editor panes;
 - Developer Preview validation, deterministic synthetic fixtures, controlled Editor launch, diagnostics, and exact-commit Windows manual UI evidence tooling.
 
 Automatic GitHub-hosted static, canonical-interchange compiled, and Windows-prerequisite jobs run for relevant events. Additional host, UI, installer, deployment, runtime, signing, or release evidence is required only when the changed surface or owning design makes that evidence applicable.
 
-The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, visual game-content browser and preview products, typed visual selector binding, and remaining specialised domain tools are not complete.
+The actual Windows screenshot pass remains pending. Trusted identity/time providers, actual verifier execution and target access, acknowledgement, toolchain resolution, compilation, file-backed staging/target inventory, package copying/archiving, backup/restore, release-artifact hashing, key custody, actual signing and signature verification, release upload/publication, runtime adapters, production deployment, live executor capture, approved upstream Tainted Interface visual assets, UI acquisition providers, function-complete visual workflows, typed visual selector binding, and remaining specialised domain tools are not complete.
 
 ## Documentation contribution rules
 

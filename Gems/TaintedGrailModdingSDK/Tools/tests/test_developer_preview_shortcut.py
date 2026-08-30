@@ -169,7 +169,7 @@ class DeveloperPreviewShortcutTests(unittest.TestCase):
     def test_diagnostic_override_is_labeled(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo, build, editor = self.make_repo(Path(temporary))
-            output = repo / "build/diagnostic-entries/test.lnk"
+            output = repo / "release/revisions/diagnostic-entries/test.lnk"
             paths = self.expected_paths(repo, build, editor, "diagnostic-override")
             with mock.patch.object(
                 shortcut.validate_developer_preview_project,

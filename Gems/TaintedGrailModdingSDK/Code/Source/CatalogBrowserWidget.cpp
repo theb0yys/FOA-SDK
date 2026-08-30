@@ -13,15 +13,21 @@
 #include <QByteArray>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QSplitter>
 #include <QStringList>
@@ -112,6 +118,36 @@ namespace TaintedGrailModdingSDK
             view->setMaximumHeight(maximumHeight);
             return view;
         }
+
+        QString CleanAbsolutePath(const QString& path)
+        {
+            return QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+        }
+
+        bool IsInsideOrEqual(const QString& path, const QString& root)
+        {
+            if (path.trimmed().isEmpty() || root.trimmed().isEmpty())
+            {
+                return false;
+            }
+
+            const QString cleanPath = CleanAbsolutePath(path);
+            const QString cleanRoot = CleanAbsolutePath(root);
+            const QString relative = QDir(cleanRoot).relativeFilePath(cleanPath);
+            return relative == "."
+                || (!relative.isEmpty()
+                    && !QDir::isAbsolutePath(relative)
+                    && relative != ".."
+                    && !relative.startsWith(QStringLiteral("../"))
+                    && !relative.startsWith(QStringLiteral("..\\")));
+        }
+
+        bool IsTemporaryPath(const QString& path)
+        {
+            return IsInsideOrEqual(path, QDir::tempPath())
+                || IsInsideOrEqual(path, qEnvironmentVariable("TEMP"))
+                || IsInsideOrEqual(path, qEnvironmentVariable("TMP"));
+        }
     } // namespace
 
     CatalogBrowserWidget::CatalogBrowserWidget(QWidget* parent)
@@ -119,7 +155,7 @@ namespace TaintedGrailModdingSDK
     {
         auto* rootLayout = new QVBoxLayout(this);
 
-        auto* heading = new QLabel(tr("Tainted Grail Canonical Catalog"), this);
+        auto* heading = new QLabel(tr("Tainted Grail Catalog Browser"), this);
         QFont headingFont = heading->font();
         headingFont.setPointSize(headingFont.pointSize() + 3);
         headingFont.setBold(true);
@@ -140,7 +176,8 @@ namespace TaintedGrailModdingSDK
         pathLayout->addRow(tr("Path"), m_catalogPathValue);
         rootLayout->addWidget(pathGroup);
 
-        auto* filterGroup = new QGroupBox(tr("Search and Filters"), this);
+        m_filterGroup = new QGroupBox(tr("Advanced Filters"), this);
+        auto* filterGroup = m_filterGroup;
         auto* filterLayout = new QGridLayout(filterGroup);
         m_searchEdit = new QLineEdit(filterGroup);
         m_searchEdit->setPlaceholderText(tr("Display name, alias, GUID, exact ref, subject, tag..."));
@@ -158,47 +195,59 @@ namespace TaintedGrailModdingSDK
         m_validationFilter = new QComboBox(filterGroup);
         m_stalenessFilter = new QComboBox(filterGroup);
         m_permissionFilter = new QLineEdit(filterGroup);
+        m_itemsOnly = new QCheckBox(tr("Items only"), filterGroup);
+        m_itemsOnly->setChecked(true);
         m_blockedOnly = new QCheckBox(tr("Blocked only"), filterGroup);
         m_includeSuperseded = new QCheckBox(tr("Include superseded"), filterGroup);
+        auto* openWorkspaceButton = new QPushButton(tr("Open Workspace..."), filterGroup);
         auto* searchButton = new QPushButton(tr("Search"), filterGroup);
         auto* reloadButton = new QPushButton(tr("Reload Catalog"), filterGroup);
         auto* saveButton = new QPushButton(tr("Save Catalog"), filterGroup);
+        auto* filterToggleButton = new QPushButton(tr("Filters"), this);
 
-        filterLayout->addWidget(new QLabel(tr("Text"), filterGroup), 0, 0);
-        filterLayout->addWidget(m_searchEdit, 0, 1, 1, 3);
-        filterLayout->addWidget(new QLabel(tr("Record ID"), filterGroup), 1, 0);
-        filterLayout->addWidget(m_recordIdFilter, 1, 1);
-        filterLayout->addWidget(new QLabel(tr("Exact native ref / GUID"), filterGroup), 1, 2);
-        filterLayout->addWidget(m_exactRefFilter, 1, 3);
-        filterLayout->addWidget(new QLabel(tr("Subject ref"), filterGroup), 2, 0);
-        filterLayout->addWidget(m_subjectFilter, 2, 1);
-        filterLayout->addWidget(new QLabel(tr("Evidence ID"), filterGroup), 2, 2);
-        filterLayout->addWidget(m_evidenceFilter, 2, 3);
-        filterLayout->addWidget(new QLabel(tr("Pack"), filterGroup), 3, 0);
-        filterLayout->addWidget(m_packFilter, 3, 1);
-        filterLayout->addWidget(new QLabel(tr("Domain"), filterGroup), 3, 2);
-        filterLayout->addWidget(m_domainFilter, 3, 3);
-        filterLayout->addWidget(new QLabel(tr("Kind"), filterGroup), 4, 0);
-        filterLayout->addWidget(m_kindFilter, 4, 1);
-        filterLayout->addWidget(new QLabel(tr("Identity"), filterGroup), 4, 2);
-        filterLayout->addWidget(m_identityFilter, 4, 3);
-        filterLayout->addWidget(new QLabel(tr("Maturity"), filterGroup), 5, 0);
-        filterLayout->addWidget(m_stageFilter, 5, 1);
-        filterLayout->addWidget(new QLabel(tr("Confidence"), filterGroup), 5, 2);
-        filterLayout->addWidget(m_confidenceFilter, 5, 3);
-        filterLayout->addWidget(new QLabel(tr("Operational risk"), filterGroup), 6, 0);
-        filterLayout->addWidget(m_riskFilter, 6, 1);
-        filterLayout->addWidget(new QLabel(tr("Validation"), filterGroup), 6, 2);
-        filterLayout->addWidget(m_validationFilter, 6, 3);
-        filterLayout->addWidget(new QLabel(tr("Staleness"), filterGroup), 7, 0);
-        filterLayout->addWidget(m_stalenessFilter, 7, 1);
-        filterLayout->addWidget(new QLabel(tr("Permission / prohibition"), filterGroup), 7, 2);
-        filterLayout->addWidget(m_permissionFilter, 7, 3);
-        filterLayout->addWidget(m_blockedOnly, 8, 0, 1, 2);
-        filterLayout->addWidget(m_includeSuperseded, 8, 2, 1, 2);
-        filterLayout->addWidget(searchButton, 9, 1);
-        filterLayout->addWidget(reloadButton, 9, 2);
-        filterLayout->addWidget(saveButton, 9, 3);
+        auto* controlsRow = new QWidget(this);
+        auto* controlsLayout = new QHBoxLayout(controlsRow);
+        controlsLayout->setContentsMargins(0, 0, 0, 0);
+        controlsLayout->addWidget(openWorkspaceButton);
+        controlsLayout->addWidget(m_searchEdit, 1);
+        controlsLayout->addWidget(searchButton);
+        controlsLayout->addWidget(m_itemsOnly);
+        controlsLayout->addWidget(filterToggleButton);
+        controlsLayout->addWidget(reloadButton);
+        controlsLayout->addWidget(saveButton);
+        rootLayout->addWidget(controlsRow);
+
+        filterLayout->addWidget(new QLabel(tr("Record ID"), filterGroup), 0, 0);
+        filterLayout->addWidget(m_recordIdFilter, 0, 1);
+        filterLayout->addWidget(new QLabel(tr("Exact native ref / GUID"), filterGroup), 0, 2);
+        filterLayout->addWidget(m_exactRefFilter, 0, 3);
+        filterLayout->addWidget(new QLabel(tr("Subject ref"), filterGroup), 1, 0);
+        filterLayout->addWidget(m_subjectFilter, 1, 1);
+        filterLayout->addWidget(new QLabel(tr("Evidence ID"), filterGroup), 1, 2);
+        filterLayout->addWidget(m_evidenceFilter, 1, 3);
+        filterLayout->addWidget(new QLabel(tr("Pack"), filterGroup), 2, 0);
+        filterLayout->addWidget(m_packFilter, 2, 1);
+        filterLayout->addWidget(new QLabel(tr("Domain"), filterGroup), 2, 2);
+        filterLayout->addWidget(m_domainFilter, 2, 3);
+        filterLayout->addWidget(new QLabel(tr("Kind"), filterGroup), 3, 0);
+        filterLayout->addWidget(m_kindFilter, 3, 1);
+        filterLayout->addWidget(new QLabel(tr("Identity"), filterGroup), 3, 2);
+        filterLayout->addWidget(m_identityFilter, 3, 3);
+        filterLayout->addWidget(new QLabel(tr("Maturity"), filterGroup), 4, 0);
+        filterLayout->addWidget(m_stageFilter, 4, 1);
+        filterLayout->addWidget(new QLabel(tr("Confidence"), filterGroup), 4, 2);
+        filterLayout->addWidget(m_confidenceFilter, 4, 3);
+        filterLayout->addWidget(new QLabel(tr("Operational risk"), filterGroup), 5, 0);
+        filterLayout->addWidget(m_riskFilter, 5, 1);
+        filterLayout->addWidget(new QLabel(tr("Validation"), filterGroup), 5, 2);
+        filterLayout->addWidget(m_validationFilter, 5, 3);
+        filterLayout->addWidget(new QLabel(tr("Staleness"), filterGroup), 6, 0);
+        filterLayout->addWidget(m_stalenessFilter, 6, 1);
+        filterLayout->addWidget(new QLabel(tr("Permission / prohibition"), filterGroup), 6, 2);
+        filterLayout->addWidget(m_permissionFilter, 6, 3);
+        filterLayout->addWidget(m_blockedOnly, 7, 0);
+        filterLayout->addWidget(m_includeSuperseded, 7, 1, 1, 3);
+        filterGroup->setVisible(false);
         rootLayout->addWidget(filterGroup);
 
         auto* splitter = new QSplitter(Qt::Horizontal, this);
@@ -319,7 +368,14 @@ namespace TaintedGrailModdingSDK
         rootLayout->addWidget(m_statusLabel);
 
         connect(searchButton, &QPushButton::clicked, this, [this]() { RunSearch(); });
+        connect(openWorkspaceButton, &QPushButton::clicked, this, [this]() { OpenWorkspace(); });
         connect(m_searchEdit, &QLineEdit::returnPressed, this, [this]() { RunSearch(); });
+        connect(filterToggleButton, &QPushButton::clicked, this, [this, filterToggleButton]()
+        {
+            const bool showFilters = !m_filterGroup->isVisible();
+            m_filterGroup->setVisible(showFilters);
+            filterToggleButton->setText(showFilters ? tr("Hide Filters") : tr("Filters"));
+        });
         connect(reloadButton, &QPushButton::clicked, this, [this]()
         {
             AZStd::string error;
@@ -344,6 +400,7 @@ namespace TaintedGrailModdingSDK
         });
         connect(m_resultsTable, &QTableWidget::currentCellChanged, this,
             [this](int, int, int, int) { InspectCurrentRow(); });
+        connect(m_itemsOnly, &QCheckBox::toggled, this, [this](bool) { RunSearch(); });
         connect(promoteButton, &QPushButton::clicked, this, [this]() { PromoteEvidence(); });
         connect(m_promotionEvidence, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int)
         {
@@ -361,6 +418,7 @@ namespace TaintedGrailModdingSDK
         });
 
         FoundationNotificationBus::Handler::BusConnect();
+        AutoLoadStartupWorkspace();
         ReloadForWorkspaceIfNeeded();
         RefreshChoices();
         RunSearch();
@@ -380,6 +438,101 @@ namespace TaintedGrailModdingSDK
         ReloadForWorkspaceIfNeeded();
         RefreshChoices();
         RunSearch();
+    }
+
+    void CatalogBrowserWidget::OpenWorkspace()
+    {
+        const QString currentPath = ToQString(FoundationService::Get().GetWorkspaceFilePath());
+        const QString filePath = QFileDialog::getOpenFileName(
+            this,
+            tr("Open TG workspace"),
+            currentPath.isEmpty() ? QString() : QFileInfo(currentPath).absolutePath(),
+            tr("TG workspace (*.tgworkspace.json *.json);;JSON files (*.json)"));
+        if (filePath.isEmpty())
+        {
+            return;
+        }
+
+        LoadWorkspaceFile(
+            filePath,
+            tr("Workspace opened from %1. Catalog refreshed.").arg(filePath));
+    }
+
+    void CatalogBrowserWidget::AutoLoadStartupWorkspace()
+    {
+        const FoundationService& service = FoundationService::Get();
+        if (!service.GetWorkspaceFilePath().empty() || !service.GetCatalogFilePath().empty())
+        {
+            return;
+        }
+
+        const QString startupWorkspace = FindStartupWorkspacePath();
+        if (startupWorkspace.isEmpty())
+        {
+            SetStatus(tr("No workspace loaded. Open a workspace to populate catalog records."));
+            return;
+        }
+
+        LoadWorkspaceFile(
+            startupWorkspace,
+            tr("Workspace loaded automatically from %1. Catalog refreshed.")
+                .arg(startupWorkspace),
+            false);
+    }
+
+    bool CatalogBrowserWidget::LoadWorkspaceFile(
+        const QString& filePath,
+        const QString& successMessage,
+        bool showFailureDialog)
+    {
+        AZStd::string error;
+        if (!FoundationService::Get().LoadWorkspace(ToAzString(filePath), &error))
+        {
+            if (showFailureDialog)
+            {
+                QMessageBox::critical(this, tr("Unable to open workspace"), ToQString(error));
+            }
+            else
+            {
+                SetStatus(
+                    tr("Saved workspace was skipped because it no longer opens cleanly."),
+                    true);
+            }
+            return false;
+        }
+
+        QSettings settings(QStringLiteral("FOA-SDK"), QStringLiteral("TaintedGrailModdingSDK"));
+        settings.setValue(QStringLiteral("CatalogBrowser/LastWorkspacePath"), QFileInfo(filePath).absoluteFilePath());
+        RefreshChoices();
+        RunSearch();
+        SetStatus(successMessage);
+        return true;
+    }
+
+    QString CatalogBrowserWidget::FindStartupWorkspacePath() const
+    {
+        QStringList candidates;
+
+        const QSettings settings(QStringLiteral("FOA-SDK"), QStringLiteral("TaintedGrailModdingSDK"));
+        candidates.push_back(settings.value(QStringLiteral("CatalogBrowser/LastWorkspacePath")).toString());
+
+        const QString localAppData = qEnvironmentVariable("LOCALAPPDATA");
+        if (!localAppData.isEmpty())
+        {
+            const QDir appDataRoot(localAppData);
+            candidates.push_back(appDataRoot.filePath(QStringLiteral("FOA-SDK/Workspace/preview.tgworkspace.json")));
+            candidates.push_back(appDataRoot.filePath(QStringLiteral("FOA-SDK/Workspace/workspace.tgworkspace.json")));
+        }
+
+        for (const QString& candidate : candidates)
+        {
+            const QFileInfo info(candidate);
+            if (info.isFile() && !IsTemporaryPath(info.absoluteFilePath()))
+            {
+                return info.absoluteFilePath();
+            }
+        }
+        return {};
     }
 
     void CatalogBrowserWidget::ReloadForWorkspaceIfNeeded()
@@ -491,6 +644,11 @@ namespace TaintedGrailModdingSDK
         query.m_ownerPackId = ToAzString(m_packFilter->currentData().toString());
         query.m_domain = ToAzString(m_domainFilter->currentData().toString());
         query.m_recordKind = ToAzString(m_kindFilter->currentData().toString());
+        if (m_itemsOnly->isChecked())
+        {
+            query.m_domain = "economy";
+            query.m_recordKind = "item";
+        }
         query.m_identityKind = ToAzString(m_identityFilter->currentData().toString());
         query.m_researchStage = ToAzString(m_stageFilter->currentData().toString());
         query.m_confidence = ToAzString(m_confidenceFilter->currentData().toString());
@@ -532,7 +690,10 @@ namespace TaintedGrailModdingSDK
         {
             InspectRecord(nullptr);
         }
-        SetStatus(tr("%1 catalog record(s) matched.").arg(static_cast<qulonglong>(m_results.size())));
+        SetStatus(
+            m_itemsOnly->isChecked()
+                ? tr("%1 canonical item record(s) matched.").arg(static_cast<qulonglong>(m_results.size()))
+                : tr("%1 catalog record(s) matched.").arg(static_cast<qulonglong>(m_results.size())));
     }
 
     void CatalogBrowserWidget::InspectCurrentRow()
@@ -570,6 +731,7 @@ namespace TaintedGrailModdingSDK
                 .arg(ToQString(record->m_identityKind))
                 .arg(ToQString(record->m_domain))
                 .arg(ToQString(record->m_recordKind)));
+        const FoundationService& service = FoundationService::Get();
         m_recordOwnerValue->setText(record->m_ownerPackId.empty() ? tr("Native / no pack owner") : ToQString(record->m_ownerPackId));
         m_recordSubjectValue->setText(ToQString(record->m_subjectRef));
         m_recordNativeRefValue->setText(record->m_nativeRefExact.empty() ? tr("Not applicable") : ToQString(record->m_nativeRefExact));
@@ -592,7 +754,6 @@ namespace TaintedGrailModdingSDK
         aliases << tr("Conflicts: %1").arg(JoinValues(record->m_conflictRefs));
         m_recordAliasesView->setPlainText(aliases.join('\n'));
 
-        const FoundationService& service = FoundationService::Get();
         QStringList evidenceLines;
         for (const AZStd::string& evidenceId : record->m_evidenceIds)
         {

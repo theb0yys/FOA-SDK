@@ -48,7 +48,7 @@ class InstallerComplianceReportTests(unittest.TestCase):
         self.assertIn("A compliant `FOA-SDK-Installer.exe` does not yet exist", report)
         self.assertIn("pending human review", report)
         self.assertIn("Package workflow run: **pending**", report)
-        self.assertIn("Install / launcher / repair / uninstall result: **pending**", report)
+        self.assertIn("Install / launcher self-test / repair / uninstall result: **pending**", report)
         self.assertIn("No automated actor may invent or impersonate", report)
 
     def test_post_build_evidence_does_not_mutate_the_reviewed_source(self) -> None:

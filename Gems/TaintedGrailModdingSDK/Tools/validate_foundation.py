@@ -159,6 +159,8 @@ def validate_editor_foundation(gem_root: Path) -> None:
         "RegisterViewPane<DevelopmentHubWidget>", "OpenViewPane(DevelopmentHubViewPaneName)",
         'tr("Setup and readiness")', 'tr("Research and author")', 'tr("Package and verify")',
         'tr("Diagnostics")', 'tr("Advanced")', "FoundationService::Get().GetSnapshot()",
+        "class AssetBrowserPreviewService", "class AssetBrowserPreviewWidget",
+        "RegisterViewPane<AssetBrowserPreviewWidget>", "Tainted Grail Asset Browser Preview",
     )
     for fragment in required:
         if fragment not in combined:
@@ -186,6 +188,7 @@ def validate_editor_foundation(gem_root: Path) -> None:
     for fragment in (
         "Tainted Grail Actor and Troop Editor",
         "Tainted Grail Release Signing Results",
+        "Tainted Grail Asset Browser Preview",
     ):
         require_contains(
             hub_source,
@@ -287,6 +290,8 @@ def validate_economy_authoring(gem_root: Path) -> None:
         "Recipe outputs require exactly one item record ID or unresolved item subject ref",
         "Recipe persistence mode must be unknown, native_template, runtime_append, or custom_template",
         "The canonical item record does not exist", "Economy evidence belongs to a different catalog subject",
+        "ApplyLatestPreviewRouteToItem", "AssetBrowserPreviewRouteRegistry::Get().GetLatestRoute",
+        "Latest preview route copied into item refs. Save the item profile to persist it.",
     ):
         if fragment not in combined:
             fail(f"Item/recipe editor is missing {fragment!r}")
@@ -295,6 +300,42 @@ def validate_economy_authoring(gem_root: Path) -> None:
     for forbidden in ("ApplyCatalogGovernanceDecision", "ApplyCatalogValidationDecision", "m_allowedUsages.push_back"):
         if forbidden in widget:
             fail(f"Item/recipe editor must not author permission state directly: {forbidden}")
+
+    quest_widget = source_root / "QuestStateInspectorWidget.cpp"
+    quest_widget_header = source_root / "QuestStateInspectorWidget.h"
+    editor_manifest = gem_root / "Code" / "taintedgrailmoddingsdk_editor_files.cmake"
+    require_fragments(
+        editor_manifest,
+        (
+            "Source/QuestStateInspectorWidget.cpp",
+            "Source/QuestStateInspectorWidget.h",
+        ),
+    )
+    require_fragments(
+        source_root / "TaintedGrailModdingSDKSystemComponent.cpp",
+        (
+            "RegisterViewPane<QuestStateInspectorWidget>",
+            "Tainted Grail Quest and State Inspector",
+            "TaintedGrailModdingSDK.QuestStateInspector",
+        ),
+    )
+    require_fragments(
+        quest_widget_header,
+        (
+            "class QuestStateInspectorWidget",
+            "PopulateBindingRequirements",
+        ),
+    )
+    require_fragments(
+        quest_widget,
+        (
+            "ParseQuestDefinitionJsonV1",
+            "CalculateQuestDefinitionFingerprintV1",
+            "MaximumQuestDocumentBytes",
+            "QIODevice::ReadOnly",
+            "does not write files, mutate editor state, execute quests, deploy content, or touch FoA saves",
+        ),
+    )
 
 
 def validate_population_authoring(gem_root: Path) -> None:
@@ -510,6 +551,138 @@ def validate_population_authoring(gem_root: Path) -> None:
     )
 
 
+def validate_preview_and_quest_wiring(gem_root: Path, repo_root: Path) -> None:
+    code_root = gem_root / "Code"
+    source_root = code_root / "Source"
+    tests_root = code_root / "Tests"
+
+    manifest_requirements = {
+        code_root / "taintedgrailmoddingsdk_framework_files.cmake": (
+            "Source/AssetBrowserPreviewService.cpp",
+            "Source/AssetBrowserPreviewService.h",
+        ),
+        code_root / "taintedgrailmoddingsdk_editor_files.cmake": (
+            "Source/AssetBrowserPreviewWidget.cpp",
+            "Source/AssetBrowserPreviewWidget.h",
+        ),
+        code_root / "taintedgrailmoddingsdk_tainted_framework_tests_files.cmake": (
+            "Tests/AssetBrowserPreviewServiceTests.cpp",
+        ),
+        code_root / "taintedgrailmoddingsdk_core_files.cmake": (
+            "Source/QuestDefinitionContract.cpp",
+            "Source/QuestDefinitionContract.h",
+        ),
+        code_root / "taintedgrailmoddingsdk_canonical_interchange_tests_files.cmake": (
+            "Tests/QuestDefinitionContractTests.cpp",
+        ),
+    }
+    for path, fragments in manifest_requirements.items():
+        require_fragments(path, fragments)
+
+    require_fragments(
+        source_root / "AssetBrowserPreviewService.cpp",
+        (
+            "PaneModelDocumentKind",
+            "ThumbnailEvidenceDocumentKind",
+            "ViewportEvidenceDocumentKind",
+            "RequireNoAuthority",
+            "RequireStageStillPreview",
+            "RequirePaneInputContract",
+            "RequiresExplicitBindingStep",
+            "FunctionCompleteAllowed",
+            "PrepareViewportRoute",
+            "AssetBrowserPreviewRouteRegistry::Get",
+            "RegisterRoute",
+            "m_canCreateTypedAuthoringBinding = false",
+            "m_requiresExplicitBindingStep = true",
+        ),
+    )
+    require_fragments(
+        source_root / "AssetBrowserPreviewWidget.cpp",
+        (
+            "AutoFindEvidence",
+            "LoadPreviewEvidence",
+            "RouteSelectedEntry",
+            "PrepareViewportRoute(BuildRequest(), *iterator)",
+            "AssetBrowserPreviewRouteRegistry::Get().RegisterRoute",
+            "Typed binding and scene mutation remain disabled.",
+        ),
+    )
+    require_fragments(
+        tests_root / "AssetBrowserPreviewServiceTests.cpp",
+        (
+            "CategorizesThumbnailEvidenceAndViewportRoute",
+            "ImportFailuresBecomeBlockedAndUnroutable",
+            "assetbrowser.viewport-route:pane.icon.texture",
+            "FindByRouteId",
+            "SelectionAuthorityEscalationFailsClosed",
+            "ThumbnailTraversalOutsidePreviewRootFailsClosed",
+        ),
+    )
+
+    require_fragments(
+        source_root / "QuestDefinitionContract.h",
+        (
+            "QuestDefinitionSchemaIdV1",
+            "QuestDefinitionV1",
+            "ValidateQuestDefinitionV1",
+            "ParseQuestDefinitionJsonV1",
+            "SerializeCanonicalQuestDefinitionV1",
+            "CalculateQuestDefinitionFingerprintV1",
+            "QuestDefinitionFingerprintMatchesV1",
+        ),
+    )
+    require_fragments(
+        source_root / "QuestDefinitionContract.cpp",
+        (
+            'IssueForbiddenPath = "quest.path.forbidden"',
+            'IssueNativeReference = "quest.native-ref.forbidden"',
+            'IssueAuthority = "quest.authority.forbidden"',
+            "ValidateQuestDefinitionV1",
+            "ParseQuestDefinitionJsonV1",
+            "SerializeCanonicalQuestDefinitionV1",
+            "CalculateQuestDefinitionFingerprintV1",
+            "QuestDefinitionFingerprintMatchesV1",
+        ),
+    )
+    require_fragments(
+        tests_root / "QuestDefinitionContractTests.cpp",
+        (
+            "ValidDefinitionHasCanonicalFingerprintAndNoRuntimeAuthority",
+            "CanonicalSerializationIsOrderIndependent",
+            "MalformedJsonSchemaVersionAndUnknownFieldsFailClosed",
+            "RuntimeEditorMutationAuthorityAndUnsafeReferencesAreRejected",
+            "ParserAcceptsSyntheticFixture",
+        ),
+    )
+
+    require_fragments(
+        repo_root / "docs/tainted-grail-sdk/DATA_FORMATS.md",
+        (
+            "## QuestDefinition document",
+            "foa.quest-definition",
+            "authority.runtime_execution_allowed",
+        ),
+    )
+    require_fragments(
+        repo_root / "docs/tainted-grail-sdk/README.md",
+        (
+            "QuestDefinition V1",
+            "registered Asset Browser Preview pane",
+            "`FunctionCompleteAllowed=false`",
+            "function-complete visual workflows",
+        ),
+    )
+    require_fragments(
+        gem_root / "README.md",
+        (
+            "Tainted Grail Asset Browser Preview",
+            "28 panes",
+            "QuestDefinition contract coverage and inspector routing",
+        ),
+    )
+
+
 def validate_public_project(repo_root: Path) -> None:
     required_files = {
         "README.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SUPPORT.md",
@@ -545,6 +718,7 @@ def main() -> int:
         validate_catalog_and_governance(gem_root)
         validate_economy_authoring(gem_root)
         validate_population_authoring(gem_root)
+        validate_preview_and_quest_wiring(gem_root, repo_root)
         validate_public_project(repo_root)
     except (OSError, RuntimeError) as exc:
         print(f"Tainted Grail SDK foundation validation failed: {exc}", file=sys.stderr)
@@ -554,7 +728,9 @@ def main() -> int:
     print(
         "Validated: Core/Framework/Editor ownership, public governance, workspace and pack editing, "
         "source/evidence intake, canonical catalog, typed atomic governance, item/recipe authoring, "
-        "evidence-bound population candidates, the existing linked-test graph, and runtime separation."
+        "evidence-bound population candidates, Asset Browser Preview wiring, QuestDefinition contracts "
+        "and inspector routing, "
+        "the existing linked-test graph, and runtime separation."
     )
     return 0
 

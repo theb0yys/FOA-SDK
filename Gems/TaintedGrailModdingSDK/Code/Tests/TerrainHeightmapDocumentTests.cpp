@@ -275,6 +275,24 @@ namespace TaintedGrailModdingSDK
                 45);
         }
 
+        QByteArray HugeMetadataPngHeader()
+        {
+            QByteArray bytes(
+                "\x89PNG\r\n\x1A\n"
+                "\x00\x00\x00\x0D"
+                "IHDR"
+                "\x00\x00\x00\x01"
+                "\x00\x00\x00\x01"
+                "\x10\x00\x00\x00\x00"
+                "\x1D\x0F\x72\x89"
+                "\x00\x00\x00\x00"
+                "IEND"
+                "\xAE\x42\x60\x82",
+                45);
+            bytes.append(QByteArray(17 * 1024 * 1024, 'm'));
+            return bytes;
+        }
+
         QByteArray ReadAll(const AZStd::string& path)
         {
             QFile file(QString::fromUtf8(path.c_str()));
@@ -1099,6 +1117,23 @@ namespace TaintedGrailModdingSDK
                 "terrain-import.oversized-image"));
         EXPECT_FALSE(outcome.IsSuccess());
         EXPECT_NE(outcome.GetError().find("dimensions"), AZStd::string::npos);
+        EXPECT_FALSE(QFileInfo(QDir(temporary.path()).filePath("Derived/Terrain")).exists());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageImportRejectsHugeMetadataBeforeDecode)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("huge-metadata.png");
+        ASSERT_TRUE(WriteFile(imagePath, HugeMetadataPngHeader()));
+
+        const auto outcome = TerrainHeightmap::ImportImageHeightmapToWorkspace(
+            MakeImageImportRequest(
+                temporary,
+                imagePath,
+                "terrain-import.huge-metadata-image"));
+        EXPECT_FALSE(outcome.IsSuccess());
+        EXPECT_NE(outcome.GetError().find("metadata"), AZStd::string::npos);
         EXPECT_FALSE(QFileInfo(QDir(temporary.path()).filePath("Derived/Terrain")).exists());
     }
 

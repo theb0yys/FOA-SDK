@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Tests/AssetBrowserPreviewServiceTests.cpp
     Tests/LocalSetupDetectionServiceTests.cpp
     Tests/TaintedFrameworkEditorServicesTests.cpp
     Tests/TaintedFrameworkKnowledgeTests.cpp

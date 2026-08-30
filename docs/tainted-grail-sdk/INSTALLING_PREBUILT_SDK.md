@@ -56,9 +56,35 @@ The executable contains the reviewed MSI and verifies its captured bytes before
 starting Windows Installer. No Python, Git, CMake, Visual Studio, source checkout,
 or separately installed .NET runtime is required.
 
-The installed launcher is `FOA-SDK.exe`. It checks the installed manifest, Editor,
-and bundled project before starting `Editor.exe --project-path <installed-project>`.
-An actionable error asks you to repair or reinstall when that layout is incomplete.
+The installed Editor is always started by the installed launcher, not by a
+user-selected engine binary. The Start Menu entry targets:
+
+```text
+<install-root>\bin\Windows\profile\Default\FOA-SDK.exe
+```
+
+`FOA-SDK.exe` resolves the self-contained install root by walking upward from
+its own path until it finds `INSTALL_MANIFEST.json` and
+root `engine.json` plus `TaintedGrailModdingEditor\project.json`. It then starts the bundled
+`Editor.exe` from `bin\Windows\profile\Default` with:
+
+```text
+--engine-path <install-root>
+--project-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project
+--project-cache-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\Cache
+--project-user-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\user
+--project-log-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project\user\log
+%LOCALAPPDATA%\O3DE\TGEditor\installed\project\Levels\DefaultLevel\DefaultLevel.prefab
+```
+
+`FOA-SDK.exe --self-test` checks the manifest, engine metadata, bundled project,
+Editor, startup level, and writable local app-data launch paths without
+launching the Editor. An actionable error asks you to repair or reinstall when
+that layout is incomplete, or to fix the Windows user profile when local
+app-data cannot host Editor state. The launcher copies the packaged `External`
+Gem roots and project into `%LOCALAPPDATA%\O3DE\TGEditor\installed`, including
+`asset_processor.setreg`, so Asset Processor can update its branch token outside
+the installed payload and on the same drive as the launched project.
 
 The Tool Wizard is separate from Windows Installer. It creates or records an
 external workspace, optional O3DE Editor path, optional Unity Editor and
@@ -76,10 +102,14 @@ uninstall.
 
 Run the same reviewed executable and select **Repair** or **Uninstall**. Windows
 **Settings → Apps → Installed apps → Tainted Grail FoA Modding SDK** remains the
-standard fallback for uninstall. A newer reviewed executable containing an MSI
-with the same Upgrade Code and a newer version replaces the older product. Do
-not rename a rebuild to impersonate a new version or install an older version
-over a newer one.
+standard fallback for uninstall.
+
+To update an installed SDK, run a newer reviewed `FOA-SDK-Installer.exe` whose
+embedded MSI uses the same Upgrade Code and a newer version. That is a Windows
+Installer major upgrade: it replaces product-owned files and keeps external
+workspaces outside the install root. Do not rename a rebuild to impersonate a
+new version, install an older version over a newer one, or copy raw build output
+into an installed product.
 
 Repair restores product-owned files from the exact MSI. It does not validate or
 repair external workspaces. Uninstall removes product-owned files and leaves
@@ -104,6 +134,10 @@ bin\Windows\profile\Default\FOA-SDK.exe
 The ZIP and MSI contain the same staged manifest payload. The ZIP has no Windows
 Installer repair or uninstall registration; remove its extraction directory
 manually only after confirming that no workspace was placed inside it.
+
+Update a portable ZIP by extracting the newer reviewed ZIP to a new empty
+directory and moving only external workspace references as needed; do not merge
+two product roots.
 
 ## Troubleshooting
 

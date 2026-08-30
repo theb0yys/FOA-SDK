@@ -27,6 +27,7 @@
 #include "AdapterVerifierEvidenceReconciliationWidget.h"
 #include "AdapterWorkOrderPlanWidget.h"
 #include "ActorTroopEditorWidget.h"
+#include "AssetBrowserPreviewWidget.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
 #include "DevelopmentHubWidget.h"
@@ -38,6 +39,7 @@
 #include "FoundationStatusWidget.h"
 #include "ItemRecipeEditorWidget.h"
 #include "PackManagerWidget.h"
+#include "QuestStateInspectorWidget.h"
 #include "SourceEvidenceIntakeWidget.h"
 
 #include <AzCore/Debug/Trace.h>
@@ -58,9 +60,11 @@ namespace TaintedGrailModdingSDK
         constexpr const char* FoundationStatusViewPaneName = "Tainted Grail SDK Status";
         constexpr const char* PackManagerViewPaneName = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakeViewPaneName = "Tainted Grail Source Intake";
+        constexpr const char* AssetBrowserPreviewViewPaneName = "Tainted Grail Asset Browser Preview";
         constexpr const char* CatalogBrowserViewPaneName = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* QuestStateInspectorViewPaneName = "Tainted Grail Quest and State Inspector";
         constexpr const char* ActorTroopEditorViewPaneName = "Tainted Grail Actor and Troop Editor";
         constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
         constexpr const char* EconomyDuplicateReportViewPaneName = "Tainted Grail Economy Cross-Pack Duplicates";
@@ -147,9 +151,11 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(FoundationStatusViewPaneName);
             AzToolsFramework::UnregisterViewPane(PackManagerViewPaneName);
             AzToolsFramework::UnregisterViewPane(SourceIntakeViewPaneName);
+            AzToolsFramework::UnregisterViewPane(AssetBrowserPreviewViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogBrowserViewPaneName);
             AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
+            AzToolsFramework::UnregisterViewPane(QuestStateInspectorViewPaneName);
             AzToolsFramework::UnregisterViewPane(ActorTroopEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyDuplicateReportViewPaneName);
@@ -175,6 +181,7 @@ namespace TaintedGrailModdingSDK
         AdapterPackageAssemblyPreviewRegistry::Get().Clear();
         AdapterRuntimeResultRegistry::Get().Clear();
         AdapterContractRegistry::Get().Clear();
+        AssetBrowserPreviewRouteRegistry::Get().Clear();
         AzToolsFramework::EditorEvents::Bus::Handler::BusDisconnect();
         FoundationService::Get().Shutdown();
         AZ_Printf("TaintedGrailModdingSDK", "Editor foundation deactivated.\n");
@@ -188,7 +195,7 @@ namespace TaintedGrailModdingSDK
         }
 
         AzToolsFramework::ViewPaneOptions hubOptions;
-        hubOptions.paneRect = QRect(80, 80, 1180, 980);
+        hubOptions.paneRect = QRect(80, 80, 460, 980);
         hubOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
         hubOptions.isDeletable = true;
         hubOptions.isPreview = true;
@@ -231,6 +238,18 @@ namespace TaintedGrailModdingSDK
             "Tainted Grail SDK",
             intakeOptions);
 
+        AzToolsFramework::ViewPaneOptions assetBrowserPreviewOptions;
+        assetBrowserPreviewOptions.paneRect = QRect(150, 150, 860, 940);
+        assetBrowserPreviewOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        assetBrowserPreviewOptions.isDeletable = true;
+        assetBrowserPreviewOptions.isPreview = true;
+        assetBrowserPreviewOptions.saveKeyName =
+            QStringLiteral("TaintedGrailModdingSDK.AssetBrowserPreview");
+        AzToolsFramework::RegisterViewPane<AssetBrowserPreviewWidget>(
+            AssetBrowserPreviewViewPaneName,
+            "Tainted Grail SDK",
+            assetBrowserPreviewOptions);
+
         AzToolsFramework::ViewPaneOptions catalogOptions;
         catalogOptions.paneRect = QRect(160, 160, 1280, 940);
         catalogOptions.preferedDockingArea = Qt::RightDockWidgetArea;
@@ -263,6 +282,17 @@ namespace TaintedGrailModdingSDK
             ItemRecipeEditorViewPaneName,
             "Tainted Grail SDK",
             itemRecipeOptions);
+
+        AzToolsFramework::ViewPaneOptions questStateOptions;
+        questStateOptions.paneRect = QRect(205, 205, 1040, 900);
+        questStateOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        questStateOptions.isDeletable = true;
+        questStateOptions.isPreview = true;
+        questStateOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.QuestStateInspector");
+        AzToolsFramework::RegisterViewPane<QuestStateInspectorWidget>(
+            QuestStateInspectorViewPaneName,
+            "Tainted Grail SDK",
+            questStateOptions);
 
         AzToolsFramework::ViewPaneOptions actorTroopOptions;
         actorTroopOptions.paneRect = QRect(210, 210, 1280, 1000);

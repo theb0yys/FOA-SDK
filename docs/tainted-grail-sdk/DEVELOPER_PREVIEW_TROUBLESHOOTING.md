@@ -9,7 +9,7 @@ Run:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py build `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 The trusted clickable entry expects `Editor.exe` beneath `bin/profile` or
@@ -20,13 +20,15 @@ The trusted clickable entry expects `Editor.exe` beneath `bin/profile` or
 The standard clickable entry accepts only:
 
 ```text
-build/tg-sdk-developer-preview-0-windows-profile
+release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
-It also requires `CMakeCache.txt` to bind that directory to the current
-repository through `CMAKE_HOME_DIRECTORY`. Re-run the configure command if the
-cache is missing or belongs to another checkout. A renamed, empty, truncated,
-non-x64, or non-GUI executable is rejected even when it is named `Editor.exe`.
+It also requires `CMakeCache.txt` to bind that directory to the exact pinned
+O3DE checkout through `CMAKE_HOME_DIRECTORY`, with `LY_PROJECTS` bound to the
+repository-owned `TaintedGrailModdingEditor` project. Re-run the configure
+command if the cache is missing or belongs to another checkout. A renamed,
+empty, truncated, non-x64, or non-GUI executable is rejected even when it is
+named `Editor.exe`.
 
 ## Clickable entry is missing
 
@@ -39,8 +41,8 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create
 The output is:
 
 ```text
-build/Tainted Grail Modding Editor.lnk
-build/Tainted Grail Modding Editor.shortcut.json
+release/revisions/Tainted Grail Modding Editor.lnk
+release/revisions/Tainted Grail Modding Editor.shortcut.json
 ```
 
 The sidecar is evidence about the generated file; trusted target paths are
@@ -68,12 +70,36 @@ entry. Use a separate output:
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
   --editor C:\diagnostics\Editor.exe `
   --diagnostic-override `
-  --output build\diagnostic-entries\External Editor.lnk
+  --output release\revisions\diagnostic-entries\External Editor.lnk
 ```
 
 Normal verification rejects diagnostic overrides. Deliberate inspection needs
 `--allow-diagnostic-override` and still does not promote the link to a verified
 source-built entry.
+
+## Installed FOA-SDK.exe reports an incomplete install
+
+`FOA-SDK.exe` is the package launcher for reviewed MSI and portable-ZIP payloads.
+It is not the source-built Developer Preview shortcut. It must run from:
+
+```text
+<install-root>\bin\Windows\profile\Default\FOA-SDK.exe
+```
+
+The launcher walks upward from its own path and requires the product root to
+contain `INSTALL_MANIFEST.json`, root `engine.json`, and
+`TaintedGrailModdingEditor\project.json`. It then starts the bundled
+`Editor.exe` with `--engine-path <install-root>`,
+`--project-path %LOCALAPPDATA%\O3DE\TGEditor\installed\project`, writable
+`--project-cache-path`, `--project-user-path`, and `--project-log-path` folders
+beneath that materialized project, and the packaged default
+level. If it reports that it is not inside a
+self-contained FOA-SDK install, run installer Repair, reinstall the reviewed
+artifact, or extract the portable ZIP to a new empty directory. Do not copy the
+launcher alone into a raw build directory or point it at another Editor.
+The installed project manifest is generated against packaged `External\...`
+Gem roots that the launcher materializes beside the LocalAppData project;
+`..\Gems` and `..\Plugins` paths are source-checkout-only paths.
 
 ## The canonical path-policy contract fails
 
@@ -106,13 +132,13 @@ Use the command-line fallback to capture wrapper logs:
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
   --engine-root <pinned external O3DE checkout> `
-  --build-dir <external Developer Preview build directory>
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 Review:
 
-- `build/tg-sdk-developer-preview-0-launch/editor-launch.stderr.log`;
-- `build/tg-sdk-developer-preview-0-launch/tg-sdk-developer-preview-launch.json`;
+- `release/revisions/tg-sdk-developer-preview-0-launch/editor-launch.stderr.log`;
+- `release/revisions/tg-sdk-developer-preview-0-launch/tg-sdk-developer-preview-launch.json`;
 - `TaintedGrailModdingEditor/user/log/Editor.log`.
 
 ## The TG SDK panes are missing
@@ -150,7 +176,7 @@ TaintedGrailModdingEditor/user/log/Editor.log
 ```
 
 `developer_preview_open.py` additionally captures wrapper-owned process output
-under `build/tg-sdk-developer-preview-0-launch`.
+under `release/revisions/tg-sdk-developer-preview-0-launch`.
 
 ## Diagnostics collection fails
 

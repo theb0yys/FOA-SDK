@@ -33,9 +33,11 @@ SCHEMA_VERSION = 1
 PRIMARY_HOST = "Windows x64 Profile"
 DEFAULT_CONFIGURATION = "profile"
 EDITOR_FILENAME = "Editor.exe"
+PROJECT_DIRECTORY_NAME = "TaintedGrailModdingEditor"
 DEFAULT_RESULT_FILENAME = "tg-sdk-developer-preview-launch.json"
 STDOUT_FILENAME = "editor-launch.stdout.log"
 STDERR_FILENAME = "editor-launch.stderr.log"
+DEFAULT_BUILD_DIRECTORY = Path("release/revisions/tg-sdk-developer-preview-0-windows-profile")
 
 ProcessExecutor = Callable[[Sequence[str], Path, TextIO | None, TextIO | None], int]
 
@@ -63,7 +65,11 @@ def repository_root_from_script() -> Path:
 
 
 def default_build_directory(repo_root: Path) -> Path:
-    return repo_root / "build" / "tg-sdk-developer-preview-0-windows-profile"
+    return repo_root / DEFAULT_BUILD_DIRECTORY
+
+
+def default_project_directory(repo_root: Path) -> Path:
+    return repo_root / PROJECT_DIRECTORY_NAME
 
 
 def resolve_path(value: Path, base: Path) -> Path:
@@ -103,6 +109,12 @@ def validate_build_directory(repo_root: Path, build_dir: Path) -> None:
         raise RuntimeError("The build directory must not be the repository root.")
     if is_relative_to(repo_root, build_dir):
         raise RuntimeError("The build directory must not contain the repository checkout.")
+    canonical_default = default_build_directory(repo_root).resolve(strict=False)
+    if is_relative_to(build_dir, repo_root) and build_dir != canonical_default:
+        raise RuntimeError(
+            "The build directory must not be inside the repository checkout unless it is the "
+            "canonical release revisions Developer Preview build directory."
+        )
     if is_relative_to(build_dir, repo_root / ".git"):
         raise RuntimeError("The build directory must not be inside .git.")
 
@@ -334,6 +346,8 @@ def run_launch(
             0.0,
             True,
         )
+        if result_path is not None:
+            atomic_write_json(result_path, asdict(result))
         return result, 0
 
     require_primary_host()
@@ -391,7 +405,11 @@ def build_parser() -> argparse.ArgumentParser:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--editor", type=Path, help=f"Explicit {EDITOR_FILENAME} path.")
     source.add_argument("--build-dir", type=Path, help="Configured Developer Preview build directory.")
-    parser.add_argument("--project", type=Path, help="Optional O3DE project directory containing project.json.")
+    parser.add_argument(
+        "--project",
+        type=Path,
+        help=f"O3DE project directory containing project.json. Defaults to {PROJECT_DIRECTORY_NAME}.",
+    )
     parser.add_argument("--engine", type=Path, help="Optional O3DE engine directory containing engine.json.")
     parser.add_argument("--project-cache", type=Path, help="Optional writable project cache directory.")
     parser.add_argument("--project-user", type=Path, help="Optional writable project user directory.")
@@ -420,7 +438,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             explicit_editor=args.editor,
             build_dir=args.build_dir,
         )
-        project = resolve_path(args.project, repo_root) if args.project else None
+        project = resolve_path(args.project or default_project_directory(repo_root), repo_root)
         if project is not None and not args.dry_run:
             validate_project_path(project)
         engine = resolve_path(args.engine, repo_root) if args.engine else None

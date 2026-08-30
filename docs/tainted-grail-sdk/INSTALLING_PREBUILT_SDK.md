@@ -10,7 +10,7 @@ FOA-SDK is still in development. Use the installer artifact supplied for the bui
 - enough free disk space for FOA-SDK;
 - a writable installation location.
 
-No Git, Python, CMake, Visual Studio, engine checkout, or separate editor installation is required for the normal prebuilt install.
+No Git, Python, CMake, Visual Studio, engine checkout, separate editor installation, or source build is required for the normal prebuilt install.
 
 ## Install
 

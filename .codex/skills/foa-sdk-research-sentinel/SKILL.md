@@ -9,7 +9,7 @@ This skill triages whether the current task needs research escalation. The defau
 
 ## Trigger
 
-Use this skill when at least one of the following is true:
+The task needs research escalation only when at least one of the following is true:
 
 - the repository owner explicitly requests research or Deep Research;
 - implementation depends on unknown Fall of Avalon runtime behavior, native identity, save/install state, or proprietary format behavior;

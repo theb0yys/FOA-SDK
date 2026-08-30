@@ -23,6 +23,20 @@ function Require-Text([string]$RelativePath, [string[]]$Fragments) {
     }
 }
 
+function Forbid-Text([string]$RelativePath, [string[]]$Fragments) {
+    $path = Join-Path $repoRoot $RelativePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Fail "Missing required process file: $RelativePath"
+        return
+    }
+    $content = Get-Content -LiteralPath $path -Raw
+    foreach ($fragment in $Fragments) {
+        if ($content -match [regex]::Escape($fragment)) {
+            Fail "$RelativePath retains prohibited text: $fragment"
+        }
+    }
+}
+
 $expected = @(
     'foa-sdk-research-sentinel',
     'foa-sdk-research-authority',
@@ -111,6 +125,8 @@ $requiredFiles = @(
     '.codex/workflows/foa_sdk_test_gates.md',
     '.codex/workflows/foa_artifact_deploy_gate.md',
     '.codex/checklists/deep_review.md',
+    '.codex/checklists/review_record_template.md',
+    '.codex/checklists/system_test_matrix_template.md',
     '.codex/checklists/deep_research_brief_template.md',
     '.codex/checklists/evidence_pack_template.json',
     '.codex/scripts/Get-AgentSkillPlan.ps1',
@@ -155,6 +171,56 @@ Require-Text '.codex/workflows/foa_sdk_development_process.md' @(
     'The public engineering workflow is',
     'Do not automatically turn a Routine change'
 )
+Require-Text '.codex/scripts/Get-AgentSkillPlan.ps1' @(
+    'Optional helper: selections are based on the current request and target paths.',
+    'Routine work may require no selected skills',
+    'Codex helper selection',
+    'Suggested validation:'
+)
+Forbid-Text '.codex/scripts/Get-AgentSkillPlan.ps1' @(
+    'Complete pre-edit and post-edit deep review.',
+    'Map exact research authority, impact classification, and evidence-pack requirements.',
+    'Required skills:',
+    'Required docs:'
+)
+Require-Text '.codex/scripts/Get-AgentTestPlan.ps1' @(
+    'Optional helper: map test evidence only when ownership or applicability is unclear.',
+    '--keep-going --static-only --skip-source-policy',
+    'This helper may be `NOT_APPLICABLE`',
+    'Suggested tests:',
+    'Suggested commands:'
+)
+Forbid-Text '.codex/scripts/Get-AgentTestPlan.ps1' @(
+    'Immediate Codex commands:',
+    'Required tests:'
+)
+Require-Text '.codex/checklists/deep_review.md' @(
+    'optional checklist',
+    'Do not use it as a universal pre-edit or post-edit gate',
+    'Research only when consequential external facts are unresolved',
+    'Do not invent or execute a follow-on task'
+)
+Forbid-Text '.codex/checklists/deep_review.md' @(
+    'before and after every agent edit',
+    'universal and narrower skills loaded',
+    'next researched stop/process'
+)
+Require-Text '.codex/checklists/review_record_template.md' @(
+    'Complete only the sections applicable to the current change.',
+    'Research Escalation — Only If Triggered',
+    'Maintainer-only transition remaining'
+)
+Forbid-Text '.codex/checklists/review_record_template.md' @(
+    'Next researched stop/process'
+)
+Require-Text '.codex/checklists/system_test_matrix_template.md' @(
+    'Select evidence by changed surface and risk.',
+    'Applicable Evidence Matrix',
+    'Explicitly `NOT_APPLICABLE` lanes'
+)
+Forbid-Text '.codex/checklists/system_test_matrix_template.md' @(
+    'Full governed pack required'
+)
 
 # Check the governing process authorities for imported project context. Optional
 # examples, evaluation prompts, and specialist records are not authority and are
@@ -165,7 +231,11 @@ $coreContextFiles = @(
     '.codex/skills/README.md',
     '.codex/skills/foa-sdk-research-sentinel/SKILL.md',
     '.codex/workflows/foa_research_first_process_stack.md',
-    '.codex/workflows/foa_sdk_development_process.md'
+    '.codex/workflows/foa_sdk_development_process.md',
+    '.codex/scripts/Get-AgentSkillPlan.ps1',
+    '.codex/checklists/deep_review.md',
+    '.codex/checklists/review_record_template.md',
+    '.codex/checklists/system_test_matrix_template.md'
 )
 $coreContextText = ($coreContextFiles | ForEach-Object {
     Get-Content -LiteralPath (Join-Path $repoRoot $_) -Raw

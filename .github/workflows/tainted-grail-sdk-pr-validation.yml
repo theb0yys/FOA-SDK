@@ -50,6 +50,7 @@ jobs:
     outputs:
       host_required: ${{ steps.classify.outputs.host_required }}
       windows_required: ${{ steps.classify.outputs.windows_required }}
+      installer_windows_required: ${{ steps.classify.outputs.installer_windows_required }}
     steps:
       - name: Check out exact event commit
         uses: actions/checkout@v4
@@ -89,6 +90,7 @@ jobs:
 
           host_required=false
           windows_required=false
+          installer_windows_required=false
           while IFS= read -r path; do
             case "$path" in
               o3de.lock.json|TaintedGrailModdingEditor/*|Gems/*/gem.json|Gems/*/Code/*|Plugins/*/*/Gem/*|.github/workflows/tainted-grail-sdk-pr-validation.yml)
@@ -100,13 +102,19 @@ jobs:
                 windows_required=true
                 ;;
             esac
+            case "$path" in
+              Installer/Launcher/Windows/*|Installer/Packaging/Windows/*|Installer/Tests/WindowsInstallerLauncher/*|Installer/Tests/WindowsFunctionalReadiness/*|.github/workflows/tainted-grail-sdk-pr-validation.yml)
+                installer_windows_required=true
+                ;;
+            esac
           done < tg-sdk-changed-paths.txt
 
           echo "host_required=$host_required" >> "$GITHUB_OUTPUT"
           echo "windows_required=$windows_required" >> "$GITHUB_OUTPUT"
-          printf 'event=%s\nbase=%s\nhead=%s\nhost_required=%s\nwindows_required=%s\n' \
+          echo "installer_windows_required=$installer_windows_required" >> "$GITHUB_OUTPUT"
+          printf 'event=%s\nbase=%s\nhead=%s\nhost_required=%s\nwindows_required=%s\ninstaller_windows_required=%s\n' \
             "$GITHUB_EVENT_NAME" "$base_sha" "$head_sha" \
-            "$host_required" "$windows_required" > tg-sdk-reviewed-range.txt
+            "$host_required" "$windows_required" "$installer_windows_required" > tg-sdk-reviewed-range.txt
 
       - name: Validate pull-request policy contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py --event "$GITHUB_EVENT_PATH"
@@ -225,3 +233,39 @@ jobs:
           $buildRoot = Join-Path $env:RUNNER_TEMP "foa-build/tg-sdk-developer-preview-0-windows-profile"
           python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites --engine-root $env:FOA_O3DE_ROOT --build-dir $buildRoot
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  windows-installer-smoke:
+    name: Exact-head Windows installer operational smoke
+    needs: static-validation
+    if: needs.static-validation.outputs.installer_windows_required == 'true'
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact event commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run exact Windows installer operational smoke
+        shell: pwsh
+        run: |
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "foa-sdk-installer-smoke-evidence"
+          & Installer\Tests\WindowsInstallerLauncher\Invoke-FoaInstallerWindowsSmoke.ps1 -EvidenceRoot $evidenceRoot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Preserve Windows installer smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foa-sdk-windows-installer-smoke-${{ github.run_id }}
+          path: ${{ runner.temp }}/foa-sdk-installer-smoke-evidence
+          if-no-files-found: error
+          retention-days: 7

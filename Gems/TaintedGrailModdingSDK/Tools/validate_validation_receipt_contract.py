@@ -175,8 +175,9 @@ def validate(repo_root: Path) -> None:
             '"--static-only"',
             '"--ctest-build-dir"',
             '"--no-tests=error"',
-            "Pinned O3DE source policy, ",
-            "compiled tests, and Windows acceptance remain mandatory exact-head ",
+            "A full validation claim must include compiled CTest via ",
+            "Full validation cannot skip the pinned O3DE source-policy checks.",
+            "No pinned O3DE source-policy, compiled, Editor/UI, or Windows operational result is claimed.",
         ),
         "Authoritative local validation gate",
     )

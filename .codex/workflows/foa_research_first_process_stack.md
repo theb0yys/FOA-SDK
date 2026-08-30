@@ -1,57 +1,48 @@
-# FOA-SDK Research-First Process Stack
+# FOA-SDK Research Escalation Workflow
 
-## Stack Order
+This workflow is **conditional**. It is not the default path for ordinary repository implementation.
 
-1. `foa-sdk-research-sentinel`
-2. `foa-sdk-research-authority`
-3. `foa-change-impact-classifier`
-4. Narrow domain skill selected for the owner surface
-5. `.codex/workflows/foa_capability_execution_contract.md` when capability, adapter, provider execution, build-manifest, package, deployment, launch, verification, rollback, execution-result, release-assembly/signing, or artifact-ownership work is involved
-6. `foa-contract-persistence-compatibility-gates` when applicable
-7. `foa-test-gap-enforcer` for implementation changes
-8. `foa-performance-budget-gates` for performance-relevant changes
-9. `foa-evidence-pack-auditor`
-10. `foa-pr-release-captain` for GitHub or release handoff
+## Use this workflow when
 
-Steps 1 through 4 are mandatory before editing. Step 5 is mandatory for its trigger surfaces. Later applicable steps may not be silently omitted. An incomplete applicable gate makes validation partial or blocked.
+Use research escalation when the current task depends on consequential information that is not established by the repository or directly inspected evidence, including:
 
-## Required Path
+- Fall of Avalon runtime behavior, native identities, saves, or installation state;
+- proprietary/external formats or executable behavior;
+- third-party compatibility, licence, or version facts;
+- deployment, signing, publication, permission, or security claims that are not already proven;
+- a material contradiction that must be resolved before the requested implementation can be correct;
+- an explicit repository-owner request for research or Deep Research.
 
-```text
-request
--> controlling documents
--> domain research and gates
--> owner surface
--> capability-execution contract when applicable
--> compatibility/test/performance gates
--> artifact or deployment-review gate
--> evidence pack
--> GitHub handoff
--> next researched stop/process
-```
+Do not invoke this workflow merely because a change touches code, tests, documentation, or an existing accepted architecture.
 
-## Capability Execution Lock
+## Research path
 
-The shared production path is:
+1. State the exact unanswered claim.
+2. Identify the evidence lane required to answer it.
+3. Inspect repository-held evidence first.
+4. Use the external research method explicitly requested or appropriate to the claim.
+5. Preserve distinctions between research context, static/decompilation evidence, host execution, and live runtime proof.
+6. Record unresolved contradictions or missing proof.
+7. Return the verified conclusion to the owning design/current task before implementation relies on it.
 
-```text
-domain materialisation when required
--> Build
--> Package
--> Deploy
--> Launch
--> Verify
--> assessment
--> reconciliation
--> human promotion when required
-```
+## Deep Research
 
-Existing inert V1 contracts stay inert. Preview and execute remain separate. Provider resolution, policy, authorisation, artifact ownership, idempotency, rollback, receipts, evidence projection, assessment, and promotion may not be collapsed.
+When the repository owner explicitly requests ChatGPT Deep Research, that method must actually be used. A brief, web search, ordinary synthesis, or repository inspection is not a substitute for a returned Deep Research report.
 
-## Hard Stop
+A returned research report is context until consequential claims are checked against the underlying evidence required by the claim.
 
-Stop when authority, owner, protected-file status, compatibility, required proof, provider binding, artifact ownership, rollback plan, or the next researched action cannot be established. Produce a Deep Research Brief rather than guessing.
+## Capability execution
 
-## Runtime Proof Status
+For capability execution, build/package/deploy/launch/verify, rollback, execution receipts, or artifact ownership, also use the accepted capability-execution architecture. Research escalation does not itself authorize execution.
 
-Static review, source inspection, configure success, compilation, unit tests, interchange validation, package preview, or adapter build do not constitute Fall of Avalon runtime proof. Runtime sign-off requires explicit, lawful, packaged evidence from the exact target installation and adapter path. Otherwise state `runtime sign-off not performed`.
+## Proof discipline
+
+Never collapse:
+
+- static inspection into runtime proof;
+- configure/build success into Editor interaction proof;
+- adapter compilation into Fall of Avalon compatibility;
+- research into permission or evidence promotion;
+- a hash/receipt into independent authorization.
+
+If required evidence remains unavailable, report the affected claim as `PARTIAL`, `BLOCKED`, or `NOT_RUN` rather than inventing a substitute.

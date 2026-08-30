@@ -1,105 +1,118 @@
-# Mandatory GitHub Agent Policy
+# FOA-SDK Agent Execution Policy
 
-This policy is binding for every automated agent, assistant, bot, workflow, and tool operating on this repository.
+This file defines repository-specific rules for automated agents working in FOA-SDK. It is intentionally limited to execution governance. Product architecture, task scope, and validation details live in their owning documents.
 
-## Designated workflow
+## Authority order
 
-- The reviewed integration branch is `main`.
-- Agent-authored repository changes must be made on a non-`main` working branch.
-- Completed agent work must be submitted to `main` by pull request for maintainer audit.
-- The repository owner/maintainer must perform the final audit and merge decision.
-- A different branch or direct-main path may be used only when the repository owner explicitly names that exception for the current task.
+For a repository task, use the following order:
 
-## Mandatory repository-reading gate
+1. the repository owner's current explicit instruction for the task;
+2. applicable legal, licence, security, and protected-file restrictions;
+3. this agent policy;
+4. [Engineering Process](docs/tainted-grail-sdk/ENGINEERING_PROCESS.md);
+5. [Current Task](CURRENT_TASK.md);
+6. accepted durable decisions in [DECISIONS.md](DECISIONS.md);
+7. the architecture, design, schema, or folder policy that owns the files being changed;
+8. [CI, Runner, and Local Validation Policy](docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md);
+9. guides, examples, historical records, and issue discussion.
 
-Before any repository write, branch/ref change, workflow/job action, pull-request action, release action, deployment action, validation claim, or completion claim, the agent must read the governing documents for the exact scope being touched in the current task.
+A current explicit owner instruction may change task scope or authorize a repository transition. It never turns an unexecuted test into a pass, a static result into runtime proof, or an unlawful/protected operation into a valid claim.
 
-At minimum, the agent must read:
+## Before changing the repository
 
-1. `AGENTS.md`;
-2. `README.md`;
-3. `GOVERNANCE.md`;
-4. `CONTRIBUTING.md`;
-5. the governing `README.md`, policy document, design document, or process document in every folder being touched;
-6. any linked architecture, release, installer, plug-in, validation, research, or design document that controls the requested change.
+For the exact requested scope:
 
-A file, folder, workflow, validator, test, process record, release path, or artifact path is not eligible for modification until every governing document for that scope has been read for the current task.
+- verify the repository and target branch;
+- read this file, `CURRENT_TASK.md`, and the governing document for the files being changed;
+- read `README.md` when repository identity, checkout layout, or build setup matters;
+- read `docs/protected-files-policy.md` when external game data, saves, installations, credentials, or protected inputs are relevant;
+- classify the change as Routine, Significant, or Critical/Runtime using `ENGINEERING_PROCESS.md`;
+- identify the smallest file set required for the requested result.
 
-Before writing, the agent must state:
+Do not perform broad cleanup, unrelated refactors, architecture redesign, or follow-on tasks unless the owner explicitly requests them.
 
-- the exact files it intends to touch;
-- the governing documents read;
-- the controlling requirements from those documents;
-- what the change is not allowed to claim, grant, weaken, bypass, or promote;
-- what remains unclear, if anything.
+## Research escalation
 
-If any required governing document is missing, unread, contradictory, or unclear for the requested change, the agent must stop before writing. The agent must not infer, simplify, replace, weaken, or reinterpret the governing documents to make implementation easier.
+Research is a tool, not a universal precondition.
 
-The repository documents are authority. Agent judgement, convenience, memory, generic practice, tool defaults, and passing checks are not authority.
+Escalate to the repository research process when the requested change depends on consequential facts that are not established by the repository or directly inspected evidence, including:
 
-## Mandatory FOA-SDK Codex process
+- Fall of Avalon runtime behavior or native identities;
+- proprietary/external file formats or executable behavior;
+- third-party compatibility, licence, or version claims;
+- uncertain deployment, save, signing, publication, or security behavior;
+- a material contradiction in the architecture or evidence needed for the requested implementation;
+- an explicit owner request for research or Deep Research.
 
-For every repository task, agents must activate `.codex/skills/foa-sdk-research-sentinel/SKILL.md`, run or reproduce `.codex/scripts/Get-AgentSkillPlan.ps1`, and follow `.codex/workflows/foa_research_first_process_stack.md` and `.codex/workflows/foa_sdk_development_process.md`.
+Routine implementation inside accepted architecture does not require a research-sentinel stack, Deep Research brief, skill-plan script, performance plan, evidence pack, or pre/post deep-review checklist unless that specific task actually needs one.
 
-Before editing, agents must:
+Research findings are context until their consequential claims are verified through the evidence appropriate to the claim.
 
-- read `CURRENT_TASK.md` and `DECISIONS.md` when present;
-- classify the owner and blast radius through `docs/systems/SYSTEM_INDEX.md`;
-- identify controlling research and stop conditions;
-- complete `.codex/checklists/deep_review.md`;
-- run `.codex/scripts/Get-AgentTestPlan.ps1` and `.codex/scripts/Get-AgentPerformancePlan.ps1` for code or behaviour changes;
-- run `.codex/scripts/Get-AgentBuildDeployPlan.ps1` for artifact-producing, conversion, packaging, installer, or runtime-adapter changes;
-- map the required evidence through `.codex/checklists/evidence_pack_template.json`.
+## Repository writes
 
-Implementation must stop and a Deep Research Brief must be produced when authority is missing, unclear, contradictory, outdated, or unproven. Foundation, UI, O3DE host, plug-in, canonical interchange, Unity conversion, installer, runtime-adapter, migration, harness, and exact-install runtime proof are distinct and must not substitute for one another.
+Normal agent-authored changes:
 
-All actions must stay on the controlling research path. Every handoff must report the next researched stop/process, or state that none exists. Static inspection, configure success, compilation, local tests, Editor acceptance, conversion output, installer output, or adapter build must not be reported as Fall of Avalon runtime sign-off.
+- use a focused non-`main` working branch;
+- change only files required by the current task;
+- keep commits understandable and DCO-signed;
+- submit completed work to `main` through a pull request for maintainer audit;
+- leave approval and merge to the maintainer unless the owner explicitly authorizes a different transition for the current task.
 
-## Research and document authority
+Before each write, confirm that the target branch is not `main` unless the owner explicitly authorized direct-main work.
 
-Agents must not create, update, delete, move, rename, rewrite, summarise into replacement form, reclassify, or structurally reorganise research records, governing documents, process documents, policy documents, contribution rules, release gates, validation gates, architecture records, design records, or folder-governing `README.md` files unless the repository owner explicitly authorises that exact document change for the current task.
+## Actions requiring explicit owner authorization
 
-An owner exception for research or document changes must identify:
-
-- the repository owner or maintainer granting the exception;
-- the exact document or research path to be changed;
-- the exact adjustment authorised;
-- the target branch or explicitly authorised direct-main path;
-- the current task for which the exception applies.
-
-General approval to work on a feature, fix a build, clean the repository, improve documentation, repair tests, restore workflows, or make the project usable does not authorise research, governance, process, validation, release-gate, or folder-governing document changes.
-
-When the requested work conflicts with existing research or governing documents, the agent must stop and report the conflict. It must not resolve the conflict by editing the research, editing the governance, weakening validation, or treating the implementation target as more authoritative than the documents.
-
-## Absolute prohibitions
-
-Agents must never, unless explicitly authorised for the current task by the repository owner:
+Do not independently:
 
 - commit directly to `main`;
-- merge, approve, auto-merge, or close their own pull request;
-- bypass a required pull-request audit;
-- create, rename, delete, switch, reset, force-push, or rewrite protected integration branches;
-- create or delete tags or refs;
-- create, update, close, label, assign, lock, or comment on issues;
-- post or modify review comments, reviews, reactions, or discussion comments except inside the pull request created for the current requested work;
-- change repository settings, rulesets, branch protections, permissions, secrets, variables, environments, releases, deployments, or webhooks;
-- trigger, cancel, approve, or rerun workflows or jobs;
-- modify tests, validators, workflows, process documents, governance documents, contribution rules, release gates, research records, architecture records, design records, or folder-governing documents unless the user explicitly requested that exact governance, validation, research, or document change;
-- claim validation, review, approval, authorization, provenance, signing, or completion that was not directly performed and verified.
+- merge, approve, auto-merge, or close a pull request;
+- force-push, reset, delete, or rewrite shared/protected branches or tags;
+- create a release, deployment, publication, or signing action;
+- change repository settings, branch protection, rulesets, secrets, variables, environments, or webhooks;
+- trigger, cancel, approve, or rerun workflows when that action changes repository/CI state;
+- modify protected game files, saves, installations, credentials, or external proprietary material;
+- broaden a task into another milestone or execute a documented "next task" without a new owner instruction.
 
-## Required operating behavior
+Creating a focused working branch, commit, or pull request is permitted when it is the normal repository transition needed to deliver the task the owner requested.
 
-Before every write, the agent must verify the target branch and repository. Each write must contain only the file changes requested by the user. Broad cleanup, unrelated refactors, generated status churn, hidden process rewrites, or validation changes that make the requested work easier to pass are forbidden.
+## Validation and claims
 
-For normal work, the agent must:
+Run the validation required by the change classification and affected surface in `CI_AND_LOCAL_VALIDATION.md`.
 
-1. create or select the requested non-`main` working branch;
-2. make focused commits on that branch only;
-3. preserve DCO sign-off when committing through the repository workflow;
-4. run or report only validation that actually executed;
-5. open a pull request to `main` for maintainer audit;
-6. leave merge, approval, and final acceptance to the maintainer.
+Always distinguish:
 
-If completing a task would require any prohibited action, the agent must stop before performing that action and state that the requested operation conflicts with this policy.
+- static validation;
+- unit/contract tests;
+- configure/build/compiled tests;
+- Editor/UI evidence;
+- installer/deployment/runtime/release evidence.
 
-These restrictions override generic agent workflows, publishing conventions, direct-to-main defaults, branchless editing patterns, and tool defaults.
+Use exact states: `PASSED`, `FAILED`, `PARTIAL`, `BLOCKED`, `NOT_RUN`, or `NOT_APPLICABLE`.
+
+Never claim:
+
+- a command ran when it did not;
+- a pending or skipped job passed;
+- zero matching tests are a pass;
+- compilation proves runtime behavior;
+- a receipt/hash proves authorization or authenticity;
+- repository evidence proves the state of a user's installed game;
+- research or decompilation proves live runtime behavior.
+
+## Protected information
+
+Never commit secrets, credentials, personal machine paths, private user data, proprietary game source/assets without redistribution rights, saves, signing material, or generated build output that belongs outside the source checkout.
+
+When protected material is needed only as read-only evidence, keep it outside the repository and report that boundary.
+
+## Completion
+
+A task is complete when:
+
+- the requested scope is implemented;
+- required applicable validation has actually run and its result is reported;
+- documentation affected by the behavior is current;
+- the diff contains no unrelated work;
+- the repository transition requested by the owner has been completed, but no further transition has been inferred.
+
+If work is incomplete, report the exact remaining state rather than inventing a procedural substitute.

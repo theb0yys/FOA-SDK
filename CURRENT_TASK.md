@@ -1,48 +1,56 @@
 # Current Task
 
-This file records the active FOA-SDK task state so work can continue without treating conversation history as authority.
+## Status
+
+`P0 — Repository Process Reset` — review candidate.
 
 ## Goal
 
-- Record the repository-owner-authorised M0 governance and implementation-authority decision for the capability-execution program.
-- Authorise exactly one later implementation batch: M1 additive Core contracts.
-- Name the exact M1 owner paths, contract boundary, threat/failure analysis, migration policy, stop conditions, and required proof before product-source work begins.
+Make FOA-SDK engineering explicit, proportional, and executable by replacing duplicated mandatory process stacks with one clear operating model.
 
-## Files Currently Involved
+## Classification
 
-- `CURRENT_TASK.md`
-- `DECISIONS.md`
-- `docs/tainted-grail-sdk/CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md`
+**Significant — process/governance only.**
 
-## Constraints
+## In scope
 
-- Documentation and decision state only in this task; no product implementation source changes.
-- The M0 decision becomes effective only after maintainer audit and merge to `main`.
-- M1 is Core-only and additive. Existing inert V1 contracts, canonical bytes, validators, result meanings, and false authority flags remain unchanged.
-- M2 process supervision, M3 Framework orchestration, M4 planner adaptation, M5 synthetic execution, M6 heightmap runtime work, and every later batch remain unauthorised.
-- No process launch, filesystem mutation, persistence, UI, provider invocation, package assembly, deployment, game launch, runtime mutation, save write, signing, publication, catalog mutation, or evidence promotion is authorised by this documentation task.
-- Work remains on `architecture/capability-execution-m0-authority` and enters `main` only through a maintainer-audited pull request.
+- establish one engineering-process authority;
+- define Routine, Significant, and Critical/Runtime change classes;
+- make validation proportional to the changed surface;
+- simplify automated-agent rules to repository execution governance;
+- make research escalation conditional on an actual research dependency;
+- remove universal PR-body merge-obligation checkboxes;
+- correct stale repository identity, checkout, and branch guidance;
+- record that the Capability Execution M0 decision is already merged and effective.
 
-## Completed Work
+## Out of scope
 
-- Pull request #234 merged the canonical Capability Execution Contract and shared Build -> Package -> Deploy -> Launch -> Verify architecture into `main` at `f5d9883e24aca6b8910600fd92a809cc3aa07253`.
-- The exact M1 contract scope, owner paths, build/test ownership, threat and failure controls, compatibility policy, migration policy, required proof, acceptance mapping, and stop conditions were defined in the M0 authority record.
-- The M0 record explicitly excludes implementation and every batch after M1.
+- SDK product implementation;
+- M1 capability-execution source work;
+- C++ contracts or behavior;
+- O3DE engine changes;
+- runtime adapters;
+- deployment, saves, installers, signing, publication, or release behavior;
+- protected Fall of Avalon files or installations.
 
-## Remaining Work
+## Acceptance criteria
 
-- Run documentation/process validation available for the final M0 branch head.
-- Complete maintainer audit and merge of the focused M0 decision pull request.
-- Only after M0 merges, create `implementation/capability-execution-m1-core-contracts` from the accepted `main` head and implement only the authorised paths.
+P0 is ready for maintainer review when:
 
-## Do Not Change
+- `AGENTS.md` contains agent execution rules without a universal research/deep-review/preflight stack;
+- `docs/tainted-grail-sdk/ENGINEERING_PROCESS.md` is the single engineering workflow;
+- `GOVERNANCE.md`, `CONTRIBUTING.md`, and review policy use the same three change classes;
+- `CI_AND_LOCAL_VALIDATION.md` is the single validation matrix;
+- the PR template records classification and actual validation without requiring irrelevant host/UI/runtime evidence;
+- PR/CI policy validators enforce read-only automation and the new template contract;
+- `DEVELOPMENT_GUIDE.md` uses the separate pinned upstream O3DE checkout;
+- `DECISIONS.md` marks the imported context-only process as superseded and records P0 progressive rigor;
+- no product/runtime behavior changes.
 
-- Product implementation source in the M0 documentation pull request.
-- Any existing V1 contract or validator.
-- Framework, Editor, ExternalToolchain, provider, plug-in, installer, runtime-adapter, game, save, signing, publication, or deployment behaviour.
-- Protected files, external build output, Unity projects, or Fall of Avalon installations.
-- Unrelated repository files.
+## Current branch
 
-## Next Concrete Step
+`governance/p0-process-reset`
 
-- Maintainer review of the M0 implementation-authority pull request. M1 source work remains blocked until that pull request is merged.
+## Next action
+
+Maintainer audit of the focused P0 pull request. After P0 is accepted, define the first SDK recovery milestone in this file before resuming product implementation.

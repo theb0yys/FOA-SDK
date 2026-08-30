@@ -1,207 +1,143 @@
 # Contributing to the Tainted Grail Modding Editor and SDK
 
-Thank you for helping build a public, evidence-governed modding toolchain for **Tainted Grail: The Fall of Avalon**.
+Thank you for helping build FOA-SDK, an unofficial open-source authoring and mod-development platform for **Tainted Grail: The Fall of Avalon**.
 
-This repository is an O3DE fork. Contributions must satisfy both this project's rules and the applicable O3DE licence, source, build, and Developer Certificate of Origin requirements.
+FOA-SDK is the product repository. It is **not** an O3DE source fork. The project uses a separately pinned upstream O3DE checkout; see `README.md` and `o3de.lock.json`.
 
 ## Read before contributing
 
-Required reading:
+For most changes, read:
 
-1. [Code of Conduct](CODE_OF_CONDUCT.md)
-2. [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
-3. [Code quality standard](docs/tainted-grail-sdk/CODE_QUALITY.md)
-4. [Review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md)
-5. [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
-6. [Security policy](SECURITY.md)
+1. [Engineering Process](docs/tainted-grail-sdk/ENGINEERING_PROCESS.md)
+2. [Development Guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
+3. [Code Quality](docs/tainted-grail-sdk/CODE_QUALITY.md)
+4. [CI and Local Validation](docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md)
+5. the architecture/design document for the system being changed
+6. [Security Policy](SECURITY.md) when security-sensitive behavior is involved
 
-Contributions that bypass the product boundary, evidence rules, ownership model, or review requirements will not be merged.
+Automated agents also follow `AGENTS.md`.
 
 ## What contributions are welcome
 
-- editor models, services, and user interfaces;
+- editor models, services, tools, and user interfaces;
+- catalog, validation, evidence, identity, maturity, risk, and permission logic;
 - importers and durable data formats;
-- catalog, validation, maturity, risk, and permission logic;
-- domain authoring tools;
-- documentation, examples, and tests;
-- diagnostic and evidence-acquisition improvements;
-- separately scoped adapter contracts and non-executing handoff formats;
-- accessibility, performance, build, and reliability improvements.
+- authoring and preview workflows;
+- external-tool and adapter contracts within their reviewed boundaries;
+- build, test, diagnostics, accessibility, reliability, and performance improvements;
+- documentation and legally distributable examples or fixtures.
 
 ## Contributions that are not accepted
 
-- copyrighted game assets or proprietary source material without redistribution rights;
-- cheats, malware, credential theft, telemetry without consent, or destructive payloads;
-- code that silently edits saves, deploys files, or mutates the game without explicit user action and rollback design;
-- runtime actions inside the editor or Avalon Core knowledge layer;
-- records created from display-name matching alone;
-- invented native references, GUIDs, game facts, validation results, or runtime permissions;
-- unbounded scanning of a user's system or game installation;
-- dependencies with unclear licences or unnecessary supply-chain risk.
+- proprietary game assets or source material without redistribution rights;
+- malware, credential theft, destructive payloads, or telemetry without consent;
+- silent game-installation or save mutation;
+- invented native references, game facts, runtime permission, validation results, or test results;
+- display-name-only identity;
+- unbounded scanning of a user's machine or installation;
+- dependencies with unresolved licence or supply-chain risk.
 
-## Branch model
+## Engineering classification
 
-The repository uses two long-lived branches:
+Every change is classified before implementation:
 
-- `main` — reviewed integration state;
-- `foa-development` — active development.
+- **Routine** — work inside accepted architecture: bug fixes, tests, internal refactors, build repairs, and ordinary docs.
+- **Significant** — new public APIs/subsystems, persistence or schema changes, new dependencies, architecture changes, or substantial build behavior.
+- **Critical/Runtime** — process execution, deployment, saves, runtime adapters, signing/publication, permission/security boundaries, or live game-runtime claims.
 
-Contributors and automated agents do not commit directly to `main`. Work happens
-on a non-`main` branch and enters `main` only through a pull request for
-maintainer audit.
-
-`AGENTS.md` defines the binding path for repository automation. Automated agents
-must make focused, validated, DCO-signed commits on a working branch, open a pull
-request to `main`, and leave final audit, approval, and merge to the maintainer.
-They must not rewrite governance, validation, tests, workflows, or process
-records unless the user explicitly requested that exact change.
+See `ENGINEERING_PROCESS.md` for the required workflow for each class.
 
 ## Contribution lifecycle
 
-### 1. Open or select an issue
+### 1. Define the change
 
-Use the appropriate issue form. Explain the problem, expected outcome, affected architecture, and validation plan.
+State:
 
-A substantial change requires an issue or design proposal before implementation. Substantial changes include:
+- the problem and desired outcome;
+- intended files/systems;
+- classification;
+- explicit out-of-scope behavior;
+- validation needed for the changed surface.
 
-- new editor tools or services;
-- schema or identifier changes;
-- persistence changes;
-- runtime-adapter contracts;
-- build, deployment, or save-impact changes;
-- new dependencies;
-- changes to the security or permission model.
+Routine changes do not require a ceremonial design document.
 
-### 2. Receive design review
+### 2. Design when required
 
-A maintainer must confirm the proposed boundary and direction before substantial implementation begins. Design approval is not approval of the final code.
+Significant and Critical/Runtime changes require a short reviewed design or durable decision covering the affected ownership, compatibility, failure behavior, data/migration implications, and validation plan.
 
-The design review must answer:
+### 3. Implement on a focused branch
 
-- Which layer owns the change?
-- What facts, evidence, validation, and permissions are involved?
-- What is persisted, versioned, or migrated?
-- What fails closed?
-- What user data, game data, saves, or deployments could be affected?
-- What tests prove the intended behavior?
+Create a non-`main` working branch from the accepted integration state. Keep the diff focused and avoid unrelated cleanup.
 
-### 3. Implement on a working branch
+### 4. Validate the changed surface
 
-Keep changes focused. Do not combine unrelated refactors, generated files, formatting churn, and new behavior in one review unit.
+Use the matrix in `CI_AND_LOCAL_VALIDATION.md`. Run focused checks first and add host, UI, runtime, deployment, installer, or release proof only when the change can affect those layers.
 
-Every commit must:
+Never describe a narrower result as a broader pass.
 
-- build toward one understandable outcome;
-- include DCO sign-off;
-- avoid secrets and local machine paths;
-- include tests or a documented validation method;
-- update documentation when behavior or formats change.
+### 5. Open a pull request
 
-### 4. Perform pre-commit self-review
+The pull request must state:
 
-Before each commit:
+- classification;
+- summary and scope;
+- design/architecture impact when applicable;
+- exact validation actually performed;
+- compatibility/migration/rollback impact when applicable;
+- documentation changes.
 
-- review the complete diff;
-- remove debug output and dead code;
-- verify explicit includes and ownership;
-- verify error paths and fail-closed behavior;
-- check that no runtime execution entered the editor layer;
-- check identifiers, schemas, and migration implications;
-- run the focused validator for affected TG SDK changes.
+### 6. Review and merge
 
-### 5. Open a pull request to `main`
+Resolve blocking review findings and failed required checks. A maintainer makes the final merge decision.
 
-Use the repository pull-request template. Link the issue or design discussion. Explain behavior, risk, testing, documentation, compatibility, data migration, and rollback.
+## Branch model
 
-### 6. Address review and CI
-
-A pull request must not be merged while required review conversations are unresolved or required checks are failing or pending.
-
-Reviewers may request:
-
-- code changes;
-- additional tests;
-- schema migration notes;
-- evidence or source references;
-- screenshots of editor UI;
-- threat or save-impact analysis;
-- a smaller or clearer change set.
-
-### 7. Merge and synchronize
-
-A maintainer merges approved work into `main`. After merging, `foa-development` is synchronized to the merge commit before new work begins.
-
-Automated-agent changes use the same branch and pull-request audit sequence. They
-also require the same research, focused diff review, validation, DCO sign-off,
-documentation, and honest failure reporting required by `AGENTS.md`.
+- `main` — reviewed integration state.
+- focused non-`main` branches — normal implementation units.
+- `foa-development` — optional maintainer convenience branch; not a required base and not an authority source.
 
 ## Developer Certificate of Origin
 
-All commits require DCO sign-off:
+Commits require DCO sign-off:
 
 ```shell
 git commit -s -m "Describe the change"
 ```
 
-The sign-off certifies that you have the right to submit the contribution under the repository's licence terms.
-
-## Commit messages
-
-Use an imperative summary of about 72 characters or fewer when practical.
-
-Good examples:
-
-```text
-Add exact-reference catalog search
-Reject mismatched evidence profile bindings
-Document pack manifest migration rules
-```
-
-Explain motivation and important constraints in the commit body when the summary is insufficient.
+Use concise imperative commit summaries and explain important constraints in the body when needed.
 
 ## Code and data requirements
 
-All changes must follow [CODE_QUALITY.md](docs/tainted-grail-sdk/CODE_QUALITY.md). In particular:
+Follow `CODE_QUALITY.md`. In particular:
 
-- public models require stable type IDs and serialization versions;
-- persistence formats require explicit schema versions;
-- exact native references must be preserved without normalisation;
-- synthetic identities must be pack-owned;
-- display names are never identity keys;
-- errors and blockers must be actionable;
-- file writes belong in persistence services;
-- UI classes should delegate domain logic to services;
-- new dependencies require licence and maintenance review.
+- public/durable identities are stable and exact;
+- persistence formats have explicit versions and migration/rejection behavior;
+- file writes stay in owned persistence/execution boundaries;
+- UI delegates domain logic to services;
+- new dependencies receive licence and maintenance review;
+- errors and blockers are actionable;
+- user-controlled input is bounded and validated.
 
 ## Testing
 
-At minimum, run:
+Testing is change-specific, not universal.
 
-```shell
-python Gems/TaintedGrailModdingSDK/Tools/validate_foundation.py
-```
+Examples:
 
-Depending on the change, also provide:
+- docs/process-only: reviewed-range and targeted static/policy validation;
+- Python/tooling: targeted unit tests plus static validation;
+- C++ behavior: focused compiled tests for the affected target;
+- build graph/Gem integration: configure/build plus focused compiled tests;
+- UI: host build plus applicable interaction evidence;
+- persistence/schema: malformed input, round trip, migration/rejection, and affected compiled tests;
+- runtime/deployment/release: the exact operational evidence defined for that surface.
 
-- unit tests;
-- serialization round-trip tests;
-- malformed-input tests;
-- migration tests;
-- UI screenshots or interaction steps;
-- O3DE configure and host build results;
-- performance measurements;
-- diagnostic or evidence fixtures that are legally distributable.
-
-Never use private game files or copyrighted assets as committed test fixtures.
+See `CI_AND_LOCAL_VALIDATION.md` for the authoritative matrix.
 
 ## Documentation
 
-Update the relevant public documentation in the same review unit. New data fields must be documented in [DATA_FORMATS.md](docs/tainted-grail-sdk/DATA_FORMATS.md). User-facing behavior must be reflected in [USER_GUIDE.md](docs/tainted-grail-sdk/USER_GUIDE.md).
+Behavior, public contracts, and durable formats must be documented in the same review unit when they change. Do not update unrelated roadmap/history merely to create process churn.
 
 ## Security and privacy
 
-Do not place vulnerability details, secrets, personal information, private paths, or proprietary game data in public issues or pull requests. Follow [SECURITY.md](SECURITY.md).
-
-## Review authority
-
-Maintainers may decline a contribution that is unsafe, out of scope, insufficiently evidenced, legally unclear, unmaintainable, or inconsistent with the project's architecture—even when the code works technically.
+Do not place secrets, private paths, personal data, protected game content, signing material, or vulnerability details that increase risk in public repository content. Follow `SECURITY.md`.

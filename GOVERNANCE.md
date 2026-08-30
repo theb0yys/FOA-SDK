@@ -2,145 +2,114 @@
 
 ## Purpose
 
-This document defines how the Tainted Grail Modding Editor and SDK makes decisions, reviews changes, assigns responsibility, and protects the project's architecture and public trust.
+This document defines decision authority for the Tainted Grail Modding Editor and SDK. Day-to-day engineering workflow is defined by [ENGINEERING_PROCESS.md](docs/tainted-grail-sdk/ENGINEERING_PROCESS.md), and validation requirements are defined by [CI_AND_LOCAL_VALIDATION.md](docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md).
 
-The project is currently maintainer-led. Governance may evolve as the contributor base grows.
+The project is maintainer-led.
 
 ## Principles
 
-Project decisions prioritise:
+Project decisions prioritize:
 
 1. user safety and data integrity;
-2. evidence-backed FoA knowledge;
+2. evidence-backed Fall of Avalon knowledge;
 3. clear ownership and exact identity;
 4. maintainability and testability;
-5. transparent public reasoning;
-6. legal and licence compliance;
-7. interoperability without collapsing architectural boundaries.
+5. legal and licence compliance;
+6. interoperability without collapsing architecture boundaries;
+7. engineering progress with rigor proportional to risk.
 
-Working code alone is not sufficient when a change weakens safety, evidence, identity, compatibility, or maintainability.
+Working code is necessary but is not sufficient when a change weakens safety, identity, compatibility, evidence, or maintainability.
 
 ## Roles
 
 ### Users
 
-Users configure workspaces, create packs, import evidence, report defects, and provide workflow feedback.
+Users configure workspaces, author content, import evidence, report defects, and provide workflow feedback.
 
 ### Contributors
 
-Contributors submit issues, designs, code, documentation, tests, and legally distributable fixtures. Contributors follow the contribution, quality, conduct, and review policies.
+Contributors may submit code, documentation, tests, designs, and legally distributable fixtures. They follow `CONTRIBUTING.md` and the engineering process.
 
 ### Reviewers
 
-Reviewers evaluate correctness, architecture, safety, evidence, data formats, compatibility, tests, and documentation. Review comments must distinguish required changes from optional suggestions.
+Reviewers evaluate correctness, scope, architecture, compatibility, risk, tests, and documentation. Review comments should distinguish blockers from optional suggestions.
 
 ### Maintainers
 
 Maintainers may:
 
 - approve or reject designs and pull requests;
-- define roadmap priority;
-- manage releases, labels, milestones, and repository settings;
-- enforce conduct, security, quality, and scope;
+- set roadmap priority;
 - resolve technical disagreements;
+- manage releases and repository administration;
 - revert unsafe or defective changes;
-- appoint or remove reviewers and maintainers.
+- appoint reviewers or maintainers.
 
-Current CODEOWNERS entries identify the default review owner for project-controlled paths.
+`CODEOWNERS` identifies default review ownership where configured.
 
-## Decision model
+## Change authority
 
-### Routine changes
+FOA-SDK uses three engineering classifications.
 
-Small fixes, documentation corrections, tests, and internal refactors proceed through
-pull-request review. Automated-agent work follows the same maintainer-audited
-branch and pull-request path defined in `AGENTS.md`.
+### Routine
 
-### Significant changes
+Existing-architecture implementation, bug fixes, tests, internal refactors, build repairs, and ordinary documentation normally proceed directly to implementation and focused review.
 
-Significant changes require a reviewed issue or design proposal before implementation. They include:
+### Significant
 
-- new editor tools or domain services;
-- new persistence formats or schema changes;
-- identity, evidence, validation, risk, or permission changes;
-- runtime-adapter contracts;
-- deployment or save-impact behavior;
-- new third-party dependencies;
-- breaking API or document changes;
-- security-sensitive changes.
+New public APIs, subsystems, persistence/schema changes, dependencies, architecture boundaries, or substantial build behavior require a short reviewed design or durable decision before implementation.
 
-### Final decision
+### Critical/Runtime
 
-Maintainers seek reasoned agreement, but unanimity is not required. When consensus is not reached, the responsible maintainer records the decision and its rationale.
+Deployment, process execution, save mutation, runtime adapters, signing, publication, permissions, security-sensitive operations, or Fall of Avalon runtime claims require explicit design/threat boundaries and the exact proof appropriate to those operations.
 
-## Architecture authority
+The full classification rules are in `ENGINEERING_PROCESS.md`.
 
-The following boundaries are project invariants unless governance explicitly changes them:
+## Architecture invariants
 
-- O3DE is the authoring host; FoA is a separate Unity runtime target.
-- The editor and knowledge layer do not execute gameplay mutations.
-- Native execution belongs to separate, validated adapters.
+The following remain project invariants unless explicitly changed through a Significant or Critical architecture decision:
+
+- O3DE is the authoring host; Fall of Avalon is a separate Unity runtime target.
+- FOA-SDK is the product repository; the pinned O3DE source checkout is external.
+- Editor and knowledge-layer code does not silently execute gameplay mutations.
+- Native execution belongs to separately reviewed execution/runtime boundaries.
 - Display names are not identities.
 - Native references remain exact.
-- Synthetic identities are pack-owned.
-- Evidence, claims, reviewed records, validation, and permission remain separate.
-- Missing proof fails closed.
+- Synthetic identities are product/pack-owned.
+- Evidence, claims, reviewed records, validation, permission, execution outcome, and promotion remain distinct.
+- Missing proof cannot be represented as successful proof.
 
-A proposal to change an invariant requires a dedicated architecture decision record, threat and migration analysis, public review, and maintainer approval.
+## Branch and review model
 
-## Branch governance
+`main` is the reviewed integration branch.
 
-The repository has two long-lived branches:
+Work is performed on focused non-`main` branches and enters `main` through pull requests. `foa-development` may be used by maintainers as a convenience branch, but it is not a required base or a second source of truth.
 
-- `main` — reviewed integration state;
-- `foa-development` — active development.
+Direct development on `main` is prohibited unless the repository owner explicitly authorizes an exception for the current task.
 
-Direct development on `main` is prohibited. Work begins on a non-`main` branch
-and enters `main` only through a pull request that the maintainer can audit.
+## Merge authority
 
-Automated agents follow `AGENTS.md`: they make focused, validated, DCO-signed
-file commits on a working branch, open a pull request to `main`, and leave final
-audit, approval, and merge to the maintainer. Agents must not rewrite governance,
-validation, tests, workflows, or process records unless the user explicitly
-requested that exact change.
+A pull request may merge when:
 
-## Review and merge authority
+- its scope and classification are clear;
+- the validation required for that classification and changed surface has passed;
+- DCO requirements are satisfied;
+- blocking review findings are resolved;
+- relevant documentation and migration/rollback notes are current;
+- a maintainer approves the change.
 
-A pull request requires:
+The repository does not require irrelevant host, UI, runtime, installer, or release evidence for a change that cannot affect those surfaces.
 
-- completed template;
-- linked issue or design when required;
-- contributor self-review;
-- DCO-compliant commits;
-- successful required checks;
-- resolved review threads;
-- documentation and migration updates;
-- maintainer approval.
-
-Maintainers may require additional reviewers for security, schema, persistence, adapter, or release changes.
-
-No contributor is entitled to merge their own change. A maintainer may merge a change they authored only after the same documented checks and review expectations have been met; independent review is preferred whenever another qualified reviewer is available.
-
-## Releases
-
-Releases follow [RELEASE_PROCESS.md](docs/tainted-grail-sdk/RELEASE_PROCESS.md). Maintainers decide release readiness based on scope, CI, known defects, documentation, migration support, security, and compatibility—not calendar pressure alone.
+Pending, skipped, absent, stale-head, wrong-commit, or zero-test results are not passes.
 
 ## Security and emergency changes
 
-Security fixes may be developed privately and merged with reduced public detail when disclosure would increase risk. The maintainer must still preserve review, testing, provenance, and post-release documentation to the extent safe.
-
-A maintainer may revert or disable functionality immediately when it risks data loss, unsafe deployment, security compromise, or invalid runtime permission.
-
-## Maintainer changes
-
-Maintainer status is based on sustained, trustworthy contributions and demonstrated judgment across code quality, review, architecture, safety, and community conduct.
-
-A maintainer may be removed for inactivity, repeated policy violations, loss of trust, undisclosed conflicts, abusive conduct, or actions that materially endanger the project or its users.
+Security or active data-loss fixes may use a narrower private review path when disclosure itself would increase risk. The mitigation must remain scoped, preserve provenance, and receive the strongest practical review and validation.
 
 ## Conflicts of interest
 
-Reviewers and maintainers must disclose material conflicts, including financial interests, employer obligations, private mod distribution, or personal disputes that could affect a decision. Recusal is expected when impartial review is not practical.
+Reviewers and maintainers disclose material conflicts and recuse when impartial review is not practical.
 
 ## Amendments
 
-Governance changes use the same significant-change process: public proposal, rationale, review, and maintainer approval. The effective change must be recorded in the pull request and changelog.
+Governance changes require an explicit repository-owner or maintainer decision, a focused pull request, and review appropriate to the impact. Process changes should update the single owning document rather than duplicating the same rule across multiple files.

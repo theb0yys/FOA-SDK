@@ -1,39 +1,44 @@
 # FOA-SDK Professional Code and Performance Gate
 
-## Rule P0: No Shortcut Code
+Use this workflow when a change has a material performance risk. It is not a universal pre-edit requirement for every source or UI change.
 
-Only professional, owner-scoped code is allowed. No heavy invasive unnecessary code, broad refactor, speculative architecture, unresearched dependency, hidden state repair, stale-truth cache, or shortcut implementation.
+## Rule P0: Professional, owner-scoped implementation
 
-## Rule P1: Run the Performance Preflight
+Avoid unnecessary broad refactors, speculative architecture, hidden state repair, stale-truth caches, and shortcut implementation.
 
-For source, UI, O3DE system/component, asset-processing, interchange, conversion, installer, packaging, runtime-adapter, migration, or harness changes, run `.codex/scripts/Get-AgentPerformancePlan.ps1` before editing.
+## Rule P1: Classify performance applicability
 
-Record performance risk, changed surfaces, data cardinality, forbidden shortcuts, required checks, and evidence requirements.
+A performance review is applicable when the change can materially affect latency, frame/UI responsiveness, startup/build time, memory, large-data scaling, file/process throughput, or repeated hot-path work.
 
-## Rule P2: Hot-Path Audit
+For low-risk changes with no credible performance effect, record performance as `NOT_APPLICABLE` rather than creating a ceremonial benchmark.
 
-Audit editor ticks, event handlers, buses, UI binding/render, asset scans, catalog operations, serialization, file interchange, external-process supervision, conversion, packaging, installer operations, adapter hooks, reflection, logging, and large collections.
+## Rule P2: Hot-path audit
 
-Do not add unbounded scans, IO or logging in loops, repeated allocation-heavy transforms, repeated reflection, accidental quadratic work, or synchronous blocking on interactive paths without measured authority.
+When applicable, inspect editor ticks, event handlers, buses, UI binding/rendering, asset scans, catalog operations, serialization, file interchange, external-process supervision, conversion, packaging, installer operations, adapter hooks, reflection, logging, and large collections.
 
-## Rule P3: Deterministic Performance Guard
+Do not add unbounded scans, IO or logging in loops, repeated allocation-heavy transforms, repeated reflection, accidental quadratic work, or synchronous blocking on interactive paths without a justified bound.
 
-High-risk changes require a deterministic guard with:
+## Rule P3: Deterministic guard for high risk
 
-- baseline or researched expected cost;
+High-risk changes require a representative deterministic guard with:
+
+- baseline or justified expected cost;
 - threshold;
 - measured result;
-- command;
-- build configuration;
-- machine, editor, toolchain, or runtime context;
+- command and build configuration;
+- machine/editor/toolchain/runtime context;
 - representative data cardinality.
 
-No lane or measurement means partial or blocked validation.
+Missing required measurement is `PARTIAL` or `BLOCKED`, not a pass.
 
-## Rule P4: Surface-Specific Performance Proof
+## Rule P4: Optional planning helper
 
-Do not substitute configure/build success for measured proof. UI, catalog, serialization, asset processing, conversion, external tools, installer, and runtime adapters require proof appropriate to their own surface.
+Use `.codex/scripts/Get-AgentPerformancePlan.ps1` when risk or measurement ownership is unclear. Its output is guidance and does not make performance testing applicable to an unrelated change.
 
-## Rule P5: Handoff Evidence
+## Rule P5: Evidence boundaries
 
-Report risk, hot-path findings, complexity before/after, budget, measurement, command, context, missing lanes, and whether exact Fall of Avalon runtime performance proof was performed.
+Configure/build success is not measured performance proof. UI, catalog, serialization, asset processing, conversion, external tools, installer, and runtime adapters require evidence appropriate to their own surface.
+
+## Rule P6: Handoff
+
+Report applicability, risk, hot-path findings, benchmark/guard command and result when required, and any missing or `NOT_APPLICABLE` lane.

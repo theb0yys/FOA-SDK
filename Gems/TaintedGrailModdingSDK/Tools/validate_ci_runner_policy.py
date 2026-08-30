@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate read-only GitHub automation and exact-head host validation policy."""
+"""Validate read-only GitHub automation and progressive FOA-SDK CI policy."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 class CiRunnerPolicyError(RuntimeError):
-    """Raised when repository automation can imply unavailable or unauthorized coverage."""
+    """Raised when repository automation or its policy drifts."""
 
 
 REMOVED_AUTOMATIC_WORKFLOWS = (
@@ -32,24 +32,29 @@ MANUAL_WORKFLOWS = (
 AGENT_POLICY = "AGENTS.md"
 CI_POLICY = "docs/tainted-grail-sdk/CI_AND_LOCAL_VALIDATION.md"
 LOCAL_RUNNER = "Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py"
+PR_POLICY_VALIDATOR = "Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py"
 
 
 def read_text(path: Path) -> str:
     if not path.is_file():
         raise CiRunnerPolicyError(f"Required CI policy file is missing: {path}")
-    return path.read_text(encoding="utf-8")
+    return path.read_text(encoding="utf-8", errors="strict")
 
 
 def require_fragments(text: str, fragments: tuple[str, ...], label: str) -> None:
     for fragment in fragments:
         if fragment not in text:
-            raise CiRunnerPolicyError(f"{label} is missing required fragment {fragment!r}.")
+            raise CiRunnerPolicyError(
+                f"{label} is missing required fragment {fragment!r}."
+            )
 
 
 def reject_fragments(text: str, fragments: tuple[str, ...], label: str) -> None:
     for fragment in fragments:
         if fragment in text:
-            raise CiRunnerPolicyError(f"{label} contains prohibited fragment {fragment!r}.")
+            raise CiRunnerPolicyError(
+                f"{label} contains prohibited fragment {fragment!r}."
+            )
 
 
 def validate_agent_policy(repo_root: Path) -> None:
@@ -57,19 +62,18 @@ def validate_agent_policy(repo_root: Path) -> None:
     require_fragments(
         agent_policy,
         (
-            "Mandatory GitHub Agent Policy",
-            "binding for every automated agent, assistant, bot, workflow, and tool",
-            "The reviewed integration branch is `main`",
-            "non-`main` working branch",
+            "# FOA-SDK Agent Execution Policy",
+            "## Authority order",
+            "## Research escalation",
+            "Research is a tool, not a universal precondition.",
+            "Routine implementation inside accepted architecture does not require",
+            "focused non-`main` working branch",
             "pull request for maintainer audit",
             "commit directly to `main`",
-            "bypass a required pull-request audit",
-            "modify tests, validators, workflows, process documents, governance documents",
-            "claim validation, review, approval, authorization, provenance, signing, or completion",
-            "leave merge, approval, and final acceptance to the maintainer",
-            "direct-to-main defaults",
+            "leave approval and merge to the maintainer",
+            "Use exact states:",
         ),
-        "Agent policy",
+        "Agent execution policy",
     )
 
 
@@ -89,7 +93,9 @@ def validate_manual_workflows(
     for relative_path in MANUAL_WORKFLOWS:
         text = read_text(repo_root / relative_path)
         if "workflow_dispatch:" not in text:
-            raise CiRunnerPolicyError(f"Manual workflow lacks workflow_dispatch: {relative_path}")
+            raise CiRunnerPolicyError(
+                f"Manual workflow lacks workflow_dispatch: {relative_path}"
+            )
         for forbidden in (
             "pull_request:",
             "pull_request_target:",
@@ -126,9 +132,7 @@ def validate_local_runner(repo_root: Path) -> None:
             '"--ctest-build-dir"',
             '"--no-tests=error"',
             "def run_validation_pipeline(",
-            "def should_run_stage(",
-            "Pinned O3DE source policy, ",
-            "compiled tests, and Windows acceptance remain mandatory exact-head ",
+            "def build_ctest_command(",
         ),
         "Local validation entry point",
     )
@@ -141,6 +145,7 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
             "pull_request:",
             "push:",
             "workflow_dispatch:",
+            '".codex/**"',
             '".github/**"',
             '"docs/**"',
             '"scripts/**"',
@@ -158,7 +163,14 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
             "github.event.before",
             "git diff --check",
             "tg-sdk-reviewed-range.txt",
+            "Validate pull-request policy contract",
+            "validate_pr_policy.py",
             "run_local_validation.py --keep-going --static-only --skip-source-policy",
+            "host_required",
+            "windows_required",
+            "needs: static-validation",
+            "needs.static-validation.outputs.host_required == 'true'",
+            "needs.static-validation.outputs.windows_required == 'true'",
             "--target \"$env:TEST_TARGET\" --parallel 2",
             "--no-tests=error",
             "developer_preview.py prerequisites",
@@ -174,6 +186,8 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
             "contents: write",
             "actions: write",
             "convertPullRequestToDraft",
+            "validate_pr_obligations.py",
+            "merge-obligation:",
             "gh api",
             "gh pr ",
             "gh issue ",
@@ -183,6 +197,7 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
             "--force",
             "self-hosted",
             "secrets.",
+            "runs-on: windows-latest",
         ),
         "Read-only TG SDK validation workflow",
     )
@@ -200,9 +215,15 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
     require_fragments(
         static_job,
         (
+            "outputs:",
+            "host_required:",
+            "windows_required:",
+            "id: classify",
+            "git diff --name-only",
             "fetch-depth: 0",
             "persist-credentials: false",
             "git diff --check",
+            "validate_pr_policy.py",
             "run_local_validation.py --keep-going --static-only --skip-source-policy",
         ),
         "Read-only static validation job",
@@ -217,30 +238,34 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
     require_fragments(
         compiled_job,
         (
+            "needs: static-validation",
+            "needs.static-validation.outputs.host_required == 'true'",
             "runs-on: windows-2022",
             "persist-credentials: false",
             "--parallel 2",
             "--no-tests=error",
         ),
-        "Compiled validation job",
+        "Conditional compiled validation job",
     )
     reject_fragments(
         compiled_job,
         ("contents: write", "pull-requests: write", "self-hosted", "secrets."),
-        "Compiled validation job",
+        "Conditional compiled validation job",
     )
 
     windows_job = automatic[windows_job_start:]
     require_fragments(
         windows_job,
         (
+            "needs: static-validation",
+            "needs.static-validation.outputs.windows_required == 'true'",
             "runs-on: windows-2022",
             "persist-credentials: false",
             "O3DE_COMMIT:",
             "sparse-checkout",
             "developer_preview.py prerequisites",
         ),
-        "Windows prerequisite job",
+        "Conditional Windows prerequisite job",
     )
     reject_fragments(
         windows_job,
@@ -253,32 +278,31 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
             "cmake --build",
             "--ctest-build-dir",
         ),
-        "Windows prerequisite job",
+        "Conditional Windows prerequisite job",
     )
 
     policy = " ".join(read_text(repo_root / CI_POLICY).split())
     require_fragments(
         policy,
         (
-            "Binding automation boundary",
-            "Agent-authored repository changes must happen on a non-main branch",
-            "pull request for maintainer audit",
-            "must not commit directly to main",
+            "single validation matrix",
+            "Validation requirements are selected by changed surface and risk",
+            "L0 — Repository and static validation",
+            "L1 — Focused unit and contract tests",
+            "L2 — Configure, build, and compiled host tests",
+            "L3 — Editor/UI/manual host interaction",
+            "L4 — Operational/runtime evidence",
             "Automated validation is read-only",
             "no `pull_request_target` trigger",
-            "pinned `windows-2022`",
-            "must not push commits, move refs, post comments, merge pull requests",
-            "--parallel 2",
-            "--static-only",
-            "--ctest-build-dir",
-            "--no-tests=error",
+            "host/build jobs are conditional",
+            "Routine changes do not require a receipt",
             "Pending is not passing",
-            "self-declared metadata are not proof",
-            "repository owner authorized an action",
-            "registration token is a secret",
+            "runner registration token is a secret",
         ),
         "CI/local-validation policy",
     )
+
+    read_text(repo_root / PR_POLICY_VALIDATOR)
 
 
 def validate_ci_runner_policy(repo_root: Path) -> None:
@@ -286,10 +310,7 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
     validate_removed_workflows(repo_root)
     automatic = read_text(repo_root / AUTOMATIC_STATIC_WORKFLOW)
     validate_read_only_mode(repo_root, automatic)
-    validate_manual_workflows(
-        repo_root,
-        require_explicit_read_only=True,
-    )
+    validate_manual_workflows(repo_root, require_explicit_read_only=True)
     validate_local_runner(repo_root)
 
 
@@ -297,13 +318,12 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
     try:
         validate_ci_runner_policy(repo_root)
-    except CiRunnerPolicyError as error:
+    except (OSError, UnicodeDecodeError, CiRunnerPolicyError) as error:
         print(f"CI runner policy validation failed: {error}", file=sys.stderr)
         return 1
     print(
-        "CI runner policy validation passed: GitHub automation is read-only, agent work "
-        "must enter main through maintainer-audited pull requests, exact-head validation "
-        "remains separated by evidence layer, and host-heavy workflows remain manual."
+        "CI runner policy validation passed: automation is read-only, static checks "
+        "run for the reviewed range, and host jobs are selected by affected surface."
     )
     return 0
 

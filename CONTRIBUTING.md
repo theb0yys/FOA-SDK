@@ -2,7 +2,7 @@
 
 Thank you for helping build a public, evidence-governed modding toolchain for **Tainted Grail: The Fall of Avalon**.
 
-This repository is an O3DE fork. Contributions must satisfy both this project's rules and the applicable O3DE licence, source, build, and Developer Certificate of Origin requirements.
+This repository is the FOA-SDK product repository, not an O3DE source fork. Contributions must satisfy both this project's rules and the applicable O3DE licence, source, build, and Developer Certificate of Origin requirements.
 
 ## Read before contributing
 

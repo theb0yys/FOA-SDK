@@ -295,23 +295,35 @@ function Invoke-GuidedInstallerUserFlow {
         Invoke-AutomationButton $InstallButton
 
         $FinishButton = $null
+        $ReadyText = $null
         $Deadline = [DateTime]::UtcNow.AddSeconds(120)
         while ([DateTime]::UtcNow -lt $Deadline) {
             if ($Process.HasExited) {
                 throw "The guided installer exited before reaching its finish screen. Exit code: $($Process.ExitCode)."
             }
-            $FinishButton = Find-AutomationControl -Root $Window -Name "Finish" -ControlType ([System.Windows.Automation.ControlType]::Button)
-            if ($null -ne $FinishButton -and -not $FinishButton.Current.IsOffscreen -and $FinishButton.Current.IsEnabled) {
-                break
-            }
-            $CloseButton = Find-AutomationControl -Root $Window -Name "Close" -ControlType ([System.Windows.Automation.ControlType]::Button)
-            if ($null -ne $CloseButton -and -not $CloseButton.Current.IsOffscreen -and $CloseButton.Current.IsEnabled) {
+
+            $FailureText = Find-AutomationControl -Root $Window -Name "Setup could not be completed" -ControlType ([System.Windows.Automation.ControlType]::Text)
+            if ($null -ne $FailureText -and -not $FailureText.Current.IsOffscreen) {
                 throw "The guided installer reached a failure screen: $(Describe-AutomationWindow $Window)"
+            }
+
+            $ReadyText = Find-AutomationControl -Root $Window -Name "FOA-SDK is ready" -ControlType ([System.Windows.Automation.ControlType]::Text)
+            $FinishButton = Find-AutomationControl -Root $Window -Name "Finish" -ControlType ([System.Windows.Automation.ControlType]::Button)
+            if ($null -ne $ReadyText
+                -and -not $ReadyText.Current.IsOffscreen
+                -and $null -ne $FinishButton
+                -and -not $FinishButton.Current.IsOffscreen
+                -and $FinishButton.Current.IsEnabled) {
+                break
             }
             Start-Sleep -Milliseconds 250
         }
-        if ($null -eq $FinishButton -or $FinishButton.Current.IsOffscreen -or -not $FinishButton.Current.IsEnabled) {
-            throw "The guided installer did not reach the FOA-SDK finish screen: $(Describe-AutomationWindow $Window)"
+        if ($null -eq $ReadyText
+            -or $ReadyText.Current.IsOffscreen
+            -or $null -eq $FinishButton
+            -or $FinishButton.Current.IsOffscreen
+            -or -not $FinishButton.Current.IsEnabled) {
+            throw "The guided installer did not reach the FOA-SDK ready finish screen: $(Describe-AutomationWindow $Window)"
         }
 
         $OpenCheckbox = Wait-AutomationControl -Root $Window -Name "Open FOA-SDK" -ControlType ([System.Windows.Automation.ControlType]::CheckBox) -TimeoutSeconds 10

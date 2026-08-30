@@ -11,6 +11,9 @@ if (-not $IsWindows) {
     throw "FOA-SDK installer operational smoke requires Windows."
 }
 
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $SourceCommit = (& git -C $RepoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $SourceCommit -notmatch '^[0-9a-f]{40}$') {
@@ -33,8 +36,12 @@ $InvalidMsi = Join-Path $WorkRoot "foa-sdk-windows-smoke-invalid.msi"
 $InstallerOutput = Join-Path $WorkRoot "installer"
 $InstallRoot = Join-Path $WorkRoot "installed-foa-sdk"
 $InvalidInstallRoot = Join-Path $WorkRoot "installed-foa-sdk-invalid"
+$GuidedInstallRoot = Join-Path $WorkRoot "installed-foa-sdk-guided"
 $ExternalRoot = Join-Path $WorkRoot "external-workspace"
 $ExternalSentinel = Join-Path $ExternalRoot "must-survive.txt"
+$LaunchMarker = Join-Path $WorkRoot "guided-launch-marker.txt"
+$DesktopRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
+$DesktopShortcut = Join-Path $DesktopRoot "FOA-SDK.lnk"
 $SummaryPath = Join-Path $EvidenceRoot "windows-installer-smoke-summary.json"
 $Result = [ordered]@{
     schema = "foa.sdk.windows_installer_smoke.v1"
@@ -47,6 +54,7 @@ $Result = [ordered]@{
     repair = "NOT_RUN"
     invalid_integrity_rejection = "NOT_RUN"
     uninstall = "NOT_RUN"
+    guided_user_flow = "NOT_RUN"
     external_workspace_preserved = "NOT_RUN"
 }
 
@@ -187,6 +195,186 @@ function Invoke-Installer([string[]]$Arguments, [int]$ExpectedExitCode = 0) {
     }
 }
 
+function Find-AutomationControl([object]$Root, [string]$Name, [object]$ControlType) {
+    $NameCondition = [System.Windows.Automation.PropertyCondition]::new(
+        [System.Windows.Automation.AutomationElement]::NameProperty,
+        $Name)
+    $TypeCondition = [System.Windows.Automation.PropertyCondition]::new(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        $ControlType)
+    $Condition = [System.Windows.Automation.AndCondition]::new($NameCondition, $TypeCondition)
+    return $Root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $Condition)
+}
+
+function Wait-AutomationControl(
+    [object]$Root,
+    [string]$Name,
+    [object]$ControlType,
+    [int]$TimeoutSeconds = 30,
+    [switch]$AllowDisabled) {
+    $Deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTime]::UtcNow -lt $Deadline) {
+        $Control = Find-AutomationControl -Root $Root -Name $Name -ControlType $ControlType
+        if ($null -ne $Control) {
+            $Current = $Control.Current
+            if (-not $Current.IsOffscreen -and ($AllowDisabled -or $Current.IsEnabled)) {
+                return $Control
+            }
+        }
+        Start-Sleep -Milliseconds 250
+    }
+    return $null
+}
+
+function Invoke-AutomationButton([object]$Button) {
+    $Pattern = $Button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+    ([System.Windows.Automation.InvokePattern]$Pattern).Invoke()
+}
+
+function Assert-AutomationCheckboxChecked([object]$Checkbox, [string]$Label) {
+    $Pattern = $Checkbox.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    $Toggle = [System.Windows.Automation.TogglePattern]$Pattern
+    if ($Toggle.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) {
+        throw "$Label is not selected on the installer finish screen."
+    }
+}
+
+function Describe-AutomationWindow([object]$Window) {
+    $TextCondition = [System.Windows.Automation.PropertyCondition]::new(
+        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+        [System.Windows.Automation.ControlType]::Text)
+    $Items = $Window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $TextCondition)
+    $Values = [System.Collections.Generic.List[string]]::new()
+    foreach ($Item in $Items) {
+        $Name = $Item.Current.Name
+        if (-not [string]::IsNullOrWhiteSpace($Name)) {
+            $Values.Add($Name)
+        }
+    }
+    return ($Values -join " | ")
+}
+
+function Invoke-GuidedInstallerUserFlow {
+    $InstallerExe = Join-Path $InstallerOutput "FOA-SDK-Installer.exe"
+    if (-not (Test-Path -LiteralPath $InstallerExe -PathType Leaf)) {
+        throw "FOA-SDK installer executable is missing before guided UI smoke."
+    }
+    if ([string]::IsNullOrWhiteSpace($DesktopRoot)) {
+        throw "Windows did not provide a desktop directory for guided UI smoke."
+    }
+    Remove-Item -LiteralPath $DesktopShortcut -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $LaunchMarker -Force -ErrorAction SilentlyContinue
+
+    $StartInfo = [Diagnostics.ProcessStartInfo]::new()
+    $StartInfo.FileName = $InstallerExe
+    $StartInfo.WorkingDirectory = $InstallerOutput
+    $StartInfo.UseShellExecute = $false
+    $StartInfo.Environment["FOA_SDK_SMOKE_LAUNCH_MARKER"] = $LaunchMarker
+    foreach ($Argument in @(
+        "--install-root", $GuidedInstallRoot,
+        "--evidence-root", $EvidenceRoot,
+        "--no-open-tool-wizard-after-install")) {
+        $StartInfo.ArgumentList.Add($Argument)
+    }
+
+    $Process = [Diagnostics.Process]::Start($StartInfo)
+    if ($null -eq $Process) {
+        throw "FOA-SDK guided installer process did not start."
+    }
+    try {
+        $Root = [System.Windows.Automation.AutomationElement]::RootElement
+        $Window = Wait-AutomationControl -Root $Root -Name "FOA-SDK Setup" -ControlType ([System.Windows.Automation.ControlType]::Window) -TimeoutSeconds 30
+        if ($null -eq $Window) {
+            throw "The FOA-SDK Setup window did not appear."
+        }
+
+        $InstallButton = Wait-AutomationControl -Root $Window -Name "Install" -ControlType ([System.Windows.Automation.ControlType]::Button) -TimeoutSeconds 15
+        if ($null -eq $InstallButton) {
+            throw "The normal installer did not expose its Install button."
+        }
+        Invoke-AutomationButton $InstallButton
+
+        $FinishButton = $null
+        $Deadline = [DateTime]::UtcNow.AddSeconds(120)
+        while ([DateTime]::UtcNow -lt $Deadline) {
+            if ($Process.HasExited) {
+                throw "The guided installer exited before reaching its finish screen. Exit code: $($Process.ExitCode)."
+            }
+            $FinishButton = Find-AutomationControl -Root $Window -Name "Finish" -ControlType ([System.Windows.Automation.ControlType]::Button)
+            if ($null -ne $FinishButton -and -not $FinishButton.Current.IsOffscreen -and $FinishButton.Current.IsEnabled) {
+                break
+            }
+            $CloseButton = Find-AutomationControl -Root $Window -Name "Close" -ControlType ([System.Windows.Automation.ControlType]::Button)
+            if ($null -ne $CloseButton -and -not $CloseButton.Current.IsOffscreen -and $CloseButton.Current.IsEnabled) {
+                throw "The guided installer reached a failure screen: $(Describe-AutomationWindow $Window)"
+            }
+            Start-Sleep -Milliseconds 250
+        }
+        if ($null -eq $FinishButton -or $FinishButton.Current.IsOffscreen -or -not $FinishButton.Current.IsEnabled) {
+            throw "The guided installer did not reach the FOA-SDK finish screen: $(Describe-AutomationWindow $Window)"
+        }
+
+        $OpenCheckbox = Wait-AutomationControl -Root $Window -Name "Open FOA-SDK" -ControlType ([System.Windows.Automation.ControlType]::CheckBox) -TimeoutSeconds 10
+        $ShortcutCheckbox = Wait-AutomationControl -Root $Window -Name "Create desktop shortcut" -ControlType ([System.Windows.Automation.ControlType]::CheckBox) -TimeoutSeconds 10
+        if ($null -eq $OpenCheckbox -or $null -eq $ShortcutCheckbox) {
+            throw "The guided installer finish options were not available."
+        }
+        Assert-AutomationCheckboxChecked -Checkbox $OpenCheckbox -Label "Open FOA-SDK"
+        Assert-AutomationCheckboxChecked -Checkbox $ShortcutCheckbox -Label "Create desktop shortcut"
+
+        Invoke-AutomationButton $FinishButton
+        if (-not $Process.WaitForExit(30000)) {
+            throw "The guided installer did not close after Finish was selected."
+        }
+        if ($Process.ExitCode -ne 0) {
+            throw "The guided installer returned exit code $($Process.ExitCode) after Finish."
+        }
+    }
+    finally {
+        if (-not $Process.HasExited) {
+            try {
+                $Process.Kill($true)
+                $Process.WaitForExit()
+            }
+            catch {
+            }
+        }
+        $Process.Dispose()
+    }
+
+    $InstalledLauncher = Join-Path $GuidedInstallRoot "bin\Windows\profile\Default\FOA-SDK.exe"
+    if (-not (Test-Path -LiteralPath $InstalledLauncher -PathType Leaf)) {
+        throw "The guided installer did not install FOA-SDK.exe."
+    }
+
+    $LaunchDeadline = [DateTime]::UtcNow.AddSeconds(15)
+    while (-not (Test-Path -LiteralPath $LaunchMarker -PathType Leaf) -and [DateTime]::UtcNow -lt $LaunchDeadline) {
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not (Test-Path -LiteralPath $LaunchMarker -PathType Leaf)) {
+        throw "The checked Open FOA-SDK finish option did not launch the installed entry point."
+    }
+
+    if (-not (Test-Path -LiteralPath $DesktopShortcut -PathType Leaf)) {
+        throw "The checked Create desktop shortcut finish option did not create FOA-SDK.lnk."
+    }
+    $Shell = New-Object -ComObject WScript.Shell
+    $Shortcut = $null
+    try {
+        $Shortcut = $Shell.CreateShortcut($DesktopShortcut)
+        $Target = [IO.Path]::GetFullPath([string]$Shortcut.TargetPath)
+        if ($Target -cne [IO.Path]::GetFullPath($InstalledLauncher)) {
+            throw "The guided installer desktop shortcut does not target the installed FOA-SDK.exe."
+        }
+    }
+    finally {
+        if ($null -ne $Shortcut) {
+            [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($Shortcut)
+        }
+        [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($Shell)
+    }
+}
+
 function Assert-InstalledLauncherHash([string]$ExpectedHash) {
     $InstalledLauncher = Join-Path $InstallRoot "bin\Windows\profile\Default\FOA-SDK.exe"
     if (-not (Test-Path -LiteralPath $InstalledLauncher -PathType Leaf)) {
@@ -232,6 +420,16 @@ internal static class Program
         if (args.Length == 1 && string.Equals(args[0], "--self-test", StringComparison.Ordinal))
         {
             return 0;
+        }
+        string? marker = Environment.GetEnvironmentVariable("FOA_SDK_SMOKE_LAUNCH_MARKER");
+        if (!string.IsNullOrWhiteSpace(marker))
+        {
+            string? directory = Path.GetDirectoryName(marker);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            File.WriteAllText(marker, "launched");
         }
         return 0;
     }
@@ -327,6 +525,16 @@ internal static class Program
         "--quiet"
     )
 
+    Invoke-GuidedInstallerUserFlow
+    $Result.guided_user_flow = "PASSED"
+    Invoke-Installer -Arguments @(
+        "--install-root", $GuidedInstallRoot,
+        "--evidence-root", $EvidenceRoot,
+        "--operation", "uninstall",
+        "--quiet"
+    )
+    Remove-Item -LiteralPath $DesktopShortcut -Force -ErrorAction SilentlyContinue
+
     if (-not (Test-Path -LiteralPath $ExternalSentinel -PathType Leaf)) {
         throw "Installer lifecycle removed external workspace data."
     }
@@ -338,6 +546,7 @@ catch {
     throw
 }
 finally {
+    Remove-Item -LiteralPath $DesktopShortcut -Force -ErrorAction SilentlyContinue
     Ensure-Directory $EvidenceRoot
     $Result | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $SummaryPath -Encoding utf8
     Write-Host "Windows installer smoke summary: $SummaryPath"

@@ -10,6 +10,8 @@
 #include "FoundationModels.h"
 #include "FoundationNotificationBus.h"
 
+#include <AzCore/std/algorithm.h>
+
 #include <QWidget>
 
 class QGroupBox;

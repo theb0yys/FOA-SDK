@@ -73,9 +73,9 @@ internal sealed class InstallerWizardForm : Form
 
         Text = "FOA-SDK Setup";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(760, 520);
-        MinimumSize = new Size(760, 520);
-        MaximumSize = new Size(760, 520);
+        Size = new Size(780, 580);
+        MinimumSize = new Size(780, 580);
+        MaximumSize = new Size(780, 580);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = true;
@@ -251,11 +251,11 @@ internal sealed class InstallerWizardForm : Form
         _resultTitle.Location = new Point(42, 46);
         _resultTitle.Size = new Size(660, 46);
         _resultText.Location = new Point(42, 104);
-        _resultText.Size = new Size(660, 92);
+        _resultText.Size = new Size(660, 112);
 
         Panel choices = new()
         {
-            Location = new Point(42, 224),
+            Location = new Point(42, 244),
             Size = new Size(660, 108),
             BackColor = Color.White,
             BorderStyle = BorderStyle.FixedSingle,
@@ -536,7 +536,8 @@ internal sealed class InstallerWizardForm : Form
                     ex is IOException
                         or UnauthorizedAccessException
                         or InvalidOperationException
-                        or System.ComponentModel.Win32Exception)
+                        or System.ComponentModel.Win32Exception
+                        or System.Runtime.InteropServices.COMException)
                 {
                     MessageBox.Show(
                         this,

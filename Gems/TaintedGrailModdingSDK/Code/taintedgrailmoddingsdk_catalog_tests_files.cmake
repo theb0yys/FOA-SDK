@@ -12,11 +12,11 @@ set(FILES
     Tests/CatalogGovernanceHardeningTests.cpp
     Tests/CatalogGovernanceServiceTests.cpp
     Tests/CatalogGovernanceTypesTests.cpp
-    Tests/CatalogSchemaMigrationPersistenceTests.cpp
     Tests/DeveloperPreviewSmokeTests.cpp
     Tests/EconomyAuthoringTests.cpp
     Tests/EconomyCoverageServiceTests.cpp
     Tests/EconomyDuplicateDetectionServiceTests.cpp
+    Tests/FoAInstallDiscoveryServiceTests.cpp
     Tests/FoundationWorkspaceIsolationTests.cpp
     Tests/Main.cpp
     Tests/PopulationActionLaneServiceTests.cpp

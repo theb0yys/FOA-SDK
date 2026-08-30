@@ -7,11 +7,18 @@ FOA-SDK is the product. O3DE is the authoring engine dependency. The supported l
 ```text
 Development/
 ├── FOA-SDK/      product_root
+│   └── release/revisions/
+│       └── tg-sdk-developer-preview-0-windows-profile/
+│           canonical local source-built Editor revision output
 ├── o3de/         engine_root
-└── foa-build/    build_root
+└── foa-build/    generated evidence, fixtures and non-Editor build output
 ```
 
-The roots must not contain one another. Generated build, validation, diagnostics, screenshot, installer, and release outputs do not belong in either source checkout.
+The product and engine roots must not contain one another. The standard
+source-built Editor revision is the only approved generated-output exception
+inside the product checkout, and it belongs under `release/revisions/`.
+Generated validation, diagnostics, screenshot, installer, release, fixture, and
+non-Editor build outputs do not belong in either source checkout.
 
 ## Product working tree
 
@@ -56,7 +63,9 @@ The Developer Preview coordinator resolves `engine_root` in this order:
 2. `FOA_O3DE_ROOT`;
 3. the sibling directory named by `checkout_directory` in `o3de.lock.json`.
 
-There is no supported combined product/engine route. The build root resolves from explicit `--build-dir`, then `FOA_BUILD_ROOT`, then the sibling `foa-build/` directory.
+There is no supported combined product/engine route. The source-built Editor
+build root resolves from explicit `--build-dir`, then `FOA_BUILD_ROOT`, then
+`<product_root>/release/revisions/tg-sdk-developer-preview-0-windows-profile`.
 
 ## Product-owned Gem discovery
 
@@ -106,14 +115,17 @@ CMake configuration is engine-owned while the project is product-owned:
 ```text
 cmake --preset windows-vs-unity
   -S <engine_root>
-  -B <build_root>/tg-sdk-developer-preview-0-windows-profile
+  -B <product_root>/release/revisions/tg-sdk-developer-preview-0-windows-profile
   -A x64
   -DLY_PROJECTS=<product_root>/TaintedGrailModdingEditor
 ```
 
-FOA validators execute from `product_root`. The O3DE source-policy validator is resolved from `engine_root` and scans the required product Gems. Each selected plug-in is separately validated before its entry points are added to a build or Editor session. Compiled tests execute from `build_root`.
+FOA validators execute from `product_root`. The O3DE source-policy validator is resolved from `engine_root` and scans the required product Gems. Each selected plug-in is separately validated before its entry points are added to a build or Editor session. Compiled tests execute from the canonical Editor revision build root.
 
-Clickable-entry policy records all three roots separately. It rejects a CMake cache whose source is FOA-SDK, a build inside either source checkout, or a shortcut that reports the product as its engine.
+Clickable-entry policy records the product, engine, and build roots separately.
+It rejects a CMake cache whose source is FOA-SDK, an in-checkout build outside
+the canonical `release/revisions/` Editor revision path, or a shortcut that
+reports the product as its engine.
 
 ## Working-tree acceptance gates
 

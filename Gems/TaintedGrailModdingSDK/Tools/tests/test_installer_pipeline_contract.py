@@ -122,7 +122,7 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Generate exact installer inventory",
             "Upload inventory for redistribution review",
             "Bind package mode to exact redistribution review",
-            "Stage reviewed payload and create portable ZIP",
+            "Stage reviewed payload, self-test launcher, and create portable ZIP",
             "Install pinned build-only WiX toolchain",
             "Install hash-pinned build-only CMake and CPack toolchain",
             "Build standard MSI from the same staged payload",
@@ -148,12 +148,44 @@ class InstallerPipelineContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("--target TaintedGrailModdingEditorLauncher", workflow)
         self.assertIn("FOA-SDK.exe does not match the reviewed installed launcher build.", workflow)
-        self.assertIn(
+        self.assertNotIn(
             "FOA-SDK.exe installed launcher self-test failed before inventory review.",
+            workflow,
+        )
+        self.assertIn('$stagedLauncher = Join-Path $env:SDK_STAGE "bin/Windows/profile/Default/FOA-SDK.exe"', workflow)
+        self.assertIn("& $stagedLauncher --self-test", workflow)
+        self.assertIn(
+            "FOA-SDK.exe staged self-contained launcher self-test failed.",
             workflow,
         )
         self.assertIn('SDK_ENTRYPOINT_PATH = BIN_DIRECTORY / "FOA-SDK.exe"', installer_source)
         self.assertIn("Installed FOA-SDK.exe launcher entry point", installer_source)
+
+    def test_installed_sdk_launcher_resolves_self_contained_product_layout(self) -> None:
+        launcher_source = (REPO_ROOT / "Installer/Launcher/Windows/InstalledEditorLauncher.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('InstalledBinRelativePath[] = L"bin\\\\Windows\\\\profile\\\\Default"', launcher_source)
+        self.assertIn("launcherDirectory / EditorFileName", launcher_source)
+        self.assertIn("installRoot / InstalledBinRelativePath / EditorFileName", launcher_source)
+        self.assertIn("installRoot / EngineMetadataFileName", launcher_source)
+        self.assertIn("installRoot / ProjectDirectoryName", launcher_source)
+        self.assertIn("LOCALAPPDATA", launcher_source)
+        self.assertIn("--engine-path", launcher_source)
+        self.assertIn("QuoteArgument(engineRoot)", launcher_source)
+        self.assertIn("--project-path", launcher_source)
+        self.assertIn("MaterializedProjectDirectoryName", launcher_source)
+        self.assertIn("ExternalDirectoryName", launcher_source)
+        self.assertIn("QuoteArgument(launchProject)", launcher_source)
+        self.assertIn("BundledCMakeBinRelativePath", launcher_source)
+        self.assertIn("ConfigureBundledRuntimeEnvironment", launcher_source)
+        self.assertIn('SetEnvironmentVariableW(L"LY_CMAKE_PATH"', launcher_source)
+        self.assertIn("--project-cache-path", launcher_source)
+        self.assertIn("--project-user-path", launcher_source)
+        self.assertIn("--project-log-path", launcher_source)
+        self.assertIn("asset_processor.setreg", launcher_source)
+        self.assertIn("ProjectRegistryRelativePath", launcher_source)
+        self.assertIn("self-contained FOA-SDK install", launcher_source)
 
     def test_zip_and_msi_are_built_from_the_same_verified_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
@@ -200,6 +232,9 @@ class InstallerPipelineContractTests(unittest.TestCase):
         )
         self.assertIn("https://cmake.org/files/v4.3/$archiveName", workflow)
         self.assertIn("$actualHash -cne $env:SDK_PACKAGE_CMAKE_SHA256", workflow)
+        self.assertIn("Install hash-pinned CMake runtime into SDK payload", workflow)
+        self.assertIn('$sdkCmakeRuntime = Join-Path $env:SDK_INSTALL "cmake/runtime"', workflow)
+        self.assertIn('Copy-Item -Path (Join-Path $toolRoot "*") -Destination $sdkCmakeRuntime -Recurse -Force', workflow)
         self.assertIn("& $env:SDK_PACKAGE_CMAKE -S Installer/Packaging/Windows", workflow)
         self.assertIn("& $env:SDK_PACKAGE_CPACK --config", workflow)
         self.assertNotIn("\n          cmake -S Installer/Packaging/Windows", workflow)

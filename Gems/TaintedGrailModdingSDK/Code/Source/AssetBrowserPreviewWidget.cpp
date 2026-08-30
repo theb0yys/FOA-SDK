@@ -15,10 +15,10 @@
 #include <QAbstractItemView>
 #include <QComboBox>
 #include <QByteArray>
+#include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QFont>
 #include <QFormLayout>
@@ -32,6 +32,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QJsonValue>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPixmap>
@@ -40,6 +41,7 @@
 #include <QSizePolicy>
 #include <QSplitter>
 #include <QStringList>
+#include <QStyle>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVariant>
@@ -72,19 +74,6 @@ namespace TaintedGrailModdingSDK
                 output.push_back(ToQString(value));
             }
             return output.join(QStringLiteral(", "));
-        }
-
-        QWidget* CreateFileRow(
-            QWidget* parent,
-            QLineEdit* edit,
-            QPushButton* browseButton)
-        {
-            auto* row = new QWidget(parent);
-            auto* layout = new QHBoxLayout(row);
-            layout->setContentsMargins(0, 0, 0, 0);
-            layout->addWidget(edit, 1);
-            layout->addWidget(browseButton);
-            return row;
         }
 
         QLineEdit* CreateEvidencePathEdit(QWidget* parent, const QString& placeholder)
@@ -138,59 +127,35 @@ namespace TaintedGrailModdingSDK
         heading->setFont(headingFont);
         rootLayout->addWidget(heading);
 
-        auto* profileGroup = new QGroupBox(tr("Active evidence binding"), this);
+        auto* profileGroup = new QGroupBox(tr("Active source"), this);
         auto* profileLayout = new QFormLayout(profileGroup);
         m_profileValue = new QLabel(profileGroup);
         ConfigureValueLabel(m_profileValue);
         profileLayout->addRow(tr("Profile"), m_profileValue);
         rootLayout->addWidget(profileGroup);
 
-        auto* evidenceGroup = new QGroupBox(tr("Preview evidence inputs"), this);
-        auto* evidenceLayout = new QFormLayout(evidenceGroup);
-        m_extractedRootEdit = CreateEvidencePathEdit(
-            evidenceGroup,
-            tr("Configured extracted-data root"));
-        m_paneModelEdit = CreateEvidencePathEdit(
-            evidenceGroup,
-            tr("foa-asset-browser-pane-model JSON"));
-        m_thumbnailEvidenceEdit = CreateEvidencePathEdit(
-            evidenceGroup,
-            tr("foa-thumbnail-artifact-evidence JSON"));
-        m_thumbnailRootEdit = CreateEvidencePathEdit(
-            evidenceGroup,
-            tr("Preview thumbnail root"));
-        m_viewportEvidenceEdit = CreateEvidencePathEdit(
-            evidenceGroup,
-            tr("foa-3d-preview-viewport-render JSON"));
+        auto* sourceGroup = new QGroupBox(tr("Asset roots"), this);
+        auto* sourceLayout = new QFormLayout(sourceGroup);
+        m_gameInstallEdit = CreateEvidencePathEdit(
+            sourceGroup,
+            tr("Detected FoA installation"));
+        m_gameInstallEdit->setReadOnly(true);
+        m_gameInstallEdit->setClearButtonEnabled(false);
+        m_customAssetsEdit = CreateEvidencePathEdit(
+            sourceGroup,
+            tr("Workspace Assets folder"));
+        m_customAssetsEdit->setReadOnly(true);
+        m_customAssetsEdit->setClearButtonEnabled(false);
 
-        auto* browseExtracted = new QPushButton(tr("Browse..."), evidenceGroup);
-        auto* browsePaneModel = new QPushButton(tr("Browse..."), evidenceGroup);
-        auto* browseThumbnailEvidence = new QPushButton(tr("Browse..."), evidenceGroup);
-        auto* browseThumbnailRoot = new QPushButton(tr("Browse..."), evidenceGroup);
-        auto* browseViewportEvidence = new QPushButton(tr("Browse..."), evidenceGroup);
-
-        evidenceLayout->addRow(
-            tr("Extracted data root"),
-            CreateFileRow(evidenceGroup, m_extractedRootEdit, browseExtracted));
-        evidenceLayout->addRow(
-            tr("Asset Browser model"),
-            CreateFileRow(evidenceGroup, m_paneModelEdit, browsePaneModel));
-        evidenceLayout->addRow(
-            tr("Thumbnail evidence"),
-            CreateFileRow(evidenceGroup, m_thumbnailEvidenceEdit, browseThumbnailEvidence));
-        evidenceLayout->addRow(
-            tr("Thumbnail root"),
-            CreateFileRow(evidenceGroup, m_thumbnailRootEdit, browseThumbnailRoot));
-        evidenceLayout->addRow(
-            tr("Viewport evidence"),
-            CreateFileRow(evidenceGroup, m_viewportEvidenceEdit, browseViewportEvidence));
-        rootLayout->addWidget(evidenceGroup);
+        sourceLayout->addRow(tr("Game install"), m_gameInstallEdit);
+        sourceLayout->addRow(tr("Custom Assets"), m_customAssetsEdit);
+        rootLayout->addWidget(sourceGroup);
 
         auto* actionRow = new QWidget(this);
         auto* actionLayout = new QHBoxLayout(actionRow);
         actionLayout->setContentsMargins(0, 0, 0, 0);
-        auto* autoFindButton = new QPushButton(tr("Auto-find evidence"), actionRow);
-        auto* loadButton = new QPushButton(tr("Load preview"), actionRow);
+        auto* autoFindButton = new QPushButton(tr("Refresh assets"), actionRow);
+        auto* loadButton = new QPushButton(tr("Load assets"), actionRow);
         actionLayout->addWidget(autoFindButton);
         actionLayout->addWidget(loadButton);
         actionLayout->addStretch(1);
@@ -276,26 +241,6 @@ namespace TaintedGrailModdingSDK
         splitter->setStretchFactor(1, 2);
         rootLayout->addWidget(splitter, 1);
 
-        connect(browseExtracted, &QPushButton::clicked, this, [this]()
-        {
-            BrowseForDirectory(m_extractedRootEdit, tr("Select extracted-data root"));
-        });
-        connect(browsePaneModel, &QPushButton::clicked, this, [this]()
-        {
-            BrowseForFile(m_paneModelEdit, tr("Select Asset Browser pane-model evidence"));
-        });
-        connect(browseThumbnailEvidence, &QPushButton::clicked, this, [this]()
-        {
-            BrowseForFile(m_thumbnailEvidenceEdit, tr("Select thumbnail evidence"));
-        });
-        connect(browseThumbnailRoot, &QPushButton::clicked, this, [this]()
-        {
-            BrowseForDirectory(m_thumbnailRootEdit, tr("Select thumbnail preview root"));
-        });
-        connect(browseViewportEvidence, &QPushButton::clicked, this, [this]()
-        {
-            BrowseForFile(m_viewportEvidenceEdit, tr("Select viewport evidence"));
-        });
         connect(autoFindButton, &QPushButton::clicked, this, [this]() { AutoFindEvidence(); });
         connect(loadButton, &QPushButton::clicked, this, [this]() { LoadPreviewEvidence(); });
         connect(m_categoryFilter, &QComboBox::currentTextChanged, this, [this]() { PopulateTree(); });
@@ -324,24 +269,31 @@ namespace TaintedGrailModdingSDK
         const GameProfile* profile = workspace.FindActiveGameProfile();
         if (!profile)
         {
-            m_profileValue->setText(tr("Not configured"));
-            SetStatus(tr("Configure an exact active FoA game profile before loading preview evidence."), true);
-            return;
+            m_gameInstallEdit->clear();
+            m_extractedRootPath.clear();
+            m_paneModelPath.clear();
+            m_thumbnailEvidencePath.clear();
+            m_viewportEvidencePath.clear();
+            m_profileValue->setText(tr("No active FoA profile"));
+        }
+        else
+        {
+            m_profileValue->setText(
+                tr("%1 [%2] / %3 / %4 / %5")
+                    .arg(ToQString(profile->m_displayName))
+                    .arg(ToQString(profile->m_profileId))
+                    .arg(ToQString(profile->m_gameVersion))
+                    .arg(ToQString(profile->m_branch))
+                    .arg(ToQString(profile->m_runtimeTarget)));
+            m_gameInstallEdit->setText(ToQString(profile->m_installPath));
+            m_extractedRootPath = ToQString(profile->m_extractedDataPath);
         }
 
-        m_profileValue->setText(
-            tr("%1 [%2] / %3 / %4 / %5")
-                .arg(ToQString(profile->m_displayName))
-                .arg(ToQString(profile->m_profileId))
-                .arg(ToQString(profile->m_gameVersion))
-                .arg(ToQString(profile->m_branch))
-                .arg(ToQString(profile->m_runtimeTarget)));
-        if (m_extractedRootEdit->text().trimmed().isEmpty())
-        {
-            m_extractedRootEdit->setText(ToQString(profile->m_extractedDataPath));
-        }
+        m_customAssetsEdit->setText(ResolveCustomAssetsRoot());
         AutoFindEvidence();
-        if (!m_paneModelEdit->text().trimmed().isEmpty())
+        if (!m_paneModelPath.isEmpty()
+            || !m_thumbnailEvidencePath.isEmpty()
+            || !m_customAssetsEdit->text().trimmed().isEmpty())
         {
             LoadPreviewEvidence();
         }
@@ -349,38 +301,37 @@ namespace TaintedGrailModdingSDK
 
     void AssetBrowserPreviewWidget::AutoFindEvidence()
     {
-        if (m_extractedRootEdit->text().trimmed().isEmpty())
+        m_paneModelPath.clear();
+        m_thumbnailEvidencePath.clear();
+        m_viewportEvidencePath.clear();
+
+        const QString customAssetsRoot = m_customAssetsEdit->text().trimmed();
+        const bool customAssetsAvailable = !customAssetsRoot.isEmpty()
+            && QFileInfo(customAssetsRoot).isDir();
+        if (m_extractedRootPath.trimmed().isEmpty())
         {
-            SetStatus(tr("No extracted-data root is configured for evidence scanning."), true);
+            SetStatus(customAssetsAvailable
+                ? tr("Custom Assets folder found.")
+                : tr("No game install evidence or custom Assets folder found."));
             return;
         }
 
         const QString paneModel = FindEvidenceDocument(QStringLiteral("foa-asset-browser-pane-model"));
         const QString thumbnailEvidence = FindEvidenceDocument(QStringLiteral("foa-thumbnail-artifact-evidence"));
         const QString viewportEvidence = FindEvidenceDocument(QStringLiteral("foa-3d-preview-viewport-render"));
-        if (!paneModel.isEmpty())
+        m_paneModelPath = paneModel;
+        m_thumbnailEvidencePath = thumbnailEvidence;
+        m_viewportEvidencePath = viewportEvidence;
+
+        if (m_paneModelPath.isEmpty() && m_thumbnailEvidencePath.isEmpty() && !customAssetsAvailable)
         {
-            m_paneModelEdit->setText(paneModel);
-        }
-        if (!thumbnailEvidence.isEmpty())
-        {
-            m_thumbnailEvidenceEdit->setText(thumbnailEvidence);
-            if (m_thumbnailRootEdit->text().trimmed().isEmpty())
-            {
-                m_thumbnailRootEdit->setText(QFileInfo(thumbnailEvidence).absolutePath());
-            }
-        }
-        if (!viewportEvidence.isEmpty())
-        {
-            m_viewportEvidenceEdit->setText(viewportEvidence);
+            SetStatus(tr("No in-game asset evidence or custom Assets files found."));
+            return;
         }
 
-        const QStringList found = {
-            paneModel.isEmpty() ? tr("Asset Browser model: missing") : tr("Asset Browser model: found"),
-            thumbnailEvidence.isEmpty() ? tr("Thumbnail evidence: missing") : tr("Thumbnail evidence: found"),
-            viewportEvidence.isEmpty() ? tr("Viewport evidence: missing") : tr("Viewport evidence: found")
-        };
-        SetStatus(found.join(QStringLiteral("; ")), paneModel.isEmpty());
+        SetStatus(m_viewportEvidencePath.isEmpty()
+            ? tr("Asset sources resolved.")
+            : tr("Asset sources and viewport routes resolved."));
     }
 
     void AssetBrowserPreviewWidget::LoadPreviewEvidence()
@@ -404,7 +355,13 @@ namespace TaintedGrailModdingSDK
         }
         m_categoryFilter->blockSignals(false);
         PopulateTree();
-        SetStatus(tr("Loaded %1 preview asset entries.").arg(static_cast<qulonglong>(m_snapshot.m_entries.size())));
+        QString status = tr("Loaded %1 asset entries.").arg(static_cast<qulonglong>(m_snapshot.m_entries.size()));
+        if (!m_snapshot.m_issues.empty())
+        {
+            status += QStringLiteral(" ");
+            status += ToQString(m_snapshot.m_issues.front());
+        }
+        SetStatus(status);
     }
 
     void AssetBrowserPreviewWidget::PopulateTree()
@@ -443,6 +400,10 @@ namespace TaintedGrailModdingSDK
                         Qt::KeepAspectRatio,
                         Qt::SmoothTransformation)));
                 }
+            }
+            if (item->icon(0).isNull())
+            {
+                item->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
             }
         }
 
@@ -492,11 +453,9 @@ namespace TaintedGrailModdingSDK
         }
 
         m_thumbnailLabel->setText(
-            tr("%1\n%2")
-                .arg(ToQString(entry.m_fidelityState))
-                .arg(entry.m_thumbnailStatus.empty()
-                    ? tr("No thumbnail evidence")
-                    : ToQString(entry.m_thumbnailStatus)));
+            QString());
+        m_thumbnailLabel->setPixmap(
+            style()->standardIcon(QStyle::SP_FileIcon).pixmap(QSize(160, 160)));
     }
 
     void AssetBrowserPreviewWidget::RouteSelectedEntry()
@@ -541,41 +500,85 @@ namespace TaintedGrailModdingSDK
                 .arg(ToQString(route.m_fidelityState)));
     }
 
-    void AssetBrowserPreviewWidget::BrowseForFile(QLineEdit* target, const QString& title)
-    {
-        const QString filePath = QFileDialog::getOpenFileName(
-            this,
-            title,
-            m_extractedRootEdit->text(),
-            tr("Evidence JSON (*.json);;All files (*)"));
-        if (!filePath.isEmpty())
-        {
-            target->setText(filePath);
-        }
-    }
-
-    void AssetBrowserPreviewWidget::BrowseForDirectory(QLineEdit* target, const QString& title)
-    {
-        const QString directory = QFileDialog::getExistingDirectory(
-            this,
-            title,
-            target->text().trimmed().isEmpty() ? m_extractedRootEdit->text() : target->text());
-        if (!directory.isEmpty())
-        {
-            target->setText(directory);
-        }
-    }
-
     void AssetBrowserPreviewWidget::SetStatus(const QString& message, bool error)
     {
         m_statusLabel->setText(message);
         m_statusLabel->setStyleSheet(error ? QStringLiteral("color: #d9534f;") : QString());
     }
 
+    QString AssetBrowserPreviewWidget::ResolveCustomAssetsRoot() const
+    {
+        const FoundationService& service = FoundationService::Get();
+        const WorkspaceModel& workspace = service.GetWorkspace();
+
+        QStringList projectRoots;
+        const auto addProjectRoot = [&projectRoots](const QString& path)
+        {
+            const QString trimmed = path.trimmed();
+            if (trimmed.isEmpty())
+            {
+                return;
+            }
+            const QString clean = QDir::cleanPath(QFileInfo(trimmed).absoluteFilePath());
+            if (!projectRoots.contains(clean, Qt::CaseInsensitive))
+            {
+                projectRoots.push_back(clean);
+            }
+        };
+
+        addProjectRoot(ToQString(service.GetWorkspaceRootPath()));
+        addProjectRoot(ToQString(workspace.m_rootPath));
+        if (!service.GetWorkspaceFilePath().empty())
+        {
+            addProjectRoot(QFileInfo(ToQString(service.GetWorkspaceFilePath())).absolutePath());
+        }
+
+        const QDir appDir(QCoreApplication::applicationDirPath());
+        addProjectRoot(appDir.filePath(QStringLiteral("../TaintedGrailModdingEditor")));
+        addProjectRoot(appDir.filePath(QStringLiteral("../../TaintedGrailModdingEditor")));
+        addProjectRoot(appDir.filePath(QStringLiteral("../../../TaintedGrailModdingEditor")));
+        addProjectRoot(appDir.filePath(QStringLiteral("../../../../TaintedGrailModdingEditor")));
+        addProjectRoot(QDir::current().filePath(QStringLiteral("TaintedGrailModdingEditor")));
+
+        const QString localAppData = qEnvironmentVariable("LOCALAPPDATA");
+        if (!localAppData.isEmpty())
+        {
+            addProjectRoot(
+                QDir(localAppData).filePath(QStringLiteral("O3DE/TGEditor/installed/project")));
+        }
+
+        for (const QString& projectRoot : projectRoots)
+        {
+            if (QFileInfo(QDir(projectRoot).filePath(QStringLiteral("project.json"))).isFile())
+            {
+                return QFileInfo(QDir(projectRoot).filePath(QStringLiteral("Assets"))).absoluteFilePath();
+            }
+        }
+
+        for (const QString& projectRoot : projectRoots)
+        {
+            const QFileInfo assets(QDir(projectRoot).filePath(QStringLiteral("Assets")));
+            if (assets.isDir())
+            {
+                return assets.absoluteFilePath();
+            }
+        }
+
+        return {};
+    }
+
     QString AssetBrowserPreviewWidget::FindEvidenceDocument(const QString& documentKind) const
     {
-        const QDir root(m_extractedRootEdit->text().trimmed());
+        const QDir root(m_extractedRootPath.trimmed());
         if (!root.exists())
+        {
+            return {};
+        }
+        const AssetBrowserPreviewLoadRequest request = BuildRequest();
+        if (request.m_profileId.empty()
+            || request.m_gameVersion.empty()
+            || request.m_branch.empty()
+            || request.m_runtimeTarget.empty())
         {
             return {};
         }
@@ -609,12 +612,29 @@ namespace TaintedGrailModdingSDK
 
             QJsonParseError error;
             const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
-            if (error.error == QJsonParseError::NoError
-                && document.isObject()
-                && document.object().value(QStringLiteral("DocumentKind")).toString() == documentKind)
+            if (error.error != QJsonParseError::NoError || !document.isObject())
             {
-                return QFileInfo(path).absoluteFilePath();
+                continue;
             }
+
+            const QJsonObject object = document.object();
+            if (object.value(QStringLiteral("DocumentKind")).toString() != documentKind)
+            {
+                continue;
+            }
+            if (object.value(QStringLiteral("ProfileId")).toString() != ToQString(request.m_profileId)
+                || object.value(QStringLiteral("GameVersion")).toString() != ToQString(request.m_gameVersion)
+                || object.value(QStringLiteral("Branch")).toString() != ToQString(request.m_branch))
+            {
+                continue;
+            }
+            const QJsonValue runtimeTarget = object.value(QStringLiteral("RuntimeTarget"));
+            if (runtimeTarget.isString()
+                && runtimeTarget.toString() != ToQString(request.m_runtimeTarget))
+            {
+                continue;
+            }
+            return QFileInfo(path).absoluteFilePath();
         }
         return {};
     }
@@ -629,12 +649,17 @@ namespace TaintedGrailModdingSDK
             request.m_gameVersion = profile->m_gameVersion;
             request.m_branch = profile->m_branch;
             request.m_runtimeTarget = profile->m_runtimeTarget;
+            request.m_installPath = profile->m_installPath;
+            request.m_extractedDataPath = profile->m_extractedDataPath;
         }
-        request.m_extractedDataPath = ToAzString(m_extractedRootEdit->text());
-        request.m_paneModelPath = ToAzString(m_paneModelEdit->text());
-        request.m_thumbnailEvidencePath = ToAzString(m_thumbnailEvidenceEdit->text());
-        request.m_thumbnailPreviewRootPath = ToAzString(m_thumbnailRootEdit->text());
-        request.m_viewportEvidencePath = ToAzString(m_viewportEvidenceEdit->text());
+        if (request.m_extractedDataPath.empty())
+        {
+            request.m_extractedDataPath = ToAzString(m_extractedRootPath);
+        }
+        request.m_customAssetsPath = ToAzString(m_customAssetsEdit->text());
+        request.m_paneModelPath = ToAzString(m_paneModelPath);
+        request.m_thumbnailEvidencePath = ToAzString(m_thumbnailEvidencePath);
+        request.m_viewportEvidencePath = ToAzString(m_viewportEvidencePath);
         return request;
     }
 } // namespace TaintedGrailModdingSDK

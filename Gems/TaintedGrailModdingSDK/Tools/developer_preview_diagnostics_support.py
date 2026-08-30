@@ -44,7 +44,7 @@ CommandRunner=Callable[[Sequence[str],Path],tuple[int,str]]
 class DiagnosticsError(RuntimeError): pass
 
 def repository_root_from_script(): return Path(__file__).resolve().parents[3]
-def default_build_directory(repo_root): return repo_root/"build/tg-sdk-developer-preview-0-windows-profile"
+def default_build_directory(repo_root): return repo_root/"release/revisions/tg-sdk-developer-preview-0-windows-profile"
 def resolve_path(value,base):
     path=value.expanduser(); return (path if path.is_absolute() else base/path).resolve(strict=False)
 def is_relative_to(path,parent):

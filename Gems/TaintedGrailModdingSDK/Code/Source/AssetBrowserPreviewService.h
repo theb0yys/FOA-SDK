@@ -19,7 +19,9 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_gameVersion;
         AZStd::string m_branch;
         AZStd::string m_runtimeTarget;
+        AZStd::string m_installPath;
         AZStd::string m_extractedDataPath;
+        AZStd::string m_customAssetsPath;
         AZStd::string m_paneModelPath;
         AZStd::string m_thumbnailEvidencePath;
         AZStd::string m_thumbnailPreviewRootPath;
@@ -42,6 +44,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_productAssetId;
         AZStd::string m_productCachePath;
         AZStd::string m_primarySourceAssetRecordId;
+        AZStd::string m_nativeAssetRef;
         AZStd::string m_blocker;
         AZStd::vector<AZStd::string> m_productAssetIds;
         AZStd::vector<AZStd::string> m_productCachePaths;

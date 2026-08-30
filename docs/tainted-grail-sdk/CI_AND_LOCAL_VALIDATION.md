@@ -108,6 +108,20 @@ When selected, the Windows-prerequisite job checks the pinned O3DE policy surfac
 
 A skipped conditional job is `NOT_APPLICABLE` for that reviewed path set, not a pass or failure.
 
+The installer workflow builds the compiled Catalog test target, the O3DE
+`INSTALL` target, and the installed `FOA-SDK.exe` launcher with `--parallel 2`.
+It copies that launcher into the install layout, hash-compares it with the
+reviewed build output, and inventories only the O3DE install root. Inventory
+mode produces an exact fingerprint and notices for review. Package mode accepts
+review metadata only from the human operator invoking the canonical workflow;
+no repository automation may synthesize reviewer identity, review time,
+evidence, or approval. Package mode stages the complete payload, verifies the
+staged manifest, runs `bin\Windows\profile\Default\FOA-SDK.exe --self-test`
+from that staged self-contained layout with root `engine.json` and writable
+materialized LocalAppData `External` Gem roots plus project, and only then
+creates the portable ZIP, MSI, embedded installer wizard, and
+functional-readiness smoke artifacts.
+
 ## Full local validation
 
 When the changed surface requires the broad existing host suite, use a complete exact pinned O3DE checkout and configured external build directory:
@@ -116,7 +130,7 @@ When the changed surface requires the broad existing host suite, use a complete 
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
   --keep-going \
   --engine-root ../o3de \
-  --ctest-build-dir ../foa-build/tg-sdk-developer-preview-0-windows-profile
+  --ctest-build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 Full local validation includes the repository static layer, pinned O3DE source policy, fixtures, and configured compiled test selection. It is not mandatory for a documentation/process-only or otherwise L0-only change.

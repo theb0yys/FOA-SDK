@@ -34,8 +34,9 @@ Both bindings must preserve the rules below. Neither UI widgets nor shortcut sid
 The standard clickable entry is trusted only when:
 
 - the project and icon are derived from repository-owned paths and may not resolve through a symlink or junction outside the checkout;
-- the build directory is exactly `build/tg-sdk-developer-preview-0-windows-profile` beneath the current repository;
-- `CMakeCache.txt` contains an explicit `CMAKE_HOME_DIRECTORY` binding to the current repository source tree;
+- the build directory is exactly `release/revisions/tg-sdk-developer-preview-0-windows-profile` beneath the current repository;
+- `CMakeCache.txt` contains an explicit `CMAKE_HOME_DIRECTORY` binding to the exact pinned O3DE engine checkout;
+- `LY_PROJECTS` binds the build to the repository-owned `TaintedGrailModdingEditor` project;
 - the target is the expected `bin/profile/Editor.exe` or
   `bin/Profile/Editor.exe` beneath that approved build;
 - the target has a valid x64 PE32+ Windows GUI executable header;
@@ -50,7 +51,7 @@ the trusted target, project, icon, or working directory.
 An external `--editor` is allowed only with an explicit `--diagnostic-override` flag. It:
 
 - is labeled `diagnostic-override` in its sidecar;
-- must use a separate output beneath `build/diagnostic-entries`;
+- must use a separate output beneath `release/revisions/diagnostic-entries`;
 - cannot replace the standard verified entry;
 - is rejected by normal verification;
 - may be inspected only with an explicit diagnostic-verification flag;
@@ -61,19 +62,33 @@ An external `--editor` is allowed only with an explicit `--diagnostic-override` 
 The standard installed entry is a separate trust mode from a source-built or
 diagnostic entry. It is accepted only when:
 
-- the launcher resides in the O3DE SDK `bin/Windows/profile/Default` install
-  layout;
+- the launcher resides in or beneath the installed product layout and can walk
+  upward to the product root;
 - the product root contains `INSTALL_MANIFEST.json`;
-- the adjacent `Editor.exe` and installed `TaintedGrailModdingEditor/project.json`
-  are regular files in that layout;
+- the product root contains root `engine.json` for the installed
+  `TaintedGrailFoASDK` engine identity;
+- the installed `TaintedGrailModdingEditor/project.json` and packaged default
+  startup level are regular files beneath the product root;
+- `Editor.exe` is a regular file either adjacent to the launcher or in
+  `bin/Windows/profile/Default` beneath the product root;
+- packaged `External` Gem roots and the packaged project can be materialized
+  beneath `%LOCALAPPDATA%/O3DE/TGEditor/installed`;
 - the staged payload was bound to an exact reviewed inventory fingerprint and
   verified before MSI/ZIP assembly;
 - MSI or ZIP provenance and published checksums identify the exact artifact.
 
-The installed launcher never searches for another Editor, project, source tree,
-game installation, or workspace. `--self-test` validates the installed layout
-without launching the Editor. Installed-release trust does not make an unsigned
-development artifact a signed or publicly approved release.
+The installed launcher never searches for another product root, project, source
+tree, game installation, or workspace, and never accepts a user-selected Editor
+as a replacement for the bundled install layout. It launches with
+`--engine-path <install-root>`,
+`--project-path %LOCALAPPDATA%/O3DE/TGEditor/installed/project`, writable
+`--project-cache-path`, `--project-user-path`, and `--project-log-path` folders
+beneath that materialized project, and the packaged
+`Levels/DefaultLevel/DefaultLevel.prefab`. The launcher copies packaged
+`External` Gem roots and `asset_processor.setreg` with the materialized project.
+`--self-test` validates the installed layout without launching the Editor.
+Installed-release trust does not make an unsigned development artifact a signed
+or publicly approved release.
 
 ## Failure behavior
 

@@ -95,8 +95,11 @@ Also review threat model, permissions, adversarial input, rollback/recovery, pro
 
 Do not:
 
+- direct human push to `main`, or automated direct commits outside an exact
+  repository-owner exception for the current task;
 - merge failing required checks;
 - describe static-only, queued, skipped, absent, stale, or zero-test evidence as a pass;
+- merge with a missing or stale exact-head receipt when that receipt is required;
 - delete tests or weaken validation solely to obtain green status;
-- merge unresolved security/legal/data-loss issues;
+- merge unresolved requested changes, undocumented schema breaks, security/legal/data-loss issues, or legally restricted material;
 - infer runtime compatibility or permission from research, source inspection, or compilation alone.

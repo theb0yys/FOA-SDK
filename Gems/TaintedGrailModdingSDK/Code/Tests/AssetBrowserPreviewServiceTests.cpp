@@ -296,6 +296,80 @@ namespace TaintedGrailModdingSDK
         AssetBrowserPreviewRouteRegistry::Get().Clear();
     }
 
+    TEST(AssetBrowserPreviewServiceTests, ThumbnailEvidenceAloneLoadsAsViewerEntries)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+
+        const QString thumbnailFile = QDir(temporary.path()).filePath("thumbs/icon.png");
+        EXPECT_TRUE(WriteTextFile(
+            thumbnailFile,
+            QByteArray::fromBase64(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")));
+
+        const QString thumbnailPath = WriteJsonFile(
+            temporary,
+            "thumbnail-artifact-evidence.json",
+            ThumbnailEvidenceDocument("$preview/thumbs/icon.png"));
+
+        AssetBrowserPreviewService service;
+        auto result = service.LoadPreview(BuildRequest(temporary, {}, thumbnailPath));
+        ASSERT_TRUE(result.IsSuccess()) << result.GetError().c_str();
+
+        ASSERT_EQ(result.GetValue().m_entries.size(), 1);
+        const AssetBrowserPreviewEntry& entry = result.GetValue().m_entries[0];
+        EXPECT_EQ(entry.m_entryId, "source.icon.texture");
+        EXPECT_EQ(entry.m_category, "Textures and icons");
+        EXPECT_EQ(entry.m_entryKind, "thumbnail-artifact");
+        EXPECT_EQ(entry.m_primarySourceAssetRecordId, "source.icon.texture");
+        EXPECT_EQ(entry.m_thumbnailStatus, "generated");
+        EXPECT_FALSE(entry.m_thumbnailPath.empty());
+        EXPECT_FALSE(entry.m_canRouteToViewport);
+        EXPECT_FALSE(entry.m_canCreateTypedAuthoringBinding);
+        EXPECT_TRUE(entry.m_requiresExplicitBindingStep);
+    }
+
+    TEST(AssetBrowserPreviewServiceTests, CustomAssetsFolderLoadsWithoutEvidenceDocuments)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+
+        const QString assetsRoot = QDir(temporary.path()).filePath("Assets");
+        const QString iconFile = QDir(assetsRoot).filePath("Icons/inventory.png");
+        EXPECT_TRUE(WriteTextFile(
+            iconFile,
+            QByteArray::fromBase64(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")));
+        EXPECT_TRUE(WriteTextFile(QDir(assetsRoot).filePath("Meshes/rock.fbx"), "fbx"));
+
+        AssetBrowserPreviewLoadRequest request;
+        request.m_customAssetsPath = ToAzString(assetsRoot);
+
+        AssetBrowserPreviewService service;
+        auto result = service.LoadPreview(request);
+        ASSERT_TRUE(result.IsSuccess()) << result.GetError().c_str();
+
+        ASSERT_EQ(result.GetValue().m_entries.size(), 2);
+        const AssetBrowserPreviewEntry* icon = FindEntry(
+            result.GetValue(),
+            "custom.asset:Icons/inventory.png");
+        ASSERT_NE(icon, nullptr);
+        EXPECT_EQ(icon->m_category, "Textures and icons");
+        EXPECT_EQ(icon->m_fidelityState, "source");
+        EXPECT_EQ(icon->m_thumbnailStatus, "source-image");
+        EXPECT_FALSE(icon->m_thumbnailPath.empty());
+        EXPECT_FALSE(icon->m_canRouteToViewport);
+
+        const AssetBrowserPreviewEntry* mesh = FindEntry(
+            result.GetValue(),
+            "custom.asset:Meshes/rock.fbx");
+        ASSERT_NE(mesh, nullptr);
+        EXPECT_EQ(mesh->m_category, "Meshes");
+        EXPECT_EQ(mesh->m_thumbnailStatus, "indexed");
+        EXPECT_TRUE(mesh->m_thumbnailPath.empty());
+        EXPECT_FALSE(mesh->m_canRouteToViewport);
+    }
+
     TEST(AssetBrowserPreviewServiceTests, ImportFailuresBecomeBlockedAndUnroutable)
     {
         QTemporaryDir temporary;

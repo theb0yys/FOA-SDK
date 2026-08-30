@@ -23,6 +23,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QStringList>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QVBoxLayout>
@@ -248,6 +249,10 @@ namespace TaintedGrailModdingSDK
         const QuestDefinitionV1& definition,
         const QuestDefinitionValidationResultV1& result)
     {
+        const auto valueOrUnavailable = [](const AZStd::string& value)
+        {
+            return value.empty() ? tr("unavailable") : ToQString(value);
+        };
         const QString fingerprint = definition.m_questFingerprint.empty()
             ? tr("not declared")
             : ToQString(definition.m_questFingerprint);
@@ -255,22 +260,36 @@ namespace TaintedGrailModdingSDK
             ? tr("unavailable")
             : ToQString(CalculateQuestDefinitionFingerprintV1(definition));
         m_summary->setText(
-            tr("id=%1 | owner pack=%2 | module=%3 | lifecycle=%4 | valid=%5 | blocked=%6 | declared fingerprint=%7 | calculated fingerprint=%8 | roles=%9 phases=%10 objectives=%11 transitions=%12 conditions=%13 actions=%14 outcomes=%15")
-                .arg(definition.m_questId.empty() ? tr("unavailable") : ToQString(definition.m_questId))
-                .arg(definition.m_ownerPackId.empty() ? tr("unavailable") : ToQString(definition.m_ownerPackId))
-                .arg(definition.m_ownerModuleId.empty() ? tr("unavailable") : ToQString(definition.m_ownerModuleId))
-                .arg(definition.m_lifecycle.empty() ? tr("unavailable") : ToQString(definition.m_lifecycle))
-                .arg(BoolText(result.IsValid()))
-                .arg(BoolText(result.IsBlocked()))
-                .arg(fingerprint)
-                .arg(calculated)
-                .arg(static_cast<qulonglong>(definition.m_roles.size()))
-                .arg(static_cast<qulonglong>(definition.m_phases.size()))
-                .arg(static_cast<qulonglong>(definition.m_objectives.size()))
-                .arg(static_cast<qulonglong>(definition.m_transitions.size()))
-                .arg(static_cast<qulonglong>(definition.m_conditions.size()))
-                .arg(static_cast<qulonglong>(definition.m_actions.size()))
-                .arg(static_cast<qulonglong>(definition.m_outcomes.size())));
+            QStringList{
+                tr("Identity: quest=%1 | owner pack=%2 | module=%3")
+                    .arg(valueOrUnavailable(definition.m_questId))
+                    .arg(valueOrUnavailable(definition.m_ownerPackId))
+                    .arg(valueOrUnavailable(definition.m_ownerModuleId)),
+                tr("Display: name=%1 | summary key=%2")
+                    .arg(valueOrUnavailable(definition.m_display.m_fallbackName))
+                    .arg(valueOrUnavailable(definition.m_display.m_summaryTextKey)),
+                tr("Lifecycle: %1").arg(valueOrUnavailable(definition.m_lifecycle)),
+                tr("Validation: valid=%1 | blocked=%2")
+                    .arg(BoolText(result.IsValid()))
+                    .arg(BoolText(result.IsBlocked())),
+                tr("Fingerprints: declared=%1 | calculated=%2")
+                    .arg(fingerprint)
+                    .arg(calculated),
+                tr("Counts: roles=%1 | phases=%2 | objectives=%3 | transitions=%4 | conditions=%5 | actions=%6 | outcomes=%7")
+                    .arg(static_cast<qulonglong>(definition.m_roles.size()))
+                    .arg(static_cast<qulonglong>(definition.m_phases.size()))
+                    .arg(static_cast<qulonglong>(definition.m_objectives.size()))
+                    .arg(static_cast<qulonglong>(definition.m_transitions.size()))
+                    .arg(static_cast<qulonglong>(definition.m_conditions.size()))
+                    .arg(static_cast<qulonglong>(definition.m_actions.size()))
+                    .arg(static_cast<qulonglong>(definition.m_outcomes.size())),
+                tr("Authority: runtime=%1 | editor mutation=%2 | save mutation=%3 | deployment=%4 | asset extraction=%5")
+                    .arg(BoolText(definition.m_authority.m_runtimeExecutionAllowed))
+                    .arg(BoolText(definition.m_authority.m_editorMutationAllowed))
+                    .arg(BoolText(definition.m_authority.m_saveMutationAllowed))
+                    .arg(BoolText(definition.m_authority.m_deploymentAllowed))
+                    .arg(BoolText(definition.m_authority.m_assetExtractionAllowed)),
+            }.join(QStringLiteral("\n")));
     }
 
     void QuestStateInspectorWidget::PopulateIssues(const QuestDefinitionValidationResultV1& result)

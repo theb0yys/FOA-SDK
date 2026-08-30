@@ -12,6 +12,7 @@
 
 #include <QByteArray>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -36,6 +37,11 @@ namespace TaintedGrailModdingSDK
 
         struct ThumbnailBinding
         {
+            QString m_artifactId;
+            QString m_assetRecordId;
+            QString m_nativeAssetRef;
+            QString m_sourceIndexId;
+            QString m_sourceSha256;
             QString m_status;
             QString m_fidelity;
             QString m_path;
@@ -83,6 +89,17 @@ namespace TaintedGrailModdingSDK
                 }
             }
             return {};
+        }
+
+        QString DisplayNameFromNativeRef(const QString& nativeAssetRef)
+        {
+            const QString normalized = nativeAssetRef;
+            const int slash = normalized.lastIndexOf('/');
+            if (slash >= 0 && slash + 1 < normalized.size())
+            {
+                return normalized.mid(slash + 1);
+            }
+            return nativeAssetRef;
         }
 
         bool HasNonFalseFlag(const QJsonObject& object)
@@ -341,6 +358,128 @@ namespace TaintedGrailModdingSDK
                     || path.rfind("$assetcache\\", 0) == 0);
         }
 
+        void AddUnique(AZStd::vector<AZStd::string>& values, const AZStd::string& value);
+
+        QString NormalizedRelativePath(const QDir& root, const QString& path)
+        {
+            return QDir::cleanPath(root.relativeFilePath(path)).replace('\\', '/');
+        }
+
+        bool IsPreviewImageFile(const QFileInfo& info)
+        {
+            const QString suffix = info.suffix().toLower();
+            return suffix == QStringLiteral("png")
+                || suffix == QStringLiteral("jpg")
+                || suffix == QStringLiteral("jpeg")
+                || suffix == QStringLiteral("bmp")
+                || suffix == QStringLiteral("tga")
+                || suffix == QStringLiteral("tif")
+                || suffix == QStringLiteral("tiff")
+                || suffix == QStringLiteral("webp");
+        }
+
+        AssetBrowserPreviewEntry BuildCustomAssetEntry(
+            const QString& path,
+            const QDir& assetRoot)
+        {
+            const QFileInfo info(path);
+            const QString relativePath = NormalizedRelativePath(assetRoot, info.absoluteFilePath());
+            const bool previewImage = IsPreviewImageFile(info);
+
+            AssetBrowserPreviewEntry entry;
+            entry.m_entryId = ToAzString(QStringLiteral("custom.asset:") + relativePath);
+            entry.m_displayName = ToAzString(relativePath);
+            entry.m_entryKind = "workspace-custom-asset";
+            entry.m_previewAvailability = previewImage ? AZStd::string("source-image") : AZStd::string("indexed");
+            entry.m_primarySourceAssetRecordId = entry.m_entryId;
+            entry.m_nativeAssetRef = ToAzString(relativePath);
+            entry.m_productAssetId = ToAzString(relativePath);
+            entry.m_thumbnailStatus = previewImage ? AZStd::string("source-image") : AZStd::string("indexed");
+            entry.m_thumbnailFidelity = previewImage ? AZStd::string("source-file") : AZStd::string();
+            entry.m_thumbnailPath = previewImage ? ToAzString(CleanAbsolutePath(info.absoluteFilePath())) : AZStd::string();
+            entry.m_viewportRouteState = "custom-source-asset";
+            entry.m_canRouteToViewport = false;
+            entry.m_canCreateTypedAuthoringBinding = false;
+            entry.m_requiresExplicitBindingStep = true;
+            AddUnique(entry.m_evidenceRefs, "workspace.assets");
+            AddUnique(entry.m_evidenceRefs, ToAzString(relativePath));
+            entry.m_fidelityState = AssetBrowserPreviewService::DetermineFidelityState(entry, false);
+            entry.m_category = AssetBrowserPreviewService::ClassifyCategory(entry);
+            return entry;
+        }
+
+        AZ::Outcome<AZStd::vector<AssetBrowserPreviewEntry>, AZStd::string> LoadCustomAssets(
+            const AssetBrowserPreviewLoadRequest& request)
+        {
+            AZStd::vector<AssetBrowserPreviewEntry> entries;
+            if (request.m_customAssetsPath.empty())
+            {
+                return AZ::Success(entries);
+            }
+
+            const QFileInfo rootInfo(ToQString(request.m_customAssetsPath));
+            if (!rootInfo.exists())
+            {
+                return AZ::Success(entries);
+            }
+            if (!rootInfo.isDir())
+            {
+                return AZ::Failure(AZStd::string("Custom asset root must be an existing directory."));
+            }
+
+            const QString assetRootPath = CleanAbsolutePath(rootInfo.absoluteFilePath());
+            const QDir assetRoot(assetRootPath);
+            QStringList files;
+            QDirIterator iterator(
+                assetRootPath,
+                QDir::Files | QDir::Readable | QDir::NoSymLinks,
+                QDirIterator::Subdirectories);
+            while (iterator.hasNext())
+            {
+                const QString path = iterator.next();
+                if (!IsInsideOrEqual(path, assetRootPath))
+                {
+                    return AZ::Failure(AZStd::string(
+                        "Custom asset scan found a file outside the configured Assets folder."));
+                }
+                files.push_back(path);
+                if (static_cast<size_t>(files.size()) > request.m_maximumEntries)
+                {
+                    return AZ::Failure(AZStd::string::format(
+                        "Custom Assets has more than %zu files, exceeding the bounded UI limit.",
+                        request.m_maximumEntries));
+                }
+            }
+
+            files.sort(Qt::CaseInsensitive);
+            entries.reserve(static_cast<size_t>(files.size()));
+            for (const QString& path : files)
+            {
+                entries.push_back(BuildCustomAssetEntry(path, assetRoot));
+            }
+            return AZ::Success(AZStd::move(entries));
+        }
+
+        AZ::Outcome<void, AZStd::string> AppendEntries(
+            AssetBrowserPreviewSnapshot& snapshot,
+            AZStd::vector<AssetBrowserPreviewEntry> entries,
+            size_t maximumEntries)
+        {
+            if (snapshot.m_entries.size() + entries.size() > maximumEntries)
+            {
+                return AZ::Failure(AZStd::string::format(
+                    "Asset viewer has more than %zu entries, exceeding the bounded UI limit.",
+                    maximumEntries));
+            }
+
+            for (AssetBrowserPreviewEntry& entry : entries)
+            {
+                AddUnique(snapshot.m_categories, entry.m_category);
+                snapshot.m_entries.push_back(AZStd::move(entry));
+            }
+            return AZ::Success();
+        }
+
         AZ::Outcome<QHash<QString, ThumbnailBinding>, AZStd::string> LoadThumbnails(
             const AssetBrowserPreviewLoadRequest& request,
             const QString& extractedRoot)
@@ -402,6 +541,15 @@ namespace TaintedGrailModdingSDK
                     continue;
                 }
                 ThumbnailBinding binding;
+                binding.m_artifactId =
+                    artifact.value(QStringLiteral("ThumbnailArtifactId")).toString();
+                binding.m_assetRecordId = assetRecordId;
+                binding.m_nativeAssetRef =
+                    artifact.value(QStringLiteral("NativeAssetRef")).toString();
+                binding.m_sourceIndexId =
+                    artifact.value(QStringLiteral("SourceIndexId")).toString();
+                binding.m_sourceSha256 =
+                    artifact.value(QStringLiteral("SourceSha256")).toString();
                 binding.m_status = artifact.value(QStringLiteral("Status")).toString();
                 binding.m_fidelity = artifact.value(QStringLiteral("Fidelity")).toString();
 
@@ -419,6 +567,12 @@ namespace TaintedGrailModdingSDK
                             ToAzString(assetRecordId).c_str()));
                     }
                     binding.m_path = CleanAbsolutePath(resolved);
+                }
+                else if (binding.m_status == QStringLiteral("generated"))
+                {
+                    return AZ::Failure(AZStd::string::format(
+                        "Generated thumbnail artifact for %s is missing its $preview payload path.",
+                        ToAzString(assetRecordId).c_str()));
                 }
 
                 thumbnails.insert(assetRecordId, binding);
@@ -477,6 +631,14 @@ namespace TaintedGrailModdingSDK
                 }
             }
             return AZ::Success(routes);
+        }
+
+        void AddUnique(AZStd::vector<AZStd::string>& values, const AZStd::string& value)
+        {
+            if (!value.empty() && AZStd::find(values.begin(), values.end(), value) == values.end())
+            {
+                values.push_back(value);
+            }
         }
 
         AZ::Outcome<AssetBrowserPreviewEntry, AZStd::string> BuildEntry(
@@ -554,6 +716,10 @@ namespace TaintedGrailModdingSDK
                 entry.m_thumbnailStatus = ToAzString(thumbnail.m_status);
                 entry.m_thumbnailFidelity = ToAzString(thumbnail.m_fidelity);
                 entry.m_thumbnailPath = ToAzString(thumbnail.m_path);
+                entry.m_nativeAssetRef = ToAzString(thumbnail.m_nativeAssetRef);
+                AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_artifactId));
+                AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_nativeAssetRef));
+                AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_sourceIndexId));
             }
             else
             {
@@ -581,37 +747,170 @@ namespace TaintedGrailModdingSDK
             return AZ::Success(AZStd::move(entry));
         }
 
-        void AddUnique(AZStd::vector<AZStd::string>& values, const AZStd::string& value)
+        AZ::Outcome<AssetBrowserPreviewEntry, AZStd::string> BuildThumbnailOnlyEntry(
+            const ThumbnailBinding& thumbnail)
         {
-            if (AZStd::find(values.begin(), values.end(), value) == values.end())
+            if (thumbnail.m_assetRecordId.isEmpty())
             {
-                values.push_back(value);
+                return AZ::Failure(AZStd::string(
+                    "Thumbnail artifact evidence is missing AssetRecordId."));
             }
+
+            AssetBrowserPreviewEntry entry;
+            entry.m_entryId = ToAzString(
+                thumbnail.m_artifactId.isEmpty()
+                    ? thumbnail.m_assetRecordId
+                    : thumbnail.m_artifactId);
+            entry.m_displayName = ToAzString(
+                thumbnail.m_nativeAssetRef.isEmpty()
+                    ? thumbnail.m_assetRecordId
+                    : DisplayNameFromNativeRef(thumbnail.m_nativeAssetRef));
+            entry.m_entryKind = thumbnail.m_status == QStringLiteral("unsupported")
+                ? AZStd::string("thumbnail-artifact-unsupported")
+                : AZStd::string("thumbnail-artifact");
+            entry.m_previewAvailability = thumbnail.m_status == QStringLiteral("generated")
+                ? AZStd::string("thumbnail-generated")
+                : ToAzString(thumbnail.m_status);
+            entry.m_primarySourceAssetRecordId = ToAzString(thumbnail.m_assetRecordId);
+            entry.m_nativeAssetRef = ToAzString(thumbnail.m_nativeAssetRef);
+            entry.m_thumbnailStatus = ToAzString(thumbnail.m_status);
+            entry.m_thumbnailFidelity = ToAzString(thumbnail.m_fidelity);
+            entry.m_thumbnailPath = ToAzString(thumbnail.m_path);
+            entry.m_viewportRouteState = "thumbnail-artifact-only";
+            entry.m_canCreateTypedAuthoringBinding = false;
+            entry.m_requiresExplicitBindingStep = true;
+            entry.m_canRouteToViewport = false;
+
+            AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_assetRecordId));
+            AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_artifactId));
+            AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_nativeAssetRef));
+            AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_sourceIndexId));
+            AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_sourceSha256));
+
+            entry.m_fidelityState = AssetBrowserPreviewService::DetermineFidelityState(entry, false);
+            entry.m_category = AssetBrowserPreviewService::ClassifyCategory(entry);
+            return AZ::Success(AZStd::move(entry));
+        }
+
+        void SortSnapshot(AssetBrowserPreviewSnapshot& snapshot)
+        {
+            AZStd::sort(
+                snapshot.m_entries.begin(),
+                snapshot.m_entries.end(),
+                [](const AssetBrowserPreviewEntry& left, const AssetBrowserPreviewEntry& right)
+                {
+                    if (left.m_category != right.m_category)
+                    {
+                        return left.m_category < right.m_category;
+                    }
+                    if (left.m_displayName != right.m_displayName)
+                    {
+                        return left.m_displayName < right.m_displayName;
+                    }
+                    return left.m_entryId < right.m_entryId;
+                });
+            AZStd::sort(snapshot.m_categories.begin(), snapshot.m_categories.end());
         }
     } // namespace
 
     AZ::Outcome<AssetBrowserPreviewSnapshot, AZStd::string> AssetBrowserPreviewService::LoadPreview(
         const AssetBrowserPreviewLoadRequest& request) const
     {
-        if (request.m_profileId.empty()
-            || request.m_gameVersion.empty()
-            || request.m_branch.empty()
-            || request.m_runtimeTarget.empty())
-        {
-            return AZ::Failure(AZStd::string(
-                "Configure an exact active FoA game profile before loading Asset Browser preview evidence."));
-        }
-        if (request.m_extractedDataPath.empty() || request.m_paneModelPath.empty())
-        {
-            return AZ::Failure(AZStd::string(
-                "Asset Browser preview requires an extracted-data root and pane-model evidence path."));
-        }
         if (request.m_maximumEntries == 0)
         {
             return AZ::Failure(AZStd::string("Asset Browser preview maximum entry count must be greater than zero."));
         }
 
+        const bool hasProfileBinding = !request.m_profileId.empty()
+            && !request.m_gameVersion.empty()
+            && !request.m_branch.empty()
+            && !request.m_runtimeTarget.empty();
+        const bool hasPaneModel = !request.m_paneModelPath.empty();
+        const bool hasThumbnailEvidence = !request.m_thumbnailEvidencePath.empty();
+        const bool hasViewportEvidence = !request.m_viewportEvidencePath.empty();
+        const bool hasEvidenceInputs = hasPaneModel || hasThumbnailEvidence || hasViewportEvidence;
+        if (hasEvidenceInputs && !hasProfileBinding)
+        {
+            return AZ::Failure(AZStd::string(
+                "Configure the active FoA install/profile before loading in-game asset evidence."));
+        }
+        if (hasEvidenceInputs && request.m_extractedDataPath.empty())
+        {
+            return AZ::Failure(AZStd::string(
+                "In-game asset evidence requires the SDK-derived evidence root for the active install."));
+        }
+        if (!hasEvidenceInputs && request.m_customAssetsPath.empty())
+        {
+            AssetBrowserPreviewSnapshot snapshot;
+            snapshot.m_issues.push_back(
+                "No asset source was resolved. Configure the FoA install/profile or add a workspace Assets folder.");
+            return AZ::Success(AZStd::move(snapshot));
+        }
+
         const QString extractedRoot = ToQString(request.m_extractedDataPath);
+        if (!hasPaneModel)
+        {
+            AssetBrowserPreviewSnapshot snapshot;
+            if (hasThumbnailEvidence)
+            {
+                auto thumbnailResult = LoadThumbnails(request, extractedRoot);
+                if (!thumbnailResult.IsSuccess())
+                {
+                    return AZ::Failure(thumbnailResult.GetError());
+                }
+                const QHash<QString, ThumbnailBinding> thumbnails = thumbnailResult.TakeValue();
+                if (static_cast<size_t>(thumbnails.size()) > request.m_maximumEntries)
+                {
+                    return AZ::Failure(AZStd::string::format(
+                        "Thumbnail artifact evidence has %d entries, exceeding the bounded UI limit of %zu.",
+                        thumbnails.size(),
+                        request.m_maximumEntries));
+                }
+
+                AZStd::vector<AssetBrowserPreviewEntry> thumbnailEntries;
+                thumbnailEntries.reserve(static_cast<size_t>(thumbnails.size()));
+                for (auto iterator = thumbnails.constBegin(); iterator != thumbnails.constEnd(); ++iterator)
+                {
+                    const ThumbnailBinding& thumbnail = iterator.value();
+                    auto entry = BuildThumbnailOnlyEntry(thumbnail);
+                    if (!entry.IsSuccess())
+                    {
+                        return AZ::Failure(entry.GetError());
+                    }
+                    thumbnailEntries.push_back(entry.TakeValue());
+                }
+                auto append = AppendEntries(
+                    snapshot,
+                    AZStd::move(thumbnailEntries),
+                    request.m_maximumEntries);
+                if (!append.IsSuccess())
+                {
+                    return AZ::Failure(append.GetError());
+                }
+            }
+
+            auto customAssets = LoadCustomAssets(request);
+            if (!customAssets.IsSuccess())
+            {
+                return AZ::Failure(customAssets.GetError());
+            }
+            auto append = AppendEntries(
+                snapshot,
+                customAssets.TakeValue(),
+                request.m_maximumEntries);
+            if (!append.IsSuccess())
+            {
+                return AZ::Failure(append.GetError());
+            }
+            if (snapshot.m_entries.empty())
+            {
+                snapshot.m_issues.push_back("No previewable in-game evidence or custom Assets files were found.");
+            }
+
+            SortSnapshot(snapshot);
+            return AZ::Success(AZStd::move(snapshot));
+        }
+
         auto paneDocumentResult = ReadJsonObject(
             ToQString(request.m_paneModelPath),
             extractedRoot,
@@ -685,22 +984,21 @@ namespace TaintedGrailModdingSDK
             snapshot.m_entries.push_back(entry.TakeValue());
         }
 
-        AZStd::sort(
-            snapshot.m_entries.begin(),
-            snapshot.m_entries.end(),
-            [](const AssetBrowserPreviewEntry& left, const AssetBrowserPreviewEntry& right)
-            {
-                if (left.m_category != right.m_category)
-                {
-                    return left.m_category < right.m_category;
-                }
-                if (left.m_displayName != right.m_displayName)
-                {
-                    return left.m_displayName < right.m_displayName;
-                }
-                return left.m_entryId < right.m_entryId;
-            });
-        AZStd::sort(snapshot.m_categories.begin(), snapshot.m_categories.end());
+        auto customAssets = LoadCustomAssets(request);
+        if (!customAssets.IsSuccess())
+        {
+            return AZ::Failure(customAssets.GetError());
+        }
+        auto append = AppendEntries(
+            snapshot,
+            customAssets.TakeValue(),
+            request.m_maximumEntries);
+        if (!append.IsSuccess())
+        {
+            return AZ::Failure(append.GetError());
+        }
+
+        SortSnapshot(snapshot);
         return AZ::Success(AZStd::move(snapshot));
     }
 
@@ -713,7 +1011,7 @@ namespace TaintedGrailModdingSDK
         }
 
         AZStd::string text = entry.m_displayName + " " + entry.m_productCachePath + " "
-            + entry.m_primarySourceAssetRecordId + " " + entry.m_entryKind;
+            + entry.m_primarySourceAssetRecordId + " " + entry.m_nativeAssetRef + " " + entry.m_entryKind;
         AZStd::transform(
             text.begin(),
             text.end(),
@@ -779,6 +1077,10 @@ namespace TaintedGrailModdingSDK
         if (entry.m_thumbnailStatus == "generated" && !entry.m_thumbnailPath.empty())
         {
             return "approximate";
+        }
+        if (entry.m_thumbnailStatus == "source-image" && !entry.m_thumbnailPath.empty())
+        {
+            return "source";
         }
         if (HasProductPath(entry) || hasViewportEvidence)
         {

@@ -17,13 +17,19 @@ FoA installation is needed only when configuring a real game profile.
 
 Keep the workspace, generated output, staging, and deployment directories separate from the game installation.
 
-Launch through the verified Developer Preview entry described in
-`OPEN_AND_TEST_EDITOR.md`. It materializes a bounded writable project beneath
+Use the entry point that matches the artifact. Contributors using a source-built
+checkout launch the verified Developer Preview entry described in
+`OPEN_AND_TEST_EDITOR.md`; it materializes a bounded writable project beneath
 `LOCALAPPDATA`, prepares the local asset cache before startup, opens the
 standard default level, and starts the 3D viewport with a visible sky, ground
-grid, and shader ball rather than an empty grey view. The repository remains
-reviewed source; no Windows security exception or
-administrator launch is required.
+grid, and shader ball rather than an empty grey view. Users of a reviewed
+prebuilt MSI or portable ZIP launch the installed
+`bin\Windows\profile\Default\FOA-SDK.exe`, which checks the self-contained
+manifest, engine metadata, and project layout, then starts the bundled Editor
+with `--engine-path <install-root>` and materialized `External` Gem roots plus a
+project copy beneath `%LOCALAPPDATA%\O3DE\TGEditor\installed`. The repository
+remains reviewed source; no Windows security exception or administrator launch
+is required.
 
 ## Build and validate
 
@@ -50,9 +56,11 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail SDK Status**
 - **Tainted Grail Pack Manager**
 - **Tainted Grail Source Intake**
+- **Tainted Grail Asset Browser Preview**
 - **Tainted Grail Catalog Browser**
 - **Tainted Grail Catalog Governance**
 - **Tainted Grail Item and Recipe Editor**
+- **Tainted Grail Quest and State Inspector**
 - **Tainted Grail Actor and Troop Editor**
 - **Tainted Grail Economy Acquisition Coverage**
 - **Tainted Grail Economy Cross-Pack Duplicates**
@@ -70,6 +78,8 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 - **Tainted Grail Release Artifact Provenance and Signing Intent**
 - **Tainted Grail Release Assembly and Checksum Results**
 - **Tainted Grail Release Signing Results**
+- **Tainted Grail Avalon AI Editor** when the optional authoring Tool Gem is enabled
+- **Tainted Grail Map Editor (Road Atlas)** when the optional authoring Tool Gem is enabled
 
 ## Recommended workflow
 
@@ -81,18 +91,20 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 6. Inspect records, relationships, and blockers.
 7. Record maturity, confidence, risk, validation, and staleness decisions.
 8. Allow or forbid one named usage through Catalog Governance.
-9. Review economy coverage and cross-pack duplicate candidates.
-10. Review adapter capability, version, permission, and proof readiness.
-11. Review generated or refused canonical work-order plans.
-12. Review any externally supplied runtime-result envelope as candidate evidence only.
-13. Review the reproducible adapter build definition.
-14. Review the package-assembly preview against a project-owned staging inventory.
-15. Review the staging/deployment preview against an accepted declared target inventory.
-16. Review the typed confirmation, maintenance window, preflight evidence, deployment work-order steps, and operator checklist.
-17. Review any separately supplied deployment execution-result envelope and candidate evidence without treating it as execution authority or promoted truth.
-18. Review the deterministic post-deployment compatibility and release blockers.
-19. Review any separately supplied independent-verifier observations without treating contract validity as certification or release approval.
-20. Review the shared status pane before later downstream work.
+9. Inspect staged visual evidence in Asset Browser Preview and copy prepared item refs only into pending item fields when appropriate.
+10. Inspect local QuestDefinition V1 documents in Quest and State Inspector before any later quest-binding work.
+11. Review economy coverage and cross-pack duplicate candidates.
+12. Review adapter capability, version, permission, and proof readiness.
+13. Review generated or refused canonical work-order plans.
+14. Review any externally supplied runtime-result envelope as candidate evidence only.
+15. Review the reproducible adapter build definition.
+16. Review the package-assembly preview against a project-owned staging inventory.
+17. Review the staging/deployment preview against an accepted declared target inventory.
+18. Review the typed confirmation, maintenance window, preflight evidence, deployment work-order steps, and operator checklist.
+19. Review any separately supplied deployment execution-result envelope and candidate evidence without treating it as execution authority or promoted truth.
+20. Review the deterministic post-deployment compatibility and release blockers.
+21. Review any separately supplied independent-verifier observations without treating contract validity as certification or release approval.
+22. Review the shared status pane before later downstream work.
 
 ## Workspace and exact game profile
 
@@ -138,6 +150,12 @@ The adapter-facing economy usages are:
 ## Item and recipe authoring
 
 The Item and Recipe Editor authors typed profiles, stations, ingredients, outputs, by-products, unlocks, and acquisition relationships on canonical records. Its action matrices and station/learnability rows are read-only. The pane cannot grant permission or invoke FoA runtime behavior.
+
+## Quest and visual preview inspection
+
+**Tainted Grail Asset Browser Preview** inspects staged, profile-bound asset-browser pane models, thumbnail evidence, and 3D viewport render evidence. A prepared route can be copied into pending item visual-reference fields, but typed selector binding, scene mutation, catalog promotion, deployment, and runtime authority remain disabled.
+
+**Tainted Grail Quest and State Inspector** opens local `*.tgquest.json` QuestDefinition V1 documents for read-only review. It shows contract issues, deterministic fingerprints, binding requirements, summary counts, and authority flags without writing files, mutating editor state, touching saves, deploying content, extracting assets, or executing quests.
 
 ## Economy analysis panes
 

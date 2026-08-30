@@ -3,6 +3,15 @@
 This is the supported Windows path from a fresh checkout to the dedicated,
 source-built **Tainted Grail Modding Editor**.
 
+Use this document for contributor source builds. Users of a reviewed prebuilt
+MSI or portable ZIP should use
+[`INSTALLING_PREBUILT_SDK.md`](INSTALLING_PREBUILT_SDK.md) and launch the
+installed `<install-root>\bin\Windows\profile\Default\FOA-SDK.exe` instead.
+That package launcher starts the bundled Editor with the installed
+`--engine-path <install-root>` and materialized `External` Gem roots plus a
+project copy beneath `%LOCALAPPDATA%\O3DE\TGEditor\installed`; it does not use
+the source-built shortcut.
+
 The editor is an O3DE project named `TaintedGrailModdingEditor`. It is separate
 from `AutomatedTesting`, enables `TaintedGrailModdingSDK` and
 `ExternalToolchain` directly, and owns the project and Windows shortcut icons.
@@ -46,7 +55,7 @@ are complete.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 Resolve every required failure before continuing.
@@ -55,24 +64,25 @@ Resolve every required failure before continuing.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py build `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 The supported clickable entry accepts only that exact configured build
-directory. Its `CMakeCache.txt` must identify the current repository as
-`CMAKE_HOME_DIRECTORY`, and the target must have a valid x64 PE32+ Windows GUI
-executable header.
+directory. Its `CMakeCache.txt` must identify the exact pinned O3DE checkout as
+`CMAKE_HOME_DIRECTORY`, `LY_PROJECTS` must bind the repository-owned
+`TaintedGrailModdingEditor` project, and the target must have a valid x64 PE32+
+Windows GUI executable header.
 
 The build includes the Editor, the `AssetProcessorBatch` clean-first-run
 preflight, and the compiled TG SDK catalog tests. The executables are expected
 at:
 
 ```text
-build/tg-sdk-developer-preview-0-windows-profile/bin/profile/Editor.exe
-build/tg-sdk-developer-preview-0-windows-profile/bin/profile/AssetProcessorBatch.exe
+release/revisions/tg-sdk-developer-preview-0-windows-profile/bin/profile/Editor.exe
+release/revisions/tg-sdk-developer-preview-0-windows-profile/bin/profile/AssetProcessorBatch.exe
 ```
 
 ## 4. Create the clickable entry
@@ -88,8 +98,8 @@ synchronously prepares its `pc` asset cache with `AssetProcessorBatch`, then
 creates and immediately verifies:
 
 ```text
-build/Tainted Grail Modding Editor.lnk
-build/Tainted Grail Modding Editor.shortcut.json
+release/revisions/Tainted Grail Modding Editor.lnk
+release/revisions/Tainted Grail Modding Editor.shortcut.json
 ```
 
 The project is materialized beneath
@@ -166,7 +176,7 @@ diagnostic-only link, provide all three explicit controls:
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py create `
   --editor C:\diagnostics\Editor.exe `
   --diagnostic-override `
-  --output build\diagnostic-entries\External Editor.lnk
+  --output release\revisions\diagnostic-entries\External Editor.lnk
 ```
 
 Normal verification rejects that link. To inspect it deliberately without
@@ -174,7 +184,7 @@ promoting it to a verified entry:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_entry.py verify `
-  --shortcut build\diagnostic-entries\External Editor.lnk `
+  --shortcut release\revisions\diagnostic-entries\External Editor.lnk `
   --allow-diagnostic-override
 ```
 
@@ -187,10 +197,14 @@ level and restricted launcher:
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
   --engine-root <pinned external O3DE checkout> `
-  --build-dir <external Developer Preview build directory>
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 Use this when collecting wrapper-owned stdout, stderr, and launch-result data.
+When `--project` is omitted, `developer_preview_launch.py` resolves the
+repository-owned `TaintedGrailModdingEditor` project and passes it with
+`--project-path`. Use `--dry-run --result <json>` to inspect the exact Editor
+command without launching.
 
 The tracked source
 `TaintedGrailModdingEditor/Levels/DefaultLevel/DefaultLevel.prefab` must remain
@@ -222,12 +236,37 @@ replace the verified shortcut, and inspect `Editor.log` before continuing.
 
 Open:
 
+- FOA Development Hub;
 - Tainted Grail SDK Status;
 - Tainted Grail Pack Manager;
 - Tainted Grail Source Intake;
+- Tainted Grail Asset Browser Preview;
 - Tainted Grail Catalog Browser;
 - Tainted Grail Catalog Governance;
-- Tainted Grail Item and Recipe Editor.
+- Tainted Grail Item and Recipe Editor;
+- Tainted Grail Quest and State Inspector;
+- Tainted Grail Actor and Troop Editor;
+- Tainted Grail Economy Acquisition Coverage;
+- Tainted Grail Economy Cross-Pack Duplicates;
+- Tainted Grail Adapter Capability Matrix;
+- Tainted Grail Adapter Work-Order Plans;
+- Tainted Grail Adapter Runtime Result Evidence;
+- Tainted Grail Adapter Build Manifests;
+- Tainted Grail Package Assembly Preview;
+- Tainted Grail Staging and Deployment Preview;
+- Tainted Grail Deployment Confirmation and Work Orders;
+- Tainted Grail Deployment Execution Result Evidence;
+- Tainted Grail Post-Deployment Verification and Release Blockers;
+- Tainted Grail Independent Post-Deployment Verifier Results;
+- Tainted Grail Verifier Evidence Reconciliation and Release Decision;
+- Tainted Grail Release Artifact Provenance and Signing Intent;
+- Tainted Grail Release Assembly and Checksum Results;
+- Tainted Grail Release Signing Results;
+- Tainted Grail Avalon AI Editor;
+- Tainted Grail Map Editor (Road Atlas).
+
+Confirm all 28 registered panes open from the Editor menu and that the Hub route
+for each specialist pane opens the same target.
 
 The native Editor log is:
 
@@ -242,10 +281,10 @@ It should contain `TaintedGrailModdingSDK` and
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
-  --output build/tg-sdk-developer-preview-0-fixture
+  --output ..\foa-build\tg-sdk-developer-preview-0-fixture
 
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
-  --output build/tg-sdk-developer-preview-0-fixture
+  --output ..\foa-build\tg-sdk-developer-preview-0-fixture
 ```
 
 Use only that project-owned fixture for the manual UI evidence pass.

@@ -10,6 +10,7 @@
 #include "AssetBrowserPreviewService.h"
 #include "FoundationNotificationBus.h"
 
+#include <QString>
 #include <QWidget>
 
 class QComboBox;
@@ -37,9 +38,8 @@ namespace TaintedGrailModdingSDK
         void PopulateTree();
         void ShowSelectedEntry(QTreeWidgetItem* current);
         void RouteSelectedEntry();
-        void BrowseForFile(QLineEdit* target, const QString& title);
-        void BrowseForDirectory(QLineEdit* target, const QString& title);
         void SetStatus(const QString& message, bool error = false);
+        QString ResolveCustomAssetsRoot() const;
         QString FindEvidenceDocument(const QString& documentKind) const;
         AssetBrowserPreviewLoadRequest BuildRequest() const;
 
@@ -49,11 +49,12 @@ namespace TaintedGrailModdingSDK
 
         QLabel* m_profileValue = nullptr;
         QLabel* m_statusLabel = nullptr;
-        QLineEdit* m_extractedRootEdit = nullptr;
-        QLineEdit* m_paneModelEdit = nullptr;
-        QLineEdit* m_thumbnailEvidenceEdit = nullptr;
-        QLineEdit* m_thumbnailRootEdit = nullptr;
-        QLineEdit* m_viewportEvidenceEdit = nullptr;
+        QLineEdit* m_gameInstallEdit = nullptr;
+        QLineEdit* m_customAssetsEdit = nullptr;
+        QString m_extractedRootPath;
+        QString m_paneModelPath;
+        QString m_thumbnailEvidencePath;
+        QString m_viewportEvidencePath;
         QComboBox* m_categoryFilter = nullptr;
         QTreeWidget* m_assetTree = nullptr;
         QLabel* m_thumbnailLabel = nullptr;

@@ -34,6 +34,7 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
         project = repo / installer.PROJECT_DIRECTORY
         (project / "ShaderLib").mkdir(parents=True)
         (project / "Levels").mkdir()
+        (project / "user" / "Registry").mkdir(parents=True)
         (project / "project.json").write_text(
             json.dumps(
                 {
@@ -46,6 +47,10 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
         )
         (project / "preview.png").write_bytes(b"preview")
         (project / "TaintedGrailModdingEditor.ico").write_bytes(b"icon")
+        (project / "user" / "Registry" / "asset_processor.setreg").write_text(
+            json.dumps({"Amazon": {"AzCore": {"Bootstrap": {"assetProcessor_branch_token": "0x1"}}}}),
+            encoding="utf-8",
+        )
         (project / "ShaderLib" / "viewsrg.srgi").write_text("shader\n", encoding="utf-8")
         (project / "CMakeLists.txt").write_text("not distributed\n", encoding="utf-8")
         (project / "cmake").mkdir()
@@ -59,10 +64,25 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
             encoding="utf-8",
         )
         (sdk / "LICENSE.txt").write_text("Apache-2.0 OR MIT\n", encoding="utf-8")
+        (sdk / Path(installer.CMAKE_RUNTIME_CMAKE_PATH.as_posix())).parent.mkdir(parents=True)
+        (sdk / Path(installer.CMAKE_RUNTIME_CMAKE_PATH.as_posix())).write_bytes(b"cmake")
+        (sdk / Path(installer.CMAKE_RUNTIME_SHARE_MARKER.as_posix())).parent.mkdir(parents=True)
+        (sdk / Path(installer.CMAKE_RUNTIME_SHARE_MARKER.as_posix())).write_text(
+            "cmake modules\n", encoding="utf-8"
+        )
+        (sdk / Path(installer.PYTHON_CMD_PATH.as_posix())).parent.mkdir(parents=True)
+        (sdk / Path(installer.PYTHON_CMD_PATH.as_posix())).write_text("python\n", encoding="utf-8")
+        (sdk / Path(installer.PYTHON_GET_PYTHON_PATH.as_posix())).write_text(
+            "get python\n", encoding="utf-8"
+        )
         (binary / "Editor.exe").write_bytes(b"editor")
         (binary / "TaintedGrailModdingEditorLauncher.exe").write_bytes(b"launcher")
         (binary / "FOA-SDK.exe").write_bytes(b"launcher")
         (binary / "AzCore.dll").write_bytes(b"runtime")
+        for gem_name, project_relative in installer.INSTALLED_PROJECT_EXTERNAL_GEMS:
+            external = sdk / installer.installed_sdk_relative_from_project_path(project_relative)
+            external.mkdir(parents=True)
+            (external / "gem.json").write_text(json.dumps({"gem_name": gem_name}), encoding="utf-8")
         (sdk / installer.PROJECT_DIRECTORY).mkdir()
         (sdk / installer.PROJECT_DIRECTORY / "preview.png").write_bytes(b"stale install preview")
 
@@ -113,7 +133,12 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
             self.assertEqual(first, second)
             paths = {entry["path"] for entry in first["entries"]}
             self.assertIn(f"{installer.PROJECT_DIRECTORY}/project.json", paths)
+            self.assertIn(f"{installer.PROJECT_DIRECTORY}/user/Registry/asset_processor.setreg", paths)
             self.assertIn(installer.SDK_ENTRYPOINT_PATH.as_posix(), paths)
+            self.assertIn(installer.CMAKE_RUNTIME_CMAKE_PATH.as_posix(), paths)
+            self.assertIn(installer.CMAKE_RUNTIME_SHARE_MARKER.as_posix(), paths)
+            self.assertIn(installer.PYTHON_CMD_PATH.as_posix(), paths)
+            self.assertIn(installer.PYTHON_GET_PYTHON_PATH.as_posix(), paths)
             self.assertNotIn(f"{installer.PROJECT_DIRECTORY}/CMakeLists.txt", paths)
             self.assertNotIn(f"{installer.PROJECT_DIRECTORY}/cmake/EngineFinder.cmake", paths)
 
@@ -125,6 +150,18 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
             project = json.loads(project_source.generated_bytes.decode("utf-8"))
             self.assertEqual(project["engine"], installer.ENGINE_NAME)
             self.assertIn("Prebuilt", project["summary"])
+            self.assertEqual(
+                project["external_subdirectories"],
+                [path.as_posix() for _, path in installer.INSTALLED_PROJECT_EXTERNAL_GEMS],
+            )
+            self.assertEqual(
+                project["gem_names"],
+                [*installer.INSTALLED_PROJECT_STOCK_GEMS]
+                + [gem_name for gem_name, _ in installer.INSTALLED_PROJECT_EXTERNAL_GEMS],
+            )
+            self.assertNotIn("../Gems/TaintedGrailModdingSDK", project["external_subdirectories"])
+            self.assertNotIn("../Plugins/Authoring/TerrainAuthoring/Gem", project["external_subdirectories"])
+            self.assertNotIn("TerrainAuthoring", project["gem_names"])
 
     def test_stage_requires_exact_inventory_redistribution_approval(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -271,6 +308,26 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
             repo, sdk, notices, packages = self.make_inputs(root)
             (sdk / Path(installer.SDK_ENTRYPOINT_PATH.as_posix())).unlink()
             with self.assertRaisesRegex(installer.InstallerError, "FOA-SDK.exe"):
+                installer.build_inventory(
+                    repo, sdk, notices, packages, VERSION, SOURCE_COMMIT, "development"
+                )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo, sdk, notices, packages = self.make_inputs(root)
+            (sdk / Path(installer.CMAKE_RUNTIME_CMAKE_PATH.as_posix())).unlink()
+            with self.assertRaisesRegex(installer.InstallerError, "CMake runtime"):
+                installer.build_inventory(
+                    repo, sdk, notices, packages, VERSION, SOURCE_COMMIT, "development"
+                )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo, sdk, notices, packages = self.make_inputs(root)
+            (
+                sdk
+                / installer.installed_sdk_relative_from_project_path(PurePosixPath("../External/Gem"))
+                / "gem.json"
+            ).unlink()
+            with self.assertRaisesRegex(installer.InstallerError, "AvalonAIAuthoring"):
                 installer.build_inventory(
                     repo, sdk, notices, packages, VERSION, SOURCE_COMMIT, "development"
                 )

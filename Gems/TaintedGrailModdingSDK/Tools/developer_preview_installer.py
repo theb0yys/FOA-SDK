@@ -38,6 +38,10 @@ BIN_DIRECTORY = PurePosixPath("bin/Windows/profile/Default")
 EDITOR_PATH = BIN_DIRECTORY / "Editor.exe"
 LAUNCHER_PATH = BIN_DIRECTORY / "TaintedGrailModdingEditorLauncher.exe"
 SDK_ENTRYPOINT_PATH = BIN_DIRECTORY / "FOA-SDK.exe"
+CMAKE_RUNTIME_CMAKE_PATH = PurePosixPath("cmake/runtime/bin/cmake.exe")
+CMAKE_RUNTIME_SHARE_MARKER = PurePosixPath("cmake/runtime/share/cmake-4.3/Modules/CMake.cmake")
+PYTHON_CMD_PATH = PurePosixPath("python/python.cmd")
+PYTHON_GET_PYTHON_PATH = PurePosixPath("python/get_python.bat")
 MANIFEST_NAME = "INSTALL_MANIFEST.json"
 CHECKSUMS_NAME = "SHA256SUMS"
 PROVENANCE_NAME = "BUILD_PROVENANCE.json"
@@ -55,10 +59,17 @@ PROJECT_FILES = (
     PurePosixPath("project.json"),
     PurePosixPath("preview.png"),
     PurePosixPath("TaintedGrailModdingEditor.ico"),
+    PurePosixPath("user/Registry/asset_processor.setreg"),
 )
 PROJECT_DIRECTORIES = (
     PurePosixPath("Levels"),
     PurePosixPath("ShaderLib"),
+)
+INSTALLED_PROJECT_STOCK_GEMS = ("Atom", "DiffuseProbeGrid", "PhysX5")
+INSTALLED_PROJECT_EXTERNAL_GEMS = (
+    ("ExternalToolchain", PurePosixPath("../External/ExternalToolchain")),
+    ("TaintedGrailModdingSDK", PurePosixPath("../External/TaintedGrailModdingSDK")),
+    ("AvalonAIAuthoring", PurePosixPath("../External/Gem")),
 )
 RESERVED_ROOTS = {
     MANIFEST_NAME.casefold(),
@@ -254,7 +265,11 @@ def is_reparse_point(path: Path) -> bool:
 
 def require_regular_file(path: Path, label: str) -> Path:
     try:
-        if path.is_symlink() or is_reparse_point(path):
+        if path.is_symlink():
+            raise InstallerError(f"{label} must not be a symlink, junction, or reparse point: {path}")
+        if not path.exists():
+            raise InstallerError(f"{label} is missing or is not a regular file: {path}")
+        if is_reparse_point(path):
             raise InstallerError(f"{label} must not be a symlink, junction, or reparse point: {path}")
         if not path.is_file():
             raise InstallerError(f"{label} is missing or is not a regular file: {path}")
@@ -265,7 +280,11 @@ def require_regular_file(path: Path, label: str) -> Path:
 
 def require_directory(path: Path, label: str) -> Path:
     try:
-        if path.is_symlink() or is_reparse_point(path):
+        if path.is_symlink():
+            raise InstallerError(f"{label} must not be a symlink, junction, or reparse point: {path}")
+        if not path.exists():
+            raise InstallerError(f"{label} is missing or is not a directory: {path}")
+        if is_reparse_point(path):
             raise InstallerError(f"{label} must not be a symlink, junction, or reparse point: {path}")
         if not path.is_dir():
             raise InstallerError(f"{label} is missing or is not a directory: {path}")
@@ -317,14 +336,40 @@ def iter_regular_files(root: Path) -> Iterable[tuple[PurePosixPath, Path]]:
                 raise InstallerError(f"Unable to inspect payload input {path}: {exc}") from exc
 
 
-def installed_project_json(repo_root: Path) -> bytes:
+def installed_sdk_relative_from_project_path(path: PurePosixPath) -> Path:
+    text = path.as_posix()
+    if not text.startswith("../"):
+        raise InstallerError(f"Installed project external path must target the install root: {text}")
+    return Path(text.removeprefix("../"))
+
+
+def validate_installed_project_gems(sdk_root: Path) -> tuple[list[str], list[str]]:
+    external_subdirectories: list[str] = []
+    gem_names: list[str] = list(INSTALLED_PROJECT_STOCK_GEMS)
+    for gem_name, project_relative in INSTALLED_PROJECT_EXTERNAL_GEMS:
+        descriptor = require_regular_file(
+            sdk_root / installed_sdk_relative_from_project_path(project_relative) / "gem.json",
+            f"Installed {gem_name} gem descriptor",
+        )
+        document = load_json(descriptor)
+        if not isinstance(document, dict) or document.get("gem_name") != gem_name:
+            raise InstallerError(f"Installed {gem_name} gem descriptor has an unexpected identity.")
+        external_subdirectories.append(project_relative.as_posix())
+        gem_names.append(gem_name)
+    return external_subdirectories, gem_names
+
+
+def installed_project_json(repo_root: Path, sdk_root: Path) -> bytes:
     source = require_regular_file(repo_root / PROJECT_DIRECTORY / "project.json", "Editor project.json")
     document = load_json(source)
     if not isinstance(document, dict) or document.get("project_name") != PROJECT_DIRECTORY:
         raise InstallerError("The dedicated Editor project.json has an unexpected project identity.")
     result = dict(document)
+    external_subdirectories, gem_names = validate_installed_project_gems(sdk_root)
     result["engine"] = ENGINE_NAME
     result["summary"] = "Prebuilt O3DE host project for the Tainted Grail modding editor and SDK."
+    result["external_subdirectories"] = external_subdirectories
+    result["gem_names"] = gem_names
     return (json.dumps(result, sort_keys=False, indent=4, ensure_ascii=False) + "\n").encode("utf-8")
 
 
@@ -341,6 +386,19 @@ def validate_sdk_identity(sdk_root: Path) -> None:
     require_regular_file(
         sdk_root / Path(SDK_ENTRYPOINT_PATH.as_posix()),
         "Installed FOA-SDK.exe launcher entry point",
+    )
+    require_regular_file(
+        sdk_root / Path(CMAKE_RUNTIME_CMAKE_PATH.as_posix()),
+        "Installed SDK CMake runtime",
+    )
+    require_regular_file(
+        sdk_root / Path(CMAKE_RUNTIME_SHARE_MARKER.as_posix()),
+        "Installed SDK CMake runtime modules",
+    )
+    require_regular_file(sdk_root / Path(PYTHON_CMD_PATH.as_posix()), "Installed SDK python.cmd")
+    require_regular_file(
+        sdk_root / Path(PYTHON_GET_PYTHON_PATH.as_posix()),
+        "Installed SDK get_python.bat",
     )
     require_regular_file(sdk_root / "LICENSE.txt", "Installed SDK licence")
 
@@ -376,7 +434,7 @@ def build_sources(
         destination = PurePosixPath(PROJECT_DIRECTORY) / relative
         if relative == PurePosixPath("project.json"):
             sources.append(
-                PayloadSource(destination, "editor-project", generated_bytes=installed_project_json(repo))
+                PayloadSource(destination, "editor-project", generated_bytes=installed_project_json(repo, sdk))
             )
         else:
             sources.append(PayloadSource(destination, "editor-project", source_path=source))
@@ -778,7 +836,12 @@ def validate_manifest_entries(entries: list[object]) -> list[dict[str, object]]:
     required_paths = {
         EDITOR_PATH.as_posix(),
         LAUNCHER_PATH.as_posix(),
+        CMAKE_RUNTIME_CMAKE_PATH.as_posix(),
+        CMAKE_RUNTIME_SHARE_MARKER.as_posix(),
+        PYTHON_CMD_PATH.as_posix(),
+        PYTHON_GET_PYTHON_PATH.as_posix(),
         f"{PROJECT_DIRECTORY}/project.json",
+        f"{PROJECT_DIRECTORY}/user/Registry/asset_processor.setreg",
         "engine.json",
         "LICENSE.txt",
         NOTICES_NAME,

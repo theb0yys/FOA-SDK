@@ -121,6 +121,21 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {preview.ENGINE_ROOT_ENVIRONMENT_VARIABLE: str(explicit)}):
                 self.assertEqual(preview.default_engine_root(product, lock), explicit.resolve())
 
+    def test_default_build_directory_uses_release_revisions_unless_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            product = self.make_product(base / "FOA-SDK")
+            self.assertEqual(
+                preview.default_build_directory(product),
+                product / "release/revisions/tg-sdk-developer-preview-0-windows-profile",
+            )
+            explicit = base / "custom-build-root"
+            with mock.patch.dict(os.environ, {preview.BUILD_ROOT_ENVIRONMENT_VARIABLE: str(explicit)}):
+                self.assertEqual(
+                    preview.default_build_directory(product),
+                    explicit.resolve() / "tg-sdk-developer-preview-0-windows-profile",
+                )
+
     def test_build_directory_rejects_product_engine_and_unrelated_content(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -138,6 +153,12 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
                 preview.validate_build_directory(
                     product, engine, product / "build", require_configured=False
                 )
+            preview.validate_build_directory(
+                product,
+                engine,
+                product / "release/revisions/tg-sdk-developer-preview-0-windows-profile",
+                require_configured=False,
+            )
             build_dir = base / "build"
             build_dir.mkdir()
             (build_dir / "unrelated.txt").write_text("data", encoding="utf-8")
@@ -161,7 +182,7 @@ class DeveloperPreviewCommandTests(unittest.TestCase):
                     product, engine, build_dir, require_configured=True
                 )
 
-    def test_build_directory_requires_dedicated_external_project_configuration(self) -> None:
+    def test_build_directory_requires_dedicated_project_configuration(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             product = self.make_product(base / "FOA-SDK")

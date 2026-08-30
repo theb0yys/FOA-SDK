@@ -6,13 +6,13 @@ Status: checklist and evidence tooling implemented; the actual Windows screensho
 
 This checklist proves the source-built TG SDK panes are usable in a **real Windows x64 Profile** Editor session. It complements automated and compiled tests and does not prove FoA runtime compatibility.
 
-Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**. Slice 18 requires **All nineteen TG SDK panes**. The release-artifact provenance/signing-intent slice requires **All twenty TG SDK panes**. The release-assembly/checksum-result slice requires **All twenty-one TG SDK panes**. The release-signing result slice requires **All twenty-two TG SDK panes**. The Actor and Troop Editor slice requires **All twenty-three TG SDK panes**. The FOA Development Hub slice requires **All twenty-four TG SDK panes**. The optional Road Atlas and Avalon AI Tool Gems require **All twenty-six TG SDK panes**.
+Evidence binds to the **exact source commit** under review. Historical contracts required **All eight TG SDK panes**, **All nine TG SDK panes**, **All ten TG SDK panes**, **All eleven TG SDK panes**, **All twelve TG SDK panes**, **All thirteen TG SDK panes**, **All fourteen TG SDK panes**, and **All fifteen TG SDK panes** as earlier slices landed. Slice 15 requires **All sixteen TG SDK panes**. Slice 16 requires **All seventeen TG SDK panes**. Slice 17 requires **All eighteen TG SDK panes**. Slice 18 requires **All nineteen TG SDK panes**. The release-artifact provenance/signing-intent slice requires **All twenty TG SDK panes**. The release-assembly/checksum-result slice requires **All twenty-one TG SDK panes**. The release-signing result slice requires **All twenty-two TG SDK panes**. The Actor and Troop Editor slice requires **All twenty-three TG SDK panes**. The FOA Development Hub slice requires **All twenty-four TG SDK panes**. The Asset Browser Preview, Quest State Inspector, optional Road Atlas, and optional Avalon AI Tool Gems require **All twenty-eight TG SDK panes**.
 
 ## Safety and privacy boundary
 
 Use only project-owned synthetic data. Do not display or capture game files/assets/saves, credentials, private paths, unrelated desktop content, FoA, BepInEx/Harmony runtime tooling, **work-order execution, deployment, injection, or save-mutation**.
 
-The evidence tool does not capture the screen and does not inspect screenshot pixels. Nothing is uploaded automatically. **Do not commit screenshots.** Keep evidence beneath `build/` or outside the repository.
+The evidence tool does not capture the screen and does not inspect screenshot pixels. Nothing is uploaded automatically. **Do not commit screenshots.** Keep evidence beneath `../foa-build/` or another reviewed output root.
 
 ## Required environment
 
@@ -32,12 +32,12 @@ Record Windows version, display scale, tester alias, exact commit, Editor launch
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py generate `
-  --output build/tg-sdk-developer-preview-0-fixture
+  --output ../foa-build/tg-sdk-developer-preview-0-fixture
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_fixture.py verify `
-  --output build/tg-sdk-developer-preview-0-fixture
+  --output ../foa-build/tg-sdk-developer-preview-0-fixture
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_open.py `
   --engine-root <pinned external O3DE checkout> `
-  --build-dir build/tg-sdk-developer-preview-0-windows-profile
+  --build-dir release/revisions/tg-sdk-developer-preview-0-windows-profile
 ```
 
 Confirm the supported opener reports per-user project, cache, user, and log
@@ -67,7 +67,7 @@ The normal fixture has no adapter declaration, runtime-result envelope, package-
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py init `
-  --output build/tg-sdk-developer-preview-0-ui-evidence `
+  --output ../foa-build/tg-sdk-developer-preview-0-ui-evidence `
   --source-commit <40-character-commit> `
   --tester-alias windows-reviewer `
   --windows-version "Windows 11 23H2" `
@@ -86,12 +86,12 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail SDK Status;
 - Tainted Grail Pack Manager;
 - Tainted Grail Source Intake;
+- Tainted Grail Asset Browser Preview;
 - Tainted Grail Catalog Browser;
 - Tainted Grail Catalog Governance;
 - Tainted Grail Item and Recipe Editor;
+- Tainted Grail Quest and State Inspector;
 - Tainted Grail Actor and Troop Editor;
-- Tainted Grail Road Atlas Editor;
-- Tainted Grail Avalon AI Editor;
 - Tainted Grail Economy Acquisition Coverage;
 - Tainted Grail Economy Cross-Pack Duplicates;
 - Tainted Grail Adapter Capability Matrix;
@@ -107,20 +107,22 @@ From **Tools → Tainted Grail SDK**, open:
 - Tainted Grail Verifier Evidence Reconciliation and Release Decision;
 - Tainted Grail Release Artifact Provenance and Signing Intent;
 - Tainted Grail Release Assembly and Checksum Results;
-- Tainted Grail Release Signing Results.
+- Tainted Grail Release Signing Results;
+- Tainted Grail Avalon AI Editor;
+- Tainted Grail Map Editor (Road Atlas).
 
 Confirm the standard default scene is loaded and the 3D viewport visibly shows
 its sky, ground grid, and shader ball. Then confirm every pane opens and remains
-interactive. **All twenty-six TG SDK panes** must be present. The Hub must open
+interactive. **All twenty-eight TG SDK panes** must be present. The Hub must open
 automatically after Editor initialization and every Hub route must open its
 named specialist pane.
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py record `
-  --output build/tg-sdk-developer-preview-0-ui-evidence `
+  --output ../foa-build/tg-sdk-developer-preview-0-ui-evidence `
   --check all-panes-open `
   --status pass `
-  --notes "The standard default scene was visible; all twenty-six TG SDK panes opened; the Hub opened automatically and all twenty-five specialist routes resolved."
+  --notes "The standard default scene was visible; all twenty-eight TG SDK panes opened; the Hub opened automatically and all twenty-seven specialist routes resolved."
 ```
 
 Screenshot required.
@@ -138,7 +140,7 @@ Use `Tab`, `Shift+Tab`, arrows, and activation keys. Confirm keyboard traversal 
 Open the synthetic workspace and duplicate companion. Confirm:
 
 - catalog/economy data and blockers are visible;
-- **Tainted Grail Road Atlas Editor** creates an exact-profile starter snapshot, rejects an invalid fingerprint or runtime flag, validates the restored inert snapshot, saves it, reloads the same normalized JSON, and reverts an unsaved edit;
+- **Tainted Grail Map Editor (Road Atlas)** creates an exact-profile starter snapshot, rejects an invalid fingerprint or runtime flag, validates the restored inert snapshot, saves it, reloads the same normalized JSON, and reverts an unsaved edit;
 - **Tainted Grail Avalon AI Editor** creates an API 2.0 starter package, rejects host linkage or execution enablement, displays a deterministic inert-plan fingerprint, saves it, reloads the same normalized JSON, and reverts an unsaved edit;
 - coverage lanes are correct;
 - **cross-pack duplicate candidates** include the exact `preview.duplicate-companion` subjects produced from `preview.evidence.duplicate.primary` and `preview.evidence.duplicate.companion`;
@@ -195,7 +197,7 @@ Confirm no runtime, deployment, injection, save mutation, duplicate merge, pack 
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attach `
-  --output build/tg-sdk-developer-preview-0-ui-evidence `
+  --output ../foa-build/tg-sdk-developer-preview-0-ui-evidence `
   --screenshot C:\Evidence\tg-sdk-panes.png `
   --check all-panes-open `
   --check preview-data-displayed `
@@ -219,7 +221,7 @@ Required screenshot coverage:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attest `
-  --output build/tg-sdk-developer-preview-0-ui-evidence `
+  --output ../foa-build/tg-sdk-developer-preview-0-ui-evidence `
   --tested-at 2026-07-19T12:00:00Z `
   --launch-exit-code 0 `
   --activation-log-confirmed `
@@ -235,7 +237,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py attest
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_ui_evidence.py verify `
-  --output build/tg-sdk-developer-preview-0-ui-evidence `
+  --output ../foa-build/tg-sdk-developer-preview-0-ui-evidence `
   --expected-commit <40-character-commit>
 ```
 

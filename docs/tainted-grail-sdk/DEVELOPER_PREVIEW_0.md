@@ -18,8 +18,11 @@ FOA-SDK and O3DE have separate identities and checkouts:
 ```text
 Development/
 ├── FOA-SDK/      product checkout
+│   └── release/revisions/
+│       └── tg-sdk-developer-preview-0-windows-profile/
+│           canonical local source-built Editor revision output
 ├── o3de/         exact O3DE checkout
-└── foa-build/    generated build and evidence output
+└── foa-build/    generated evidence, fixtures and non-Editor build output
 ```
 
 The FOA-SDK working tree contains only the product project, the two product Gems,
@@ -31,8 +34,10 @@ the engine name, version, and full Git commit before configure, build, or
 validation.
 
 Set `FOA_O3DE_ROOT` when the O3DE checkout is not the sibling `o3de/` directory.
-Set `FOA_BUILD_ROOT` to change the generated-output root. Explicit
-`--engine-root` and `--build-dir` arguments take precedence.
+The default source-built Editor revision uses `release/revisions/`. Set
+`FOA_BUILD_ROOT` only for a controlled alternate build root such as CI or
+disposable diagnostics. Explicit `--engine-root` and `--build-dir` arguments
+take precedence.
 
 ## Obtain the pinned engine
 
@@ -55,8 +60,8 @@ Run commands from `FOA-SDK`.
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py prerequisites `
   --engine-root ..\o3de `
-  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
-  --json-output ..\foa-build\tg-sdk-developer-preview-0-windows-profile\prerequisites.json
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile `
+  --json-output release\revisions\tg-sdk-developer-preview-0-windows-profile\prerequisites.json
 ```
 
 Required checks cover Windows x64, Python 3.10 or newer, CMake 3.23 or newer,
@@ -68,7 +73,7 @@ pinned engine commit, and build-directory state.
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py configure `
   --engine-root ..\o3de `
-  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
 ```
 
 The generated CMake command uses:
@@ -92,7 +97,7 @@ the FOA-SDK product root and never to the O3DE engine root.
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py build `
   --engine-root ..\o3de `
-  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
 ```
 
 The Profile build contains exactly these command-layer targets:
@@ -108,7 +113,7 @@ TaintedGrailModdingSDK.Catalog.Tests
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
   --engine-root ..\o3de `
-  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
 ```
 
 FOA validators run from the product checkout. The O3DE source-policy validator
@@ -128,7 +133,7 @@ Run the complete local product gate with:
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
   --engine-root ..\o3de `
-  --ctest-build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
+  --ctest-build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile
 ```
 
 ## Synthetic fixture
@@ -153,7 +158,7 @@ The fixture is project-owned synthetic data. It does not prove Editor load/save/
 ## Compiled persistence smoke
 
 ```powershell
-ctest --test-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
+ctest --test-dir release\revisions\tg-sdk-developer-preview-0-windows-profile `
   -C profile `
   --output-on-failure `
   --no-tests=error `
@@ -169,13 +174,22 @@ bounded `--log-dir`:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/developer_preview_launch.py `
-  --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile `
-  --log-dir ..\foa-build\tg-sdk-developer-preview-0-launch-logs `
+  --build-dir release\revisions\tg-sdk-developer-preview-0-windows-profile `
+  --log-dir release\revisions\tg-sdk-developer-preview-0-launch-logs `
   --dry-run
 ```
 
 It uses O3DE’s `--project-path` switch, exposes no arbitrary Editor passthrough
-arguments, waits for the Editor process, and returns its exit code.
+arguments, waits for the Editor process, and returns its exit code. When
+`--project` is omitted, the wrapper resolves the repository-owned
+`TaintedGrailModdingEditor` project. `--dry-run --result <json>` records the
+resolved command without launching the Editor.
+
+The installed `FOA-SDK.exe` launcher is a different entry point for reviewed MSI
+or portable-ZIP payloads. It must run from a self-contained install root with
+`INSTALL_MANIFEST.json`, `TaintedGrailModdingEditor/project.json`, the bundled
+`Editor.exe`, and the packaged default startup level. Do not use it to launch a
+raw source-built revision or point it at an arbitrary Editor.
 
 Collect and verify a redacted diagnostic bundle with:
 
@@ -188,8 +202,10 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify
   --output ..\foa-build\tg-sdk-developer-preview-0-diagnostics
 ```
 
-Diagnostics and screenshot evidence must remain under the external build root or
-another reviewed output directory. Nothing is uploaded automatically; review every generated file before sharing.
+Editor-entry diagnostics remain under `release/revisions/diagnostic-entries/`.
+Other diagnostics and screenshot evidence belong under `../foa-build/` or
+another reviewed output directory. Nothing is uploaded automatically; review
+every generated file before sharing.
 
 ## Windows manual UI smoke
 

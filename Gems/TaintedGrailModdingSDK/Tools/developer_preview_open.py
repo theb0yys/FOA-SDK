@@ -31,7 +31,7 @@ import developer_preview_launch
 import developer_preview_workspace
 import validate_developer_preview_project
 
-DEFAULT_BUILD_DIRECTORY = Path("build/tg-sdk-developer-preview-0-windows-profile")
+DEFAULT_BUILD_DIRECTORY = Path("release/revisions/tg-sdk-developer-preview-0-windows-profile")
 
 
 def repository_root_from_script() -> Path:

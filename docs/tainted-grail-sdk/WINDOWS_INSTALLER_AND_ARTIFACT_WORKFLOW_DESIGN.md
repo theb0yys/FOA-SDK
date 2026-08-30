@@ -30,8 +30,11 @@ One reviewed Windows x64 `profile` build produces:
 - one canonical `INSTALL_MANIFEST.json` shared by both forms;
 - `SHA256SUMS`, a ZIP checksum, build provenance, third-party notices, the O3DE
   package inventory, and an SPDX 2.3 file inventory;
-- a dedicated launcher that opens the installed Editor with the installed
-  `TaintedGrailModdingEditor` project;
+- a dedicated installed launcher at
+  `bin\Windows\profile\Default\FOA-SDK.exe` that resolves the self-contained
+  product root, checks `INSTALL_MANIFEST.json` and the installed
+  `TaintedGrailModdingEditor` project, then opens the bundled Editor with that
+  project and the packaged default level;
 - no requirement for Git, Python, CMake, Visual Studio, or a source build on the
   user's machine.
 
@@ -69,11 +72,13 @@ installed engine name without modifying the source document.
 validate
   -> configure Windows x64 profile SDK
   -> build O3DE INSTALL target
+  -> build and hash-compare the installed FOA-SDK.exe launcher entry point
   -> generate notices and package inventory
   -> inventory exact files and SHA-256 values
   -> human redistribution review
   -> bind approval to the exact inventory fingerprint
   -> stage and re-hash the captured bytes
+  -> run FOA-SDK.exe --self-test from the staged self-contained layout
   -> create deterministic portable ZIP
   -> create MSI from the same staging root
   -> embed the reviewed MSI in the self-contained executable wizard
@@ -126,6 +131,17 @@ copier. Windows Installer remains the sole authority for product-file mutation,
 registration, Start Menu integration, repair, major upgrade, and uninstall.
 The executable itself requests `asInvoker`; the reviewed MSI is per-user.
 
+After install, `FOA-SDK.exe` is the Editor startup entry point. It walks upward
+from its own path to find the product root, requires `INSTALL_MANIFEST.json` and
+root `engine.json` plus `TaintedGrailModdingEditor/project.json`, resolves
+`Editor.exe` from the installed `bin/Windows/profile/Default` layout, and starts
+it with `--engine-path <install-root>`,
+`--project-path %LOCALAPPDATA%/O3DE/TGEditor/installed/project`, writable
+`--project-cache-path`, `--project-user-path`, and `--project-log-path` folders
+beneath that materialized project, plus materialized `External` Gem roots and the
+`Levels/DefaultLevel/DefaultLevel.prefab`. `--self-test` performs the same
+layout and writable-user-root checks without launching the Editor.
+
 The MSI uses CPack's WiX generator with:
 
 - fixed project-owned Upgrade Code
@@ -133,13 +149,16 @@ The MSI uses CPack's WiX generator with:
 - Product Code derived deterministically from that namespace and the exact
   three-component version;
 - Windows x64 architecture and per-user install scope;
-- one Start Menu entry for `TaintedGrailModdingEditorLauncher.exe`;
+- one Start Menu entry for `FOA-SDK.exe`;
 - Programs and Features metadata, standard repair, and uninstall.
 
 The stable Upgrade Code and version-specific Product Code provide the required
-major-upgrade identity. An actual older-to-newer MSI smoke requires two
-independently reviewed inventories and remains a release gate until two versions
-exist; it must not be inferred from structural configuration alone.
+major-upgrade identity. Updating an installed SDK means running a newer reviewed
+`FOA-SDK-Installer.exe` whose embedded MSI has that stable Upgrade Code and a
+newer version. An actual older-to-newer MSI smoke requires two independently
+reviewed inventories and remains a release gate until two versions exist; it
+must not be inferred from structural configuration alone. There is no automatic
+updater or background service.
 
 Uninstall removes product-owned files only. The smoke test creates an external
 workspace sentinel and requires it to survive uninstall. Real user workspaces

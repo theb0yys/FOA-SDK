@@ -6,6 +6,7 @@ This directory contains the public documentation for the FOA-SDK product reposit
 
 ### For users
 
+- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, installed `FOA-SDK.exe` startup, repair, upgrade, uninstall, and troubleshooting.
 - [Open and Test the Actual Editor](OPEN_AND_TEST_EDITOR.md) — shortest Windows path from a fresh pull to the dedicated O3DE project, source build, trusted clickable entry, native log, and synthetic workspace.
 - [Developer Preview 0](DEVELOPER_PREVIEW_0.md) — Windows x64 prerequisites, configure/build/validate commands, deterministic fixture, persistence smoke, controlled Editor launch, redacted diagnostics, manual UI evidence tooling, and current limitations.
 - [Developer Preview Exact-Head Verification](DEVELOPER_PREVIEW_EXACT_HEAD_VERIFICATION.md) — reviewed-range whitespace checking, external receipts, O3DE configure/build, compiled tests, authoritative receipt/UI re-verification, and Windows evidence finalization.
@@ -53,8 +54,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Development Guide](DEVELOPMENT_GUIDE.md) — repository setup, build, validation, and implementation guidance.
 - [CI, Runner, and Local Validation Policy](CI_AND_LOCAL_VALIDATION.md) — applicability-based validation matrix, read-only hosted jobs, local evidence layers, and runner boundaries.
 - [Developer Preview 0 Design](DEVELOPER_PREVIEW_0_DESIGN.md) — approved scope, acceptance criteria, safety boundary, and implementation sequence.
-- [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, MSI/ZIP identity, failure, rollback, and non-release boundary.
-- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, repair, upgrade, uninstall, and troubleshooting.
+- [Windows Installer and Prebuilt Artifact Workflow Design](WINDOWS_INSTALLER_AND_ARTIFACT_WORKFLOW_DESIGN.md) — approved prebuilt O3DE SDK layout, exact redistribution review, installed launcher behavior, MSI/ZIP identity, repair, upgrade, rollback, and non-release boundary.
+- [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, installed `FOA-SDK.exe` startup, repair, upgrade, uninstall, and troubleshooting.
 - [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — approved population design and implementation history. The completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source, immutable action-lane, and registered Actor/Troop pane units are recorded here with deterministic fixture, validation, and deferred runtime scope.
 - [Actor and Troop Architecture and Data Formats](ACTOR_TROOP_ARCHITECTURE_AND_DATA_FORMATS.md) — Core/Framework/Editor ownership, schema-2 actor/troop/member shapes, identity, evidence, governance, ordering, fixture format, and deferred contracts.
 - [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE build, compiled-test and Windows evidence requirements, release claims, rollback, and next population work.
@@ -67,8 +68,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [O3DE-to-Unity Bridge Research Archive](../../Research/o3de-to-unity-conversion-and-runtime-bridge/README.md) — supplied report, durable source and claim registers, research areas, and gate reconciliation.
 - [Tainted Grail System Ports](../../Research/tainted-grail-system-ports/README.md) — exact-commit inventory and
   gated selective ports for the user's Tainted Grail frameworks, UI, diagnostics, roads, AI, and providers.
-- [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, and separation from engine testing projects.
-- [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, and diagnostic overrides.
+- [Dedicated Editor Entry Architecture](DEDICATED_EDITOR_ENTRY.md) — product-host project, project-owned icons, trusted generated Windows shortcut, installed package entry distinction, and separation from engine testing projects.
+- [Canonical Path and Executable Trust Policy](PATH_POLICY.md) — canonical resolution, component containment, workspace/pack persistence boundaries, source-build provenance, diagnostic overrides, and installed prebuilt launcher trust.
 - [Atomic Workspace Transition and Schema Contract](WORKSPACE_ATOMICITY_AND_SCHEMA.md) — schema-0 migration, durable schema 1, candidate construction, cross-binding validation, atomic publication, rollback, and failure-stage tests.
 - [Core and Framework Build Graph](CORE_FRAMEWORK_BUILD_GRAPH.md) — internal static targets, unique source ownership, dependency direction, test linkage, enforcement, and runtime boundary.
 - [Economy Acquisition Coverage Contract](ECONOMY_ACQUISITION_COVERAGE.md) — Core analysis ownership, lane/status semantics, evidence and blocker handling, determinism, non-mutation, and runtime boundary.

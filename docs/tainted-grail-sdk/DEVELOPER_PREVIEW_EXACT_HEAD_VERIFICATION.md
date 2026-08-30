@@ -41,10 +41,10 @@ Every coordinator command requires:
 For an exact head `<head>`, the coordinator uses:
 
 ```text
-build/tg-sdk-developer-preview-0-windows-profile
+release/revisions/tg-sdk-developer-preview-0-windows-profile
 ../tg-sdk-exact-head-receipt-<first-12-of-head>
-build/tg-sdk-developer-preview-0-ui-evidence-<first-12-of-head>
-build/tg-sdk-developer-preview-0-verification-<first-12-of-head>
+../foa-build/tg-sdk-developer-preview-0-ui-evidence-<first-12-of-head>
+../foa-build/tg-sdk-developer-preview-0-verification-<first-12-of-head>
 ```
 
 The prerequisite report is written to the separate verification directory as
@@ -53,9 +53,9 @@ preserves the existing fail-closed rule that rejects a non-empty, unconfigured
 build directory.
 
 The receipt and captured logs stay outside the repository. UI evidence and
-verification state may be beneath `build/`, but must remain outside the O3DE
-build directory. Do not commit generated output, receipts, logs, screenshots, or
-verification state.
+verification state use `../foa-build/` or another reviewed output root and must
+remain outside the O3DE build directory. Do not commit generated output,
+receipts, logs, screenshots, or verification state.
 
 ## 1. Inspect the command plan
 

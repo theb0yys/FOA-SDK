@@ -59,6 +59,9 @@ Newer, malformed, or unsafe versions fail without replacing the published catalo
 
 ## Search
 
+The browser opens in **Items only** mode so the first result set is the canonical economy/item catalogue.
+Disable **Items only** to browse all canonical records.
+
 The browser supports free-text and exact filters.
 
 ### Free-text search
@@ -97,6 +100,17 @@ Available filters include:
 - superseded-record inclusion.
 
 Results are ordered by stable record ID.
+
+### Asset preview
+
+The Catalog Browser does not load or render item thumbnails. Use **Tainted Grail Asset Browser Preview** as
+the single editor pane for asset viewing. For in-game assets, the user points the SDK at the FoA installation
+through the active profile and the pane resolves the SDK-derived evidence internally. For custom assets, put
+files under the workspace or project `Assets` folder; the pane reads that folder directly and shows source-image
+thumbnails when the asset is an image.
+
+Preview paths are not catalog truth. Viewing staged preview evidence does not promote evidence, mutate the
+catalog, deploy assets, or grant runtime permission.
 
 ### Display-name duplicates
 

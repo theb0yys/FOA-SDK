@@ -10,11 +10,14 @@
 #include "FoundationModels.h"
 #include "FoundationNotificationBus.h"
 
+#include <AzCore/std/algorithm.h>
+
 #include <QWidget>
 
-class QComboBox;
+class QGroupBox;
 class QLabel;
-class QLineEdit;
+class QPlainTextEdit;
+class QPushButton;
 class QTableWidget;
 
 namespace TaintedGrailModdingSDK
@@ -31,48 +34,29 @@ namespace TaintedGrailModdingSDK
 
     private:
         void OnFoundationChanged() override;
-        void LoadFormFromWorkspace();
-        void LoadFormFromModel(const WorkspaceModel& workspace);
-        WorkspaceModel BuildWorkspaceFromFields() const;
-        bool ApplyConfiguration();
-        void AutoDetectConfiguration();
-        bool EnsureWorkspaceDirectories(const WorkspaceModel& workspace);
+        void DetectAndApply(const AZStd::string& explicitInstallPath = {});
+        void LocateGame();
         void OpenWorkspace();
-        void SaveWorkspace();
-        void SaveWorkspaceAs();
+        bool EnsureWorkspaceDirectories(const WorkspaceModel& workspace);
+        AZStd::string DefaultWorkspaceFilePath(const WorkspaceModel& workspace) const;
+        bool PersistDetectedWorkspace(const WorkspaceModel& workspace);
+        void UpdateAdvancedDetails();
 
-        QLabel* m_workspaceValue = nullptr;
-        QLabel* m_workspaceFileValue = nullptr;
-        QLabel* m_profileValue = nullptr;
+        QLabel* m_overallStatus = nullptr;
+        QLabel* m_sdkStatus = nullptr;
+        QLabel* m_gameStatus = nullptr;
         QLabel* m_versionValue = nullptr;
-        QLabel* m_branchValue = nullptr;
         QLabel* m_runtimeTargetValue = nullptr;
-        QLabel* m_unityVersionValue = nullptr;
-        QLabel* m_bepInExVersionValue = nullptr;
-        QLabel* m_boundaryValue = nullptr;
+        QLabel* m_workspaceValue = nullptr;
+        QLabel* m_authoringStatus = nullptr;
         QLabel* m_persistenceStatus = nullptr;
-
-        QLineEdit* m_workspaceIdEdit = nullptr;
-        QLineEdit* m_workspaceNameEdit = nullptr;
-        QLineEdit* m_workspaceRootEdit = nullptr;
-        QLineEdit* m_outputPathEdit = nullptr;
-        QLineEdit* m_stagingPathEdit = nullptr;
-        QLineEdit* m_deploymentPathEdit = nullptr;
-
-        QLineEdit* m_profileIdEdit = nullptr;
-        QLineEdit* m_profileNameEdit = nullptr;
-        QLineEdit* m_installPathEdit = nullptr;
-        QLineEdit* m_gameVersionEdit = nullptr;
-        QLineEdit* m_branchEdit = nullptr;
-        QComboBox* m_runtimeTargetEdit = nullptr;
-        QLineEdit* m_unityVersionEdit = nullptr;
-        QLineEdit* m_bepInExVersionEdit = nullptr;
-        QLineEdit* m_managedAssembliesPathEdit = nullptr;
-        QLineEdit* m_pluginPathEdit = nullptr;
-        QLineEdit* m_diagnosticsPathEdit = nullptr;
-        QLineEdit* m_extractedDataPathEdit = nullptr;
-        QLineEdit* m_dlcScopesEdit = nullptr;
+        QLabel* m_boundaryValue = nullptr;
+        QPlainTextEdit* m_advancedDetails = nullptr;
+        QGroupBox* m_advancedGroup = nullptr;
+        QPushButton* m_locateGameButton = nullptr;
+        QPushButton* m_advancedToggleButton = nullptr;
         AZStd::string m_workspaceFilePath;
+        AZStd::vector<AZStd::string> m_detectionNotes;
 
         QTableWidget* m_countsTable = nullptr;
         QTableWidget* m_domainTable = nullptr;

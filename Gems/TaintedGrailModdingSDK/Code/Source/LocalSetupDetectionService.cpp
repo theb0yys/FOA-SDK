@@ -252,6 +252,12 @@ namespace TaintedGrailModdingSDK
             const Filesystem::path& installRoot,
             Filesystem::path& dataRoot)
         {
+            const Filesystem::path current = installRoot / "Fall of Avalon_Data";
+            if (DirectoryExists(current))
+            {
+                dataRoot = current;
+                return true;
+            }
             const Filesystem::path spaced = installRoot / "Tainted Grail_Data";
             if (DirectoryExists(spaced))
             {
@@ -449,6 +455,7 @@ namespace TaintedGrailModdingSDK
 
         Filesystem::path dataRoot;
         return RegularFileExists(resolved / "UnityPlayer.dll")
+            || RegularFileExists(resolved / "Fall of Avalon.exe")
             || RegularFileExists(resolved / "TaintedGrail.exe")
             || RegularFileExists(resolved / "Tainted Grail.exe")
             || TryFindDataDirectory(resolved, dataRoot);
@@ -552,6 +559,7 @@ namespace TaintedGrailModdingSDK
                 const std::regex gameVersionPattern(R"((\d+\.\d+\.\d+))");
                 const AZStd::string observedGameVersion = FindVersionInFiles(
                     {
+                        installRoot / "Fall of Avalon.exe",
                         installRoot / "TaintedGrail.exe",
                         installRoot / "Tainted Grail.exe",
                     },

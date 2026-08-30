@@ -20,6 +20,8 @@ set(FILES
     Source/ExtensionAPI.h
     Source/ExtensionAPIClient.cpp
     Source/ExtensionRequestBus.h
+    Source/FoAInstallDiscoveryService.cpp
+    Source/FoAInstallDiscoveryService.h
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
     Source/FoundationEvidenceReviewService.cpp

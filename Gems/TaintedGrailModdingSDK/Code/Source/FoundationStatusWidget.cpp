@@ -7,12 +7,12 @@
 
 #include "FoundationStatusWidget.h"
 
+#include "FoAInstallDiscoveryService.h"
 #include "FoundationService.h"
 #include "LocalSetupDetectionService.h"
 
 #include <QAbstractItemView>
 #include <QByteArray>
-#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -23,21 +23,19 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
-#include <QLineEdit>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
-#include <QStandardPaths>
 #include <QStringList>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QVBoxLayout>
 
 #include <cstddef>
-#include <functional>
 
 namespace TaintedGrailModdingSDK
 {
@@ -58,7 +56,6 @@ namespace TaintedGrailModdingSDK
         {
             QString m_workspaceRoot;
             QString m_installPath;
-            bool m_loaded = false;
         };
 
         QString LocalAppDataRoot()
@@ -69,16 +66,10 @@ namespace TaintedGrailModdingSDK
 
         QString DefaultWorkspaceRoot()
         {
-            const QString documentsPath =
-                QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-            if (!documentsPath.isEmpty())
-            {
-                return QDir(documentsPath).filePath("FOA-SDK/Workspace");
-            }
             return QDir(LocalAppDataRoot()).filePath("FOA-SDK/Workspace");
         }
 
-        ToolWizardProfileHints ReadToolWizardProfileHints()
+        ToolWizardProfileHints ReadLegacyToolWizardProfileHints()
         {
             ToolWizardProfileHints hints;
             const QString profilePath = QDir(LocalAppDataRoot()).filePath(
@@ -99,8 +90,21 @@ namespace TaintedGrailModdingSDK
             const QJsonObject root = document.object();
             hints.m_workspaceRoot = root.value("workspace_root").toString().trimmed();
             hints.m_installPath = root.value("tainted_grail_install_path").toString().trimmed();
-            hints.m_loaded = true;
             return hints;
+        }
+
+        void AddInstallCandidate(
+            LocalSetupDetectionService::Hints& hints,
+            const AZStd::string& value)
+        {
+            if (!value.empty()
+                && AZStd::find(
+                    hints.m_installPathCandidates.begin(),
+                    hints.m_installPathCandidates.end(),
+                    value) == hints.m_installPathCandidates.end())
+            {
+                hints.m_installPathCandidates.push_back(value);
+            }
         }
 
         void AddInstallCandidate(
@@ -110,46 +114,8 @@ namespace TaintedGrailModdingSDK
             const QString trimmed = value.trimmed();
             if (!trimmed.isEmpty())
             {
-                hints.m_installPathCandidates.push_back(ToAzString(trimmed));
+                AddInstallCandidate(hints, ToAzString(trimmed));
             }
-        }
-
-        QString DetectionStatusMessage(
-            const LocalSetupDetectionService::Result& result)
-        {
-            QStringList parts;
-            if (result.m_gameProfileComplete)
-            {
-                parts.push_back(
-                    QObject::tr("Local setup detected. Review the filled fields, then save the workspace."));
-            }
-            else if (result.m_gameInstallDetected)
-            {
-                parts.push_back(
-                    QObject::tr("Local setup partially detected. Some version or runtime paths still need attention."));
-            }
-            else if (result.m_workspaceRootDetected)
-            {
-                parts.push_back(
-                    QObject::tr("Workspace defaults filled. FoA install was not found from local setup hints; use Browse if needed."));
-            }
-            else
-            {
-                parts.push_back(
-                    QObject::tr("Auto-detect did not find enough local setup information."));
-            }
-
-            if (!result.m_notes.empty())
-            {
-                QStringList notes;
-                notes.reserve(static_cast<int>(result.m_notes.size()));
-                for (const AZStd::string& note : result.m_notes)
-                {
-                    notes.push_back(ToQString(note));
-                }
-                parts.push_back(QObject::tr("Notes: %1").arg(notes.join("; ")));
-            }
-            return parts.join(" ");
         }
 
         QString ResolveDirectoryValue(const QString& workspaceRoot, const AZStd::string& value)
@@ -185,33 +151,6 @@ namespace TaintedGrailModdingSDK
             return normalizedPath.startsWith(normalizedRoot);
         }
 
-        AZStd::vector<AZStd::string> ParseCommaSeparatedValues(const QString& value)
-        {
-            AZStd::vector<AZStd::string> values;
-            const QStringList parts = value.split(',', Qt::SkipEmptyParts);
-            values.reserve(static_cast<size_t>(parts.size()));
-            for (const QString& part : parts)
-            {
-                const QString trimmed = part.trimmed();
-                if (!trimmed.isEmpty())
-                {
-                    values.push_back(ToAzString(trimmed));
-                }
-            }
-            return values;
-        }
-
-        QString JoinValues(const AZStd::vector<AZStd::string>& values)
-        {
-            QStringList result;
-            result.reserve(static_cast<int>(values.size()));
-            for (const AZStd::string& value : values)
-            {
-                result.push_back(ToQString(value));
-            }
-            return result.join(", ");
-        }
-
         void ConfigureReadOnlyTable(QTableWidget* table)
         {
             table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -225,38 +164,9 @@ namespace TaintedGrailModdingSDK
             table->setItem(row, column, new QTableWidgetItem(value));
         }
 
-        QWidget* CreateDirectoryEditor(
-            QWidget* parent,
-            QLineEdit*& lineEdit,
-            const QString& dialogCaption,
-            std::function<void()> afterSelection = {})
+        QString StatusText(bool ready, const QString& readyText, const QString& pendingText)
         {
-            auto* container = new QWidget(parent);
-            auto* layout = new QHBoxLayout(container);
-            layout->setContentsMargins(0, 0, 0, 0);
-
-            lineEdit = new QLineEdit(container);
-            auto* browseButton = new QPushButton(QObject::tr("Browse..."), container);
-            layout->addWidget(lineEdit, 1);
-            layout->addWidget(browseButton);
-
-            QObject::connect(browseButton, &QPushButton::clicked, container, [container, lineEdit, dialogCaption, afterSelection]()
-            {
-                const QString selectedPath = QFileDialog::getExistingDirectory(
-                    container,
-                    dialogCaption,
-                    lineEdit->text());
-                if (!selectedPath.isEmpty())
-                {
-                    lineEdit->setText(selectedPath);
-                    if (afterSelection)
-                    {
-                        afterSelection();
-                    }
-                }
-            });
-
-            return container;
+            return ready ? readyText : pendingText;
         }
     } // namespace
 
@@ -274,7 +184,7 @@ namespace TaintedGrailModdingSDK
         scrollArea->setWidget(content);
         rootLayout->addWidget(scrollArea);
 
-        auto* heading = new QLabel(tr("Tainted Grail Modding SDK - Foundation Status"), content);
+        auto* heading = new QLabel(tr("FOA-SDK Control Center"), content);
         QFont headingFont = heading->font();
         headingFont.setPointSize(headingFont.pointSize() + 3);
         headingFont.setBold(true);
@@ -282,129 +192,83 @@ namespace TaintedGrailModdingSDK
         contentLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Configure an exact FoA build, persist the workspace, and review ownership, evidence, catalog coverage, governance decisions, usage constraints, and blockers. Displayed status never grants runtime permission."),
+            tr("FOA-SDK discovers the local game, exact profile, runtime, workspace, and derived paths automatically. Manual file-path setup is only used when the game cannot be found."),
             content);
         description->setWordWrap(true);
         contentLayout->addWidget(description);
 
-        auto* configurationGroup = new QGroupBox(tr("Workspace Configuration"), content);
-        auto* configurationLayout = new QFormLayout(configurationGroup);
-        m_workspaceIdEdit = new QLineEdit(configurationGroup);
-        m_workspaceNameEdit = new QLineEdit(configurationGroup);
-        configurationLayout->addRow(tr("Workspace ID"), m_workspaceIdEdit);
-        configurationLayout->addRow(tr("Display name"), m_workspaceNameEdit);
-        configurationLayout->addRow(
-            tr("Workspace root"),
-            CreateDirectoryEditor(
-                configurationGroup,
-                m_workspaceRootEdit,
-                tr("Choose TG workspace root"),
-                [this]() { AutoDetectConfiguration(); }));
-        configurationLayout->addRow(
-            tr("Output directory"),
-            CreateDirectoryEditor(configurationGroup, m_outputPathEdit, tr("Choose build output directory")));
-        configurationLayout->addRow(
-            tr("Staging directory"),
-            CreateDirectoryEditor(configurationGroup, m_stagingPathEdit, tr("Choose package staging directory")));
-        configurationLayout->addRow(
-            tr("Deployment directory"),
-            CreateDirectoryEditor(configurationGroup, m_deploymentPathEdit, tr("Choose deployment directory")));
-        contentLayout->addWidget(configurationGroup);
+        m_overallStatus = new QLabel(content);
+        QFont overallFont = m_overallStatus->font();
+        overallFont.setPointSize(overallFont.pointSize() + 2);
+        overallFont.setBold(true);
+        m_overallStatus->setFont(overallFont);
+        contentLayout->addWidget(m_overallStatus);
 
-        auto* profileGroup = new QGroupBox(tr("Active FoA Game Profile"), content);
-        auto* profileLayout = new QFormLayout(profileGroup);
-        m_profileIdEdit = new QLineEdit(profileGroup);
-        m_profileNameEdit = new QLineEdit(profileGroup);
-        m_gameVersionEdit = new QLineEdit(profileGroup);
-        m_branchEdit = new QLineEdit(profileGroup);
-        m_runtimeTargetEdit = new QComboBox(profileGroup);
-        m_runtimeTargetEdit->addItems({ "Mono", "IL2CPP" });
-        m_unityVersionEdit = new QLineEdit(profileGroup);
-        m_bepInExVersionEdit = new QLineEdit(profileGroup);
-        m_dlcScopesEdit = new QLineEdit(profileGroup);
-        m_dlcScopesEdit->setPlaceholderText(tr("base-game, sanctuary-of-sarras"));
-
-        profileLayout->addRow(tr("Profile ID"), m_profileIdEdit);
-        profileLayout->addRow(tr("Display name"), m_profileNameEdit);
-        profileLayout->addRow(
-            tr("FoA installation"),
-            CreateDirectoryEditor(
-                profileGroup,
-                m_installPathEdit,
-                tr("Choose Tainted Grail installation"),
-                [this]() { AutoDetectConfiguration(); }));
-        profileLayout->addRow(tr("Game version"), m_gameVersionEdit);
-        profileLayout->addRow(tr("Game branch"), m_branchEdit);
-        profileLayout->addRow(tr("Runtime target"), m_runtimeTargetEdit);
-        profileLayout->addRow(tr("Unity version"), m_unityVersionEdit);
-        profileLayout->addRow(tr("BepInEx version"), m_bepInExVersionEdit);
-        profileLayout->addRow(
-            tr("Managed assemblies"),
-            CreateDirectoryEditor(profileGroup, m_managedAssembliesPathEdit, tr("Choose managed assembly directory")));
-        profileLayout->addRow(
-            tr("BepInEx plugins"),
-            CreateDirectoryEditor(profileGroup, m_pluginPathEdit, tr("Choose BepInEx plugin directory")));
-        profileLayout->addRow(
-            tr("Diagnostics"),
-            CreateDirectoryEditor(profileGroup, m_diagnosticsPathEdit, tr("Choose diagnostic capture directory")));
-        profileLayout->addRow(
-            tr("Extracted data"),
-            CreateDirectoryEditor(profileGroup, m_extractedDataPathEdit, tr("Choose extracted data directory")));
-        profileLayout->addRow(tr("DLC/content scopes"), m_dlcScopesEdit);
-        contentLayout->addWidget(profileGroup);
+        auto* systemGroup = new QGroupBox(tr("System status"), content);
+        auto* systemLayout = new QFormLayout(systemGroup);
+        m_sdkStatus = new QLabel(systemGroup);
+        m_gameStatus = new QLabel(systemGroup);
+        m_versionValue = new QLabel(systemGroup);
+        m_runtimeTargetValue = new QLabel(systemGroup);
+        m_workspaceValue = new QLabel(systemGroup);
+        m_authoringStatus = new QLabel(systemGroup);
+        m_boundaryValue = new QLabel(
+            tr("Editor authoring only - runtime/deployment authority remains separately gated"),
+            systemGroup);
+        m_boundaryValue->setWordWrap(true);
+        systemLayout->addRow(tr("FOA-SDK"), m_sdkStatus);
+        systemLayout->addRow(tr("Fall of Avalon"), m_gameStatus);
+        systemLayout->addRow(tr("Game version"), m_versionValue);
+        systemLayout->addRow(tr("Runtime"), m_runtimeTargetValue);
+        systemLayout->addRow(tr("Workspace"), m_workspaceValue);
+        systemLayout->addRow(tr("Authoring"), m_authoringStatus);
+        systemLayout->addRow(tr("Safety boundary"), m_boundaryValue);
+        contentLayout->addWidget(systemGroup);
 
         auto* actionRow = new QWidget(content);
         auto* actionLayout = new QHBoxLayout(actionRow);
         actionLayout->setContentsMargins(0, 0, 0, 0);
-        auto* applyButton = new QPushButton(tr("Apply Configuration"), actionRow);
-        auto* autoDetectButton = new QPushButton(tr("Auto-detect Local Setup"), actionRow);
-        auto* openButton = new QPushButton(tr("Open Workspace..."), actionRow);
-        auto* saveButton = new QPushButton(tr("Save Workspace"), actionRow);
-        auto* saveAsButton = new QPushButton(tr("Save Workspace As..."), actionRow);
-        actionLayout->addWidget(applyButton);
-        actionLayout->addWidget(autoDetectButton);
-        actionLayout->addWidget(openButton);
-        actionLayout->addWidget(saveButton);
-        actionLayout->addWidget(saveAsButton);
+        auto* recheckButton = new QPushButton(tr("Recheck"), actionRow);
+        m_locateGameButton = new QPushButton(tr("Locate Fall of Avalon..."), actionRow);
+        m_advancedToggleButton = new QPushButton(tr("Show advanced details"), actionRow);
+        actionLayout->addWidget(recheckButton);
+        actionLayout->addWidget(m_locateGameButton);
+        actionLayout->addStretch(1);
+        actionLayout->addWidget(m_advancedToggleButton);
         contentLayout->addWidget(actionRow);
 
         m_persistenceStatus = new QLabel(content);
         m_persistenceStatus->setWordWrap(true);
         contentLayout->addWidget(m_persistenceStatus);
 
-        connect(applyButton, &QPushButton::clicked, this, [this]() { ApplyConfiguration(); });
-        connect(autoDetectButton, &QPushButton::clicked, this, [this]() { AutoDetectConfiguration(); });
-        connect(openButton, &QPushButton::clicked, this, [this]() { OpenWorkspace(); });
-        connect(saveButton, &QPushButton::clicked, this, [this]() { SaveWorkspace(); });
-        connect(saveAsButton, &QPushButton::clicked, this, [this]() { SaveWorkspaceAs(); });
-        connect(m_workspaceRootEdit, &QLineEdit::editingFinished, this, [this]() { AutoDetectConfiguration(); });
-        connect(m_installPathEdit, &QLineEdit::editingFinished, this, [this]() { AutoDetectConfiguration(); });
+        m_advancedGroup = new QGroupBox(tr("Advanced details"), content);
+        auto* advancedLayout = new QVBoxLayout(m_advancedGroup);
+        auto* advancedDescription = new QLabel(
+            tr("Diagnostic values are derived from the active Foundation workspace/profile. They are read-only here."),
+            m_advancedGroup);
+        advancedDescription->setWordWrap(true);
+        advancedLayout->addWidget(advancedDescription);
+        m_advancedDetails = new QPlainTextEdit(m_advancedGroup);
+        m_advancedDetails->setReadOnly(true);
+        m_advancedDetails->setMinimumHeight(190);
+        advancedLayout->addWidget(m_advancedDetails);
+        auto* openWorkspaceButton = new QPushButton(tr("Open existing workspace..."), m_advancedGroup);
+        advancedLayout->addWidget(openWorkspaceButton);
+        m_advancedGroup->setVisible(false);
+        contentLayout->addWidget(m_advancedGroup);
 
-        auto* workspaceGroup = new QGroupBox(tr("Current Workspace Status"), content);
-        auto* workspaceLayout = new QFormLayout(workspaceGroup);
-        m_workspaceValue = new QLabel(workspaceGroup);
-        m_workspaceFileValue = new QLabel(workspaceGroup);
-        m_profileValue = new QLabel(workspaceGroup);
-        m_versionValue = new QLabel(workspaceGroup);
-        m_branchValue = new QLabel(workspaceGroup);
-        m_runtimeTargetValue = new QLabel(workspaceGroup);
-        m_unityVersionValue = new QLabel(workspaceGroup);
-        m_bepInExVersionValue = new QLabel(workspaceGroup);
-        m_boundaryValue = new QLabel(tr("Editor authoring only - FoA runtime execution disabled"), workspaceGroup);
-        m_workspaceFileValue->setWordWrap(true);
-        m_boundaryValue->setWordWrap(true);
-        workspaceLayout->addRow(tr("Workspace"), m_workspaceValue);
-        workspaceLayout->addRow(tr("Workspace file"), m_workspaceFileValue);
-        workspaceLayout->addRow(tr("Active profile"), m_profileValue);
-        workspaceLayout->addRow(tr("Game version"), m_versionValue);
-        workspaceLayout->addRow(tr("Branch"), m_branchValue);
-        workspaceLayout->addRow(tr("Runtime target"), m_runtimeTargetValue);
-        workspaceLayout->addRow(tr("Unity version"), m_unityVersionValue);
-        workspaceLayout->addRow(tr("BepInEx version"), m_bepInExVersionValue);
-        workspaceLayout->addRow(tr("Runtime boundary"), m_boundaryValue);
-        contentLayout->addWidget(workspaceGroup);
+        connect(recheckButton, &QPushButton::clicked, this, [this]() { DetectAndApply(); });
+        connect(m_locateGameButton, &QPushButton::clicked, this, [this]() { LocateGame(); });
+        connect(openWorkspaceButton, &QPushButton::clicked, this, [this]() { OpenWorkspace(); });
+        connect(m_advancedToggleButton, &QPushButton::clicked, this, [this]()
+        {
+            const bool show = !m_advancedGroup->isVisible();
+            m_advancedGroup->setVisible(show);
+            m_advancedToggleButton->setText(
+                show ? tr("Hide advanced details") : tr("Show advanced details"));
+        });
 
-        auto* countsGroup = new QGroupBox(tr("Foundation and Governance Counts"), content);
+        auto* countsGroup = new QGroupBox(tr("Foundation and governance"), content);
         auto* countsLayout = new QVBoxLayout(countsGroup);
         m_countsTable = new QTableWidget(12, 2, countsGroup);
         m_countsTable->setHorizontalHeaderLabels({ tr("Area"), tr("Count") });
@@ -412,7 +276,7 @@ namespace TaintedGrailModdingSDK
         countsLayout->addWidget(m_countsTable);
         contentLayout->addWidget(countsGroup);
 
-        auto* coverageGroup = new QGroupBox(tr("Catalog Coverage by Domain"), content);
+        auto* coverageGroup = new QGroupBox(tr("Catalog coverage by domain"), content);
         auto* coverageLayout = new QVBoxLayout(coverageGroup);
         m_domainTable = new QTableWidget(0, 3, coverageGroup);
         m_domainTable->setHorizontalHeaderLabels({ tr("Domain"), tr("Records"), tr("Blocked") });
@@ -420,7 +284,7 @@ namespace TaintedGrailModdingSDK
         coverageLayout->addWidget(m_domainTable);
         contentLayout->addWidget(coverageGroup);
 
-        auto* blockersGroup = new QGroupBox(tr("Open Blockers"), content);
+        auto* blockersGroup = new QGroupBox(tr("Open blockers"), content);
         auto* blockersLayout = new QVBoxLayout(blockersGroup);
         m_blockerTable = new QTableWidget(0, 3, blockersGroup);
         m_blockerTable->setHorizontalHeaderLabels({ tr("Severity"), tr("Area"), tr("Reason") });
@@ -428,15 +292,7 @@ namespace TaintedGrailModdingSDK
         blockersLayout->addWidget(m_blockerTable);
         contentLayout->addWidget(blockersGroup, 1);
 
-        auto* refreshButton = new QPushButton(tr("Refresh Foundation Status"), content);
-        connect(refreshButton, &QPushButton::clicked, this, []()
-        {
-            FoundationService::Get().RefreshSnapshot();
-        });
-        contentLayout->addWidget(refreshButton);
-
-        LoadFormFromWorkspace();
-        AutoDetectConfiguration();
+        DetectAndApply();
         Refresh();
     }
 
@@ -450,230 +306,122 @@ namespace TaintedGrailModdingSDK
         Refresh();
     }
 
-    void FoundationStatusWidget::LoadFormFromWorkspace()
+    void FoundationStatusWidget::DetectAndApply(const AZStd::string& explicitInstallPath)
     {
-        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
-        LoadFormFromModel(workspace);
-    }
+        FoundationService& service = FoundationService::Get();
+        const WorkspaceModel& currentWorkspace = service.GetWorkspace();
+        const GameProfile* currentProfile = currentWorkspace.FindActiveGameProfile();
+        const bool currentProfileReady =
+            currentProfile && currentProfile->IsConfigured() && !currentWorkspace.m_rootPath.empty();
 
-    void FoundationStatusWidget::LoadFormFromModel(const WorkspaceModel& workspace)
-    {
-        m_workspaceIdEdit->setText(ToQString(workspace.m_workspaceId));
-        m_workspaceNameEdit->setText(ToQString(workspace.m_displayName));
-        m_workspaceRootEdit->setText(ToQString(workspace.m_rootPath));
-        m_outputPathEdit->setText(ToQString(workspace.m_outputPath));
-        m_stagingPathEdit->setText(ToQString(workspace.m_stagingPath));
-        m_deploymentPathEdit->setText(ToQString(workspace.m_deploymentPath));
-
-        if (const GameProfile* profile = workspace.FindActiveGameProfile())
+        LocalSetupDetectionService::Hints hints;
+        const ToolWizardProfileHints legacyHints = ReadLegacyToolWizardProfileHints();
+        if (!currentWorkspace.m_rootPath.empty())
         {
-            m_profileIdEdit->setText(ToQString(profile->m_profileId));
-            m_profileNameEdit->setText(ToQString(profile->m_displayName));
-            m_installPathEdit->setText(ToQString(profile->m_installPath));
-            m_gameVersionEdit->setText(ToQString(profile->m_gameVersion));
-            m_branchEdit->setText(ToQString(profile->m_branch));
-            const int targetIndex = m_runtimeTargetEdit->findText(ToQString(profile->m_runtimeTarget));
-            m_runtimeTargetEdit->setCurrentIndex(targetIndex >= 0 ? targetIndex : 0);
-            m_unityVersionEdit->setText(ToQString(profile->m_unityVersion));
-            m_bepInExVersionEdit->setText(ToQString(profile->m_bepInExVersion));
-            m_managedAssembliesPathEdit->setText(ToQString(profile->m_managedAssembliesPath));
-            m_pluginPathEdit->setText(ToQString(profile->m_pluginPath));
-            m_diagnosticsPathEdit->setText(ToQString(profile->m_diagnosticsPath));
-            m_extractedDataPathEdit->setText(ToQString(profile->m_extractedDataPath));
-            m_dlcScopesEdit->setText(JoinValues(profile->m_dlcScopes));
+            hints.m_workspaceRoot = currentWorkspace.m_rootPath;
+        }
+        else if (!legacyHints.m_workspaceRoot.isEmpty())
+        {
+            hints.m_workspaceRoot = ToAzString(legacyHints.m_workspaceRoot);
         }
         else
         {
-            m_profileIdEdit->clear();
-            m_profileNameEdit->clear();
-            m_installPathEdit->clear();
-            m_gameVersionEdit->clear();
-            m_branchEdit->setText("mono");
-            m_runtimeTargetEdit->setCurrentText("Mono");
-            m_unityVersionEdit->clear();
-            m_bepInExVersionEdit->clear();
-            m_managedAssembliesPathEdit->clear();
-            m_pluginPathEdit->clear();
-            m_diagnosticsPathEdit->clear();
-            m_extractedDataPathEdit->clear();
-            m_dlcScopesEdit->clear();
+            hints.m_workspaceRoot = ToAzString(DefaultWorkspaceRoot());
         }
-    }
 
-    WorkspaceModel FoundationStatusWidget::BuildWorkspaceFromFields() const
-    {
-        WorkspaceModel workspace = FoundationService::Get().GetWorkspace();
-        const AZStd::string previousActiveProfileId = workspace.m_activeGameProfileId;
-
-        workspace.m_workspaceId = ToAzString(m_workspaceIdEdit->text().trimmed());
-        workspace.m_displayName = ToAzString(m_workspaceNameEdit->text().trimmed());
-        workspace.m_rootPath = ToAzString(m_workspaceRootEdit->text().trimmed());
-        workspace.m_outputPath = ToAzString(m_outputPathEdit->text().trimmed());
-        workspace.m_stagingPath = ToAzString(m_stagingPathEdit->text().trimmed());
-        workspace.m_deploymentPath = ToAzString(m_deploymentPathEdit->text().trimmed());
-
-        GameProfile profile;
-        profile.m_profileId = ToAzString(m_profileIdEdit->text().trimmed());
-        profile.m_displayName = ToAzString(m_profileNameEdit->text().trimmed());
-        profile.m_installPath = ToAzString(m_installPathEdit->text().trimmed());
-        profile.m_gameVersion = ToAzString(m_gameVersionEdit->text().trimmed());
-        profile.m_branch = ToAzString(m_branchEdit->text().trimmed());
-        profile.m_runtimeTarget = ToAzString(m_runtimeTargetEdit->currentText());
-        profile.m_unityVersion = ToAzString(m_unityVersionEdit->text().trimmed());
-        profile.m_bepInExVersion = ToAzString(m_bepInExVersionEdit->text().trimmed());
-        profile.m_managedAssembliesPath = ToAzString(m_managedAssembliesPathEdit->text().trimmed());
-        profile.m_pluginPath = ToAzString(m_pluginPathEdit->text().trimmed());
-        profile.m_diagnosticsPath = ToAzString(m_diagnosticsPathEdit->text().trimmed());
-        profile.m_extractedDataPath = ToAzString(m_extractedDataPathEdit->text().trimmed());
-        profile.m_dlcScopes = ParseCommaSeparatedValues(m_dlcScopesEdit->text());
-
-        bool replaced = false;
-        for (GameProfile& existing : workspace.m_gameProfiles)
+        if (currentProfile)
         {
-            if (existing.m_profileId == previousActiveProfileId
-                || (!profile.m_profileId.empty() && existing.m_profileId == profile.m_profileId))
+            AddInstallCandidate(hints, currentProfile->m_installPath);
+        }
+        AddInstallCandidate(hints, explicitInstallPath);
+        AddInstallCandidate(hints, legacyHints.m_installPath);
+
+        const FoAInstallDiscoveryService installDiscovery;
+        const FoAInstallDiscoveryService::Result installResult = installDiscovery.Discover();
+        for (const AZStd::string& candidate : installResult.m_installPathCandidates)
+        {
+            AddInstallCandidate(hints, candidate);
+        }
+
+        const LocalSetupDetectionService setupDetection;
+        const LocalSetupDetectionService::Result detected =
+            setupDetection.Detect(currentWorkspace, hints);
+
+        m_detectionNotes = installResult.m_notes;
+        for (const AZStd::string& note : detected.m_notes)
+        {
+            if (AZStd::find(m_detectionNotes.begin(), m_detectionNotes.end(), note)
+                == m_detectionNotes.end())
             {
-                existing = profile;
-                replaced = true;
-                break;
+                m_detectionNotes.push_back(note);
             }
         }
-        if (!replaced)
+
+        const bool explicitSelection = !explicitInstallPath.empty();
+        if (detected.m_gameProfileComplete
+            && detected.m_changed
+            && (!currentProfileReady || explicitSelection))
         {
-            workspace.m_gameProfiles.push_back(profile);
+            if (PersistDetectedWorkspace(detected.m_workspace))
+            {
+                m_persistenceStatus->setText(
+                    tr("Setup is ready. FOA-SDK detected and saved the local configuration automatically."));
+            }
         }
-        workspace.m_activeGameProfileId = profile.m_profileId;
+        else if (detected.m_gameProfileComplete)
+        {
+            m_persistenceStatus->setText(tr("Setup is ready. No manual configuration is required."));
+        }
+        else if (!detected.m_gameInstallDetected)
+        {
+            m_persistenceStatus->setText(
+                tr("Fall of Avalon was not found automatically. Use Locate Fall of Avalon once; all dependent paths and versions will be derived from that folder."));
+        }
+        else
+        {
+            m_persistenceStatus->setText(
+                tr("Fall of Avalon was found, but the active profile is not complete yet. Recheck after the game/runtime files are available."));
+        }
 
-        return workspace;
+        Refresh();
     }
 
-    bool FoundationStatusWidget::ApplyConfiguration()
+    void FoundationStatusWidget::LocateGame()
     {
-        FoundationService::Get().SetWorkspace(BuildWorkspaceFromFields());
-        m_persistenceStatus->setText(tr("Configuration applied in memory. Review blockers, then save the workspace."));
-        return true;
-    }
+        QString startDirectory;
+        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
+        if (const GameProfile* profile = workspace.FindActiveGameProfile())
+        {
+            startDirectory = ToQString(profile->m_installPath);
+        }
 
-    void FoundationStatusWidget::AutoDetectConfiguration()
-    {
-        LocalSetupDetectionService::Hints hints;
-        const ToolWizardProfileHints toolProfile = ReadToolWizardProfileHints();
-        hints.m_workspaceRoot = ToAzString(
-            toolProfile.m_workspaceRoot.isEmpty()
-                ? DefaultWorkspaceRoot()
-                : toolProfile.m_workspaceRoot);
-
-        AddInstallCandidate(hints, toolProfile.m_installPath);
-        AddInstallCandidate(hints, m_installPathEdit->text());
-
-        const LocalSetupDetectionService detectionService;
-        const LocalSetupDetectionService::Result result =
-            detectionService.Detect(BuildWorkspaceFromFields(), hints);
-        LoadFormFromModel(result.m_workspace);
-        m_persistenceStatus->setText(DetectionStatusMessage(result));
-    }
-
-    bool FoundationStatusWidget::EnsureWorkspaceDirectories(const WorkspaceModel& workspace)
-    {
-        const QString workspaceRoot = ResolveDirectoryValue(QString(), workspace.m_rootPath);
-        if (workspaceRoot.isEmpty())
+        const QString selectedPath = QFileDialog::getExistingDirectory(
+            this,
+            tr("Locate Fall of Avalon"),
+            startDirectory);
+        if (selectedPath.isEmpty())
+        {
+            return;
+        }
+        if (!LocalSetupDetectionService::LooksLikeTaintedGrailInstall(ToAzString(selectedPath)))
         {
             QMessageBox::warning(
                 this,
-                tr("Workspace root required"),
-                tr("Choose or auto-detect a workspace root before saving."));
-            return false;
-        }
-        if (!QDir().mkpath(workspaceRoot))
-        {
-            QMessageBox::critical(
-                this,
-                tr("Unable to create workspace root"),
-                tr("Could not create %1").arg(workspaceRoot));
-            return false;
+                tr("Fall of Avalon not found"),
+                tr("That folder does not look like a Fall of Avalon installation. Select the folder containing Fall of Avalon.exe."));
+            return;
         }
 
-        auto ensureWorkspaceOwnedDirectory =
-            [this, &workspaceRoot](
-                const QString& label,
-                const AZStd::string& value,
-                bool mustBeDedicatedChild)
-            {
-                const QString directoryPath = ResolveDirectoryValue(workspaceRoot, value);
-                if (directoryPath.isEmpty())
-                {
-                    QMessageBox::warning(
-                        this,
-                        tr("Workspace directory required"),
-                        tr("The %1 is required before saving.").arg(label));
-                    return false;
-                }
-                if (!IsSameOrChildDirectory(workspaceRoot, directoryPath))
-                {
-                    QMessageBox::warning(
-                        this,
-                        tr("Workspace directory outside root"),
-                        tr("The %1 must stay inside the workspace root.").arg(label));
-                    return false;
-                }
-                if (mustBeDedicatedChild
-                    && QDir::cleanPath(directoryPath)
-                        == QDir::cleanPath(QFileInfo(workspaceRoot).absoluteFilePath()))
-                {
-                    QMessageBox::warning(
-                        this,
-                        tr("Workspace child directory required"),
-                        tr("The %1 must be a dedicated child directory, not the workspace root.").arg(label));
-                    return false;
-                }
-                if (!QDir().mkpath(directoryPath))
-                {
-                    QMessageBox::critical(
-                        this,
-                        tr("Unable to create workspace directory"),
-                        tr("Could not create %1").arg(directoryPath));
-                    return false;
-                }
-                return true;
-            };
-
-        if (!ensureWorkspaceOwnedDirectory(tr("output directory"), workspace.m_outputPath, true)
-            || !ensureWorkspaceOwnedDirectory(tr("staging directory"), workspace.m_stagingPath, true)
-            || !ensureWorkspaceOwnedDirectory(tr("deployment directory"), workspace.m_deploymentPath, true))
-        {
-            return false;
-        }
-
-        if (const GameProfile* profile = workspace.FindActiveGameProfile())
-        {
-            if (!profile->m_diagnosticsPath.empty()
-                && !ensureWorkspaceOwnedDirectory(
-                    tr("diagnostics directory"),
-                    profile->m_diagnosticsPath,
-                    false))
-            {
-                return false;
-            }
-            if (!profile->m_extractedDataPath.empty()
-                && !ensureWorkspaceOwnedDirectory(
-                    tr("extracted data directory"),
-                    profile->m_extractedDataPath,
-                    false))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        DetectAndApply(ToAzString(selectedPath));
     }
 
     void FoundationStatusWidget::OpenWorkspace()
     {
         const QString filePath = QFileDialog::getOpenFileName(
             this,
-            tr("Open TG workspace"),
+            tr("Open FOA-SDK workspace"),
             QString(),
-            tr("TG workspace (*.tgworkspace.json *.json);;JSON files (*.json)"));
+            tr("FOA-SDK workspace (*.tgworkspace.json *.json);;JSON files (*.json)"));
         if (filePath.isEmpty())
         {
             return;
@@ -686,91 +434,194 @@ namespace TaintedGrailModdingSDK
             return;
         }
 
-        m_workspaceFilePath = ToAzString(filePath);
-        LoadFormFromWorkspace();
-        m_persistenceStatus->setText(tr("Workspace opened from %1").arg(filePath));
+        m_workspaceFilePath = FoundationService::Get().GetWorkspaceFilePath();
+        m_persistenceStatus->setText(tr("Workspace opened. Local setup was rechecked automatically."));
+        DetectAndApply();
     }
 
-    void FoundationStatusWidget::SaveWorkspace()
+    bool FoundationStatusWidget::EnsureWorkspaceDirectories(const WorkspaceModel& workspace)
     {
+        const QString workspaceRoot = ResolveDirectoryValue(QString(), workspace.m_rootPath);
+        if (workspaceRoot.isEmpty() || !QDir().mkpath(workspaceRoot))
+        {
+            return false;
+        }
+
+        auto ensureWorkspaceOwnedDirectory =
+            [&workspaceRoot](const AZStd::string& value, bool mustBeDedicatedChild)
+            {
+                const QString directoryPath = ResolveDirectoryValue(workspaceRoot, value);
+                if (directoryPath.isEmpty()
+                    || !IsSameOrChildDirectory(workspaceRoot, directoryPath)
+                    || (mustBeDedicatedChild
+                        && QDir::cleanPath(directoryPath)
+                            == QDir::cleanPath(QFileInfo(workspaceRoot).absoluteFilePath())))
+                {
+                    return false;
+                }
+                return QDir().mkpath(directoryPath);
+            };
+
+        if (!ensureWorkspaceOwnedDirectory(workspace.m_outputPath, true)
+            || !ensureWorkspaceOwnedDirectory(workspace.m_stagingPath, true)
+            || !ensureWorkspaceOwnedDirectory(workspace.m_deploymentPath, true))
+        {
+            return false;
+        }
+
+        if (const GameProfile* profile = workspace.FindActiveGameProfile())
+        {
+            if (!profile->m_diagnosticsPath.empty()
+                && !ensureWorkspaceOwnedDirectory(profile->m_diagnosticsPath, false))
+            {
+                return false;
+            }
+            if (!profile->m_extractedDataPath.empty()
+                && !ensureWorkspaceOwnedDirectory(profile->m_extractedDataPath, false))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    AZStd::string FoundationStatusWidget::DefaultWorkspaceFilePath(
+        const WorkspaceModel& workspace) const
+    {
+        const QString root = ResolveDirectoryValue(QString(), workspace.m_rootPath);
+        if (root.isEmpty())
+        {
+            return {};
+        }
+        return ToAzString(QDir(root).filePath("foa-sdk.tgworkspace.json"));
+    }
+
+    bool FoundationStatusWidget::PersistDetectedWorkspace(const WorkspaceModel& workspace)
+    {
+        const GameProfile* profile = workspace.FindActiveGameProfile();
+        if (!profile || !profile->IsConfigured())
+        {
+            m_persistenceStatus->setText(
+                tr("Automatic setup is waiting for a complete Fall of Avalon profile before saving."));
+            return false;
+        }
+
+        if (!EnsureWorkspaceDirectories(workspace))
+        {
+            m_persistenceStatus->setText(
+                tr("FOA-SDK could not prepare its automatic workspace directories."));
+            return false;
+        }
+
         FoundationService& service = FoundationService::Get();
-        const AZStd::string workspaceFilePath =
-            m_workspaceFilePath.empty() ? service.GetWorkspaceFilePath() : m_workspaceFilePath;
-        if (workspaceFilePath.empty())
+        AZStd::string targetPath = m_workspaceFilePath;
+        if (targetPath.empty())
         {
-            SaveWorkspaceAs();
-            return;
+            targetPath = service.GetWorkspaceFilePath();
+        }
+        if (targetPath.empty())
+        {
+            targetPath = DefaultWorkspaceFilePath(workspace);
+        }
+        if (targetPath.empty())
+        {
+            m_persistenceStatus->setText(tr("FOA-SDK could not resolve its workspace file location."));
+            return false;
         }
 
-        const WorkspaceModel workspace = BuildWorkspaceFromFields();
-        if (!EnsureWorkspaceDirectories(workspace))
-        {
-            return;
-        }
         service.SetWorkspace(workspace);
-
         AZStd::string error;
-        if (!service.SaveWorkspace(workspaceFilePath, &error))
+        if (!service.SaveWorkspace(targetPath, &error))
         {
-            QMessageBox::critical(this, tr("Unable to save workspace"), ToQString(error));
-            return;
+            m_persistenceStatus->setText(
+                tr("Automatic workspace save failed: %1").arg(ToQString(error)));
+            return false;
         }
 
-        m_persistenceStatus->setText(
-            tr("Workspace saved to %1").arg(ToQString(service.GetWorkspaceFilePath())));
         m_workspaceFilePath = service.GetWorkspaceFilePath();
+        return true;
     }
 
-    void FoundationStatusWidget::SaveWorkspaceAs()
+    void FoundationStatusWidget::UpdateAdvancedDetails()
     {
-        QString filePath = QFileDialog::getSaveFileName(
-            this,
-            tr("Save TG workspace"),
-            QString(),
-            tr("TG workspace (*.tgworkspace.json);;JSON files (*.json)"));
-        if (filePath.isEmpty())
+        const FoundationService& service = FoundationService::Get();
+        const WorkspaceModel& workspace = service.GetWorkspace();
+        const GameProfile* profile = workspace.FindActiveGameProfile();
+
+        QStringList lines;
+        lines.push_back(tr("Workspace file: %1").arg(
+            service.GetWorkspaceFilePath().empty()
+                ? tr("Not saved")
+                : ToQString(service.GetWorkspaceFilePath())));
+        lines.push_back(tr("Workspace root: %1").arg(ToQString(workspace.m_rootPath)));
+        lines.push_back(tr("Output: %1").arg(ToQString(workspace.m_outputPath)));
+        lines.push_back(tr("Staging: %1").arg(ToQString(workspace.m_stagingPath)));
+        lines.push_back(tr("Deployment: %1").arg(ToQString(workspace.m_deploymentPath)));
+
+        if (profile)
         {
-            return;
-        }
-        if (!filePath.endsWith(".json", Qt::CaseInsensitive))
-        {
-            filePath += ".tgworkspace.json";
+            lines.push_back(QString());
+            lines.push_back(tr("Profile ID: %1").arg(ToQString(profile->m_profileId)));
+            lines.push_back(tr("Game install: %1").arg(ToQString(profile->m_installPath)));
+            lines.push_back(tr("Branch: %1").arg(ToQString(profile->m_branch)));
+            lines.push_back(tr("Unity: %1").arg(ToQString(profile->m_unityVersion)));
+            lines.push_back(tr("BepInEx: %1").arg(ToQString(profile->m_bepInExVersion)));
+            lines.push_back(tr("Managed/interop: %1").arg(ToQString(profile->m_managedAssembliesPath)));
+            lines.push_back(tr("Plugins: %1").arg(
+                profile->m_pluginPath.empty() ? tr("Not applicable") : ToQString(profile->m_pluginPath)));
+            lines.push_back(tr("Diagnostics: %1").arg(ToQString(profile->m_diagnosticsPath)));
+            lines.push_back(tr("Extracted data: %1").arg(ToQString(profile->m_extractedDataPath)));
         }
 
-        const WorkspaceModel workspace = BuildWorkspaceFromFields();
-        if (!EnsureWorkspaceDirectories(workspace))
+        if (!m_detectionNotes.empty())
         {
-            return;
+            lines.push_back(QString());
+            lines.push_back(tr("Detection notes:"));
+            for (const AZStd::string& note : m_detectionNotes)
+            {
+                lines.push_back(tr("- %1").arg(ToQString(note)));
+            }
         }
-        FoundationService::Get().SetWorkspace(workspace);
-
-        AZStd::string error;
-        if (!FoundationService::Get().SaveWorkspace(ToAzString(filePath), &error))
-        {
-            QMessageBox::critical(this, tr("Unable to save workspace"), ToQString(error));
-            return;
-        }
-
-        m_workspaceFilePath = ToAzString(filePath);
-        m_persistenceStatus->setText(tr("Workspace saved to %1").arg(filePath));
+        m_advancedDetails->setPlainText(lines.join('\n'));
     }
 
     void FoundationStatusWidget::Refresh()
     {
-        const FoundationSnapshot& snapshot = FoundationService::Get().GetSnapshot();
-        const AZStd::string workspaceFilePath =
-            snapshot.m_workspaceFilePath.empty() ? m_workspaceFilePath : snapshot.m_workspaceFilePath;
+        const FoundationService& service = FoundationService::Get();
+        const WorkspaceModel& workspace = service.GetWorkspace();
+        const GameProfile* profile = workspace.FindActiveGameProfile();
+        const bool workspaceReady =
+            !workspace.m_rootPath.empty()
+            && !workspace.m_outputPath.empty()
+            && !workspace.m_stagingPath.empty()
+            && !workspace.m_deploymentPath.empty();
+        const bool gameFound = profile
+            && LocalSetupDetectionService::LooksLikeTaintedGrailInstall(profile->m_installPath);
+        const bool profileReady = profile && profile->IsConfigured();
+        const bool ready = workspaceReady && gameFound && profileReady;
 
-        m_workspaceValue->setText(ToQString(snapshot.m_workspaceName));
-        m_workspaceFileValue->setText(
-            workspaceFilePath.empty() ? tr("Not saved") : ToQString(workspaceFilePath));
-        m_profileValue->setText(ToQString(snapshot.m_activeGameProfile));
-        m_versionValue->setText(ToQString(snapshot.m_gameVersion));
-        m_branchValue->setText(ToQString(snapshot.m_branch));
-        m_runtimeTargetValue->setText(ToQString(snapshot.m_runtimeTarget));
-        m_unityVersionValue->setText(ToQString(snapshot.m_unityVersion));
-        m_bepInExVersionValue->setText(ToQString(snapshot.m_bepInExVersion));
+        m_overallStatus->setText(
+            ready ? tr("Ready to author") : tr("Setup needs attention"));
+        m_sdkStatus->setText(tr("Ready"));
+        m_gameStatus->setText(
+            gameFound ? tr("Found") : tr("Not found"));
+        m_versionValue->setText(
+            profile && !profile->m_gameVersion.empty()
+                ? ToQString(profile->m_gameVersion)
+                : tr("Detecting"));
+        m_runtimeTargetValue->setText(
+            profile && !profile->m_runtimeTarget.empty()
+                ? ToQString(profile->m_runtimeTarget)
+                : tr("Detecting"));
+        m_workspaceValue->setText(
+            StatusText(workspaceReady, tr("Ready"), tr("Preparing")));
+        m_authoringStatus->setText(
+            profileReady ? tr("Ready") : (gameFound ? tr("Resolving profile") : tr("Waiting for game")));
+        m_locateGameButton->setVisible(!gameFound);
 
+        UpdateAdvancedDetails();
+
+        const FoundationSnapshot& snapshot = service.GetSnapshot();
         const struct CountRow
         {
             const char* m_name;

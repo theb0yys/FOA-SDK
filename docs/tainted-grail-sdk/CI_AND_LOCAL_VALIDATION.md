@@ -50,7 +50,7 @@ Screenshots and logs must exclude private paths and protected/proprietary conten
 
 Proves an operation that leaves the authoring host or can mutate external state: installer lifecycle, deployment, rollback, save behavior, runtime adapter behavior, Fall of Avalon launch/verification, signing, or publication.
 
-L4 evidence is operation-specific. One L4 lane does not prove another. A disposable-runner installer fixture can prove the installer control path while still not proving the complete packaged O3DE payload, manual finish-page interaction, signing, or release publication.
+L4 evidence is operation-specific. One L4 lane does not prove another. A disposable-runner installer fixture can prove the installer control path and guided finish actions while still not proving the complete packaged O3DE payload, manual visual-quality inspection, signing, or release publication.
 
 ## Validation matrix
 
@@ -118,10 +118,12 @@ When selected, `windows-installer-smoke` uses a disposable `windows-2022` runner
 - requires installed-file SHA-256 validation followed by startup self-test validation;
 - deliberately damages the installed launcher and proves Repair restores the reviewed bytes;
 - builds a bad-integrity MSI fixture and proves the installer refuses to report success;
-- uninstalls the fixture and proves an external workspace sentinel survives;
+- uses Windows UI Automation to open the real `FOA-SDK Setup` window, select **Install**, and wait for the **FOA-SDK is ready** finish screen;
+- verifies **Open FOA-SDK** and **Create desktop shortcut** are selected by default, selects **Finish**, proves the installed entry point was launched, and verifies the desktop shortcut targets that installed `FOA-SDK.exe`;
+- uninstalls every fixture installation and proves an external workspace sentinel survives;
 - preserves a machine-readable smoke summary and installer logs as hosted-runner evidence.
 
-This automatic smoke proves the installer executable/control path on Windows. It does **not** prove the complete multi-GB O3DE product payload, Start Menu/desktop finish-page interaction, manual visual quality, code signing, distribution provenance, or public release behavior.
+This automatic smoke proves the exact installer executable/control path and the guided finish actions on Windows against the bounded fixture payload. It does **not** prove the complete multi-GB O3DE product payload, the canonical MSI's Start Menu registration, manual visual quality, code signing, distribution provenance, or public release behavior.
 
 A skipped conditional job is `NOT_APPLICABLE` for that reviewed path set, not a pass or failure.
 

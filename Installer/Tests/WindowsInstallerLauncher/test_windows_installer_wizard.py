@@ -116,6 +116,25 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertNotRegex(runner, re.compile(r"\bcmd(?:\.exe)?\b", re.IGNORECASE))
         self.assertNotRegex(runner, re.compile(r"\bpowershell(?:\.exe)?\b", re.IGNORECASE))
 
+    def test_installed_validation_hashes_payload_before_startup_self_test(self) -> None:
+        runner = RUNNER.read_text(encoding="utf-8")
+        integrity_call = "Task.Run(() => ValidateInstalledFileHashes(installRoot))"
+        self_test = 'Arguments = "--self-test"'
+        self.assertIn(integrity_call, runner)
+        self.assertIn(self_test, runner)
+        self.assertLess(runner.index(integrity_call), runner.index(self_test))
+        self.assertIn('ChecksumsName = "SHA256SUMS"', runner)
+        self.assertIn('ManifestName = "INSTALL_MANIFEST.json"', runner)
+        self.assertIn("MaximumChecksumEntries", runner)
+        self.assertIn("MaximumChecksumsFileSize", runner)
+        self.assertIn("IsSafeChecksumPath", runner)
+        self.assertIn("ContainsReparsePoint", runner)
+        self.assertIn("SHA256.HashData(stream)", runner)
+        self.assertIn("Convert.ToHexString", runner)
+        self.assertIn("seenPaths.Contains(ManifestName)", runner)
+        self.assertIn("seenPaths.Contains(LauncherChecksumPath)", runner)
+        self.assertIn("damaged or incorrect file", runner)
+
     def test_desktop_shortcut_targets_only_installed_foa_sdk_launcher(self) -> None:
         runner = RUNNER.read_text(encoding="utf-8")
         self.assertIn("CreateDesktopShortcut", runner)

@@ -15,7 +15,7 @@ A normal double-click presents one product setup flow:
 
 The normal UI does not expose MSI fingerprints, engine paths, project paths, tool profiles, package review terminology, repair/uninstall choices, or internal editor components. Those are implementation and maintenance concerns, not installation choices.
 
-The installer validates the embedded MSI before Windows Installer is started. After Windows Installer succeeds, it runs the installed `FOA-SDK.exe --self-test` before reporting the product ready. That self-test verifies the self-contained installed layout and the writable per-user startup state required by the application.
+The installer validates the embedded MSI before Windows Installer is started. After Windows Installer succeeds, the **Validating installation** stage first hashes the installed payload against the packaged `SHA256SUMS` inventory. Every listed file must exist, remain inside the install root, avoid reparse-point traversal, and match its expected SHA-256. The integrity index must include both `INSTALL_MANIFEST.json` and the installed `FOA-SDK.exe`. Only after file integrity passes does setup run `FOA-SDK.exe --self-test` to verify the self-contained layout and writable per-user startup state. Setup reports the product ready only when both checks pass.
 
 The Start Menu entry is installed automatically. The finish-page desktop option creates a current-user `FOA-SDK.lnk` that targets only the installed `FOA-SDK.exe` launcher.
 
@@ -29,7 +29,7 @@ The installed user-facing application entry point is:
 
 Users should launch FOA-SDK through `FOA-SDK.exe`, the Start Menu entry, or the optional desktop shortcut. Internal bundled editor/runtime files are not separate user-facing applications.
 
-Internally, `FOA-SDK.exe` resolves and validates the complete self-contained product layout, materializes writable per-user application state, and starts the bundled editor host with the packaged FOA-SDK project. `FOA-SDK.exe --self-test` performs the same required layout/startup validation without opening the editor.
+Internally, `FOA-SDK.exe` resolves and validates the complete self-contained product layout, materializes writable per-user application state, and starts the bundled editor host with the packaged FOA-SDK project. `FOA-SDK.exe --self-test` performs the required layout/startup validation without opening the editor.
 
 ## Maintenance and automation
 
@@ -100,5 +100,5 @@ It exercises the hidden maintenance/automation path: wizard construction, clean 
 - External MSI paths must be regular `.msi` files, not symbolic links or reparse points.
 - The install path must be absolute, must not be a filesystem root, and must not traverse an existing reparse-point directory.
 - The executable requests `asInvoker`; it does not silently elevate.
-- The installed product must pass `FOA-SDK.exe --self-test` before the normal UI reports it ready.
+- The installed payload must pass `SHA256SUMS` integrity verification and `FOA-SDK.exe --self-test` before the normal UI reports it ready.
 - Current development artifacts are unsigned; artifact provenance remains a distribution concern rather than a normal installer-screen concept.

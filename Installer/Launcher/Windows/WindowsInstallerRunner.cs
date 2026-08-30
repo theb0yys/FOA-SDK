@@ -510,7 +510,7 @@ internal static class InstalledEditorLauncher
     {
         if (string.IsNullOrWhiteSpace(relativePath)
             || relativePath.Contains('\\')
-            || relativePath.StartsWith('/', StringComparison.Ordinal)
+            || relativePath.StartsWith("/", StringComparison.Ordinal)
             || Path.IsPathFullyQualified(relativePath))
         {
             return false;

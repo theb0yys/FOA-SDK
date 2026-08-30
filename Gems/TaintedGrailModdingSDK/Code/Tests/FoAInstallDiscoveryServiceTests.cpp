@@ -10,10 +10,13 @@
 
 #include <AzTest/AzTest.h>
 
+#include <QByteArray>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
+
+#include <cstddef>
 
 namespace TaintedGrailModdingSDK
 {

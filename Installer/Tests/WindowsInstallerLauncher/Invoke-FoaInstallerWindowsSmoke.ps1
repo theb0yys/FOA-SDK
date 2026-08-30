@@ -126,14 +126,62 @@ function Build-FixtureMsi([string]$OutputPath) {
     Write-MsiChecksum $OutputPath
 }
 
+function Write-LatestInstallerLog {
+    $LogRoot = Join-Path $EvidenceRoot "installer-logs"
+    if (-not (Test-Path -LiteralPath $LogRoot -PathType Container)) {
+        return
+    }
+    $Latest = Get-ChildItem -LiteralPath $LogRoot -Filter "*.log" -File |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if ($null -eq $Latest) {
+        return
+    }
+    Write-Host "=== Latest MSI log tail: $($Latest.Name) ==="
+    Get-Content -LiteralPath $Latest.FullName -Tail 160 | ForEach-Object { Write-Host $_ }
+}
+
 function Invoke-Installer([string[]]$Arguments, [int]$ExpectedExitCode = 0) {
     $InstallerExe = Join-Path $InstallerOutput "FOA-SDK-Installer.exe"
     if (-not (Test-Path -LiteralPath $InstallerExe -PathType Leaf)) {
         throw "FOA-SDK installer executable is missing: $InstallerExe"
     }
-    & $InstallerExe @Arguments
-    $ExitCode = $LASTEXITCODE
+
+    $StartInfo = [Diagnostics.ProcessStartInfo]::new()
+    $StartInfo.FileName = $InstallerExe
+    $StartInfo.UseShellExecute = $false
+    $StartInfo.CreateNoWindow = $true
+    $StartInfo.RedirectStandardOutput = $true
+    $StartInfo.RedirectStandardError = $true
+    $StartInfo.Environment["FOA_SDK_INSTALLER_DEBUG_ERRORS"] = "1"
+    foreach ($Argument in $Arguments) {
+        $StartInfo.ArgumentList.Add($Argument)
+    }
+
+    $Process = [Diagnostics.Process]::Start($StartInfo)
+    if ($null -eq $Process) {
+        throw "FOA-SDK installer process did not start."
+    }
+    try {
+        $StdoutTask = $Process.StandardOutput.ReadToEndAsync()
+        $StderrTask = $Process.StandardError.ReadToEndAsync()
+        $Process.WaitForExit()
+        $Stdout = $StdoutTask.GetAwaiter().GetResult()
+        $Stderr = $StderrTask.GetAwaiter().GetResult()
+        if (-not [string]::IsNullOrWhiteSpace($Stdout)) {
+            Write-Host $Stdout.TrimEnd()
+        }
+        if (-not [string]::IsNullOrWhiteSpace($Stderr)) {
+            Write-Host $Stderr.TrimEnd()
+        }
+        $ExitCode = $Process.ExitCode
+    }
+    finally {
+        $Process.Dispose()
+    }
+
     if ($ExitCode -ne $ExpectedExitCode) {
+        Write-LatestInstallerLog
         throw "FOA-SDK installer returned $ExitCode; expected $ExpectedExitCode. Arguments: $($Arguments -join ' ')"
     }
 }

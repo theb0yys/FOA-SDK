@@ -124,7 +124,7 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview.py validate `
   --build-dir ..\foa-build\tg-sdk-developer-preview-0-windows-profile
 ```
 
-For the complete local gate, including both custom Gems and O3DE source-policy validation:
+For the broad local gate, including both custom Gems and O3DE source-policy validation:
 
 ```powershell
 python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py `
@@ -136,7 +136,7 @@ The local gate does not claim a hosted CI result. Read-only static,
 canonical-interchange, and Windows-prerequisite jobs run automatically on their
 documented pull-request and `main` push events. Host-heavy exact-head,
 installer, and Editor evidence workflows remain manual and require their own
-recorded results.
+recorded results when the changed surface makes them applicable.
 
 ## Architecture boundary
 
@@ -156,6 +156,7 @@ Start with:
 
 - [FOA-SDK documentation index](docs/tainted-grail-sdk/README.md)
 - [Architecture](docs/tainted-grail-sdk/ARCHITECTURE.md)
+- [Engineering process](docs/tainted-grail-sdk/ENGINEERING_PROCESS.md)
 - [Plug-in package root](Plugins/README.md)
 - [Installer root](Installer/README.md)
 - [Development guide](docs/tainted-grail-sdk/DEVELOPMENT_GUIDE.md)
@@ -169,15 +170,14 @@ Start with:
 ## Branch and review model
 
 - `main` is reviewed integrated product state.
-- Human contributions use the existing `foa-development` branch and enter
-  `main` through pull requests.
-- Repository agents follow `AGENTS.md`: focused, DCO-signed changes are made on
-  a non-`main` branch, submitted to `main` by pull request for maintainer audit,
-  and left for maintainer approval and merge.
-- Significant changes require design review, focused validation, exact-head evidence where applicable, and maintainer approval.
+- Human and agent contributions use focused non-`main` branches and enter `main` through pull requests.
+- `foa-development` may be used as a maintainer convenience branch, but it is not a required base or a second source of truth.
+- Routine changes use focused validation for the affected surface.
+- Significant changes require a short reviewed design or durable decision.
+- Critical/Runtime changes require explicit operational boundaries and exact applicable evidence.
 - Direct runtime authority, automatic evidence promotion, and unreviewed generated artifacts are prohibited.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), and the [review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), the [engineering process](docs/tainted-grail-sdk/ENGINEERING_PROCESS.md), and the [review and merge policy](docs/tainted-grail-sdk/REVIEW_AND_MERGE_POLICY.md).
 
 ## Legal status
 

@@ -109,7 +109,7 @@ jobs:
             "$host_required" "$windows_required" > tg-sdk-reviewed-range.txt
 
       - name: Validate pull-request policy contract
-        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py
+        run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py --event "$GITHUB_EVENT_PATH"
 
       - name: Run non-compiled TG SDK validation layer
         shell: bash

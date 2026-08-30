@@ -87,6 +87,7 @@ function Build-FixtureMsi([string]$OutputPath) {
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="FOA-SDK Windows Smoke Payload" Manufacturer="FOA-SDK" Version="1.0.0" UpgradeCode="$UpgradeCode" Scope="perUser">
     <MajorUpgrade DowngradeErrorMessage="A newer smoke payload is already installed." />
+    <MediaTemplate EmbedCab="yes" />
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="INSTALL_ROOT" Name="FOA-SDK-Windows-Smoke">
         <Component Id="ManifestComponent" Guid="*">

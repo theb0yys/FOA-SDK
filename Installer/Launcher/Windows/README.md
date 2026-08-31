@@ -10,14 +10,14 @@ A normal double-click presents one product setup flow:
 2. select **Install**;
 3. wait while FOA-SDK is installed;
 4. wait while the installer validates the installed product automatically;
-5. on the finish screen, optionally leave **Open FOA-SDK** and **Create desktop shortcut** selected;
+5. on the finish screen, leave **Open FOA-SDK Control Panel** selected for first-run setup, optionally choose **Open FOA-SDK**, and choose whether to **Create desktop shortcut**;
 6. select **Finish**.
 
 The normal UI does not expose MSI fingerprints, engine paths, project paths, tool profiles, package review terminology, repair/uninstall choices, or internal editor components. Those are implementation and maintenance concerns, not installation choices.
 
 The installer validates the embedded MSI before Windows Installer is started. After Windows Installer succeeds, the **Validating installation** stage first hashes the installed payload against the packaged `SHA256SUMS` inventory. Every listed file must exist, remain inside the install root, avoid reparse-point traversal, and match its expected SHA-256. The integrity index must include both `INSTALL_MANIFEST.json` and the installed `FOA-SDK.exe`. Only after file integrity passes does setup run `FOA-SDK.exe --self-test` to verify the self-contained layout and writable per-user startup state. Setup reports the product ready only when both checks pass.
 
-The Start Menu entry is installed automatically. The finish-page desktop option creates a current-user `FOA-SDK.lnk` that targets only the installed `FOA-SDK.exe` launcher.
+Start Menu entries for the Control Panel and Editor launcher are installed automatically. The finish-page desktop option creates a current-user `FOA-SDK.lnk` that targets only the installed `FOA-SDK.exe` launcher.
 
 ## Product entry point
 
@@ -27,7 +27,7 @@ The installed user-facing application entry point is:
 <install-root>\bin\Windows\profile\Default\FOA-SDK.exe
 ```
 
-Users should launch FOA-SDK through `FOA-SDK.exe`, the Start Menu entry, or the optional desktop shortcut. Internal bundled editor/runtime files are not separate user-facing applications.
+Users perform first-run setup through the installed `FOA-SDK-ControlPanel.exe`, then launch the Editor through `FOA-SDK.exe`, the Start Menu entry, or the optional desktop shortcut. Internal bundled editor/runtime files are not separate user-facing applications.
 
 Internally, `FOA-SDK.exe` resolves and validates the complete self-contained product layout, materializes writable per-user application state, and starts the bundled editor host with the packaged FOA-SDK project. `FOA-SDK.exe --self-test` performs the required layout/startup validation without opening the editor.
 
@@ -44,6 +44,7 @@ FOA-SDK-Installer.exe [--msi <reviewed.msi>]
   [--operation install|upgrade|repair|uninstall]
   [--quiet] [--smoke-test]
   [--launch-after-install|--no-launch-after-install]
+  [--open-control-panel-after-install|--no-open-control-panel-after-install]
   [--open-tool-wizard-after-install|--no-open-tool-wizard-after-install]
   [--tool-wizard] [--save-tool-profile]
   [--workspace-root <absolute-directory>]
@@ -54,7 +55,7 @@ FOA-SDK-Installer.exe [--msi <reviewed.msi>]
   [--no-dialog]
 ```
 
-The Tool Setup Wizard remains a separate maintenance/development surface and is never opened automatically by the normal installer.
+The installed Control Panel is the normal setup surface. The legacy Tool Setup Wizard remains available for maintenance compatibility and is never opened automatically by the normal installer.
 
 ## Build
 
@@ -92,7 +93,7 @@ Installer\Tests\WindowsFunctionalReadiness\Invoke-FoaWindowsFunctionalReadiness.
   -ExternalWorkspace "$env:TEMP\external-foa-workspace"
 ```
 
-It exercises the hidden maintenance/automation path: wizard construction, clean install, installed launcher self-test, Tool Wizard profile save, repair, uninstall, external workspace preservation, and installer-log capture.
+It exercises the hidden maintenance/automation path: wizard construction, clean install, installed launcher and Control Panel self-tests, versioned Setup Manager profile and redacted-report export, legacy Tool Wizard compatibility, repair, uninstall, external workspace preservation, and installer-log capture.
 
 ## Security and trust boundary
 

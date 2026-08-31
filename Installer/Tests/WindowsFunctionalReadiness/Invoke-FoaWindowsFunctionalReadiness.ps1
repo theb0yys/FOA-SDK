@@ -26,6 +26,8 @@ $script:Result = "failed"
 $script:Failure = $null
 $script:ReviewedLauncherHash = $null
 $script:ProfilePath = $null
+$script:SetupProfilePath = $null
+$script:SupportReportPath = $null
 
 function Resolve-FullPath {
     param([Parameter(Mandatory = $true)][string]$PathValue)
@@ -119,6 +121,8 @@ function Write-ReadinessSummary {
         evidence_root = $EvidenceRoot
         external_workspace = $ExternalWorkspace
         tool_profile = $script:ProfilePath
+        setup_profile = $script:SetupProfilePath
+        redacted_support_report = $script:SupportReportPath
         installed_launcher_sha256 = $script:ReviewedLauncherHash
         installer_logs = $installerLogs
         steps = $script:Steps
@@ -161,16 +165,20 @@ try {
             "--install-root", $InstallRoot,
             "--evidence-root", $EvidenceRoot,
             "--no-launch-after-install",
-            "--no-open-tool-wizard-after-install"
+            "--no-open-control-panel-after-install"
         )
 
     $launcher = Join-Path $InstallRoot "bin/Windows/profile/Default/FOA-SDK.exe"
+    $controlPanel = Join-Path $InstallRoot "FOA-SDK-ControlPanel.exe"
     $installedManifest = Join-Path $InstallRoot "INSTALL_MANIFEST.json"
     if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
         throw "FOA-SDK.exe was not installed as the SDK launcher: $launcher"
     }
     if (-not (Test-Path -LiteralPath $installedManifest -PathType Leaf)) {
         throw "MSI install did not preserve INSTALL_MANIFEST.json: $installedManifest"
+    }
+    if (-not (Test-Path -LiteralPath $controlPanel -PathType Leaf)) {
+        throw "MSI install did not preserve FOA-SDK-ControlPanel.exe: $controlPanel"
     }
     if (-not [string]::IsNullOrWhiteSpace($StagedManifest)) {
         $StagedManifest = Resolve-FullPath $StagedManifest
@@ -196,10 +204,26 @@ try {
         throw "MSI Start Menu entry targets '$shortcutTarget' instead of '$expectedTarget'."
     }
 
+    $controlPanelStartMenuEntry = Join-Path $env:APPDATA "Microsoft/Windows/Start Menu/Programs/Tainted Grail FoA SDK/FOA-SDK Control Panel.lnk"
+    if (-not (Test-Path -LiteralPath $controlPanelStartMenuEntry -PathType Leaf)) {
+        throw "MSI Start Menu entry for FOA-SDK Control Panel was not created: $controlPanelStartMenuEntry"
+    }
+    $controlPanelShortcut = $shortcutShell.CreateShortcut($controlPanelStartMenuEntry)
+    $controlPanelShortcutTarget = [System.IO.Path]::GetFullPath($controlPanelShortcut.TargetPath)
+    $expectedControlPanelTarget = [System.IO.Path]::GetFullPath($controlPanel)
+    if (-not [string]::Equals($controlPanelShortcutTarget, $expectedControlPanelTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "MSI Control Panel Start Menu entry targets '$controlPanelShortcutTarget' instead of '$expectedControlPanelTarget'."
+    }
+
     Invoke-ReadinessCommand `
         -Name "installed-launcher-self-test" `
         -FilePath $launcher `
         -Arguments @("--self-test")
+
+    Invoke-ReadinessCommand `
+        -Name "installed-control-panel-self-test" `
+        -FilePath $controlPanel `
+        -Arguments @("--self-test", "--no-dialog")
 
     $toolRoot = Join-Path $EvidenceRoot "tool-fixtures"
     $o3deEditor = Join-Path $toolRoot "O3DE/bin/Editor.exe"
@@ -213,6 +237,48 @@ try {
     Set-Content -LiteralPath (Join-Path $unityProject "ProjectSettings/ProjectVersion.txt") -Encoding ascii -Value "m_EditorVersion: readiness-fixture"
     New-Item -ItemType Directory -Path $tgInstall -Force | Out-Null
     New-FileFixture (Join-Path $tgInstall "UnityPlayer.dll")
+    New-FileFixture (Join-Path $tgInstall "TaintedGrail.exe")
+    New-FileFixture (Join-Path $tgInstall "TaintedGrail_Data/Managed/Assembly-CSharp.dll")
+
+    $script:SupportReportPath = Join-Path $EvidenceRoot "setup-manager-support-report.json"
+    Invoke-ReadinessCommand `
+        -Name "control-panel-profile-and-report" `
+        -FilePath $controlPanel `
+        -Arguments @(
+            "--save-profile",
+            "--workspace-root", $ExternalWorkspace,
+            "--game-install", $tgInstall,
+            "--export-report", $script:SupportReportPath,
+            "--no-dialog"
+        )
+
+    $script:SetupProfilePath = Join-Path $env:LOCALAPPDATA "FOA-SDK/SetupManager/setup-profile.local.json"
+    if (-not (Test-Path -LiteralPath $script:SetupProfilePath -PathType Leaf)) {
+        throw "Setup Manager profile was not saved: $($script:SetupProfilePath)"
+    }
+    $setupProfile = Get-Content -LiteralPath $script:SetupProfilePath -Raw | ConvertFrom-Json
+    if ($setupProfile.schema -cne "foa.sdk.setup_profile.v1" -or $setupProfile.schema_version -ne 1) {
+        throw "Setup Manager profile did not use the supported versioned schema."
+    }
+    if ($setupProfile.runtime_route -cne "mono-indicated") {
+        throw "Setup Manager did not preserve the bounded Mono route indication."
+    }
+    if ($setupProfile.conversion_execution_allowed -or $setupProfile.deployment_execution_allowed `
+        -or $setupProfile.game_launch_allowed -or $setupProfile.save_access_allowed) {
+        throw "Setup Manager profile promoted authority beyond read-only setup."
+    }
+    Copy-Item -LiteralPath $script:SetupProfilePath -Destination (Join-Path $EvidenceRoot "setup-profile.local.json") -Force
+
+    $supportReportText = Get-Content -LiteralPath $script:SupportReportPath -Raw
+    $supportReport = $supportReportText | ConvertFrom-Json
+    if ($supportReport.schema -cne "foa.sdk.support_report.v1") {
+        throw "Setup Manager support report did not use the supported schema."
+    }
+    foreach ($protectedPath in @($InstallRoot, $ExternalWorkspace, $tgInstall)) {
+        if ($supportReportText.Contains($protectedPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Setup Manager support report exposed an unredacted local path."
+        }
+    }
 
     Invoke-ReadinessCommand `
         -Name "tool-profile-save" `
@@ -260,7 +326,7 @@ try {
             "--install-root", $InstallRoot,
             "--evidence-root", $EvidenceRoot,
             "--no-launch-after-install",
-            "--no-open-tool-wizard-after-install"
+            "--no-open-control-panel-after-install"
         )
 
     if ((Get-Sha256 $launcher) -cne $script:ReviewedLauncherHash) {
@@ -280,7 +346,7 @@ try {
             "--install-root", $InstallRoot,
             "--evidence-root", $EvidenceRoot,
             "--no-launch-after-install",
-            "--no-open-tool-wizard-after-install"
+            "--no-open-control-panel-after-install"
         )
 
     if (Test-Path -LiteralPath $launcher -PathType Leaf) {
@@ -289,8 +355,14 @@ try {
     if (Test-Path -LiteralPath $installedManifest -PathType Leaf) {
         throw "MSI uninstall left the product manifest installed: $installedManifest"
     }
+    if (Test-Path -LiteralPath $controlPanel -PathType Leaf) {
+        throw "MSI uninstall left the Control Panel installed: $controlPanel"
+    }
     if (Test-Path -LiteralPath $startMenuEntry -PathType Leaf) {
         throw "MSI uninstall left the product Start Menu entry installed: $startMenuEntry"
+    }
+    if (Test-Path -LiteralPath $controlPanelStartMenuEntry -PathType Leaf) {
+        throw "MSI uninstall left the Control Panel Start Menu entry installed: $controlPanelStartMenuEntry"
     }
     if (-not (Test-Path -LiteralPath (Join-Path $ExternalWorkspace "preserve.txt") -PathType Leaf)) {
         throw "MSI uninstall removed external workspace data."

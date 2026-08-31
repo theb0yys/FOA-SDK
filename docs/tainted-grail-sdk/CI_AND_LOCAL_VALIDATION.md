@@ -110,8 +110,8 @@ When selected, the Windows-prerequisite job checks the pinned O3DE policy surfac
 
 When selected, `windows-installer-smoke` uses a disposable `windows-2022` runner and `Installer/Tests/WindowsInstallerLauncher/Invoke-FoaInstallerWindowsSmoke.ps1`. The smoke:
 
-- builds a bounded self-contained `FOA-SDK.exe` fixture whose `--self-test` is deterministic;
-- creates an MSI fixture with `INSTALL_MANIFEST.json`, `SHA256SUMS`, and the launcher;
+- builds bounded self-contained `FOA-SDK.exe` and `FOA-SDK-ControlPanel.exe` fixtures whose self-tests are deterministic;
+- creates an MSI fixture with `INSTALL_MANIFEST.json`, `SHA256SUMS`, the launcher, and the Control Panel;
 - builds the exact event-head self-contained `FOA-SDK-Installer.exe` with that MSI embedded;
 - constructs the normal WinForms wizard through `--smoke-test`;
 - performs a real Windows Installer clean install;
@@ -119,7 +119,7 @@ When selected, `windows-installer-smoke` uses a disposable `windows-2022` runner
 - deliberately damages the installed launcher and proves Repair restores the reviewed bytes;
 - builds a bad-integrity MSI fixture and proves the installer refuses to report success;
 - uses Windows UI Automation to open the real `FOA-SDK Setup` window, select **Install**, and wait for the **FOA-SDK is ready** finish screen;
-- verifies **Open FOA-SDK** and **Create desktop shortcut** are selected by default, selects **Finish**, proves the installed entry point was launched, and verifies the desktop shortcut targets that installed `FOA-SDK.exe`;
+- verifies **Open FOA-SDK Control Panel** and **Create desktop shortcut** are selected by default while immediate Editor launch is optional, selects **Finish**, proves the installed Control Panel was launched, and verifies the desktop shortcut targets the installed `FOA-SDK.exe`;
 - uninstalls every fixture installation and proves an external workspace sentinel survives;
 - preserves a machine-readable smoke summary and installer logs as hosted-runner evidence.
 
@@ -128,14 +128,16 @@ This automatic smoke proves the exact installer executable/control path and the 
 A skipped conditional job is `NOT_APPLICABLE` for that reviewed path set, not a pass or failure.
 
 The canonical installer workflow builds the compiled Catalog test target, the O3DE
-`INSTALL` target, and the installed `FOA-SDK.exe` launcher with `--parallel 2`.
-It copies that launcher into the install layout, hash-compares it with the
-reviewed build output, and inventories only the O3DE install root. Inventory
+`INSTALL` target, the installed `FOA-SDK.exe` launcher, and the self-contained
+`FOA-SDK-ControlPanel.exe` with `--parallel 2` where applicable. It copies both
+applications into the install layout, hash-compares the launcher with the
+reviewed build output, self-tests the Control Panel, and inventories only the O3DE install root. Inventory
 mode produces an exact fingerprint and notices for review. Package mode accepts
 review metadata only from the human operator invoking the canonical workflow;
 no repository automation may synthesize reviewer identity, review time,
 evidence, or approval. Package mode stages the complete payload, verifies the
 staged manifest, runs `bin\Windows\profile\Default\FOA-SDK.exe --self-test`
+and `FOA-SDK-ControlPanel.exe --self-test --no-dialog`
 from that staged self-contained layout with root `engine.json` and writable
 materialized LocalAppData `External` Gem roots plus project, and only then
 creates the portable ZIP, MSI, embedded installer wizard, and

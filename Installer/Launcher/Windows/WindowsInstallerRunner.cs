@@ -266,6 +266,7 @@ internal static class WindowsInstallerRunner
 internal static class InstalledEditorLauncher
 {
     private const string LauncherRelativePath = "bin\\Windows\\profile\\Default\\FOA-SDK.exe";
+    private const string ControlPanelRelativePath = "FOA-SDK-ControlPanel.exe";
     private const string LauncherChecksumPath = "bin/Windows/profile/Default/FOA-SDK.exe";
     private const string ManifestName = "INSTALL_MANIFEST.json";
     private const string ChecksumsName = "SHA256SUMS";
@@ -335,6 +336,22 @@ internal static class InstalledEditorLauncher
             FileName = launcher,
             UseShellExecute = true,
             WorkingDirectory = Path.GetDirectoryName(launcher)!,
+        });
+    }
+
+    public static void LaunchControlPanel(string installRoot)
+    {
+        string controlPanel = Path.Combine(installRoot, ControlPanelRelativePath);
+        if (!File.Exists(controlPanel))
+        {
+            throw new InvalidOperationException(
+                "FOA-SDK-ControlPanel.exe is missing. Run the installer again or repair the installation.");
+        }
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = controlPanel,
+            UseShellExecute = true,
+            WorkingDirectory = installRoot,
         });
     }
 

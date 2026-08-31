@@ -118,6 +118,7 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Configure prebuilt O3DE SDK layout",
             "Build canonical O3DE INSTALL target",
             "Build and verify installed FOA-SDK.exe launcher entry point",
+            "Build and verify installed FOA-SDK Control Panel",
             "Generate notices and third-party package inventory",
             "Generate exact installer inventory",
             "Upload inventory for redistribution review",
@@ -160,6 +161,10 @@ class InstallerPipelineContractTests(unittest.TestCase):
         )
         self.assertIn('SDK_ENTRYPOINT_PATH = BIN_DIRECTORY / "FOA-SDK.exe"', installer_source)
         self.assertIn("Installed FOA-SDK.exe launcher entry point", installer_source)
+        self.assertIn('CONTROL_PANEL_PATH = PurePosixPath("FOA-SDK-ControlPanel.exe")', installer_source)
+        self.assertIn("Installed FOA-SDK Control Panel entry point", installer_source)
+        self.assertIn("FOA-SDK-ControlPanel.exe self-test failed before inventory review.", workflow)
+        self.assertIn("FOA-SDK-ControlPanel.exe staged self-test failed.", workflow)
 
     def test_installed_sdk_launcher_resolves_self_contained_product_layout(self) -> None:
         launcher_source = (REPO_ROOT / "Installer/Launcher/Windows/InstalledEditorLauncher.cpp").read_text(
@@ -249,10 +254,16 @@ class InstallerPipelineContractTests(unittest.TestCase):
             "Installed MSI manifest differs from the exact reviewed staging manifest",
             "CreateShortcut($startMenuEntry)",
             "MSI Start Menu entry targets",
+            "installed-control-panel-self-test",
+            "CreateShortcut($controlPanelStartMenuEntry)",
+            "foa.sdk.setup_profile.v1",
+            "foa.sdk.support_report.v1",
+            "Setup Manager support report exposed an unredacted local path",
             "WriteAllBytes($launcher",
             "MSI repair did not restore the reviewed product-owned launcher bytes",
             "repaired-launcher-self-test",
             "MSI uninstall left the product manifest installed",
+            "MSI uninstall left the Control Panel installed",
             "MSI uninstall removed external workspace data",
             "functional-readiness-summary.json",
         ):

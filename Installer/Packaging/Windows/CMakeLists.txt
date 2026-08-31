@@ -28,6 +28,7 @@ foreach(required_file IN ITEMS
     bin/Windows/profile/Default/Editor.exe
     bin/Windows/profile/Default/TaintedGrailModdingEditorLauncher.exe
     bin/Windows/profile/Default/FOA-SDK.exe
+    FOA-SDK-ControlPanel.exe
     TaintedGrailModdingEditor/project.json
     TaintedGrailModdingEditor/TaintedGrailModdingEditor.ico
 )
@@ -116,7 +117,9 @@ set(CPACK_PACKAGE_CHECKSUM "SHA256")
 set(CPACK_RESOURCE_FILE_LICENSE "${TG_INSTALLER_PAYLOAD_ROOT}/LICENSE.txt")
 set(CPACK_PACKAGE_EXECUTABLES
     "FOA-SDK"
-    "FOA-SDK")
+    "FOA-SDK"
+    "FOA-SDK-ControlPanel"
+    "FOA-SDK Control Panel")
 
 set(CPACK_WIX_VERSION 4)
 set(CPACK_WIX_ARCHITECTURE x64)

@@ -1,6 +1,6 @@
 # FOA-SDK Windows Installer
 
-`Installer/` owns the source that turns one reviewed prebuilt FOA-SDK payload into a self-contained Windows application setup. End users run `FOA-SDK-Installer.exe`; after installation they open `FOA-SDK.exe` from the Start Menu, optional desktop shortcut, or installed application path.
+`Installer/` owns the source that turns one reviewed prebuilt FOA-SDK payload into a self-contained Windows application setup. End users run `FOA-SDK-Installer.exe`; after installation they finish first-run setup in `FOA-SDK-ControlPanel.exe` and open the Editor through `FOA-SDK.exe`.
 
 The normal user workflow requires no Git, Python, CMake, Visual Studio, engine checkout, project-file selection, or internal tool configuration.
 
@@ -10,6 +10,7 @@ Generated MSI files, portable ZIP archives, retained installer EXEs, staged payl
 
 ```text
 Installer/
+├── ControlPanel/ installed first-run setup and diagnostics application
 ├── Launcher/    installer UI and installed FOA-SDK launcher source
 ├── Packaging/   MSI packaging source for a verified staging payload
 └── Tests/       installer contract and functional-readiness tests
@@ -26,9 +27,9 @@ A normal double-click on the installer follows this product flow:
 3. run Windows Installer for the product files;
 4. show **Validating installation** and run installed `FOA-SDK.exe --self-test`;
 5. report success only when the installed product passes validation;
-6. offer **Open FOA-SDK** and **Create desktop shortcut** on the finish screen.
+6. offer **Open FOA-SDK Control Panel** by default, optional **Open FOA-SDK**, and **Create desktop shortcut** on the finish screen.
 
-The Start Menu entry is installed automatically. The optional desktop shortcut targets only the installed `FOA-SDK.exe`.
+Start Menu entries for the Control Panel and Editor launcher are installed automatically. The optional desktop shortcut targets only the installed `FOA-SDK.exe`.
 
 MSI fingerprints, internal manifests, engine/project paths, tool profiles, repair/uninstall choices, logs, and other implementation details are deliberately absent from the normal setup UI.
 
@@ -42,13 +43,14 @@ External workspaces, game diagnostics, generated output, staging, deployment roo
 
 ## Installed application startup
 
-The installed product exposes one user-facing application entry point:
+The installed product exposes two user-facing application entry points:
 
 ```text
+<install-root>\FOA-SDK-ControlPanel.exe
 <install-root>\bin\Windows\profile\Default\FOA-SDK.exe
 ```
 
-`FOA-SDK.exe` resolves the complete self-contained install root, verifies the required packaged layout, prepares writable per-user application state, and starts the bundled editor host with the packaged FOA-SDK project. Internal host executables and configuration documents are implementation details rather than separate user-facing setup targets.
+`FOA-SDK-ControlPanel.exe` owns first-run workspace selection, explicit read-only game-folder validation, compatibility indication, plan preview, and redacted support reporting. `FOA-SDK.exe` resolves the complete self-contained install root, verifies the required packaged layout, prepares writable per-user application state, and starts the bundled editor host with the packaged FOA-SDK project.
 
 `FOA-SDK.exe --self-test` performs the same required layout and writable-startup checks without opening the application. The installer uses that self-test automatically after installation or repair and fails closed when the installed product is incomplete.
 
@@ -60,7 +62,7 @@ Repair restores product-owned files from the reviewed MSI. Uninstall removes pro
 
 ## Boundaries
 
-Installer selection or installation does not grant runtime execution, game deployment, save mutation, signing, publication, catalogue mutation, or evidence-promotion authority. The installer does not discover, modify, launch, or deploy to Fall of Avalon.
+Installer selection or installation does not grant runtime execution, game deployment, save mutation, signing, publication, catalogue mutation, or evidence-promotion authority. The Control Panel inspects only a folder the user explicitly selects, never scans the machine or network, and does not modify, launch, or deploy to Fall of Avalon.
 
 Current development artifacts remain unsigned until a separate release/signing decision. Payload integrity verification remains internal to setup rather than a normal user choice.
 

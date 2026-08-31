@@ -172,6 +172,31 @@ jobs:
             throw "FOA-SDK.exe does not match the reviewed installed launcher build."
           }
 
+      - name: Build and verify installed FOA-SDK Control Panel
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:FOA_BUILD_ROOT "control-panel-publish"
+          dotnet publish Installer/ControlPanel/Windows/FOAControlPanel.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:BaseIntermediateOutputPath="$env:FOA_BUILD_ROOT/control-panel-obj/" `
+            -p:BaseOutputPath="$env:FOA_BUILD_ROOT/control-panel-bin/" `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=embedded `
+            -o $publish
+          $source = Join-Path $publish "FOA-SDK-ControlPanel.exe"
+          $target = Join-Path $env:SDK_INSTALL "FOA-SDK-ControlPanel.exe"
+          if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "FOA-SDK-ControlPanel.exe build output is missing."
+          }
+          $controlPanelSelfTest = Start-Process -FilePath $source `
+            -ArgumentList @("--self-test", "--no-dialog") `
+            -Wait -PassThru -WindowStyle Hidden
+          if ($controlPanelSelfTest.ExitCode -ne 0) {
+            throw "FOA-SDK-ControlPanel.exe self-test failed before inventory review. Exit code: $($controlPanelSelfTest.ExitCode)"
+          }
+          Copy-Item -LiteralPath $source -Destination $target -Force
+
       - name: Install hash-pinned CMake runtime into SDK payload
         shell: pwsh
         run: |
@@ -285,6 +310,13 @@ jobs:
           & $stagedLauncher --self-test
           if ($LASTEXITCODE -ne 0) {
             throw "FOA-SDK.exe staged self-contained launcher self-test failed."
+          }
+          $stagedControlPanel = Join-Path $env:SDK_STAGE "FOA-SDK-ControlPanel.exe"
+          $stagedControlPanelSelfTest = Start-Process -FilePath $stagedControlPanel `
+            -ArgumentList @("--self-test", "--no-dialog") `
+            -Wait -PassThru -WindowStyle Hidden
+          if ($stagedControlPanelSelfTest.ExitCode -ne 0) {
+            throw "FOA-SDK-ControlPanel.exe staged self-test failed. Exit code: $($stagedControlPanelSelfTest.ExitCode)"
           }
           $zip = Join-Path $env:SDK_ARTIFACTS `
             "Tainted-Grail-FoA-SDK-${{ inputs.version }}-windows-x64.zip"

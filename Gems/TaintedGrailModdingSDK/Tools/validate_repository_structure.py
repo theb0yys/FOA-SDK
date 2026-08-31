@@ -62,6 +62,7 @@ AUTOMATIC_STATIC_WORKFLOW = (
     ".github/workflows/tainted-grail-sdk-pr-validation.yml"
 )
 ALLOWED_INSTALLER_LANES = {
+    "ControlPanel",
     "Launcher",
     "Packaging",
     "Tests",
@@ -100,6 +101,10 @@ REQUIRED_PATHS = {
     "Installer/Launcher/Windows/InstallerWizardForm.cs",
     "Installer/Launcher/Windows/InstalledEditorLauncher.cpp",
     "Installer/Launcher/Windows/InstalledEditorLauncher.rc",
+    "Installer/ControlPanel/Windows/FOAControlPanel.csproj",
+    "Installer/ControlPanel/Windows/Program.cs",
+    "Installer/ControlPanel/Windows/ProviderManifest.cs",
+    "Installer/ControlPanel/Windows/Providers/foa.provider.json",
     "Installer/Packaging/README.md",
     "Installer/Packaging/Windows/.config/dotnet-tools.json",
     "Installer/Packaging/Windows/CMakeLists.txt",

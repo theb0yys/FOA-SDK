@@ -30,7 +30,7 @@ Generated builds, caches, diagnostics, screenshots, installers, packages, and va
 Gems/
 ├── ExternalToolchain/                bounded external-tool discovery and provider contracts
 └── TaintedGrailModdingSDK/           required editor foundation, schemas, services and tests
-Installer/                            native installer wizard, installed launcher and packaging source
+Installer/                            installer wizard, installed Control Panel, launcher and packaging source
 Plugins/                              optional product extension packages
 ├── Authoring/                        Avalon AI, UI Framework, Road Atlas and future authoring systems
 ├── Integrations/                     Merlin's Workshop and acquisition/tool providers
@@ -53,7 +53,7 @@ LICENSE.txt                            repository licence
 
 `Gems/` contains the two always-present product foundations. `Plugins/` contains optional, independently governed packages. Every plug-in package requires a schema-valid `plugin.json`, deterministic ExtensionAPI registration, explicit compatibility and capabilities, provenance, licence state, and focused tests. A plug-in declaration never grants runtime, deployment, save, signing, publication, catalog-mutation, or evidence-promotion authority.
 
-`Installer/` owns the self-contained Windows installer wizard, installed-Editor launcher, platform packaging project, and installer tests. The wizard verifies and executes one reviewed MSI; generated EXE/MSI files, portable ZIPs, staged payloads, logs, signing material, and release uploads remain outside the source checkout.
+`Installer/` owns the self-contained Windows installer wizard, installed first-run Control Panel, Editor launcher, platform packaging project, and installer tests. The wizard verifies and executes one reviewed MSI; generated EXE/MSI files, portable ZIPs, staged payloads, logs, signing material, and release uploads remain outside the source checkout.
 
 See [`Plugins/README.md`](Plugins/README.md), [`Plugins/plugin.schema.json`](Plugins/plugin.schema.json), and [`Installer/README.md`](Installer/README.md) for the extension and distribution contracts.
 

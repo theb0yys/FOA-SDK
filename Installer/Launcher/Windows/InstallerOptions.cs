@@ -16,6 +16,7 @@ internal sealed record InstallerOptions(
     bool Quiet,
     bool SmokeTest,
     bool LaunchAfterInstall,
+    bool OpenControlPanelAfterInstall,
     bool OpenToolWizardAfterInstall,
     bool ToolWizardOnly,
     bool NoDialog,
@@ -35,6 +36,7 @@ internal sealed record InstallerOptions(
         bool quiet = false;
         bool smokeTest = false;
         bool launchAfterInstall = false;
+        bool openControlPanelAfterInstall = false;
         bool openToolWizardAfterInstall = false;
         bool toolWizardOnly = false;
         bool noDialog = false;
@@ -75,6 +77,12 @@ internal sealed record InstallerOptions(
                     break;
                 case "--no-launch-after-install":
                     launchAfterInstall = false;
+                    break;
+                case "--open-control-panel-after-install":
+                    openControlPanelAfterInstall = true;
+                    break;
+                case "--no-open-control-panel-after-install":
+                    openControlPanelAfterInstall = false;
                     break;
                 case "--open-tool-wizard-after-install":
                     openToolWizardAfterInstall = true;
@@ -128,6 +136,7 @@ internal sealed record InstallerOptions(
             quiet,
             smokeTest,
             launchAfterInstall,
+            openControlPanelAfterInstall,
             openToolWizardAfterInstall,
             toolWizardOnly,
             noDialog,
@@ -176,6 +185,7 @@ internal sealed record InstallerOptions(
         + "[--install-root <directory>] [--operation install|repair|uninstall] "
         + "[--evidence-root <directory>] "
         + "[--quiet] [--smoke-test] [--launch-after-install|--no-launch-after-install] "
+        + "[--open-control-panel-after-install|--no-open-control-panel-after-install] "
         + "[--open-tool-wizard-after-install|--no-open-tool-wizard-after-install] "
         + "[--tool-wizard] [--save-tool-profile] [--workspace-root <directory>] "
         + "[--o3de-editor <Editor.exe>] [--unity-editor <Unity.exe>] "

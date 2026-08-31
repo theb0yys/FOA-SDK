@@ -30,11 +30,14 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
 
-    def mutate(self, root: Path, relative: str, old: str, new: str) -> None:
+    def mutate(self, root: Path, relative: str, old: str, new: str, *, all_occurrences: bool = False) -> None:
         path = root / relative
         text = path.read_text(encoding="utf-8")
         self.assertIn(old, text)
-        path.write_text(text.replace(old, new, 1), encoding="utf-8")
+        path.write_text(
+            text.replace(old, new) if all_occurrences else text.replace(old, new, 1),
+            encoding="utf-8",
+        )
 
     def test_current_item_viewer_contract_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -77,6 +80,7 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
                 "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
                 "CandidateMatchesActiveProfile",
                 "CandidateMatchesAnyProfile",
+                all_occurrences=True,
             )
             with self.assertRaisesRegex(RuntimeError, "exact-profile candidate filtering"):
                 contract.validate_item_viewer(root)

@@ -67,6 +67,24 @@ ly_add_target(
             AZ::AzToolsFramework
 )
 
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_asset_browser_pane_model.py" tg_asset_browser_pane_model_tool_source)
+ly_add_source_properties(
+    SOURCES
+        Source/AssetBrowserPreviewRefreshService.cpp
+    PROPERTY COMPILE_DEFINITIONS
+        VALUES
+            TG_SDK_ASSET_BROWSER_PANE_MODEL_TOOL_SOURCE="${tg_asset_browser_pane_model_tool_source}"
+)
+
+# Keep the generator available in the installed self-contained Editor. Runtime C++
+# invokes it through O3DE's embedded Python runner; system Python is not required.
+ly_install_files(
+    FILES
+        ../Tools/foa_asset_browser_pane_model.py
+    DESTINATION
+        scripts/foa-sdk
+)
+
 ly_add_source_properties(
     SOURCES
         Source/TaintedGrailModdingSDKEditorModule.cpp

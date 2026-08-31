@@ -11,6 +11,7 @@
 
 #include <QWidget>
 
+class QGroupBox;
 class QLabel;
 class QPushButton;
 
@@ -29,14 +30,16 @@ namespace TaintedGrailModdingSDK
     private:
         void OnFoundationChanged() override;
 
-        QLabel* m_workspaceValue = nullptr;
-        QLabel* m_profileValue = nullptr;
+        QLabel* m_statusHeadline = nullptr;
+        QLabel* m_setupValue = nullptr;
+        QLabel* m_gameValue = nullptr;
         QLabel* m_packValue = nullptr;
-        QLabel* m_validationValue = nullptr;
         QLabel* m_blockersValue = nullptr;
-        QLabel* m_dirtyValue = nullptr;
-        QLabel* m_continueWorkspaceHint = nullptr;
-        QPushButton* m_continuePackButton = nullptr;
-        QLabel* m_continuePackHint = nullptr;
+        QLabel* m_primaryHint = nullptr;
+        QPushButton* m_setupButton = nullptr;
+        QPushButton* m_packButton = nullptr;
+        QPushButton* m_advancedToggleButton = nullptr;
+        QGroupBox* m_authoringGroup = nullptr;
+        QGroupBox* m_advancedGroup = nullptr;
     };
 } // namespace TaintedGrailModdingSDK

@@ -84,6 +84,44 @@ namespace TaintedGrailModdingSDK
             return value.empty() ? fallback : ToQString(value);
         }
 
+        bool IsAdvancedOnlyUsage(const AZStd::string& usage)
+        {
+            return usage == "build"
+                || usage == "package"
+                || usage == "deploy"
+                || usage == "release"
+                || usage == "runtime_handoff"
+                || usage == "all_runtime_actions";
+        }
+
+        bool IsNormalAuthoringIssue(const BlockerRecord& blocker)
+        {
+            if (blocker.m_severity != "error")
+            {
+                return false;
+            }
+
+            if (blocker.m_blockerId.find("foundation.pack.profile-mismatch.") == 0
+                || blocker.m_blockerId.find("foundation.pack.game-target.") == 0)
+            {
+                return true;
+            }
+
+            if (blocker.m_affectedUsages.empty())
+            {
+                return true;
+            }
+
+            for (const AZStd::string& usage : blocker.m_affectedUsages)
+            {
+                if (!IsAdvancedOnlyUsage(usage))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         QPushButton* CreateRouteButton(
             QWidget* parent,
             const QString& label,
@@ -91,7 +129,7 @@ namespace TaintedGrailModdingSDK
             const char* paneName)
         {
             auto* button = new QPushButton(label, parent);
-            button->setMinimumWidth(260);
+            button->setMinimumWidth(190);
             button->setAccessibleName(label);
             button->setAccessibleDescription(description);
             button->setToolTip(description);
@@ -118,9 +156,12 @@ namespace TaintedGrailModdingSDK
             auto* group = new QGroupBox(title, parent);
             auto* layout = new QVBoxLayout(group);
 
-            auto* introductionLabel = new QLabel(introduction, group);
-            introductionLabel->setWordWrap(true);
-            layout->addWidget(introductionLabel);
+            if (!introduction.isEmpty())
+            {
+                auto* introductionLabel = new QLabel(introduction, group);
+                introductionLabel->setWordWrap(true);
+                layout->addWidget(introductionLabel);
+            }
 
             for (const HubRoute& route : routes)
             {
@@ -149,8 +190,8 @@ namespace TaintedGrailModdingSDK
     {
         FoundationNotificationBus::Handler::BusConnect();
 
-        setMinimumWidth(320);
-        setMaximumWidth(560);
+        setMinimumWidth(420);
+        setMaximumWidth(760);
 
         auto* rootLayout = new QVBoxLayout(this);
         auto* scrollArea = new QScrollArea(this);
@@ -160,7 +201,7 @@ namespace TaintedGrailModdingSDK
         scrollArea->setWidget(content);
         rootLayout->addWidget(scrollArea);
 
-        auto* heading = new QLabel(tr("FOA Development Hub"), content);
+        auto* heading = new QLabel(tr("FOA-SDK Home"), content);
         QFont headingFont = heading->font();
         headingFont.setPointSize(headingFont.pointSize() + 5);
         headingFont.setBold(true);
@@ -168,135 +209,149 @@ namespace TaintedGrailModdingSDK
         contentLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Resume the current workspace and move through the governed authoring flow. "
-               "This Hub presents shared Foundation state and opens existing specialist panes; "
-               "it does not duplicate validation, grant permission, execute adapters, deploy files, "
-               "or launch FoA."),
+            tr("FOA-SDK handles the local game and workspace setup automatically. "
+               "Open or create a mod, then choose what you want to edit."),
             content);
         description->setWordWrap(true);
         contentLayout->addWidget(description);
 
-        auto* contextGroup = new QGroupBox(tr("Current context"), content);
+        m_statusHeadline = new QLabel(content);
+        QFont statusFont = m_statusHeadline->font();
+        statusFont.setPointSize(statusFont.pointSize() + 2);
+        statusFont.setBold(true);
+        m_statusHeadline->setFont(statusFont);
+        m_statusHeadline->setWordWrap(true);
+        contentLayout->addWidget(m_statusHeadline);
+
+        auto* contextGroup = new QGroupBox(tr("Current project"), content);
         auto* contextLayout = new QFormLayout(contextGroup);
-        m_workspaceValue = new QLabel(contextGroup);
-        m_profileValue = new QLabel(contextGroup);
+        m_setupValue = new QLabel(contextGroup);
+        m_gameValue = new QLabel(contextGroup);
         m_packValue = new QLabel(contextGroup);
-        m_validationValue = new QLabel(contextGroup);
         m_blockersValue = new QLabel(contextGroup);
-        m_dirtyValue = new QLabel(contextGroup);
         for (QLabel* label : {
-                 m_workspaceValue,
-                 m_profileValue,
+                 m_setupValue,
+                 m_gameValue,
                  m_packValue,
-                 m_validationValue,
-                 m_blockersValue,
-                 m_dirtyValue })
+                 m_blockersValue })
         {
             label->setWordWrap(true);
             label->setTextInteractionFlags(Qt::TextSelectableByKeyboard | Qt::TextSelectableByMouse);
         }
-        contextLayout->addRow(tr("Workspace"), m_workspaceValue);
-        contextLayout->addRow(tr("Game profile"), m_profileValue);
-        contextLayout->addRow(tr("Active pack"), m_packValue);
-        contextLayout->addRow(tr("Validation state"), m_validationValue);
-        contextLayout->addRow(tr("Open blockers"), m_blockersValue);
-        contextLayout->addRow(tr("Dirty state"), m_dirtyValue);
+        contextLayout->addRow(tr("System"), m_setupValue);
+        contextLayout->addRow(tr("Fall of Avalon"), m_gameValue);
+        contextLayout->addRow(tr("Current mod"), m_packValue);
+        contextLayout->addRow(tr("Authoring issues"), m_blockersValue);
         contentLayout->addWidget(contextGroup);
 
-        auto* continueGroup = new QGroupBox(tr("Continue"), content);
-        auto* continueLayout = new QVBoxLayout(continueGroup);
+        auto* startGroup = new QGroupBox(tr("Start"), content);
+        auto* startLayout = new QVBoxLayout(startGroup);
 
-        auto* continueWorkspaceRow = new QWidget(continueGroup);
-        auto* continueWorkspaceLayout = new QHBoxLayout(continueWorkspaceRow);
-        continueWorkspaceLayout->setContentsMargins(0, 0, 0, 0);
-        continueWorkspaceLayout->addWidget(CreateRouteButton(
-            continueWorkspaceRow,
-            tr("Continue workspace setup"),
-            tr("Open the existing Foundation Status pane for workspace and exact game-profile configuration."),
-            FoundationStatusPane));
-        m_continueWorkspaceHint = new QLabel(continueWorkspaceRow);
-        m_continueWorkspaceHint->setWordWrap(true);
-        continueWorkspaceLayout->addWidget(m_continueWorkspaceHint, 1);
-        continueLayout->addWidget(continueWorkspaceRow);
-
-        auto* continuePackRow = new QWidget(continueGroup);
-        auto* continuePackLayout = new QHBoxLayout(continuePackRow);
-        continuePackLayout->setContentsMargins(0, 0, 0, 0);
-        m_continuePackButton = CreateRouteButton(
-            continuePackRow,
-            tr("Continue active pack"),
-            tr("Open the existing Pack Manager for the active pack or select a pack when none is active."),
+        auto* actionRow = new QWidget(startGroup);
+        auto* actionLayout = new QHBoxLayout(actionRow);
+        actionLayout->setContentsMargins(0, 0, 0, 0);
+        m_setupButton = CreateRouteButton(
+            actionRow,
+            tr("System details"),
+            tr("Check automatic game detection, versions, workspace paths, and setup diagnostics."),
+            FoundationStatusPane);
+        m_packButton = CreateRouteButton(
+            actionRow,
+            tr("Create or open a mod"),
+            tr("Create, select, or manage the current mod project."),
             PackManagerPane);
-        continuePackLayout->addWidget(m_continuePackButton);
-        m_continuePackHint = new QLabel(continuePackRow);
-        m_continuePackHint->setWordWrap(true);
-        continuePackLayout->addWidget(m_continuePackHint, 1);
-        continueLayout->addWidget(continuePackRow);
-        contentLayout->addWidget(continueGroup);
+        actionLayout->addWidget(m_setupButton);
+        actionLayout->addWidget(m_packButton);
+        startLayout->addWidget(actionRow);
 
-        contentLayout->addWidget(CreateRouteGroup(
+        m_primaryHint = new QLabel(startGroup);
+        m_primaryHint->setWordWrap(true);
+        startLayout->addWidget(m_primaryHint);
+        contentLayout->addWidget(startGroup);
+
+        m_authoringGroup = CreateRouteGroup(
             content,
-            tr("Setup and readiness"),
-            tr("Establish exact workspace, game-build, pack, and adapter capability context before downstream work."),
+            tr("Create and edit"),
+            tr("These are the main authoring tools. FOA-SDK supplies the detected game/profile context automatically."),
             {
-                { tr("Workspace and game profile"), tr("Configure and persist the exact authoring context."), FoundationStatusPane },
-                { tr("Pack manager"), tr("Create, select, inspect, and persist governed pack manifests."), PackManagerPane },
-                { tr("Adapter capability matrix"), tr("Review fail-closed capability, version, proof, and permission readiness."), AdapterCapabilityPane },
+                { tr("Game assets"), tr("Browse imported game assets and previews."), AssetBrowserPreviewPane },
+                { tr("Map editor"), tr("Build and edit map and road content."), RoadAtlasEditorPane },
+                { tr("Items and recipes"), tr("Create and edit items, recipes, and economy data."), ItemRecipeEditorPane },
+                { tr("Actors and troops"), tr("Create and edit actors and troop composition."), ActorTroopEditorPane },
+                { tr("Quests and state"), tr("Inspect and work with quest/state definitions."), QuestStateInspectorPane },
+                { tr("Avalon AI"), tr("Create and edit Avalon AI packages and plans."), AvalonAIEditorPane },
+            });
+        contentLayout->addWidget(m_authoringGroup);
+
+        auto* advancedToggleRow = new QWidget(content);
+        auto* advancedToggleLayout = new QHBoxLayout(advancedToggleRow);
+        advancedToggleLayout->setContentsMargins(0, 0, 0, 0);
+        advancedToggleLayout->addStretch(1);
+        m_advancedToggleButton = new QPushButton(tr("Show advanced tools"), advancedToggleRow);
+        advancedToggleLayout->addWidget(m_advancedToggleButton);
+        contentLayout->addWidget(advancedToggleRow);
+
+        m_advancedGroup = new QGroupBox(tr("Advanced tools"), content);
+        auto* advancedLayout = new QVBoxLayout(m_advancedGroup);
+        auto* advancedDescription = new QLabel(
+            tr("Diagnostics, evidence, packaging, adapter, and release surfaces are kept here so they do not clutter normal authoring."),
+            m_advancedGroup);
+        advancedDescription->setWordWrap(true);
+        advancedLayout->addWidget(advancedDescription);
+
+        advancedLayout->addWidget(CreateRouteGroup(
+            m_advancedGroup,
+            tr("Data and diagnostics"),
+            QString(),
+            {
+                { tr("Source and evidence intake"), tr("Import and inspect local source/evidence material."), SourceIntakePane },
+                { tr("Catalog browser"), tr("Inspect canonical records and relationships."), CatalogBrowserPane },
+                { tr("Catalog governance"), tr("Review validation and usage decisions."), CatalogGovernancePane },
+                { tr("Economy coverage"), tr("Review acquisition-path coverage and blockers."), EconomyCoveragePane },
+                { tr("Cross-pack duplicates"), tr("Review exact duplicate signals across mods."), EconomyDuplicatesPane },
             }));
 
-        contentLayout->addWidget(CreateRouteGroup(
-            content,
-            tr("Research and author"),
-            tr("Move from fingerprinted source material to reviewed canonical records and typed economy authoring."),
+        advancedLayout->addWidget(CreateRouteGroup(
+            m_advancedGroup,
+            tr("Adapters and packaging"),
+            QString(),
             {
-                { tr("Asset import and evidence intake"), tr("Browse, fingerprint, import, and inspect local source or preview-asset artifacts without inferring facts."), SourceIntakePane },
-                { tr("Asset Browser preview"), tr("Review categorized preview products, thumbnail evidence, fidelity state, blockers, and central viewport route readiness."), AssetBrowserPreviewPane },
-                { tr("Catalog browser"), tr("Inspect canonical identities, relationships, evidence, and blockers."), CatalogBrowserPane },
-                { tr("Catalog governance"), tr("Record reviewed validation, permission, prohibition, and staleness decisions."), CatalogGovernancePane },
-                { tr("Item and recipe editor"), tr("Author typed economy profiles against existing canonical identities."), ItemRecipeEditorPane },
-                { tr("Quest and state inspector"), tr("Load and inspect local QuestDefinition V1 documents without runtime, deployment, save, or editor-mutation authority."), QuestStateInspectorPane },
-                { tr("Actor and troop editor"), tr("Author evidence-bound population profiles and troop composition without runtime spawn authority."), ActorTroopEditorPane },
-                { tr("Map editor (Road Atlas)"), tr("Author and validate exact-profile planning-only map road topology snapshots."), RoadAtlasEditorPane },
-                { tr("Avalon AI editor"), tr("Author API 2.0 packages and deterministic inert AI plans."), AvalonAIEditorPane },
+                { tr("Adapter capability matrix"), tr("Inspect adapter compatibility and readiness."), AdapterCapabilityPane },
+                { tr("Work-order plans"), tr("Inspect generated non-executable adapter plans."), AdapterPlanPane },
+                { tr("Runtime result evidence"), tr("Inspect supplied adapter result evidence."), RuntimeEvidencePane },
+                { tr("Build manifests"), tr("Inspect reproducible adapter build definitions."), BuildManifestPane },
+                { tr("Package assembly preview"), tr("Inspect deterministic package layout."), PackagePreviewPane },
+                { tr("Staging and deployment preview"), tr("Inspect intended staging/deployment changes and rollback steps."), StagingPreviewPane },
+                { tr("Deployment work orders"), tr("Inspect confirmation and operator work orders."), DeploymentWorkOrderPane },
+                { tr("Deployment result evidence"), tr("Inspect supplied deployment execution evidence."), DeploymentEvidencePane },
             }));
 
-        contentLayout->addWidget(CreateRouteGroup(
-            content,
-            tr("Package and verify"),
-            tr("Review deterministic handoffs and externally supplied evidence. These routes never authorise execution."),
+        advancedLayout->addWidget(CreateRouteGroup(
+            m_advancedGroup,
+            tr("Verification and release"),
+            QString(),
             {
-                { tr("Work-order plans"), tr("Review generated or refused non-executable adapter plans."), AdapterPlanPane },
-                { tr("Runtime result evidence"), tr("Inspect externally supplied adapter results as candidate evidence only."), RuntimeEvidencePane },
-                { tr("Build manifests"), tr("Review reproducible definitions with build permission fixed false."), BuildManifestPane },
-                { tr("Package assembly preview"), tr("Inspect deterministic package layout without assembling files."), PackagePreviewPane },
-                { tr("Staging and deployment preview"), tr("Inspect declared target changes, backups, and rollback steps."), StagingPreviewPane },
-                { tr("Deployment work orders"), tr("Review named confirmations and non-executable operator checklists."), DeploymentWorkOrderPane },
-                { tr("Deployment result evidence"), tr("Inspect separately supplied execution evidence without promotion."), DeploymentEvidencePane },
+                { tr("Post-deployment verification"), tr("Inspect compatibility and release blockers."), PostDeploymentPane },
+                { tr("Independent verifier results"), tr("Inspect supplied independent verifier observations."), IndependentVerifierPane },
+                { tr("Evidence reconciliation"), tr("Review evidence dispositions and release decisions."), ReconciliationPane },
+                { tr("Release artifact provenance"), tr("Inspect provenance and signing intent metadata."), ReleaseArtifactPane },
+                { tr("Release assembly results"), tr("Inspect supplied archive/checksum result evidence."), ReleaseAssemblyPane },
+                { tr("Release signing results"), tr("Inspect supplied signing-result metadata."), ReleaseSigningPane },
             }));
 
-        contentLayout->addWidget(CreateRouteGroup(
-            content,
-            tr("Diagnostics"),
-            tr("Inspect coverage, ambiguity, and post-deployment evidence without clearing blockers automatically."),
-            {
-                { tr("Economy acquisition coverage"), tr("Review acquisition-path coverage and associated blockers."), EconomyCoveragePane },
-                { tr("Cross-pack duplicates"), tr("Review exact duplicate signals without fuzzy identity matching."), EconomyDuplicatesPane },
-                { tr("Post-deployment verification"), tr("Review deterministic compatibility and release blockers."), PostDeploymentPane },
-                { tr("Independent verifier results"), tr("Inspect supplied verifier observations as adverse-capable evidence."), IndependentVerifierPane },
-                { tr("Evidence reconciliation"), tr("Review preserved blockers, dispositions, and human release decisions."), ReconciliationPane },
-            }));
+        m_advancedGroup->setVisible(false);
+        contentLayout->addWidget(m_advancedGroup);
 
-        contentLayout->addWidget(CreateRouteGroup(
-            content,
-            tr("Advanced"),
-            tr("Inspect release metadata and result envelopes. Declared checksums, signing intent, and publication targets are not performed actions."),
-            {
-                { tr("Release artifact provenance"), tr("Review provenance, legal disposition, signing intent, and publication targets."), ReleaseArtifactPane },
-                { tr("Release assembly results"), tr("Inspect externally supplied archive and checksum-result evidence."), ReleaseAssemblyPane },
-                { tr("Release signing results"), tr("Inspect separately supplied signing-result metadata without loading keys, signing, or verification."), ReleaseSigningPane },
-            }));
+        connect(m_advancedToggleButton, &QPushButton::clicked, this, [this]()
+        {
+            const bool show = !m_advancedGroup->isVisible();
+            m_advancedGroup->setVisible(show);
+            m_advancedToggleButton->setText(
+                show ? tr("Hide advanced tools") : tr("Show advanced tools"));
+        });
 
         contentLayout->addStretch();
+        FoundationService::Get().RefreshLocalSetup();
         Refresh();
     }
 
@@ -314,63 +369,104 @@ namespace TaintedGrailModdingSDK
     {
         const FoundationSnapshot snapshot = FoundationService::Get().GetSnapshot();
 
-        m_workspaceValue->setText(DisplayValue(snapshot.m_workspaceName, tr("Not configured")));
-        m_workspaceValue->setToolTip(
-            DisplayValue(snapshot.m_workspaceFilePath, tr("No persisted workspace path")));
+        const bool setupReady =
+            !snapshot.m_workspaceFilePath.empty()
+            && !snapshot.m_activeGameProfile.empty()
+            && !snapshot.m_gameVersion.empty()
+            && !snapshot.m_runtimeTarget.empty();
+        const bool hasPack = !snapshot.m_activePackId.empty();
 
-        QString profile = DisplayValue(snapshot.m_activeGameProfile, tr("Not configured"));
-        if (!snapshot.m_gameVersion.empty() || !snapshot.m_branch.empty())
+        AZ::u64 authoringIssueCount = 0;
+        if (hasPack)
         {
-            profile += tr(" \u2014 version %1, branch %2")
-                .arg(DisplayValue(snapshot.m_gameVersion, tr("unknown")))
-                .arg(DisplayValue(snapshot.m_branch, tr("unknown")));
+            for (const BlockerRecord& blocker : snapshot.m_blockers)
+            {
+                if (IsNormalAuthoringIssue(blocker))
+                {
+                    ++authoringIssueCount;
+                }
+            }
         }
-        m_profileValue->setText(profile);
-        m_packValue->setText(DisplayValue(snapshot.m_activePackName, tr("No active pack")));
+        const bool hasAuthoringIssues = authoringIssueCount > 0;
 
-        if (snapshot.m_openBlockerCount > 0)
+        m_setupValue->setText(setupReady ? tr("Ready") : tr("Needs attention"));
+        m_setupValue->setToolTip(
+            DisplayValue(snapshot.m_workspaceFilePath, tr("FOA-SDK manages the workspace automatically.")));
+
+        if (setupReady)
         {
-            m_validationValue->setText(
-                tr("Blocked \u2014 resolve or explicitly review open blockers"));
+            m_gameValue->setText(
+                tr("%1 · %2")
+                    .arg(DisplayValue(snapshot.m_gameVersion, tr("version unknown")))
+                    .arg(DisplayValue(snapshot.m_runtimeTarget, tr("runtime unknown"))));
+            m_gameValue->setToolTip(
+                tr("Profile: %1\nBranch: %2")
+                    .arg(DisplayValue(snapshot.m_activeGameProfile, tr("unknown")))
+                    .arg(DisplayValue(snapshot.m_branch, tr("unknown"))));
         }
         else
         {
-            m_validationValue->setText(
-                tr("No open Foundation blockers; runtime and release permission remain separate"));
+            m_gameValue->setText(tr("Not ready"));
+            m_gameValue->setToolTip(tr("Open System details to finish automatic detection."));
         }
-        m_blockersValue->setText(tr("%1").arg(snapshot.m_openBlockerCount));
 
-        if (snapshot.m_workspaceFilePath.empty())
+        if (hasPack)
         {
-            m_dirtyValue->setText(
-                tr("Workspace has no persisted file; exact unsaved-change tracking is not exposed"));
-            m_continueWorkspaceHint->setText(
-                tr("Configure the workspace and exact game profile, then save before downstream work."));
+            QString packText = DisplayValue(snapshot.m_activePackName, tr("Current mod"));
+            if (!snapshot.m_activePackVersion.empty())
+            {
+                packText += tr(" · %1").arg(ToQString(snapshot.m_activePackVersion));
+            }
+            m_packValue->setText(packText);
         }
         else
         {
-            m_dirtyValue->setText(
-                tr("Persisted workspace path is known; exact unsaved-change tracking is not exposed"));
-            m_continueWorkspaceHint->setText(
-                tr("Resume %1. Review blockers before continuing downstream.")
-                    .arg(DisplayValue(snapshot.m_workspaceName, tr("the current workspace"))));
+            m_packValue->setText(tr("None selected"));
         }
 
-        if (snapshot.m_activePackId.empty())
+        m_blockersValue->setText(
+            hasAuthoringIssues
+                ? tr("%1 need review").arg(authoringIssueCount)
+                : tr("None"));
+
+        if (!setupReady)
         {
-            m_continuePackButton->setText(tr("Choose a pack"));
-            m_continuePackButton->setAccessibleName(tr("Choose a pack"));
-            m_continuePackHint->setText(
-                tr("No active pack is selected. The Pack Manager explains the required identity and compatibility fields."));
+            m_statusHeadline->setText(tr("Finish setup to start authoring"));
+            m_setupButton->setText(tr("Fix setup"));
+            m_setupButton->setAccessibleName(tr("Fix setup"));
+            m_packButton->setText(tr("Create or open a mod"));
+            m_packButton->setAccessibleName(tr("Create or open a mod"));
+            m_packButton->setEnabled(false);
+            m_primaryHint->setText(
+                tr("FOA-SDK could not complete automatic setup. Open System details and resolve the single item it reports."));
+        }
+        else if (!hasPack)
+        {
+            m_statusHeadline->setText(tr("Create or open a mod"));
+            m_setupButton->setText(tr("System details"));
+            m_setupButton->setAccessibleName(tr("System details"));
+            m_packButton->setText(tr("Create or open a mod"));
+            m_packButton->setAccessibleName(tr("Create or open a mod"));
+            m_packButton->setEnabled(true);
+            m_primaryHint->setText(
+                tr("Fall of Avalon and the workspace are ready. Create or select a mod to enable the authoring tools."));
         }
         else
         {
-            m_continuePackButton->setText(tr("Continue active pack"));
-            m_continuePackButton->setAccessibleName(tr("Continue active pack"));
-            m_continuePackHint->setText(
-                tr("Resume %1 (%2).")
-                    .arg(DisplayValue(snapshot.m_activePackName, tr("the active pack")))
-                    .arg(DisplayValue(snapshot.m_activePackVersion, tr("version not set"))));
+            m_statusHeadline->setText(
+                hasAuthoringIssues
+                    ? tr("Ready to author · %1 issue(s) need review").arg(authoringIssueCount)
+                    : tr("Ready to author"));
+            m_setupButton->setText(tr("System details"));
+            m_setupButton->setAccessibleName(tr("System details"));
+            m_packButton->setText(tr("Manage mod"));
+            m_packButton->setAccessibleName(tr("Manage mod"));
+            m_packButton->setEnabled(true);
+            m_primaryHint->setText(
+                tr("Continue %1 or choose an editor below.")
+                    .arg(DisplayValue(snapshot.m_activePackName, tr("the current mod"))));
         }
+
+        m_authoringGroup->setEnabled(setupReady && hasPack);
     }
 } // namespace TaintedGrailModdingSDK

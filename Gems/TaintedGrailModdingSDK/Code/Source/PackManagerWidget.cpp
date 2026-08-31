@@ -9,6 +9,8 @@
 
 #include "FoundationService.h"
 
+#include <AzCore/std/algorithm.h>
+
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -24,8 +26,6 @@
 #include <QScrollArea>
 #include <QStringList>
 #include <QVBoxLayout>
-
-#include <cctype>
 
 namespace TaintedGrailModdingSDK
 {
@@ -289,6 +289,13 @@ namespace TaintedGrailModdingSDK
                 tr("FOA-SDK mod (*.tgpack.json);;JSON files (*.json)"));
             if (filePath.isEmpty())
             {
+                return;
+            }
+            if (!IsInsideWorkspace(filePath))
+            {
+                SetStatus(
+                    tr("Open a mod from this FOA-SDK workspace. External paths are not used for normal mod projects."),
+                    true);
                 return;
             }
 

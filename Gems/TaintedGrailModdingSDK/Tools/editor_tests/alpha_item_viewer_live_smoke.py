@@ -1,8 +1,9 @@
-"""Windows O3DE Editor smoke test for the complete item-viewer UI lifecycle.
+"""Windows O3DE Editor smoke test for the working item-viewer UI lifecycle.
 
-This structural smoke verifies the official O3DE thumbnail grid, registered live
-previewer, explicit assignment controls, and close/reopen reconstruction. A
-configured exact-profile fixture is still required for product-render evidence.
+This smoke verifies production Editor integration, the official O3DE thumbnail
+grid, registered live previewer, simplified exact-profile asset refresh UX,
+explicit assignment controls, and close/reopen reconstruction. A configured
+exact-profile preview cohort is still required for product-render evidence.
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ class Tests:
     thumbnail_grid_present = ("Official product-thumbnail grid is present", "Product-thumbnail grid is missing")
     evidence_table_present = ("Validated product table is retained", "Validated product table is missing")
     live_previewer_present = ("Live O3DE preview frame is present", "Live O3DE preview frame is missing")
+    refresh_assets_control = ("Item visuals expose one Refresh Assets action", "Refresh Assets action is missing or disabled")
+    internal_model_controls_hidden = ("Raw pane-model controls are hidden", "Raw pane-model controls leaked into the user workflow")
     explicit_binding_controls = ("Explicit icon and model assignment controls are present", "Assignment controls are missing")
     reopened = ("Pane closed and reopened with one viewer lifecycle", "Pane did not reconstruct cleanly after reopen")
 
@@ -97,7 +100,28 @@ def ItemViewerLifecycleSmoke() -> None:
             for widget in selector.findChildren(QtWidgets.QWidget)
         ),
     )
-    button_texts = {button.text() for button in selector.findChildren(QtWidgets.QPushButton)}
+
+    buttons = selector.findChildren(QtWidgets.QPushButton)
+    refresh_buttons = [button for button in buttons if button.text() == "Refresh Assets"]
+    Report.critical_result(
+        Tests.refresh_assets_control,
+        len(refresh_buttons) == 1
+        and not refresh_buttons[0].isHidden()
+        and refresh_buttons[0].isEnabled(),
+    )
+    raw_choose_buttons = [button for button in buttons if button.text() == "Choose Model..."]
+    raw_model_paths = [
+        edit
+        for edit in selector.findChildren(QtWidgets.QLineEdit)
+        if edit.accessibleName() == "Loaded Asset Browser pane model path"
+    ]
+    Report.critical_result(
+        Tests.internal_model_controls_hidden,
+        all(button.isHidden() for button in raw_choose_buttons)
+        and all(edit.isHidden() for edit in raw_model_paths),
+    )
+
+    button_texts = {button.text() for button in buttons}
     Report.critical_result(
         Tests.explicit_binding_controls,
         {"Use Selected as Icon Reference", "Use Selected as Asset Reference"}.issubset(button_texts),

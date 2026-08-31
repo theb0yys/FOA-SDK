@@ -1,0 +1,89 @@
+name: FOA-SDK Item Viewer Windows Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/item-viewer-windows-validation.yml"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.cpp"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.h"
+      - "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
+      - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.ps1"
+      - "Gems/TaintedGrailModdingSDK/Tools/editor_tests/alpha_item_viewer_live_smoke.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_item_viewer_working_lifecycle.py"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/item-viewer-windows-validation.yml"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.cpp"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.h"
+      - "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
+      - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.ps1"
+      - "Gems/TaintedGrailModdingSDK/Tools/editor_tests/alpha_item_viewer_live_smoke.py"
+      - "Gems/TaintedGrailModdingSDK/Tools/tests/test_validate_item_viewer_working_lifecycle.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foa-sdk-item-viewer-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  item-viewer-windows:
+    name: Exact-head Item Viewer Editor lifecycle
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+    steps:
+      - name: Check out exact FOA-SDK event commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Check out pinned O3DE source
+        uses: actions/checkout@v4
+        with:
+          repository: o3de/o3de
+          ref: ${{ env.O3DE_COMMIT }}
+          path: o3de
+          persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run working Item Viewer lifecycle gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildRoot = Join-Path $env:RUNNER_TEMP "foa-item-viewer-build"
+          $thirdPartyRoot = Join-Path $env:RUNNER_TEMP "o3de-3rdparty"
+          & .\Gems\TaintedGrailModdingSDK\Tools\run_item_viewer_working_lifecycle_windows_validation.ps1 `
+            -EngineRoot "$env:GITHUB_WORKSPACE\o3de" `
+            -BuildRoot $buildRoot `
+            -ThirdPartyRoot $thirdPartyRoot `
+            -Configuration profile `
+            -Parallel 2 `
+            -EditorSmokeTimeoutSeconds 600
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Preserve Item Viewer Editor log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foa-sdk-item-viewer-windows-${{ github.run_id }}
+          path: |
+            TaintedGrailModdingEditor/user/log/Editor.log
+            TaintedGrailModdingEditor/Cache/**/user/log/Editor.log
+          if-no-files-found: warn
+          retention-days: 7

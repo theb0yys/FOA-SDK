@@ -28,6 +28,21 @@
 
 namespace TaintedGrailModdingSDK
 {
+    struct FoundationLocalSetupResult
+    {
+        AZStd::vector<AZStd::string> m_notes;
+        AZStd::string m_error;
+        bool m_changed = false;
+        bool m_gameInstallDetected = false;
+        bool m_gameProfileComplete = false;
+        bool m_persisted = false;
+
+        bool IsReady() const
+        {
+            return m_gameProfileComplete && m_error.empty();
+        }
+    };
+
     class FoundationService
         : private ExtensionRequestBus::Handler
     {
@@ -38,6 +53,10 @@ namespace TaintedGrailModdingSDK
         void Initialize();
         void Shutdown();
         bool IsInitialized() const;
+
+        FoundationLocalSetupResult RefreshLocalSetup(
+            const AZStd::string& explicitInstallPath = {},
+            const AZStd::string& workspaceRootHint = {});
 
         void SetWorkspace(const WorkspaceModel& workspace);
         bool SaveWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr);

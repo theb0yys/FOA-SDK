@@ -123,6 +123,7 @@ namespace RoadAtlasAuthoring
             options.preferedDockingArea = Qt::RightDockWidgetArea;
             options.isDeletable = true;
             options.isPreview = true;
+            options.showInMenu = false;
             options.saveKeyName = QStringLiteral("RoadAtlasAuthoring.MapEditorDock");
             AzToolsFramework::RegisterViewPane<RoadAtlasEditorWidget>(
                 PaneName,

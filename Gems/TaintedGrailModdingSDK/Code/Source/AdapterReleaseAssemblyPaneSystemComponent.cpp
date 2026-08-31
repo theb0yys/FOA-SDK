@@ -63,6 +63,7 @@ namespace TaintedGrailModdingSDK
         options.preferedDockingArea = Qt::BottomDockWidgetArea;
         options.isDeletable = true;
         options.isPreview = true;
+        options.showInMenu = false;
         options.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.ReleaseAssemblyResults");
         AzToolsFramework::RegisterViewPane<AdapterReleaseAssemblyResultWidget>(

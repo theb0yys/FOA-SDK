@@ -11,14 +11,19 @@
 
 #include <AzCore/std/algorithm.h>
 
+#include <QByteArray>
 #include <QComboBox>
 #include <QDir>
-#include <QFileDialog>
+#include <QFile>
 #include <QFileInfo>
+#include <QFileInfoList>
 #include <QFont>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -27,10 +32,15 @@
 #include <QStringList>
 #include <QVBoxLayout>
 
+#include <cstddef>
+
 namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        constexpr int MaximumWorkspaceModDirectories = 512;
+        constexpr qint64 MaximumManifestSummaryBytes = 1024 * 1024;
+
         AZStd::string ToAzString(const QString& value)
         {
             const QByteArray utf8 = value.trimmed().toUtf8();
@@ -117,6 +127,37 @@ namespace TaintedGrailModdingSDK
             layout->addRow(label, editor);
             return editor;
         }
+
+        QString WorkspaceModLabel(const QFileInfo& manifestInfo)
+        {
+            const QString fallback = manifestInfo.dir().dirName();
+            QFile file(manifestInfo.absoluteFilePath());
+            if (!file.open(QIODevice::ReadOnly))
+            {
+                return QObject::tr("%1 · needs repair").arg(fallback);
+            }
+
+            QJsonParseError parseError;
+            const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+            if (parseError.error != QJsonParseError::NoError || !document.isObject())
+            {
+                return QObject::tr("%1 · needs repair").arg(fallback);
+            }
+
+            const QJsonObject root = document.object();
+            const QString packId = root.value(QStringLiteral("PackId")).toString().trimmed();
+            const QString displayName = root.value(QStringLiteral("DisplayName")).toString().trimmed();
+            const QString version = root.value(QStringLiteral("Version")).toString().trimmed();
+
+            QString label = displayName.isEmpty()
+                ? (packId.isEmpty() ? fallback : packId)
+                : displayName;
+            if (!version.isEmpty())
+            {
+                label += QObject::tr(" · %1").arg(version);
+            }
+            return label;
+        }
     } // namespace
 
     PackManagerWidget::PackManagerWidget(QWidget* parent)
@@ -132,7 +173,7 @@ namespace TaintedGrailModdingSDK
         rootLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Create or open a mod. FOA-SDK fills the current game compatibility and stores the manifest inside the workspace automatically."),
+            tr("Create or select a mod. FOA-SDK fills the current game compatibility and stores each manifest in the workspace automatically."),
             this);
         description->setWordWrap(true);
         rootLayout->addWidget(description);
@@ -142,6 +183,23 @@ namespace TaintedGrailModdingSDK
         m_activePackValue = new QLabel(summaryGroup);
         summaryLayout->addRow(tr("Mod"), m_activePackValue);
         rootLayout->addWidget(summaryGroup);
+
+        auto* workspaceModsGroup = new QGroupBox(tr("Saved mods"), this);
+        auto* workspaceModsLayout = new QVBoxLayout(workspaceModsGroup);
+        auto* workspaceModsRow = new QWidget(workspaceModsGroup);
+        auto* workspaceModsRowLayout = new QHBoxLayout(workspaceModsRow);
+        workspaceModsRowLayout->setContentsMargins(0, 0, 0, 0);
+        m_workspaceModsCombo = new QComboBox(workspaceModsRow);
+        m_workspaceModsCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        m_workspaceModsCombo->setMinimumContentsLength(28);
+        m_openSelectedButton = new QPushButton(tr("Open selected"), workspaceModsRow);
+        workspaceModsRowLayout->addWidget(m_workspaceModsCombo, 1);
+        workspaceModsRowLayout->addWidget(m_openSelectedButton);
+        workspaceModsLayout->addWidget(workspaceModsRow);
+        m_workspaceModsHint = new QLabel(workspaceModsGroup);
+        m_workspaceModsHint->setWordWrap(true);
+        workspaceModsLayout->addWidget(m_workspaceModsHint);
+        rootLayout->addWidget(workspaceModsGroup);
 
         auto* detailsGroup = new QGroupBox(tr("Mod details"), this);
         auto* detailsLayout = new QFormLayout(detailsGroup);
@@ -242,10 +300,8 @@ namespace TaintedGrailModdingSDK
 
         auto* buttonLayout = new QHBoxLayout();
         auto* newButton = new QPushButton(tr("New mod"), this);
-        auto* openButton = new QPushButton(tr("Open existing..."), this);
         auto* saveButton = new QPushButton(tr("Save mod"), this);
         buttonLayout->addWidget(newButton);
-        buttonLayout->addWidget(openButton);
         buttonLayout->addStretch(1);
         buttonLayout->addWidget(saveButton);
         rootLayout->addLayout(buttonLayout);
@@ -269,47 +325,15 @@ namespace TaintedGrailModdingSDK
             m_advancedToggleButton->setText(
                 show ? tr("Hide advanced manifest") : tr("Show advanced manifest"));
         });
+        connect(m_openSelectedButton, &QPushButton::clicked, this, [this]()
+        {
+            OpenSelectedPack();
+        });
         connect(newButton, &QPushButton::clicked, this, [this]()
         {
             FoundationService::Get().ClearActivePack();
             ClearFormForNewPack();
             SetStatus(tr("New mod ready. Enter a name and author, then Save mod."));
-        });
-        connect(openButton, &QPushButton::clicked, this, [this]()
-        {
-            const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
-            const QString workspaceRoot = ToQString(workspace.m_rootPath);
-            const QString startDirectory = workspaceRoot.isEmpty()
-                ? QDir::homePath()
-                : QDir(workspaceRoot).filePath(QStringLiteral("Packs"));
-            const QString filePath = QFileDialog::getOpenFileName(
-                this,
-                tr("Open FOA-SDK mod"),
-                startDirectory,
-                tr("FOA-SDK mod (*.tgpack.json);;JSON files (*.json)"));
-            if (filePath.isEmpty())
-            {
-                return;
-            }
-            if (!IsInsideWorkspace(filePath))
-            {
-                SetStatus(
-                    tr("Open a mod from this FOA-SDK workspace. External paths are not used for normal mod projects."),
-                    true);
-                return;
-            }
-
-            AZStd::string error;
-            if (!FoundationService::Get().LoadPack(ToAzString(filePath), &error))
-            {
-                SetStatus(ToQString(error), true);
-                return;
-            }
-            if (const PackManifest* pack = FoundationService::Get().GetActivePack())
-            {
-                PopulateFromPack(*pack);
-            }
-            SetStatus(tr("Mod opened."));
         });
         connect(saveButton, &QPushButton::clicked, this, [this]()
         {
@@ -323,6 +347,7 @@ namespace TaintedGrailModdingSDK
             PopulateFromPack(*pack);
         }
         UpdateSummary();
+        RefreshWorkspaceMods(ToQString(FoundationService::Get().GetActivePackFilePath()));
     }
 
     PackManagerWidget::~PackManagerWidget()
@@ -333,6 +358,7 @@ namespace TaintedGrailModdingSDK
     void PackManagerWidget::OnFoundationChanged()
     {
         UpdateSummary();
+        RefreshWorkspaceMods(ToQString(FoundationService::Get().GetActivePackFilePath()));
     }
 
     PackManifest PackManagerWidget::BuildPackFromForm() const
@@ -461,6 +487,115 @@ namespace TaintedGrailModdingSDK
                 : ToQString(snapshot.m_activePackFilePath));
     }
 
+    void PackManagerWidget::RefreshWorkspaceMods(const QString& selectedPath)
+    {
+        QString selection = selectedPath.trimmed();
+        if (selection.isEmpty() && m_workspaceModsCombo->currentIndex() >= 0)
+        {
+            selection = m_workspaceModsCombo->currentData().toString();
+        }
+        if (!selection.isEmpty())
+        {
+            selection = QDir::cleanPath(QFileInfo(selection).absoluteFilePath());
+        }
+
+        m_workspaceModsCombo->clear();
+        int availableCount = 0;
+        int ignoredCount = 0;
+        bool truncated = false;
+
+        const QString workspaceRoot = ToQString(FoundationService::Get().GetWorkspace().m_rootPath);
+        if (!workspaceRoot.isEmpty())
+        {
+            QDir packsDirectory(QDir(workspaceRoot).filePath(QStringLiteral("Packs")));
+            const QFileInfoList directories = packsDirectory.entryInfoList(
+                QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
+                QDir::Name | QDir::IgnoreCase);
+            const int limit = directories.size() < MaximumWorkspaceModDirectories
+                ? directories.size()
+                : MaximumWorkspaceModDirectories;
+            truncated = directories.size() > MaximumWorkspaceModDirectories;
+
+            for (int index = 0; index < limit; ++index)
+            {
+                const QFileInfo manifestInfo(
+                    QDir(directories[index].absoluteFilePath()).filePath(
+                        QStringLiteral("pack.tgpack.json")));
+                if (manifestInfo.isSymLink()
+                    || !manifestInfo.isFile()
+                    || manifestInfo.size() <= 0
+                    || manifestInfo.size() > MaximumManifestSummaryBytes)
+                {
+                    ++ignoredCount;
+                    continue;
+                }
+
+                const QString filePath = QDir::cleanPath(manifestInfo.absoluteFilePath());
+                m_workspaceModsCombo->addItem(WorkspaceModLabel(manifestInfo), filePath);
+                ++availableCount;
+            }
+        }
+
+        if (availableCount == 0)
+        {
+            m_workspaceModsCombo->addItem(tr("No saved mods found"), QString());
+            m_workspaceModsCombo->setEnabled(false);
+            m_openSelectedButton->setEnabled(false);
+            m_workspaceModsHint->setText(
+                tr("Create a new mod below. It will appear here automatically after the first save."));
+            return;
+        }
+
+        m_workspaceModsCombo->setEnabled(true);
+        m_openSelectedButton->setEnabled(true);
+        const int selectedIndex = selection.isEmpty()
+            ? -1
+            : m_workspaceModsCombo->findData(selection);
+        m_workspaceModsCombo->setCurrentIndex(selectedIndex >= 0 ? selectedIndex : 0);
+
+        QString hint = availableCount == 1
+            ? tr("1 saved mod is available in this workspace.")
+            : tr("%1 saved mods are available in this workspace.").arg(availableCount);
+        if (ignoredCount > 0)
+        {
+            hint += tr(" %1 unsafe or unsupported manifest(s) were ignored.").arg(ignoredCount);
+        }
+        if (truncated)
+        {
+            hint += tr(" The list is limited to the first %1 mod folders.")
+                .arg(MaximumWorkspaceModDirectories);
+        }
+        m_workspaceModsHint->setText(hint);
+    }
+
+    void PackManagerWidget::OpenSelectedPack()
+    {
+        const QString filePath = m_workspaceModsCombo->currentData().toString();
+        if (filePath.isEmpty())
+        {
+            SetStatus(tr("No saved mod is selected."), true);
+            return;
+        }
+        if (!IsInsideWorkspace(filePath))
+        {
+            SetStatus(tr("The selected mod is outside the FOA-SDK workspace."), true);
+            return;
+        }
+
+        AZStd::string error;
+        if (!FoundationService::Get().LoadPack(ToAzString(filePath), &error))
+        {
+            SetStatus(ToQString(error), true);
+            return;
+        }
+        if (const PackManifest* pack = FoundationService::Get().GetActivePack())
+        {
+            PopulateFromPack(*pack);
+        }
+        RefreshWorkspaceMods(filePath);
+        SetStatus(tr("Mod opened."));
+    }
+
     void PackManagerWidget::SetStatus(const QString& message, bool error)
     {
         m_statusLabel->setText(message);
@@ -544,6 +679,7 @@ namespace TaintedGrailModdingSDK
         }
         SetStatus(tr("Mod saved. You can start authoring."));
         UpdateSummary();
+        RefreshWorkspaceMods(filePath);
         return true;
     }
 

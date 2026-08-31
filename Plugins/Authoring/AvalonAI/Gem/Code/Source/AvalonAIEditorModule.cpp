@@ -121,6 +121,7 @@ namespace AvalonAIAuthoring
             options.preferedDockingArea = Qt::RightDockWidgetArea;
             options.isDeletable = true;
             options.isPreview = true;
+            options.showInMenu = false;
             options.saveKeyName = QStringLiteral("AvalonAIAuthoring.Editor");
             AzToolsFramework::RegisterViewPane<AvalonAIEditorWidget>(
                 PaneName,

@@ -199,6 +199,7 @@ namespace TaintedGrailModdingSDK
         hubOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
         hubOptions.isDeletable = true;
         hubOptions.isPreview = true;
+        hubOptions.optionalMenuText = QStringLiteral("FOA-SDK Home");
         hubOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.DevelopmentHub");
         AzToolsFramework::RegisterViewPane<DevelopmentHubWidget>(
             DevelopmentHubViewPaneName,
@@ -210,6 +211,7 @@ namespace TaintedGrailModdingSDK
         statusOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         statusOptions.isDeletable = true;
         statusOptions.isPreview = true;
+        statusOptions.showInMenu = false;
         statusOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.FoundationStatus");
         AzToolsFramework::RegisterViewPane<FoundationStatusWidget>(
             FoundationStatusViewPaneName,
@@ -221,6 +223,7 @@ namespace TaintedGrailModdingSDK
         packOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
         packOptions.isDeletable = true;
         packOptions.isPreview = true;
+        packOptions.showInMenu = false;
         packOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.PackManager");
         AzToolsFramework::RegisterViewPane<PackManagerWidget>(
             PackManagerViewPaneName,
@@ -232,6 +235,7 @@ namespace TaintedGrailModdingSDK
         intakeOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         intakeOptions.isDeletable = true;
         intakeOptions.isPreview = true;
+        intakeOptions.showInMenu = false;
         intakeOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.SourceIntake");
         AzToolsFramework::RegisterViewPane<SourceEvidenceIntakeWidget>(
             SourceIntakeViewPaneName,
@@ -243,6 +247,7 @@ namespace TaintedGrailModdingSDK
         assetBrowserPreviewOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         assetBrowserPreviewOptions.isDeletable = true;
         assetBrowserPreviewOptions.isPreview = true;
+        assetBrowserPreviewOptions.showInMenu = false;
         assetBrowserPreviewOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.AssetBrowserPreview");
         AzToolsFramework::RegisterViewPane<AssetBrowserPreviewWidget>(
@@ -255,6 +260,7 @@ namespace TaintedGrailModdingSDK
         catalogOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         catalogOptions.isDeletable = true;
         catalogOptions.isPreview = true;
+        catalogOptions.showInMenu = false;
         catalogOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.CatalogBrowser");
         AzToolsFramework::RegisterViewPane<CatalogBrowserWidget>(
             CatalogBrowserViewPaneName,
@@ -266,6 +272,7 @@ namespace TaintedGrailModdingSDK
         governanceOptions.preferedDockingArea = Qt::LeftDockWidgetArea;
         governanceOptions.isDeletable = true;
         governanceOptions.isPreview = true;
+        governanceOptions.showInMenu = false;
         governanceOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.CatalogGovernance");
         AzToolsFramework::RegisterViewPane<CatalogGovernanceWidget>(
             CatalogGovernanceViewPaneName,
@@ -277,6 +284,7 @@ namespace TaintedGrailModdingSDK
         itemRecipeOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         itemRecipeOptions.isDeletable = true;
         itemRecipeOptions.isPreview = true;
+        itemRecipeOptions.showInMenu = false;
         itemRecipeOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.ItemRecipeEditor");
         AzToolsFramework::RegisterViewPane<ItemRecipeEditorWidget>(
             ItemRecipeEditorViewPaneName,
@@ -288,6 +296,7 @@ namespace TaintedGrailModdingSDK
         questStateOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         questStateOptions.isDeletable = true;
         questStateOptions.isPreview = true;
+        questStateOptions.showInMenu = false;
         questStateOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.QuestStateInspector");
         AzToolsFramework::RegisterViewPane<QuestStateInspectorWidget>(
             QuestStateInspectorViewPaneName,
@@ -299,6 +308,7 @@ namespace TaintedGrailModdingSDK
         actorTroopOptions.preferedDockingArea = Qt::RightDockWidgetArea;
         actorTroopOptions.isDeletable = true;
         actorTroopOptions.isPreview = true;
+        actorTroopOptions.showInMenu = false;
         actorTroopOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.ActorTroopEditor");
         AzToolsFramework::RegisterViewPane<ActorTroopEditorWidget>(
             ActorTroopEditorViewPaneName,
@@ -310,6 +320,7 @@ namespace TaintedGrailModdingSDK
         economyCoverageOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         economyCoverageOptions.isDeletable = true;
         economyCoverageOptions.isPreview = true;
+        economyCoverageOptions.showInMenu = false;
         economyCoverageOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.EconomyCoverageDashboard");
         AzToolsFramework::RegisterViewPane<EconomyCoverageDashboardWidget>(
             EconomyCoverageDashboardViewPaneName,
@@ -321,6 +332,7 @@ namespace TaintedGrailModdingSDK
         economyDuplicateOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         economyDuplicateOptions.isDeletable = true;
         economyDuplicateOptions.isPreview = true;
+        economyDuplicateOptions.showInMenu = false;
         economyDuplicateOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.EconomyDuplicateReport");
         AzToolsFramework::RegisterViewPane<EconomyDuplicateReportWidget>(
             EconomyDuplicateReportViewPaneName,
@@ -332,6 +344,7 @@ namespace TaintedGrailModdingSDK
         adapterMatrixOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         adapterMatrixOptions.isDeletable = true;
         adapterMatrixOptions.isPreview = true;
+        adapterMatrixOptions.showInMenu = false;
         adapterMatrixOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.AdapterCapabilityMatrix");
         AzToolsFramework::RegisterViewPane<AdapterCapabilityMatrixWidget>(
             AdapterCapabilityMatrixViewPaneName,
@@ -343,6 +356,7 @@ namespace TaintedGrailModdingSDK
         workOrderPlanOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         workOrderPlanOptions.isDeletable = true;
         workOrderPlanOptions.isPreview = true;
+        workOrderPlanOptions.showInMenu = false;
         workOrderPlanOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.AdapterWorkOrderPlans");
         AzToolsFramework::RegisterViewPane<AdapterWorkOrderPlanWidget>(
             AdapterWorkOrderPlanViewPaneName,
@@ -354,6 +368,7 @@ namespace TaintedGrailModdingSDK
         runtimeResultOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         runtimeResultOptions.isDeletable = true;
         runtimeResultOptions.isPreview = true;
+        runtimeResultOptions.showInMenu = false;
         runtimeResultOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.AdapterRuntimeResultEvidence");
         AzToolsFramework::RegisterViewPane<AdapterRuntimeResultEvidenceWidget>(
@@ -366,6 +381,7 @@ namespace TaintedGrailModdingSDK
         buildManifestOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         buildManifestOptions.isDeletable = true;
         buildManifestOptions.isPreview = true;
+        buildManifestOptions.showInMenu = false;
         buildManifestOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.AdapterBuildManifests");
         AzToolsFramework::RegisterViewPane<AdapterBuildManifestWidget>(
@@ -378,6 +394,7 @@ namespace TaintedGrailModdingSDK
         packagePreviewOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         packagePreviewOptions.isDeletable = true;
         packagePreviewOptions.isPreview = true;
+        packagePreviewOptions.showInMenu = false;
         packagePreviewOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.PackageAssemblyPreview");
         AzToolsFramework::RegisterViewPane<AdapterPackageAssemblyPreviewWidget>(
@@ -390,6 +407,7 @@ namespace TaintedGrailModdingSDK
         deploymentPreviewOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         deploymentPreviewOptions.isDeletable = true;
         deploymentPreviewOptions.isPreview = true;
+        deploymentPreviewOptions.showInMenu = false;
         deploymentPreviewOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.StagingDeploymentPreview");
         AzToolsFramework::RegisterViewPane<AdapterStagingDeploymentPreviewWidget>(
@@ -402,6 +420,7 @@ namespace TaintedGrailModdingSDK
         deploymentWorkOrderOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         deploymentWorkOrderOptions.isDeletable = true;
         deploymentWorkOrderOptions.isPreview = true;
+        deploymentWorkOrderOptions.showInMenu = false;
         deploymentWorkOrderOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.DeploymentWorkOrders");
         AzToolsFramework::RegisterViewPane<AdapterDeploymentWorkOrderWidget>(
@@ -414,6 +433,7 @@ namespace TaintedGrailModdingSDK
         deploymentExecutionEvidenceOptions.preferedDockingArea = Qt::BottomDockWidgetArea;
         deploymentExecutionEvidenceOptions.isDeletable = true;
         deploymentExecutionEvidenceOptions.isPreview = true;
+        deploymentExecutionEvidenceOptions.showInMenu = false;
         deploymentExecutionEvidenceOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.DeploymentExecutionEvidence");
         AzToolsFramework::RegisterViewPane<AdapterDeploymentExecutionEvidenceWidget>(
@@ -427,6 +447,7 @@ namespace TaintedGrailModdingSDK
             Qt::BottomDockWidgetArea;
         postDeploymentVerificationOptions.isDeletable = true;
         postDeploymentVerificationOptions.isPreview = true;
+        postDeploymentVerificationOptions.showInMenu = false;
         postDeploymentVerificationOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.PostDeploymentVerification");
         AzToolsFramework::RegisterViewPane<AdapterPostDeploymentVerificationWidget>(
@@ -440,6 +461,7 @@ namespace TaintedGrailModdingSDK
             Qt::BottomDockWidgetArea;
         postDeploymentVerifierOptions.isDeletable = true;
         postDeploymentVerifierOptions.isPreview = true;
+        postDeploymentVerifierOptions.showInMenu = false;
         postDeploymentVerifierOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.PostDeploymentVerifier");
         AzToolsFramework::RegisterViewPane<AdapterPostDeploymentVerifierWidget>(
@@ -453,6 +475,7 @@ namespace TaintedGrailModdingSDK
             Qt::BottomDockWidgetArea;
         verifierReconciliationOptions.isDeletable = true;
         verifierReconciliationOptions.isPreview = true;
+        verifierReconciliationOptions.showInMenu = false;
         verifierReconciliationOptions.saveKeyName =
             QStringLiteral("TaintedGrailModdingSDK.VerifierReconciliation");
         AzToolsFramework::RegisterViewPane<

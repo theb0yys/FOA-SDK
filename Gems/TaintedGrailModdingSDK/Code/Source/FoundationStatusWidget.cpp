@@ -336,7 +336,8 @@ namespace TaintedGrailModdingSDK
         const WorkspaceModel& workspace = service.GetWorkspace();
         const GameProfile* profile = workspace.FindActiveGameProfile();
         const bool workspaceReady =
-            !workspace.m_rootPath.empty()
+            !service.GetWorkspaceFilePath().empty()
+            && !workspace.m_rootPath.empty()
             && !workspace.m_outputPath.empty()
             && !workspace.m_stagingPath.empty()
             && !workspace.m_deploymentPath.empty();
@@ -361,7 +362,11 @@ namespace TaintedGrailModdingSDK
         m_workspaceValue->setText(
             StatusText(workspaceReady, tr("Ready"), tr("Preparing")));
         m_authoringStatus->setText(
-            profileReady ? tr("Ready") : (gameFound ? tr("Resolving profile") : tr("Waiting for game")));
+            ready
+                ? tr("Ready")
+                : (!gameFound
+                    ? tr("Waiting for game")
+                    : (!profileReady ? tr("Resolving profile") : tr("Preparing workspace"))));
         m_locateGameButton->setVisible(!gameFound);
 
         UpdateAdvancedDetails();

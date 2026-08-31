@@ -37,7 +37,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* ImportProofDocumentKind = "foa-o3de-asset-processor-import-proof";
         constexpr const char* PaneModelFileName = "foa-asset-browser-pane-model.json";
         constexpr const char* PaneModelDocumentKind = "foa-asset-browser-pane-model";
-        constexpr const char* InstalledPaneModelTool = "@engroot@/scripts/foa-sdk/foa_asset_browser_pane_model.py";
+        constexpr const char* InstalledPaneRefreshTool = "@engroot@/scripts/foa-sdk/foa_asset_browser_pane_refresh.py";
 
         AZStd::string ToAzString(const QString& value)
         {
@@ -242,12 +242,12 @@ namespace TaintedGrailModdingSDK
             return AZ::Success(best);
         }
 
-        QString ResolvePaneModelToolPath()
+        QString ResolvePaneRefreshToolPath()
         {
             if (AZ::IO::FileIOBase* fileIo = AZ::IO::FileIOBase::GetDirectInstance())
             {
                 char resolvedPath[AZ_MAX_PATH_LEN] = { 0 };
-                if (fileIo->ResolvePath(InstalledPaneModelTool, resolvedPath, AZ_MAX_PATH_LEN))
+                if (fileIo->ResolvePath(InstalledPaneRefreshTool, resolvedPath, AZ_MAX_PATH_LEN))
                 {
                     const QFileInfo installed(QString::fromUtf8(resolvedPath));
                     if (installed.isFile())
@@ -258,8 +258,8 @@ namespace TaintedGrailModdingSDK
                 }
             }
 
-#if defined(TG_SDK_ASSET_BROWSER_PANE_MODEL_TOOL_SOURCE)
-            const QFileInfo source(QString::fromUtf8(TG_SDK_ASSET_BROWSER_PANE_MODEL_TOOL_SOURCE));
+#if defined(TG_SDK_ASSET_BROWSER_PANE_REFRESH_TOOL_SOURCE)
+            const QFileInfo source(QString::fromUtf8(TG_SDK_ASSET_BROWSER_PANE_REFRESH_TOOL_SOURCE));
             if (source.isFile())
             {
                 const QString canonical = source.canonicalFilePath();
@@ -273,7 +273,7 @@ namespace TaintedGrailModdingSDK
             const ExactProfileContext& context,
             const EvidenceCandidate& proof)
         {
-            const QString toolPath = ResolvePaneModelToolPath();
+            const QString toolPath = ResolvePaneRefreshToolPath();
             if (toolPath.isEmpty())
             {
                 return AZ::Failure(AZStd::string("FOA-SDK's item-visual refresh tool is missing from this installation."));
@@ -284,7 +284,6 @@ namespace TaintedGrailModdingSDK
             }
 
             AZStd::vector<AZStd::string> ownedArgs;
-            ownedArgs.emplace_back("build");
             ownedArgs.emplace_back("--workspace");
             ownedArgs.emplace_back(ToAzString(context.m_workspacePath));
             ownedArgs.emplace_back("--import-proof");
@@ -298,11 +297,12 @@ namespace TaintedGrailModdingSDK
                 args.emplace_back(value);
             }
 
+            const AZStd::string toolPathUtf8 = ToAzString(toolPath);
             bool succeeded = false;
             AzToolsFramework::EditorPythonRunnerRequestBus::BroadcastResult(
                 succeeded,
                 &AzToolsFramework::EditorPythonRunnerRequestBus::Events::ExecuteByFilenameWithArgs,
-                AZStd::string_view(ToAzString(toolPath)),
+                AZStd::string_view(toolPathUtf8),
                 args);
             if (!succeeded)
             {

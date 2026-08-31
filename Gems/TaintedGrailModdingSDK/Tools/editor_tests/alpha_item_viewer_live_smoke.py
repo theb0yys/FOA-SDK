@@ -17,7 +17,7 @@ import sys
 
 import azlmbr.paths
 import azlmbr.legacy.general as general
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtWidgets
 
 PANE_NAME = "Tainted Grail Item and Recipe Editor"
 STATUS_PANE_NAME = "Tainted Grail SDK Status"
@@ -36,6 +36,10 @@ class Tests:
     refresh_fixture_ready = (
         "Isolated exact-profile workspace reached Ready to author",
         "Isolated Item Viewer workspace did not become ready",
+    )
+    refresh_starts_without_model = (
+        "Refresh fixture starts without an Asset Browser pane model",
+        "Refresh fixture already contained an Asset Browser pane model",
     )
     pane_opened = ("Item and Recipe Editor pane opened", "Item and Recipe Editor pane did not open")
     selector_created = ("Item visual selector was created", "Item visual selector was not created")
@@ -143,7 +147,7 @@ def ItemViewerLifecycleSmoke() -> None:
         helper.wait_for_condition(lambda: not general.is_pane_visible(STATUS_PANE_NAME), 10.0)
 
     # The fixture deliberately removes every pane model before Editor launch.
-    Report.critical_result(Tests.refresh_regenerated_model, len(generated_models()) == 0)
+    Report.critical_result(Tests.refresh_starts_without_model, len(generated_models()) == 0)
 
     general.open_pane(PANE_NAME)
     Report.critical_result(
@@ -234,7 +238,6 @@ def ItemViewerLifecycleSmoke() -> None:
         20.0,
     )
     selector = find_selector()
-    product_table = find_product_table(selector)
     grid = selector.findChild(QtWidgets.QListWidget, GRID_OBJECT_NAME) if selector else None
     hidden_path_matches = (
         len(raw_model_paths) == 1

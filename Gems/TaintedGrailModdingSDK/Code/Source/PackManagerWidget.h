@@ -13,9 +13,11 @@
 #include <QWidget>
 
 class QComboBox;
+class QGroupBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
+class QPushButton;
 
 namespace TaintedGrailModdingSDK
 {
@@ -33,10 +35,12 @@ namespace TaintedGrailModdingSDK
         PackManifest BuildPackFromForm() const;
         void PopulateFromPack(const PackManifest& pack);
         void ClearFormForNewPack();
+        void UpdateGeneratedIdentity();
         void UpdateSummary();
         void SetStatus(const QString& message, bool error = false);
         bool ApplyPack();
-        bool SavePackAs();
+        bool SavePack();
+        QString CanonicalPackFilePath(const PackManifest& pack) const;
         bool IsInsideWorkspace(const QString& filePath) const;
 
         QLineEdit* m_packIdEdit = nullptr;
@@ -61,5 +65,8 @@ namespace TaintedGrailModdingSDK
         QLabel* m_activePackValue = nullptr;
         QLabel* m_manifestPathValue = nullptr;
         QLabel* m_statusLabel = nullptr;
+        QGroupBox* m_advancedGroup = nullptr;
+        QPushButton* m_advancedToggleButton = nullptr;
+        bool m_isNewPack = true;
     };
 } // namespace TaintedGrailModdingSDK

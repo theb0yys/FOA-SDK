@@ -16,7 +16,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QFileInfoList>
 #include <QFont>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -663,11 +662,6 @@ namespace TaintedGrailModdingSDK
         if (!IsInsideWorkspace(filePath))
         {
             SetStatus(tr("The mod manifest must stay inside the FOA-SDK workspace."), true);
-            return false;
-        }
-        if (!QDir().mkpath(QFileInfo(filePath).absolutePath()))
-        {
-            SetStatus(tr("FOA-SDK could not create the mod folder."), true);
             return false;
         }
 

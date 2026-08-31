@@ -242,10 +242,11 @@ namespace TaintedGrailModdingSDK
             }
             else
             {
-                AddNote(
-                    result,
-                    AZStd::string("Existing automatic workspace could not be loaded: ")
-                        + loadError);
+                result.m_error =
+                    AZStd::string("The automatic FOA-SDK workspace could not be loaded and was left unchanged: ")
+                    + loadError;
+                RefreshSnapshot();
+                return result;
             }
         }
 

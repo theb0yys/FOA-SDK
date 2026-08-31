@@ -1,0 +1,39 @@
+{
+  "schema": "foa.sdk.provider_manifest.v1",
+  "schema_version": 1,
+  "provider_id": "game.foa",
+  "display_name": "Tainted Grail: The Fall of Avalon",
+  "platform": "windows-x64",
+  "discovery": {
+    "mode": "user-selected-path",
+    "machine_scan_allowed": false,
+    "network_allowed": false
+  },
+  "capabilities": [
+    "explicit-path-validation",
+    "read-only-runtime-observation",
+    "compatibility-report",
+    "non-mutating-plan-preview",
+    "redacted-support-report"
+  ],
+  "runtime_routes": [
+    {
+      "route_id": "mono-bepinex5",
+      "support_state": "evidence-required"
+    },
+    {
+      "route_id": "il2cpp-bepinex6",
+      "support_state": "evidence-required"
+    }
+  ],
+  "writes_allowed_by_default": [
+    "foa-sdk-local-profile",
+    "user-selected-workspace",
+    "user-selected-support-report"
+  ],
+  "conversion_execution_allowed": false,
+  "deployment_execution_allowed": false,
+  "game_launch_allowed": false,
+  "save_access_allowed": false,
+  "source_authority": "Research/Deep Research Report on the Multi-Game Installer and Setup Wizard Platform.md"
+}

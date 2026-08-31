@@ -38,6 +38,7 @@ BIN_DIRECTORY = PurePosixPath("bin/Windows/profile/Default")
 EDITOR_PATH = BIN_DIRECTORY / "Editor.exe"
 LAUNCHER_PATH = BIN_DIRECTORY / "TaintedGrailModdingEditorLauncher.exe"
 SDK_ENTRYPOINT_PATH = BIN_DIRECTORY / "FOA-SDK.exe"
+CONTROL_PANEL_PATH = PurePosixPath("FOA-SDK-ControlPanel.exe")
 CMAKE_RUNTIME_CMAKE_PATH = PurePosixPath("cmake/runtime/bin/cmake.exe")
 CMAKE_RUNTIME_SHARE_MARKER = PurePosixPath("cmake/runtime/share/cmake-4.3/Modules/CMake.cmake")
 PYTHON_CMD_PATH = PurePosixPath("python/python.cmd")
@@ -386,6 +387,10 @@ def validate_sdk_identity(sdk_root: Path) -> None:
     require_regular_file(
         sdk_root / Path(SDK_ENTRYPOINT_PATH.as_posix()),
         "Installed FOA-SDK.exe launcher entry point",
+    )
+    require_regular_file(
+        sdk_root / Path(CONTROL_PANEL_PATH.as_posix()),
+        "Installed FOA-SDK Control Panel entry point",
     )
     require_regular_file(
         sdk_root / Path(CMAKE_RUNTIME_CMAKE_PATH.as_posix()),

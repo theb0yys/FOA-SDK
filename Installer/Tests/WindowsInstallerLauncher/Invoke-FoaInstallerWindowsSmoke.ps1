@@ -88,6 +88,7 @@ function Build-FixtureMsi([string]$OutputPath) {
     $ManifestPath = Join-Path $PayloadRoot "INSTALL_MANIFEST.json"
     $ChecksumsPath = Join-Path $PayloadRoot "SHA256SUMS"
     $LauncherPath = Join-Path $LauncherDirectory "FOA-SDK.exe"
+    $ControlPanelPath = Join-Path $PayloadRoot "FOA-SDK-ControlPanel.exe"
     $WxsPath = Join-Path $WorkRoot (([IO.Path]::GetFileNameWithoutExtension($OutputPath)) + ".wxs")
     $UpgradeCode = "E34992B7-97D0-4CA7-9744-43CA130F9B66"
 
@@ -103,6 +104,9 @@ function Build-FixtureMsi([string]$OutputPath) {
         </Component>
         <Component Id="ChecksumsComponent" Guid="*">
           <File Id="ChecksumsFile" Source="$(Escape-Xml $ChecksumsPath)" Name="SHA256SUMS" KeyPath="yes" />
+        </Component>
+        <Component Id="ControlPanelComponent" Guid="*">
+          <File Id="ControlPanelFile" Source="$(Escape-Xml $ControlPanelPath)" Name="FOA-SDK-ControlPanel.exe" KeyPath="yes" />
         </Component>
         <Directory Id="BinDirectory" Name="bin">
           <Directory Id="WindowsDirectory" Name="Windows">
@@ -120,6 +124,7 @@ function Build-FixtureMsi([string]$OutputPath) {
     <Feature Id="Main" Title="FOA-SDK Windows Smoke Payload" Level="1">
       <ComponentRef Id="ManifestComponent" />
       <ComponentRef Id="ChecksumsComponent" />
+      <ComponentRef Id="ControlPanelComponent" />
       <ComponentRef Id="LauncherComponent" />
     </Feature>
   </Package>
@@ -318,12 +323,13 @@ function Invoke-GuidedInstallerUserFlow {
             throw "The guided installer did not reach the FOA-SDK ready finish screen: $(Describe-AutomationWindow $Window)"
         }
 
+        $ControlPanelCheckbox = Wait-AutomationControl -Root $Window -Name "Open FOA-SDK Control Panel" -ControlType ([System.Windows.Automation.ControlType]::CheckBox) -TimeoutSeconds 10
         $OpenCheckbox = Wait-AutomationControl -Root $Window -Name "Open FOA-SDK" -ControlType ([System.Windows.Automation.ControlType]::CheckBox) -TimeoutSeconds 10
         $ShortcutCheckbox = Wait-AutomationControl -Root $Window -Name "Create desktop shortcut" -ControlType ([System.Windows.Automation.ControlType]::CheckBox) -TimeoutSeconds 10
-        if ($null -eq $OpenCheckbox -or $null -eq $ShortcutCheckbox) {
+        if ($null -eq $ControlPanelCheckbox -or $null -eq $OpenCheckbox -or $null -eq $ShortcutCheckbox) {
             throw "The guided installer finish options were not available."
         }
-        Assert-AutomationCheckboxChecked -Checkbox $OpenCheckbox -Label "Open FOA-SDK"
+        Assert-AutomationCheckboxChecked -Checkbox $ControlPanelCheckbox -Label "Open FOA-SDK Control Panel"
         Assert-AutomationCheckboxChecked -Checkbox $ShortcutCheckbox -Label "Create desktop shortcut"
 
         Invoke-AutomationButton $FinishButton
@@ -356,7 +362,7 @@ function Invoke-GuidedInstallerUserFlow {
         Start-Sleep -Milliseconds 250
     }
     if (-not (Test-Path -LiteralPath $LaunchMarker -PathType Leaf)) {
-        throw "The checked Open FOA-SDK finish option did not launch the installed entry point."
+        throw "The checked Open FOA-SDK Control Panel finish option did not launch the installed entry point."
     }
 
     if (-not (Test-Path -LiteralPath $DesktopShortcut -PathType Leaf)) {
@@ -450,11 +456,13 @@ internal static class Program
         throw "Smoke launcher build did not produce FOA-SDK.exe."
     }
     Copy-Item -LiteralPath $BuiltStub -Destination (Join-Path $LauncherDirectory "FOA-SDK.exe") -Force
+    Copy-Item -LiteralPath $BuiltStub -Destination (Join-Path $PayloadRoot "FOA-SDK-ControlPanel.exe") -Force
 
     Write-Utf8NoBomLf -Path (Join-Path $PayloadRoot "INSTALL_MANIFEST.json") -Text "{`"schema_version`":1,`"product_id`":`"foa-sdk-windows-smoke`"}`n"
     $ManifestHash = (Get-FileHash -LiteralPath (Join-Path $PayloadRoot "INSTALL_MANIFEST.json") -Algorithm SHA256).Hash.ToLowerInvariant()
     $LauncherHash = (Get-FileHash -LiteralPath (Join-Path $LauncherDirectory "FOA-SDK.exe") -Algorithm SHA256).Hash.ToLowerInvariant()
-    $ValidChecksums = "$ManifestHash  INSTALL_MANIFEST.json`n$LauncherHash  bin/Windows/profile/Default/FOA-SDK.exe`n"
+    $ControlPanelHash = (Get-FileHash -LiteralPath (Join-Path $PayloadRoot "FOA-SDK-ControlPanel.exe") -Algorithm SHA256).Hash.ToLowerInvariant()
+    $ValidChecksums = "$ManifestHash  INSTALL_MANIFEST.json`n$ControlPanelHash  FOA-SDK-ControlPanel.exe`n$LauncherHash  bin/Windows/profile/Default/FOA-SDK.exe`n"
     Write-Utf8NoBomLf -Path (Join-Path $PayloadRoot "SHA256SUMS") -Text $ValidChecksums
 
     Ensure-Directory $WixToolRoot
@@ -508,7 +516,7 @@ internal static class Program
     }
     $Result.uninstall = "PASSED"
 
-    $InvalidChecksums = "$ManifestHash  INSTALL_MANIFEST.json`n$('0' * 64)  bin/Windows/profile/Default/FOA-SDK.exe`n"
+    $InvalidChecksums = "$ManifestHash  INSTALL_MANIFEST.json`n$ControlPanelHash  FOA-SDK-ControlPanel.exe`n$('0' * 64)  bin/Windows/profile/Default/FOA-SDK.exe`n"
     Write-Utf8NoBomLf -Path (Join-Path $PayloadRoot "SHA256SUMS") -Text $InvalidChecksums
     Build-FixtureMsi $InvalidMsi
     Invoke-Installer -Arguments @(

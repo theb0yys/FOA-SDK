@@ -5,9 +5,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>FOA-SDK-Installer</AssemblyName>
-    <RootNamespace>FOA.SDK.InstallerLauncher</RootNamespace>
+    <AssemblyName>FOA-SDK-ControlPanel</AssemblyName>
+    <RootNamespace>FOA.SDK.ControlPanel</RootNamespace>
+    <StartupObject>FOA.SDK.ControlPanel.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>..\..\..\TaintedGrailModdingEditor\TaintedGrailModdingEditor.ico</ApplicationIcon>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <PublishSingleFile>true</PublishSingleFile>
@@ -16,13 +19,7 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/bin/**;$(MSBuildProjectDirectory)/obj/**</DefaultItemExcludes>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(InstallerMsiPath)' != ''">
-    <EmbeddedResource Include="$(InstallerMsiPath)" LogicalName="FOA.SDK.Payload.msi" />
-    <EmbeddedResource Include="$(InstallerMsiChecksumPath)" LogicalName="FOA.SDK.Payload.msi.sha256" />
+  <ItemGroup>
+    <EmbeddedResource Include="Providers\foa.provider.json" LogicalName="FOA.SDK.ControlPanel.Providers.foa.provider.json" />
   </ItemGroup>
-
-  <Target Name="ValidateEmbeddedInstallerPayload" BeforeTargets="BeforeBuild" Condition="'$(InstallerMsiPath)' != ''">
-    <Error Condition="!Exists('$(InstallerMsiPath)')" Text="InstallerMsiPath does not identify an MSI file." />
-    <Error Condition="'$(InstallerMsiChecksumPath)' == '' Or !Exists('$(InstallerMsiChecksumPath)')" Text="InstallerMsiChecksumPath must identify the MSI SHA-256 sidecar." />
-  </Target>
 </Project>

@@ -78,6 +78,7 @@ class DeveloperPreviewInstallerTests(unittest.TestCase):
         (binary / "Editor.exe").write_bytes(b"editor")
         (binary / "TaintedGrailModdingEditorLauncher.exe").write_bytes(b"launcher")
         (binary / "FOA-SDK.exe").write_bytes(b"launcher")
+        (sdk / Path(installer.CONTROL_PANEL_PATH.as_posix())).write_bytes(b"control panel")
         (binary / "AzCore.dll").write_bytes(b"runtime")
         for gem_name, project_relative in installer.INSTALLED_PROJECT_EXTERNAL_GEMS:
             external = sdk / installer.installed_sdk_relative_from_project_path(project_relative)

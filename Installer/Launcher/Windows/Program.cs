@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Windows.Forms;
 
@@ -125,11 +126,36 @@ internal static class Program
             }
         }
 
+        if (options.OpenControlPanelAfterInstall && options.Operation is not InstallerOperation.Uninstall)
+        {
+            InstalledEditorLauncher.LaunchControlPanel(options.InstallRoot);
+        }
         if (options.LaunchAfterInstall && options.Operation is not InstallerOperation.Uninstall)
         {
             InstalledEditorLauncher.Launch(options.InstallRoot);
         }
+        if (options.OpenToolWizardAfterInstall && options.Operation is not InstallerOperation.Uninstall)
+        {
+            LaunchToolWizardProcess(options.InstallRoot);
+        }
         Console.WriteLine($"{result.Message} Log: {result.LogPath}");
         return 0;
+    }
+
+    private static void LaunchToolWizardProcess(string installRoot)
+    {
+        string executable = Environment.ProcessPath
+            ?? throw new InvalidOperationException("The installer executable path is unavailable.");
+        ProcessStartInfo startInfo = new()
+        {
+            FileName = executable,
+            WorkingDirectory = AppContext.BaseDirectory,
+            UseShellExecute = false,
+        };
+        startInfo.ArgumentList.Add("--tool-wizard");
+        startInfo.ArgumentList.Add("--install-root");
+        startInfo.ArgumentList.Add(installRoot);
+        _ = System.Diagnostics.Process.Start(startInfo)
+            ?? throw new InvalidOperationException("The legacy Tool Setup Wizard did not start.");
     }
 }

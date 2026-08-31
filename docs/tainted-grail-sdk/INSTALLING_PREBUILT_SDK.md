@@ -19,12 +19,23 @@ No Git, Python, CMake, Visual Studio, engine checkout, separate editor installat
 3. Select **Install**.
 4. Wait while the installer copies and registers FOA-SDK.
 5. Wait for the automatic **Validating installation** stage. The installer checks the installed files and startup requirements before it reports success.
-6. On the finish screen, choose whether to keep **Open FOA-SDK** and **Create desktop shortcut** selected.
+6. On the finish screen, keep **Open FOA-SDK Control Panel** selected for first-run setup. Choose whether to open the Editor immediately and **Create desktop shortcut**.
 7. Select **Finish**.
 
-The Start Menu entry is created automatically. The optional desktop shortcut points to the installed `FOA-SDK.exe` application.
+Start Menu entries for **FOA-SDK Control Panel** and **FOA-SDK** are created automatically. The optional desktop shortcut points to the installed `FOA-SDK.exe` application.
 
-That is the complete normal setup flow. The installer does not ask for engine paths, project files, tool profiles, game paths, package fingerprints, or internal configuration files.
+The installer does not ask for engine paths, project files, tool profiles, game paths, package fingerprints, or internal configuration files. Game and workspace setup happens in the installed Control Panel after product installation succeeds.
+
+## First-run Control Panel
+
+1. Confirm or choose a workspace outside the FOA-SDK installation.
+2. Choose the local Fall of Avalon folder you want inspected.
+3. Select **Save setup**.
+4. Review the compatibility indication and plan preview, then open FOA-SDK when ready.
+
+The Control Panel checks only the folder you choose. It does not scan other drives or the network, install BepInEx, convert or deploy assets, change game files, launch the game, or inspect saves. Mono/IL2CPP results are local marker indications, not a claim that runtime mod loading has been verified.
+
+Use **Export redacted report** when support evidence is needed. Exported reports hash local paths instead of exposing them.
 
 ## Opening FOA-SDK
 
@@ -33,6 +44,8 @@ Open FOA-SDK from any of these user-facing entry points:
 - the Start Menu;
 - the optional desktop shortcut;
 - the installed `FOA-SDK.exe`.
+
+Reopen first-run setup or diagnostics through **FOA-SDK Control Panel** in the Start Menu.
 
 `FOA-SDK.exe` is the application entry point. The bundled editor/runtime implementation is internal to the installed product and should not be launched or configured separately.
 

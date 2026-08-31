@@ -35,6 +35,9 @@ One reviewed Windows x64 `profile` build produces:
   product root, checks `INSTALL_MANIFEST.json` and the installed
   `TaintedGrailModdingEditor` project, then opens the bundled Editor with that
   project and the packaged default level;
+- a separate installed `FOA-SDK-ControlPanel.exe` for first-run workspace setup,
+  explicit read-only game-folder inspection, compatibility indication,
+  non-mutating plan preview, and redacted diagnostics;
 - no requirement for Git, Python, CMake, Visual Studio, or a source build on the
   user's machine.
 
@@ -73,12 +76,14 @@ validate
   -> configure Windows x64 profile SDK
   -> build O3DE INSTALL target
   -> build and hash-compare the installed FOA-SDK.exe launcher entry point
+  -> build and self-test the installed FOA-SDK Control Panel
   -> generate notices and package inventory
   -> inventory exact files and SHA-256 values
   -> human redistribution review
   -> bind approval to the exact inventory fingerprint
   -> stage and re-hash the captured bytes
   -> run FOA-SDK.exe --self-test from the staged self-contained layout
+  -> run FOA-SDK-ControlPanel.exe --self-test from the staged layout
   -> create deterministic portable ZIP
   -> create MSI from the same staging root
   -> embed the reviewed MSI in the self-contained executable wizard
@@ -142,6 +147,15 @@ beneath that materialized project, plus materialized `External` Gem roots and th
 `Levels/DefaultLevel/DefaultLevel.prefab`. `--self-test` performs the same
 layout and writable-user-root checks without launching the Editor.
 
+`FOA-SDK-ControlPanel.exe` is the separate installed setup application and the
+default successful-installer finish action. It uses an embedded, versioned
+provider manifest and a reusable setup core behind a thin WinForms UI. Its
+first release accepts one explicit game folder, performs bounded read-only
+marker observation, keeps Mono and IL2CPP indications separate, stores a
+versioned local profile, and exports reports with hashed paths. It performs no
+machine-wide discovery, network access, conversion, loader installation,
+deployment, game launch, save access, or runtime-authority promotion.
+
 The MSI uses CPack's WiX generator with:
 
 - fixed project-owned Upgrade Code
@@ -149,7 +163,7 @@ The MSI uses CPack's WiX generator with:
 - Product Code derived deterministically from that namespace and the exact
   three-component version;
 - Windows x64 architecture and per-user install scope;
-- one Start Menu entry for `FOA-SDK.exe`;
+- Start Menu entries for `FOA-SDK.exe` and `FOA-SDK-ControlPanel.exe`;
 - Programs and Features metadata, standard repair, and uninstall.
 
 The stable Upgrade Code and version-specific Product Code provide the required

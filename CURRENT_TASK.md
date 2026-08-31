@@ -2,55 +2,41 @@
 
 ## Status
 
-`P0 — Repository Process Reset` — review candidate.
+`Installer + Control Panel completion` — implementation complete; maintainer review candidate.
 
 ## Goal
 
-Make FOA-SDK engineering explicit, proportional, and executable by replacing duplicated mandatory process stacks with one clear operating model.
+Deliver a polished, usable Windows installer and a separate installed FOA-SDK Control Panel that implements the accepted first-release setup boundary from the multi-game installer research.
 
 ## Classification
 
-**Significant — process/governance only.**
+**Critical/Runtime** for the installer lifecycle, plus **Significant** for the new installed profile, compatibility, diagnostics, and UI surfaces.
 
-## In scope
+## Completed scope
 
-- establish one engineering-process authority;
-- define Routine, Significant, and Critical/Runtime change classes;
-- make validation proportional to the changed surface;
-- simplify automated-agent rules to repository execution governance;
-- make research escalation conditional on an actual research dependency;
-- remove universal PR-body merge-obligation checkboxes;
-- correct stale repository identity, checkout, and branch guidance;
-- record that the Capability Execution M0 decision is already merged and effective.
+- self-contained `FOA-SDK-ControlPanel.exe` with Home, Setup, Compatibility, and Diagnostics pages;
+- explicit external workspace and game-folder selection without broad disk or network scanning;
+- versioned `foa.sdk.setup_profile.v1` persistence with bounded legacy Tool Wizard import;
+- separate Mono/IL2CPP/unknown route indications without runtime-proof claims;
+- non-mutating plan preview and path-redacted `foa.sdk.support_report.v1` export;
+- installer finish flow, MSI payload, Start Menu, inventory, smoke, and functional-readiness integration;
+- preserved legacy Tool Setup Wizard command-line compatibility;
+- focused static, build, self-test, and bounded Windows installer evidence.
 
-## Out of scope
+## Explicit boundary
 
-- SDK product implementation;
-- M1 capability-execution source work;
-- C++ contracts or behavior;
-- O3DE engine changes;
-- runtime adapters;
-- deployment, saves, installers, signing, publication, or release behavior;
-- protected Fall of Avalon files or installations.
-
-## Acceptance criteria
-
-P0 is ready for maintainer review when:
-
-- `AGENTS.md` contains agent execution rules without a universal research/deep-review/preflight stack;
-- `docs/tainted-grail-sdk/ENGINEERING_PROCESS.md` is the single engineering workflow;
-- `GOVERNANCE.md`, `CONTRIBUTING.md`, and review policy use the same three change classes;
-- `CI_AND_LOCAL_VALIDATION.md` is the single validation matrix;
-- the PR template records classification and actual validation without requiring irrelevant host/UI/runtime evidence;
-- PR/CI policy validators enforce read-only automation and the new template contract;
-- `DEVELOPMENT_GUIDE.md` uses the separate pinned upstream O3DE checkout;
-- `DECISIONS.md` marks the imported context-only process as superseded and records P0 progressive rigor;
-- no product/runtime behavior changes.
+This milestone does not install loaders, convert or deploy assets, write game files, launch Fall of Avalon, inspect saves, sign artifacts, publish a release, or promote local observations to runtime compatibility evidence.
 
 ## Current branch
 
-`governance/p0-process-reset`
+`codex/installer-control-panel-completion`
 
 ## Next action
 
-Maintainer audit of the focused P0 pull request. After P0 is accepted, define the first SDK recovery milestone in this file before resuming product implementation.
+Maintainer audit of this focused installer/Control Panel change. Exact full-product package and clean-machine evidence remains tied to a reviewed canonical inventory and must be recorded separately when that package lane is run.
+
+## Next product task — do not start implicitly
+
+After this change is accepted, the next task is the **zero-configuration Highmap Importer experience** described in `Research/world-authoring-terrain-heightmap/`.
+
+That task must build the two-action Terrain Authoring pane and coordinator over the existing `TerrainHeightmapDocumentV1` backend and current command-line importer. The ordinary path remains **Edit Vanilla Map** or **Import New Map** without a technical path/metadata wizard. The production vanilla-map provider remains `BLOCKED` until an exact lawful CampaignMap-to-terrain source binding is established; missing provider facts must not be guessed or transferred to the user as configuration fields.

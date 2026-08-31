@@ -45,6 +45,14 @@ internal sealed class InstallerWizardForm : Form
     {
         Text = "Open FOA-SDK",
         AutoSize = true,
+        Checked = false,
+        Font = BaseFont,
+        ForeColor = Ink,
+    };
+    private readonly CheckBox _openControlPanel = new()
+    {
+        Text = "Open FOA-SDK Control Panel",
+        AutoSize = true,
         Checked = true,
         Font = BaseFont,
         ForeColor = Ink,
@@ -256,12 +264,14 @@ internal sealed class InstallerWizardForm : Form
         Panel choices = new()
         {
             Location = new Point(42, 244),
-            Size = new Size(660, 108),
+            Size = new Size(660, 142),
             BackColor = Color.White,
             BorderStyle = BorderStyle.FixedSingle,
         };
-        _launchEditor.Location = new Point(22, 22);
-        _createDesktopShortcut.Location = new Point(22, 62);
+        _openControlPanel.Location = new Point(22, 18);
+        _launchEditor.Location = new Point(22, 56);
+        _createDesktopShortcut.Location = new Point(22, 94);
+        choices.Controls.Add(_openControlPanel);
         choices.Controls.Add(_launchEditor);
         choices.Controls.Add(_createDesktopShortcut);
         choices.Name = "finish-options";
@@ -350,7 +360,7 @@ internal sealed class InstallerWizardForm : Form
                 _options = _options with
                 {
                     InstallRoot = InstallerOptions.NormalizeInstallRoot(_installRoot.Text),
-                    OpenToolWizardAfterInstall = false,
+                    OpenControlPanelAfterInstall = false,
                 };
             }
             catch (ArgumentException ex)
@@ -543,6 +553,23 @@ internal sealed class InstallerWizardForm : Form
                         this,
                         $"FOA-SDK is installed, but the desktop shortcut could not be created.\n\n{ex.Message}",
                         "Shortcut not created",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+
+            if (_openControlPanel.Checked)
+            {
+                try
+                {
+                    InstalledEditorLauncher.LaunchControlPanel(_options.InstallRoot);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    MessageBox.Show(
+                        this,
+                        $"FOA-SDK is installed, but the Control Panel could not be opened automatically.\n\n{ex.Message}",
+                        "Unable to open Control Panel",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                 }

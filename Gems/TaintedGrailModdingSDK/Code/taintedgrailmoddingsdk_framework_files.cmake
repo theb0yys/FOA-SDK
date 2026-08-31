@@ -28,6 +28,7 @@ set(FILES
     Source/FoundationExtensionAPI.cpp
     Source/FoundationExtensionRequestBus.cpp
     Source/FoundationGovernanceService.cpp
+    Source/FoundationLocalSetupService.cpp
     Source/FoundationNotificationBus.h
     Source/FoundationPersistenceBoundary.cpp
     Source/FoundationPersistenceBoundary.h

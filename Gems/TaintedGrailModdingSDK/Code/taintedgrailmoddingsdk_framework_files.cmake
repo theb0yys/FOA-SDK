@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/AssetBrowserPreviewRefreshService.cpp
+    Source/AssetBrowserPreviewRefreshService.h
     Source/AssetBrowserPreviewService.cpp
     Source/AssetBrowserPreviewService.h
     Source/CatalogGovernanceService.cpp

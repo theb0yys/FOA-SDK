@@ -4,6 +4,7 @@
  */
 #include "ItemVisualLifecycleEnhancer.h"
 
+#include "AssetBrowserPreviewRefreshService.h"
 #include "FoundationModels.h"
 #include "FoundationService.h"
 #include "PathPolicyService.h"
@@ -265,12 +266,12 @@ namespace TaintedGrailModdingSDK
                 m_refreshAssets = new QPushButton(tr("Refresh Assets"), controlsHost);
                 m_refreshAssets->setAccessibleName(tr("Refresh item visuals"));
                 m_refreshAssets->setAccessibleDescription(
-                    tr("Reload the newest exact-profile item visual index generated for the active Fall of Avalon profile."));
+                    tr("Regenerate and reload item visuals for the active Fall of Avalon profile."));
                 if (auto* layout = qobject_cast<QHBoxLayout*>(controlsHost->layout()))
                 {
                     layout->insertWidget(0, m_refreshAssets);
                 }
-                connect(m_refreshAssets, &QPushButton::clicked, this, [this]() { LoadLatestAvailableModel(); });
+                connect(m_refreshAssets, &QPushButton::clicked, this, [this]() { RefreshAssets(); });
             }
         }
         if (m_status)
@@ -291,6 +292,38 @@ namespace TaintedGrailModdingSDK
             m_autoLoadPending = false;
             LoadLatestAvailableModel();
         });
+    }
+
+    void ItemVisualLifecycleEnhancer::RefreshAssets()
+    {
+        if (!m_modelPath || !m_reload || !m_refreshAssets)
+        {
+            return;
+        }
+
+        m_refreshAssets->setEnabled(false);
+        if (m_status)
+        {
+            m_status->setText(tr("Refreshing item visuals for the active game profile..."));
+        }
+
+        AssetBrowserPreviewRefreshService refreshService;
+        auto outcome = refreshService.RefreshActiveProfileModel();
+        if (!outcome.IsSuccess())
+        {
+            if (m_status)
+            {
+                m_status->setText(ToQString(outcome.GetError()));
+            }
+            m_refreshAssets->setEnabled(true);
+            return;
+        }
+
+        const AssetBrowserPreviewRefreshResult& result = outcome.GetValue();
+        m_modelPath->setText(ToQString(result.m_modelPath));
+        m_reload->setEnabled(true);
+        m_reload->click();
+        m_refreshAssets->setEnabled(true);
     }
 
     void ItemVisualLifecycleEnhancer::LoadLatestAvailableModel()
@@ -316,7 +349,7 @@ namespace TaintedGrailModdingSDK
             if (m_status)
             {
                 m_status->setText(
-                    tr("No indexed item visuals are available for the active game profile yet. Refresh after game-content indexing completes."));
+                    tr("No processed item visuals are available for this game profile yet. Use Refresh Assets after preview products are prepared."));
             }
             return;
         }

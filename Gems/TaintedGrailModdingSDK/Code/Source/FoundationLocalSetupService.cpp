@@ -20,6 +20,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QStringList>
 
 #include <cstddef>
 
@@ -27,6 +28,8 @@ namespace TaintedGrailModdingSDK
 {
     namespace
     {
+        constexpr int MaximumWorkspacePackDirectories = 512;
+
         struct LegacyToolProfileHints
         {
             QString m_workspaceRoot;
@@ -205,6 +208,65 @@ namespace TaintedGrailModdingSDK
             }
             return ToAzString(QDir(resolved).filePath("foa-sdk.tgworkspace.json"));
         }
+
+        void ReopenSingleWorkspacePack(
+            FoundationService& service,
+            FoundationLocalSetupResult& result)
+        {
+            if (service.GetActivePack())
+            {
+                return;
+            }
+
+            const QString workspaceRoot = ToQString(service.GetWorkspace().m_rootPath);
+            if (workspaceRoot.isEmpty())
+            {
+                return;
+            }
+
+            QDir packsRoot(QDir(workspaceRoot).filePath(QStringLiteral("Packs")));
+            if (!packsRoot.exists())
+            {
+                return;
+            }
+
+            const QFileInfoList directories = packsRoot.entryInfoList(
+                QDir::Dirs | QDir::NoDotAndDotDot,
+                QDir::Name | QDir::IgnoreCase);
+            QStringList manifests;
+            const int directoryCount =
+                qMin(directories.size(), MaximumWorkspacePackDirectories);
+            for (int index = 0; index < directoryCount; ++index)
+            {
+                const QString candidate = QDir(directories[index].absoluteFilePath()).filePath(
+                    QStringLiteral("pack.tgpack.json"));
+                if (QFileInfo(candidate).isFile())
+                {
+                    manifests.push_back(candidate);
+                }
+            }
+
+            if (manifests.size() == 1)
+            {
+                AZStd::string loadError;
+                if (service.LoadPack(ToAzString(manifests.front()), &loadError))
+                {
+                    AddNote(result, "The only workspace mod was reopened automatically.");
+                }
+                else
+                {
+                    AddNote(
+                        result,
+                        AZStd::string("The workspace mod could not be reopened: ") + loadError);
+                }
+            }
+            else if (manifests.size() > 1)
+            {
+                AddNote(
+                    result,
+                    "Multiple workspace mods were found; no mod was selected automatically.");
+            }
+        }
     } // namespace
 
     FoundationLocalSetupResult FoundationService::RefreshLocalSetup(
@@ -296,6 +358,7 @@ namespace TaintedGrailModdingSDK
         if (!needsPersistence)
         {
             result.m_persisted = true;
+            ReopenSingleWorkspacePack(*this, result);
             RefreshSnapshot();
             return result;
         }
@@ -332,6 +395,7 @@ namespace TaintedGrailModdingSDK
         }
 
         result.m_persisted = true;
+        ReopenSingleWorkspacePack(*this, result);
         return result;
     }
 } // namespace TaintedGrailModdingSDK

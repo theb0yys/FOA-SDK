@@ -42,8 +42,6 @@ set(FILES
     Source/AdapterVerifierEvidenceReconciliationWidget.h
     Source/AdapterWorkOrderPlanWidget.cpp
     Source/AdapterWorkOrderPlanWidget.h
-    Source/AssetBrowserPreviewRefreshService.cpp
-    Source/AssetBrowserPreviewRefreshService.h
     Source/AssetBrowserPreviewWidget.cpp
     Source/AssetBrowserPreviewWidget.h
     Source/CatalogBrowserWidget.cpp

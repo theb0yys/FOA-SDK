@@ -37,9 +37,6 @@ namespace TaintedGrailModdingSDK
         void DetectAndApply(const AZStd::string& explicitInstallPath = {});
         void LocateGame();
         void OpenWorkspace();
-        bool EnsureWorkspaceDirectories(const WorkspaceModel& workspace);
-        AZStd::string DefaultWorkspaceFilePath(const WorkspaceModel& workspace) const;
-        bool PersistDetectedWorkspace(const WorkspaceModel& workspace);
         void UpdateAdvancedDetails();
 
         QLabel* m_overallStatus = nullptr;
@@ -55,7 +52,6 @@ namespace TaintedGrailModdingSDK
         QGroupBox* m_advancedGroup = nullptr;
         QPushButton* m_locateGameButton = nullptr;
         QPushButton* m_advancedToggleButton = nullptr;
-        AZStd::string m_workspaceFilePath;
         AZStd::vector<AZStd::string> m_detectionNotes;
 
         QTableWidget* m_countsTable = nullptr;

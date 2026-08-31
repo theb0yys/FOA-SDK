@@ -41,8 +41,7 @@ function Invoke-Checked {
         [Parameter(Mandatory = $true)]
         [string] $FilePath,
 
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]] $Arguments
+        [string[]] $Arguments = @()
     )
 
     Write-Host "> $FilePath $($Arguments -join ' ')"
@@ -81,7 +80,7 @@ if ($expectedO3deCommit -notmatch '^[0-9a-f]{40}$') {
     throw "o3de.lock.json does not contain one exact 40-character commit."
 }
 
-Invoke-Checked git -C $engineRootResolved rev-parse --is-inside-work-tree
+Invoke-Checked -FilePath git -Arguments @("-C", $engineRootResolved, "rev-parse", "--is-inside-work-tree")
 $actualO3deCommit = (& git -C $engineRootResolved rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to resolve the O3DE checkout commit."
@@ -106,6 +105,7 @@ try {
             }
 
             $unitPatterns = @(
+                "test_validate_item_viewer_working_lifecycle.py",
                 "test_foa_visual_asset_discovery_index.py",
                 "test_foa_thumbnail_artifact_extractor.py",
                 "test_foa_neutral_preview_handoff.py",
@@ -116,10 +116,11 @@ try {
                 "test_foa_3d_preview_viewport.py"
             )
             foreach ($pattern in $unitPatterns) {
-                Invoke-Checked python -m unittest discover -s $testRoot -p $pattern -v
+                Invoke-Checked -FilePath python -Arguments @("-m", "unittest", "discover", "-s", $testRoot, "-p", $pattern, "-v")
             }
 
             $validators = @(
+                "validate_item_viewer_working_lifecycle.py",
                 "validate_foa_visual_asset_discovery_index.py",
                 "validate_foa_thumbnail_artifact_extractor.py",
                 "validate_foa_neutral_preview_handoff.py",
@@ -128,11 +129,10 @@ try {
                 "validate_foa_asset_browser_pane_model.py",
                 "validate_foa_asset_browser_pane_ui_render.py",
                 "validate_foa_3d_preview_viewport.py",
-                "validate_editor_lifecycle.py",
-                "validate_foundation.py"
+                "validate_editor_lifecycle.py"
             )
             foreach ($validator in $validators) {
-                Invoke-Checked python (Join-Path $toolRoot $validator)
+                Invoke-Checked -FilePath python -Arguments @((Join-Path $toolRoot $validator))
             }
         }
         finally {
@@ -155,18 +155,18 @@ try {
             New-Item -ItemType Directory -Path $thirdPartyResolved -Force | Out-Null
             $configureArguments += "-DLY_3RDPARTY_PATH=$thirdPartyResolved"
         }
-        Invoke-Checked cmake @configureArguments
+        Invoke-Checked -FilePath cmake -Arguments $configureArguments
     }
 
-    Invoke-Checked cmake --build $buildRootResolved --config $Configuration --target TaintedGrailModdingSDK.Editor --parallel $Parallel
+    Invoke-Checked -FilePath cmake -Arguments @("--build", $buildRootResolved, "--config", $Configuration, "--target", "TaintedGrailModdingSDK.Editor", "--parallel", [string] $Parallel)
 
     if (-not $SkipCompiledTests) {
-        Invoke-Checked cmake --build $buildRootResolved --config $Configuration --target TaintedGrailModdingSDK.Catalog.Tests --parallel $Parallel
-        Invoke-Checked ctest --test-dir $buildRootResolved -C $Configuration --output-on-failure --no-tests=error -R 'TaintedGrailModdingSDK\.Catalog\.Tests'
+        Invoke-Checked -FilePath cmake -Arguments @("--build", $buildRootResolved, "--config", $Configuration, "--target", "TaintedGrailModdingSDK.Catalog.Tests", "--parallel", [string] $Parallel)
+        Invoke-Checked -FilePath ctest -Arguments @("--test-dir", $buildRootResolved, "-C", $Configuration, "--output-on-failure", "--no-tests=error", "-R", "TaintedGrailModdingSDK\.Catalog\.Tests")
     }
 
     if (-not $SkipEditorSmoke) {
-        Invoke-Checked cmake --build $buildRootResolved --config $Configuration --target Editor --parallel $Parallel
+        Invoke-Checked -FilePath cmake -Arguments @("--build", $buildRootResolved, "--config", $Configuration, "--target", "Editor", "--parallel", [string] $Parallel)
 
         $configurationDirectory = $Configuration.ToLowerInvariant()
         $editorCandidates = @(

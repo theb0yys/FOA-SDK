@@ -22,6 +22,7 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualSelectorInstallerSystemComponent.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualSelectorWidget.cpp",
         "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake",
+        "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_framework_files.cmake",
         "Gems/TaintedGrailModdingSDK/Tools/editor_tests/alpha_item_viewer_live_smoke.py",
     )
 
@@ -47,7 +48,7 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             self.copy_fixture(root)
             contract.validate_item_viewer(root)
 
-    def test_missing_production_build_registration_fails(self) -> None:
+    def test_missing_editor_build_registration_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.copy_fixture(root)
@@ -57,7 +58,33 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
                 "Source/ItemVisualSelectorWidget.cpp",
                 "Source/RemovedItemVisualSelectorWidget.cpp",
             )
-            with self.assertRaisesRegex(RuntimeError, "production build registration"):
+            with self.assertRaisesRegex(RuntimeError, "Editor production build registration"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_service_must_be_framework_owned(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_framework_files.cmake",
+                "Source/AssetBrowserPreviewRefreshService.cpp",
+                "Source/RemovedAssetBrowserPreviewRefreshService.cpp",
+            )
+            with self.assertRaisesRegex(RuntimeError, "Framework production ownership"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_service_cannot_leak_back_into_editor_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            editor_manifest = root / "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
+            editor_manifest.write_text(
+                editor_manifest.read_text(encoding="utf-8")
+                + "\nset(LEAKED Source/AssetBrowserPreviewRefreshService.cpp)\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "duplicate Editor ownership"):
                 contract.validate_item_viewer(root)
 
     def test_raw_model_chooser_must_remain_hidden(self) -> None:

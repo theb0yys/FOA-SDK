@@ -84,6 +84,44 @@ namespace TaintedGrailModdingSDK
             return value.empty() ? fallback : ToQString(value);
         }
 
+        bool IsAdvancedOnlyUsage(const AZStd::string& usage)
+        {
+            return usage == "build"
+                || usage == "package"
+                || usage == "deploy"
+                || usage == "release"
+                || usage == "runtime_handoff"
+                || usage == "all_runtime_actions";
+        }
+
+        bool IsNormalAuthoringIssue(const BlockerRecord& blocker)
+        {
+            if (blocker.m_severity != "error")
+            {
+                return false;
+            }
+
+            if (blocker.m_blockerId.find("foundation.pack.profile-mismatch.") == 0
+                || blocker.m_blockerId.find("foundation.pack.game-target.") == 0)
+            {
+                return true;
+            }
+
+            if (blocker.m_affectedUsages.empty())
+            {
+                return true;
+            }
+
+            for (const AZStd::string& usage : blocker.m_affectedUsages)
+            {
+                if (!IsAdvancedOnlyUsage(usage))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         QPushButton* CreateRouteButton(
             QWidget* parent,
             const QString& label,
@@ -203,7 +241,7 @@ namespace TaintedGrailModdingSDK
         contextLayout->addRow(tr("System"), m_setupValue);
         contextLayout->addRow(tr("Fall of Avalon"), m_gameValue);
         contextLayout->addRow(tr("Current mod"), m_packValue);
-        contextLayout->addRow(tr("Issues"), m_blockersValue);
+        contextLayout->addRow(tr("Authoring issues"), m_blockersValue);
         contentLayout->addWidget(contextGroup);
 
         auto* startGroup = new QGroupBox(tr("Start"), content);
@@ -337,7 +375,19 @@ namespace TaintedGrailModdingSDK
             && !snapshot.m_gameVersion.empty()
             && !snapshot.m_runtimeTarget.empty();
         const bool hasPack = !snapshot.m_activePackId.empty();
-        const bool hasBlockers = snapshot.m_openBlockerCount > 0;
+
+        AZ::u64 authoringIssueCount = 0;
+        if (hasPack)
+        {
+            for (const BlockerRecord& blocker : snapshot.m_blockers)
+            {
+                if (IsNormalAuthoringIssue(blocker))
+                {
+                    ++authoringIssueCount;
+                }
+            }
+        }
+        const bool hasAuthoringIssues = authoringIssueCount > 0;
 
         m_setupValue->setText(setupReady ? tr("Ready") : tr("Needs attention"));
         m_setupValue->setToolTip(
@@ -375,8 +425,8 @@ namespace TaintedGrailModdingSDK
         }
 
         m_blockersValue->setText(
-            hasBlockers
-                ? tr("%1 need review").arg(snapshot.m_openBlockerCount)
+            hasAuthoringIssues
+                ? tr("%1 need review").arg(authoringIssueCount)
                 : tr("None"));
 
         if (!setupReady)
@@ -404,8 +454,8 @@ namespace TaintedGrailModdingSDK
         else
         {
             m_statusHeadline->setText(
-                hasBlockers
-                    ? tr("Ready to author · %1 issue(s) need review").arg(snapshot.m_openBlockerCount)
+                hasAuthoringIssues
+                    ? tr("Ready to author · %1 issue(s) need review").arg(authoringIssueCount)
                     : tr("Ready to author"));
             m_setupButton->setText(tr("System details"));
             m_setupButton->setAccessibleName(tr("System details"));

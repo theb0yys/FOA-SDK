@@ -58,6 +58,14 @@ set(FILES
     Source/FoundationStatusWidget.h
     Source/ItemRecipeEditorWidget.cpp
     Source/ItemRecipeEditorWidget.h
+    Source/ItemVisualLifecycleEnhancer.h
+    Source/ItemVisualLifecycleWidget.cpp
+    Source/ItemVisualSelectionRestoreBridge.h
+    Source/ItemVisualSelectionRestoreWidget.cpp
+    Source/ItemVisualSelectorInstallerSystemComponent.cpp
+    Source/ItemVisualSelectorInstallerSystemComponent.h
+    Source/ItemVisualSelectorWidget.cpp
+    Source/ItemVisualSelectorWidget.h
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
     Source/QuestStateInspectorWidget.cpp

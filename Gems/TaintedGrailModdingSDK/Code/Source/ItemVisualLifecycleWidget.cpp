@@ -6,6 +6,7 @@
 
 #include "FoundationModels.h"
 #include "FoundationService.h"
+#include "PathPolicyService.h"
 
 #include <AzCore/Asset/AssetCommon.h>
 #include <AzCore/std/smart_ptr/make_shared.h>
@@ -15,7 +16,17 @@
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
 #include <QComboBox>
+#include <QDateTime>
+#include <QDir>
+#include <QDirIterator>
+#include <QFile>
+#include <QFileInfo>
+#include <QFormLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -35,6 +46,7 @@ namespace TaintedGrailModdingSDK
     {
         constexpr int EntryRowRole = Qt::UserRole;
         constexpr int AssetIdColumn = 4;
+        constexpr qint64 MaximumModelBytes = 16 * 1024 * 1024;
 
         AZStd::string ToAzString(const QString& value)
         {
@@ -78,7 +90,32 @@ namespace TaintedGrailModdingSDK
         : QObject(selector)
         , m_selector(selector)
     {
+        FoundationNotificationBus::Handler::BusConnect();
         InstallGrid();
+        m_profileBindingKey = CurrentProfileBindingKey();
+        ScheduleAutomaticModelLoad();
+    }
+
+    ItemVisualLifecycleEnhancer::~ItemVisualLifecycleEnhancer()
+    {
+        FoundationNotificationBus::Handler::BusDisconnect();
+    }
+
+    void ItemVisualLifecycleEnhancer::OnFoundationChanged()
+    {
+        const QString currentBinding = CurrentProfileBindingKey();
+        if (currentBinding == m_profileBindingKey)
+        {
+            return;
+        }
+
+        m_profileBindingKey = currentBinding;
+        m_pendingAssetId.clear();
+        QTimer::singleShot(0, this, [this]()
+        {
+            RestoreState();
+            ScheduleAutomaticModelLoad();
+        });
     }
 
     void ItemVisualLifecycleEnhancer::InstallGrid()
@@ -120,6 +157,17 @@ namespace TaintedGrailModdingSDK
             if (button->text() == tr("Reload"))
             {
                 m_reload = button;
+            }
+            else if (button->text() == tr("Choose Model..."))
+            {
+                m_chooseModel = button;
+            }
+        }
+        for (QLabel* label : m_selector->findChildren<QLabel*>())
+        {
+            if (label->text().contains(QStringLiteral("Choose an Asset Browser pane model"), Qt::CaseInsensitive))
+            {
+                m_status = label;
                 break;
             }
         }
@@ -127,6 +175,8 @@ namespace TaintedGrailModdingSDK
         {
             return;
         }
+
+        SimplifyModelControls();
 
         auto* splitter = qobject_cast<QSplitter*>(m_table->parentWidget());
         if (!splitter)
@@ -178,15 +228,254 @@ namespace TaintedGrailModdingSDK
         {
             connect(m_search, &QLineEdit::textChanged, this, [this]() { ApplyFilter(); });
         }
-        if (m_modelPath)
-        {
-            connect(m_modelPath, &QLineEdit::textChanged, this, [this]() { SaveState(); ScheduleRebuild(); });
-        }
         if (m_target)
         {
             connect(m_target, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { SaveState(); });
         }
         QTimer::singleShot(0, this, [this]() { RestoreState(); ScheduleRebuild(); });
+    }
+
+    void ItemVisualLifecycleEnhancer::SimplifyModelControls()
+    {
+        if (m_modelPath)
+        {
+            m_modelPath->hide();
+            if (auto* group = qobject_cast<QGroupBox*>(m_modelPath->parentWidget()))
+            {
+                group->setTitle(tr("Item target and game visuals"));
+                if (auto* form = qobject_cast<QFormLayout*>(group->layout()))
+                {
+                    if (QWidget* label = form->labelForField(m_modelPath))
+                    {
+                        label->hide();
+                    }
+                }
+            }
+        }
+        if (m_chooseModel)
+        {
+            m_chooseModel->hide();
+        }
+        if (m_reload)
+        {
+            m_reload->hide();
+            QWidget* controlsHost = m_reload->parentWidget();
+            if (controlsHost)
+            {
+                m_refreshAssets = new QPushButton(tr("Refresh Assets"), controlsHost);
+                m_refreshAssets->setAccessibleName(tr("Refresh item visuals"));
+                m_refreshAssets->setAccessibleDescription(
+                    tr("Reload the newest exact-profile item visual index generated for the active Fall of Avalon profile."));
+                if (auto* layout = qobject_cast<QHBoxLayout*>(controlsHost->layout()))
+                {
+                    layout->insertWidget(0, m_refreshAssets);
+                }
+                connect(m_refreshAssets, &QPushButton::clicked, this, [this]() { LoadLatestAvailableModel(); });
+            }
+        }
+        if (m_status)
+        {
+            m_status->setText(tr("Loading item visuals for the active game profile..."));
+        }
+    }
+
+    void ItemVisualLifecycleEnhancer::ScheduleAutomaticModelLoad()
+    {
+        if (m_autoLoadPending)
+        {
+            return;
+        }
+        m_autoLoadPending = true;
+        QTimer::singleShot(0, this, [this]()
+        {
+            m_autoLoadPending = false;
+            LoadLatestAvailableModel();
+        });
+    }
+
+    void ItemVisualLifecycleEnhancer::LoadLatestAvailableModel()
+    {
+        if (!m_modelPath || !m_reload)
+        {
+            return;
+        }
+
+        const QString extractedRoot = ResolveExtractedDataRoot();
+        if (extractedRoot.isEmpty())
+        {
+            if (m_status)
+            {
+                m_status->setText(tr("No active Fall of Avalon profile is ready for item visuals."));
+            }
+            return;
+        }
+
+        const QString path = FindLatestModelPath();
+        if (path.isEmpty())
+        {
+            if (m_status)
+            {
+                m_status->setText(
+                    tr("No indexed item visuals are available for the active game profile yet. Refresh after game-content indexing completes."));
+            }
+            return;
+        }
+
+        m_modelPath->setText(path);
+        m_reload->setEnabled(true);
+        m_reload->click();
+    }
+
+    QString ItemVisualLifecycleEnhancer::FindLatestModelPath() const
+    {
+        const QString extractedRoot = ResolveExtractedDataRoot();
+        if (extractedRoot.isEmpty())
+        {
+            return {};
+        }
+
+        const QString assetBrowserRoot = QDir(extractedRoot).filePath(QStringLiteral("PreviewArtifacts/AssetBrowser"));
+        if (!QFileInfo(assetBrowserRoot).isDir())
+        {
+            return {};
+        }
+
+        QString bestPath;
+        QString bestCapturedAt;
+        QDateTime bestModified;
+        QDirIterator iterator(
+            assetBrowserRoot,
+            QStringList{ QStringLiteral("foa-asset-browser-pane-model.json") },
+            QDir::Files | QDir::Readable,
+            QDirIterator::Subdirectories);
+        while (iterator.hasNext())
+        {
+            const QString candidatePath = iterator.next();
+            QString capturedAt;
+            if (!CandidateMatchesActiveProfile(candidatePath, &capturedAt))
+            {
+                continue;
+            }
+
+            const QFileInfo candidateInfo(candidatePath);
+            const bool newerCapture = !capturedAt.isEmpty()
+                && (bestCapturedAt.isEmpty() || capturedAt > bestCapturedAt);
+            const bool sameCaptureNewerFile = capturedAt == bestCapturedAt
+                && candidateInfo.lastModified() > bestModified;
+            if (bestPath.isEmpty() || newerCapture || sameCaptureNewerFile)
+            {
+                bestPath = candidateInfo.canonicalFilePath();
+                bestCapturedAt = capturedAt;
+                bestModified = candidateInfo.lastModified();
+            }
+        }
+        return bestPath;
+    }
+
+    bool ItemVisualLifecycleEnhancer::CandidateMatchesActiveProfile(const QString& path, QString* capturedAt) const
+    {
+        const GameProfile* profile = FoundationService::Get().GetWorkspace().FindActiveGameProfile();
+        const QString extractedRoot = ResolveExtractedDataRoot();
+        if (!profile || extractedRoot.isEmpty())
+        {
+            return false;
+        }
+
+        const QFileInfo requested(path);
+        const QString canonicalPath = requested.canonicalFilePath();
+        if (canonicalPath.isEmpty()
+            || requested.fileName() != QStringLiteral("foa-asset-browser-pane-model.json")
+            || !PathPolicyService::IsCanonicalPathContained(
+                ToAzString(extractedRoot),
+                ToAzString(canonicalPath),
+                true))
+        {
+            return false;
+        }
+
+        QFile file(canonicalPath);
+        if (!file.open(QIODevice::ReadOnly)
+            || file.size() <= 0
+            || file.size() > MaximumModelBytes)
+        {
+            return false;
+        }
+        const QByteArray payload = file.readAll();
+        file.close();
+
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(payload, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !document.isObject())
+        {
+            return false;
+        }
+        const QJsonObject root = document.object();
+        if (root.value(QStringLiteral("SchemaVersion")).toInt(-1) != 1
+            || root.value(QStringLiteral("DocumentKind")).toString() != QStringLiteral("foa-asset-browser-pane-model")
+            || root.value(QStringLiteral("ProfileId")).toString() != ToQString(profile->m_profileId)
+            || root.value(QStringLiteral("GameVersion")).toString() != ToQString(profile->m_gameVersion)
+            || root.value(QStringLiteral("Branch")).toString() != ToQString(profile->m_branch)
+            || root.value(QStringLiteral("RuntimeTarget")).toString() != ToQString(profile->m_runtimeTarget))
+        {
+            return false;
+        }
+        if (capturedAt)
+        {
+            *capturedAt = root.value(QStringLiteral("CapturedAt")).toString();
+        }
+        return true;
+    }
+
+    QString ItemVisualLifecycleEnhancer::ResolveExtractedDataRoot() const
+    {
+        const FoundationService& foundation = FoundationService::Get();
+        const WorkspaceModel& workspace = foundation.GetWorkspace();
+        const GameProfile* profile = workspace.FindActiveGameProfile();
+        if (!profile || profile->m_extractedDataPath.empty())
+        {
+            return {};
+        }
+
+        QString baseDirectory;
+        if (!foundation.GetWorkspaceFilePath().empty())
+        {
+            baseDirectory = QFileInfo(ToQString(foundation.GetWorkspaceFilePath())).absolutePath();
+        }
+        else if (!foundation.GetWorkspaceRootPath().empty())
+        {
+            baseDirectory = ToQString(foundation.GetWorkspaceRootPath());
+        }
+        else
+        {
+            return {};
+        }
+
+        const QString configured = ToQString(profile->m_extractedDataPath);
+        const QString absolute = QFileInfo(configured).isAbsolute()
+            ? QDir::cleanPath(configured)
+            : QDir(baseDirectory).absoluteFilePath(configured);
+        const QFileInfo resolved(absolute);
+        if (!resolved.isDir())
+        {
+            return {};
+        }
+        const QString canonical = resolved.canonicalFilePath();
+        return canonical.isEmpty() ? resolved.absoluteFilePath() : canonical;
+    }
+
+    QString ItemVisualLifecycleEnhancer::CurrentProfileBindingKey() const
+    {
+        const GameProfile* profile = FoundationService::Get().GetWorkspace().FindActiveGameProfile();
+        if (!profile)
+        {
+            return {};
+        }
+        return QStringLiteral("%1|%2|%3|%4|%5")
+            .arg(ToQString(profile->m_profileId))
+            .arg(ToQString(profile->m_gameVersion))
+            .arg(ToQString(profile->m_branch))
+            .arg(ToQString(profile->m_runtimeTarget))
+            .arg(ResolveExtractedDataRoot());
     }
 
     void ItemVisualLifecycleEnhancer::ScheduleRebuild()
@@ -309,10 +598,10 @@ namespace TaintedGrailModdingSDK
         }
         QSettings settings(QStringLiteral("FOA-SDK"), QStringLiteral("ItemViewer"));
         const QString prefix = SettingsPrefix();
-        settings.setValue(prefix + QStringLiteral("modelPath"), m_modelPath ? m_modelPath->text() : QString());
         settings.setValue(prefix + QStringLiteral("target"), m_target ? m_target->currentData().toString() : QString());
         settings.setValue(prefix + QStringLiteral("assetId"), m_pendingAssetId);
         settings.setValue(prefix + QStringLiteral("thumbnailSize"), m_sizeSlider ? m_sizeSlider->value() : 112);
+        settings.remove(prefix + QStringLiteral("modelPath"));
         settings.sync();
     }
 
@@ -338,18 +627,6 @@ namespace TaintedGrailModdingSDK
             }
         }
         m_pendingAssetId = settings.value(prefix + QStringLiteral("assetId")).toString();
-        const QString path = settings.value(prefix + QStringLiteral("modelPath")).toString();
-        if (m_modelPath && m_reload && !path.isEmpty())
-        {
-            m_modelPath->setText(path);
-            QTimer::singleShot(0, m_reload, [reload = m_reload]()
-            {
-                if (reload)
-                {
-                    reload->click();
-                }
-            });
-        }
         m_restoring = false;
     }
 }

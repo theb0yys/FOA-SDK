@@ -60,6 +60,65 @@ function ConvertTo-ProcessArgument {
     return '"' + $Value.Replace('"', '\"') + '"'
 }
 
+function Write-SmokeWorkspace {
+    param(
+        [Parameter(Mandatory = $true)][string] $WorkspaceRoot,
+        [Parameter(Mandatory = $true)][string] $GameRoot
+    )
+
+    $managedRoot = Join-Path $GameRoot "Fall of Avalon_Data\Managed"
+    $pluginRoot = Join-Path $GameRoot "BepInEx\plugins"
+    $diagnosticsRoot = Join-Path $WorkspaceRoot "Diagnostics"
+    $extractedRoot = Join-Path $WorkspaceRoot "Extracted"
+    foreach ($directory in @(
+        $WorkspaceRoot,
+        (Join-Path $WorkspaceRoot "Build"),
+        (Join-Path $WorkspaceRoot "Staging"),
+        (Join-Path $WorkspaceRoot "Deployment"),
+        $diagnosticsRoot,
+        $extractedRoot,
+        $managedRoot,
+        $pluginRoot
+    )) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+
+    Set-Content -LiteralPath (Join-Path $GameRoot "UnityPlayer.dll") -Value "fixture" -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $managedRoot "Assembly-CSharp.dll") -Value "fixture" -Encoding ASCII
+
+    $workspace = [ordered]@{
+        SchemaVersion = 1
+        WorkspaceId = "fixture.workspace"
+        DisplayName = "Item Viewer Refresh Fixture"
+        RootPath = $WorkspaceRoot
+        OutputPath = (Join-Path $WorkspaceRoot "Build")
+        StagingPath = (Join-Path $WorkspaceRoot "Staging")
+        DeploymentPath = (Join-Path $WorkspaceRoot "Deployment")
+        ActiveGameProfileId = "foa.mono.fixture"
+        GameProfiles = @(
+            [ordered]@{
+                ProfileId = "foa.mono.fixture"
+                DisplayName = "Fixture"
+                InstallPath = $GameRoot
+                GameVersion = "1.23.401"
+                Branch = "mono"
+                RuntimeTarget = "Mono"
+                UnityVersion = "6000.0.64f1"
+                BepInExVersion = "5.4.23.3"
+                ManagedAssembliesPath = $managedRoot
+                PluginPath = $pluginRoot
+                DiagnosticsPath = $diagnosticsRoot
+                ExtractedDataPath = $extractedRoot
+                DlcScopes = @("base-game")
+            }
+        )
+    }
+
+    $workspacePath = Join-Path $WorkspaceRoot "foa-sdk.tgworkspace.json"
+    $workspace | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $workspacePath -Encoding UTF8
+    return $workspacePath
+}
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..\..\..")).Path
 $engineRootResolved = (Resolve-Path -LiteralPath $EngineRoot).Path
 $projectRoot = Join-Path $repoRoot "TaintedGrailModdingEditor"
@@ -67,8 +126,9 @@ $lockPath = Join-Path $repoRoot "o3de.lock.json"
 $smokeScript = Join-Path $repoRoot "Gems\TaintedGrailModdingSDK\Tools\editor_tests\alpha_item_viewer_live_smoke.py"
 $toolRoot = Join-Path $repoRoot "Gems\TaintedGrailModdingSDK\Tools"
 $testRoot = Join-Path $toolRoot "tests"
+$paneModelTool = Join-Path $toolRoot "foa_asset_browser_pane_model.py"
 
-foreach ($requiredPath in @($projectRoot, $lockPath, $smokeScript, $toolRoot, $testRoot)) {
+foreach ($requiredPath in @($projectRoot, $lockPath, $smokeScript, $toolRoot, $testRoot, $paneModelTool)) {
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "Required Alpha item viewer path is missing: $requiredPath"
     }
@@ -180,6 +240,45 @@ try {
             throw "Expected exactly one $Configuration Editor.exe; found $($editorCandidates.Count): $found"
         }
 
+        # Isolate all automatic workspace and user-state discovery from the runner's
+        # real LocalAppData, then seed only the exact-profile import proof required
+        # to prove that Refresh Assets regenerates the pane model inside the Editor.
+        $originalLocalAppData = $env:LOCALAPPDATA
+        $validationLocalAppData = Join-Path $buildRootResolved "item-viewer-smoke-localappdata"
+        $seedRoot = Join-Path $buildRootResolved "item-viewer-refresh-seed"
+        Remove-Item -LiteralPath $validationLocalAppData -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $seedRoot -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path $validationLocalAppData -Force | Out-Null
+
+        Invoke-Checked -FilePath python -Arguments @($paneModelTool, "fixture", "--output", $seedRoot, "--replace")
+        $proofCandidates = @(
+            Get-ChildItem -LiteralPath $seedRoot -Filter "foa-o3de-asset-processor-import-proof.json" -File -Recurse -ErrorAction Stop
+        )
+        if ($proofCandidates.Count -ne 1) {
+            throw "Expected exactly one synthetic Item Viewer import proof; found $($proofCandidates.Count)."
+        }
+        $proofDocument = Get-Content -LiteralPath $proofCandidates[0].FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+        $expectedProofId = [string] $proofDocument.ImportProofId
+        if ([string]::IsNullOrWhiteSpace($expectedProofId)) {
+            throw "Synthetic Item Viewer import proof is missing ImportProofId."
+        }
+
+        $autoWorkspaceRoot = Join-Path $validationLocalAppData "FOA-SDK\Workspace"
+        $fakeGameRoot = Join-Path $validationLocalAppData "FOA-SDK\FakeGame"
+        $workspacePath = Write-SmokeWorkspace -WorkspaceRoot $autoWorkspaceRoot -GameRoot $fakeGameRoot
+        $extractedRoot = Join-Path $autoWorkspaceRoot "Extracted"
+        $o3deRoot = Join-Path $extractedRoot "PreviewArtifacts\O3DE"
+        New-Item -ItemType Directory -Path $o3deRoot -Force | Out-Null
+        $seedO3deRoot = Join-Path $seedRoot "workspace\Extracted\PreviewArtifacts\O3DE"
+        Copy-Item -LiteralPath (Join-Path $seedO3deRoot "*") -Destination $o3deRoot -Recurse -Force
+        $assetBrowserRoot = Join-Path $extractedRoot "PreviewArtifacts\AssetBrowser"
+        Remove-Item -LiteralPath $assetBrowserRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+        $env:LOCALAPPDATA = $validationLocalAppData
+        $env:FOA_SDK_ITEM_VIEWER_REFRESH_WORKSPACE = $workspacePath
+        $env:FOA_SDK_ITEM_VIEWER_REFRESH_MODEL_ROOT = $assetBrowserRoot
+        $env:FOA_SDK_ITEM_VIEWER_REFRESH_EXPECTED_PROOF_ID = $expectedProofId
+
         $editorArguments = @(
             "--project-path=$projectRoot",
             "--runpythontest",
@@ -190,28 +289,36 @@ try {
         )
         $argumentLine = ($editorArguments | ForEach-Object { ConvertTo-ProcessArgument $_ }) -join " "
         Write-Host "> $($editorCandidates[0].FullName) $argumentLine"
-        $editorProcess = Start-Process -FilePath $editorCandidates[0].FullName `
-            -ArgumentList $argumentLine `
-            -WorkingDirectory $projectRoot `
-            -PassThru
         try {
-            Wait-Process -Id $editorProcess.Id -Timeout $EditorSmokeTimeoutSeconds -ErrorAction Stop
-        }
-        catch {
-            Stop-Process -Id $editorProcess.Id -Force -ErrorAction SilentlyContinue
-            throw "Alpha item viewer Editor smoke exceeded $EditorSmokeTimeoutSeconds seconds."
-        }
-        $editorProcess.Refresh()
+            $editorProcess = Start-Process -FilePath $editorCandidates[0].FullName `
+                -ArgumentList $argumentLine `
+                -WorkingDirectory $projectRoot `
+                -PassThru
+            try {
+                Wait-Process -Id $editorProcess.Id -Timeout $EditorSmokeTimeoutSeconds -ErrorAction Stop
+            }
+            catch {
+                Stop-Process -Id $editorProcess.Id -Force -ErrorAction SilentlyContinue
+                throw "Alpha item viewer Editor smoke exceeded $EditorSmokeTimeoutSeconds seconds."
+            }
+            $editorProcess.Refresh()
 
-        $editorLog = Get-ChildItem -LiteralPath $projectRoot -Filter Editor.log -File -Recurse -ErrorAction SilentlyContinue |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-        if ($editorLog) {
-            Write-Host "--- Editor.log tail ---"
-            Get-Content -LiteralPath $editorLog.FullName -Tail 200
+            $editorLog = Get-ChildItem -LiteralPath $projectRoot -Filter Editor.log -File -Recurse -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+            if ($editorLog) {
+                Write-Host "--- Editor.log tail ---"
+                Get-Content -LiteralPath $editorLog.FullName -Tail 240
+            }
+            if ($editorProcess.ExitCode -ne 0) {
+                throw "Alpha item viewer Editor smoke failed with exit code $($editorProcess.ExitCode)."
+            }
         }
-        if ($editorProcess.ExitCode -ne 0) {
-            throw "Alpha item viewer Editor smoke failed with exit code $($editorProcess.ExitCode)."
+        finally {
+            $env:LOCALAPPDATA = $originalLocalAppData
+            Remove-Item Env:FOA_SDK_ITEM_VIEWER_REFRESH_WORKSPACE -ErrorAction SilentlyContinue
+            Remove-Item Env:FOA_SDK_ITEM_VIEWER_REFRESH_MODEL_ROOT -ErrorAction SilentlyContinue
+            Remove-Item Env:FOA_SDK_ITEM_VIEWER_REFRESH_EXPECTED_PROOF_ID -ErrorAction SilentlyContinue
         }
     }
 }

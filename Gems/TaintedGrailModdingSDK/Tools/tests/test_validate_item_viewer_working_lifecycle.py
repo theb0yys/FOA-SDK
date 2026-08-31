@@ -16,6 +16,8 @@ import validate_item_viewer_working_lifecycle as contract
 
 class ItemViewerWorkingLifecycleTests(unittest.TestCase):
     FIXTURE_PATHS = (
+        "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
+        "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualSelectorInstallerSystemComponent.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualSelectorWidget.cpp",
@@ -83,6 +85,41 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
                 all_occurrences=True,
             )
             with self.assertRaisesRegex(RuntimeError, "exact-profile candidate filtering"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_must_regenerate_the_shared_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
+                "RefreshActiveProfileModel",
+                "LoadLatestAvailableModel",
+            )
+            with self.assertRaisesRegex(RuntimeError, "refresh-to-generation service integration"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_must_use_embedded_python_not_an_external_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp"
+            path.write_text(path.read_text(encoding="utf-8") + "\nQProcess forbidden;\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "remain inside the Editor process"):
+                contract.validate_item_viewer(root)
+
+    def test_pane_model_generator_must_ship_with_the_installed_editor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
+                "scripts/foa-sdk",
+                "scripts/missing-item-viewer-tool",
+            )
+            with self.assertRaisesRegex(RuntimeError, "private installed generator location"):
                 contract.validate_item_viewer(root)
 
     def test_internal_model_path_cannot_return_to_settings(self) -> None:

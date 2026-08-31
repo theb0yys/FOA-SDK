@@ -1,6 +1,6 @@
 # World Authoring Terrain / Highmap Research
 
-Status: research intake and bounded follow-up brief
+Status: research intake and bounded follow-up evidence planning
 
 Repository intake baseline: `ef86d0542e01c1a1104e0564fd52c0695bd9a50d`
 
@@ -45,6 +45,7 @@ The supplied/returned reports are preserved below `inputs/` as research context:
 - [`DR_TH_001_DEEP_RESEARCH_REPORT_2026-08-31.md`](inputs/DR_TH_001_DEEP_RESEARCH_REPORT_2026-08-31.md)
 - [`DR_TH_001_STATIC_DECOMPILATION_REPORT_2026-08-31.md`](inputs/DR_TH_001_STATIC_DECOMPILATION_REPORT_2026-08-31.md)
 - [`DR_TH_002_DEEP_RESEARCH_REPORT_2026-08-31.md`](inputs/DR_TH_002_DEEP_RESEARCH_REPORT_2026-08-31.md)
+- [`DR_TH_003_DEEP_RESEARCH_REPORT_2026-08-31.md`](inputs/DR_TH_003_DEEP_RESEARCH_REPORT_2026-08-31.md)
 
 The original reports may contain conversation-local citation tokens. Those tokens are preserved as part of the
 input but are not durable repository citations. Durable source locators and scoped claim states live in
@@ -57,6 +58,7 @@ The repository-facing derivatives are:
 - [`DR_TH_000_PUBLIC_RECONNAISSANCE_CLEAN_INTAKE.md`](intakes/DR_TH_000_PUBLIC_RECONNAISSANCE_CLEAN_INTAKE.md)
 - [`DR_TH_001_CLEAN_INTAKE.md`](intakes/DR_TH_001_CLEAN_INTAKE.md)
 - [`DR_TH_002_CLEAN_INTAKE.md`](intakes/DR_TH_002_CLEAN_INTAKE.md)
+- [`DR_TH_003_CLEAN_INTAKE.md`](intakes/DR_TH_003_CLEAN_INTAKE.md)
 
 These files are derivatives, not replacements for the preserved inputs. They retain evidence-lane distinctions
 and remove conversation-local citations from claims relied on by this topic.
@@ -67,13 +69,10 @@ Completed briefs:
 
 - [`DR_TH_001_VANILLA_TERRAIN_RASTER_IDENTITY_ENCODING_RECONSTRUCTION_BRIEF.md`](briefs/DR_TH_001_VANILLA_TERRAIN_RASTER_IDENTITY_ENCODING_RECONSTRUCTION_BRIEF.md)
 - [`DR_TH_002_CAMPAIGN_AUTHORITATIVE_WORLD_GEOMETRY_SOURCE_BRIEF.md`](briefs/DR_TH_002_CAMPAIGN_AUTHORITATIVE_WORLD_GEOMETRY_SOURCE_BRIEF.md)
-
-Current next brief:
-
 - [`DR_TH_003_CAMPAIGNMAP_SCENE_COMPONENT_AND_SOURCE_ASSET_INVENTORY_BRIEF.md`](briefs/DR_TH_003_CAMPAIGNMAP_SCENE_COMPONENT_AND_SOURCE_ASSET_INVENTORY_BRIEF.md)
 
-DR-TH-003 is intentionally narrow. It targets only the component and source-asset inventory of the four
-`CampaignMap_*` scenes. It does not authorize another broad survey of FOA world systems.
+No DR-TH-004 brief is committed by the DR-TH-003 intake step. The next research question should be derived only
+from the remaining source-binding unknowns recorded below.
 
 ## Research chronology
 
@@ -86,12 +85,14 @@ zero-configuration Highmap design
     -> DR-TH-001 clean intake
     -> DR-TH-002 Deep Research brief and report
     -> DR-TH-002 clean intake
-    -> DR-TH-003 bounded scene/source-asset inventory brief
+    -> DR-TH-003 CampaignMap scene/source-asset inventory brief and report
+    -> DR-TH-003 clean intake
+    -> remaining static source-binding evidence
 ```
 
 ## Current research disposition
 
-The current E1 research context is:
+The current research context is:
 
 ```text
 Highmap product objective:
@@ -113,10 +114,16 @@ Medusa runtime archive as editable terrain:
     FAILED
 
 Campaign world representation:
-    MIXED_REPRESENTATION
+    MIXED_REPRESENTATION at system level
 
 Unity Terrain / TerrainData presence somewhere in project tooling/code:
     source-supported by supplied static report
+
+DR-TH-003 per-map result:
+    CampaignMap_HOS       -> INSUFFICIENT_EVIDENCE
+    CampaignMap_Cuanacht  -> INSUFFICIENT_EVIDENCE
+    CampaignMap_Forlorn   -> INSUFFICIENT_EVIDENCE
+    CampaignMap_Sarras    -> INSUFFICIENT_EVIDENCE
 
 CampaignMap -> exact Terrain/TerrainData or base-ground mesh binding:
     UNKNOWN
@@ -131,6 +138,23 @@ Production zero-configuration vanilla Highmap provider:
 The zero-configuration product objective remains unchanged. Unknown source metadata is a provider/research
 blocker; it must not become a normal user-facing form.
 
+## Remaining evidence boundary
+
+DR-TH-003 substantially closes broad public-system research as the next useful lane. The remaining blocker is a
+serialized source-object binding rather than another conceptual survey of FOA rendering systems.
+
+Highest-value remaining evidence includes:
+
+1. `GroundBounds.CalculateGameBounds()` implementation and backing source;
+2. callers/references of `Awaken.TG.EditorOnly.TerrainHeightRemapper` and related terrain editor tooling;
+3. CampaignMap scene-loading/dependency code exposing exact scene and source identities;
+4. Medusa build/source-selection types and source-object join identifiers;
+5. Addressables semantic key/GUID/object mapping for candidate terrain or base-ground assets;
+6. separately authorised static `CampaignMap_*` scene/component metadata if lawfully available.
+
+No absent field may be replaced by Unity defaults, DepthTextures grid values, Pathfinding extents, or assumptions
+about all Medusa meshes being continuous base ground.
+
 ## Claim states
 
 This topic uses:
@@ -139,9 +163,9 @@ This topic uses:
 - `repository-observed` — exact repository content at the recorded baseline supports the claim;
 - `source-supported` — a durable public source in `SOURCE_REGISTER.md` supports the scoped claim;
 - `static-report-supported` — the preserved decompilation report supports the claim, but the underlying binaries
-  and analysis were not independently reproduced in this repository change;
-- `input-observed` — a preserved Deep Research report states the claim, but its underlying citation has not yet
-  been fully reconciled to a durable source entry;
+  and analysis were not independently reproduced in the repository intake;
+- `input-observed` — a preserved Deep Research or reconnaissance report states the observation, but an absence or
+  exhaustive-search result is not promoted beyond the evidence actually available;
 - `inference` — a bounded conclusion derived from identified facts;
 - `unknown` — required proof is missing;
 - `contradicted` — accepted evidence conflicts with the claim;

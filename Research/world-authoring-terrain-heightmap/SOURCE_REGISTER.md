@@ -34,6 +34,7 @@ Preserved inputs may retain their original tokens, but those tokens are not dura
 | `SRC-INPUT-DR-TH-001` | DR-TH-001 Deep Research report | `inputs/DR_TH_001_DEEP_RESEARCH_REPORT_2026-08-31.md` | Returned ChatGPT Deep Research report / E1 context | Underlying sources must be checked before consequential promotion |
 | `SRC-INPUT-DR-TH-001-STATIC` | DR-TH-001 static/CIL decompilation report | `inputs/DR_TH_001_STATIC_DECOMPILATION_REPORT_2026-08-31.md` | User-supplied static assembly metadata and CIL analysis | Underlying DLLs were not committed and analysis was not independently reproduced in this change |
 | `SRC-INPUT-DR-TH-002` | DR-TH-002 Deep Research report | `inputs/DR_TH_002_DEEP_RESEARCH_REPORT_2026-08-31.md` | Returned ChatGPT Deep Research report / E1 context | Some original conversation citations remain unreconciled; cleaned intake relies only on registered claims |
+| `SRC-INPUT-DR-TH-003` | DR-TH-003 CampaignMap scene/source-asset inventory report | `inputs/DR_TH_003_DEEP_RESEARCH_REPORT_2026-08-31.md` | Returned ChatGPT Deep Research report / public documentation + public package metadata + supplied static context | Negative/exhaustive-search observations remain bounded to the researched public surface; no private scene or bundle extraction occurred |
 
 The supplied static report binds these external assembly observations by SHA-256:
 
@@ -52,6 +53,9 @@ state, or live runtime behavior.
 | --- | --- | --- | --- | --- |
 | `SRC-PUB-DEPOT` | Fall of Avalon depot file listing | https://steamdb.info/depot/1466062/apps/ | SteamDB presentation of Steam depot metadata | Public path and approximate-size inventory; secondary source, not developer format documentation |
 | `SRC-PUB-MANIFESTS` | Fall of Avalon depot manifests | https://steamdb.info/depot/1466062/manifests/ | SteamDB | Manifest/build context and retrieval date; file hashes may require Steam sign-in |
+| `SRC-PUB-MEDUSA-CUANACHT-2024` | Mega Patch 0.7 / Cuanacht package changes | https://steamdb.info/patchnotes/14508111/ | SteamDB package-change presentation | Historical map-scoped Medusa products, including HOS/Cuanacht static data; does not expose source object membership |
+| `SRC-PUB-MEDUSA-CUANACHT-2024-HOTFIX` | 28 May 2024 package changes | https://steamdb.info/patchnotes/14518981/ | SteamDB package-change presentation | Follow-up changes to map-scoped Medusa products; still derived package metadata |
+| `SRC-PUB-SARRAS-2025` | Sanctuary of Sarras expansion package/update record | https://steamdb.info/patchnotes/21099119/ | SteamDB package/update presentation | Sarras package chronology and map-scoped derived products; not terrain-source identity |
 | `SRC-PUB-MAPSCENE-LOG` | Public FOA runtime log with `CampaignMap_*` scene events | https://steamcommunity.com/app/1466060/discussions/3/824857476142790518/ | Steam Community user-posted runtime log | Direct logged strings; provenance is user-posted and not an independently reproduced runtime run |
 | `SRC-PUB-MERLIN` | Merlin's Workshop public project/wiki | https://github.com/AR-Questline/merlin-workshop/wiki | AR-Questline | Public modding/Addressables context; does not expose all commercial assets |
 
@@ -60,8 +64,9 @@ state, or live runtime behavior.
 | Source ID | Source | Direct URL | Date | Scoped support |
 | --- | --- | --- | --- | --- |
 | `SRC-DEV-INTRO` | Deep dive Tainted Grail [0] — Introduction | https://dev.to/kamilvdono/deep-dive-tainted-grail-0-introduction-5gka | 31 May 2025 | Developer-described final system inventory: Addressables, Leshy, Medusa, Drake, scene baking, HLOD and related systems |
+| `SRC-DEV-DRAKE` | Deep dive Tainted Grail [1] — Drake | https://dev.to/kamilvdono/deep-dive-tainted-grail-1-drake-runtime-entity-renderer-registration-system-1751 | June 2025 | Drake renderer registration and semantic Addressables mesh/material key usage |
+| `SRC-DEV-LESHY` | Deep dive Tainted Grail [2] — Leshy | https://dev.to/kamilvdono/deep-dive-tainted-grail-2-leshy-vegetation-streaming-and-rendering-4ndk | 2025 | Leshy vegetation placement/rendering and offline-prepared-world role |
 | `SRC-DEV-MEDUSA` | Deep dive Tainted Grail [3] — Medusa | https://dev.to/kamilvdono/deep-dive-tainted-grail-3-medusa-blazing-fast-cliffs-rendering-4pi1 | 19 October 2025 | Medusa authoring inputs, immutable runtime bake, `IProcessSceneWithReport`, StreamingAssets and collider boundary |
-| `SRC-DEV-DRAKE` | Drake technical discussion | https://discussions.unity.com/t/deep-dive-tainted-grail-1-drake-runtime-entity-renderer-registration-system/1657058 | 19 June 2025 | Drake creates/manages runtime rendering entities and streams materials/meshes through Addressables |
 | `SRC-DEV-TECH-UPDATE` | FOA Tech Development Update mirror | https://www.eprison.de/spiele/tainted-grail-the-fall-of-avalon/steam-news/6350729003498121703/7324/77618.html | Public Steam-news mirror | Leshy vegetation, Medusa/static-object, Drake and HLOD descriptions; mirror rather than canonical developer page |
 
 The author profile associated with the DEV articles identifies the author as a Unity/Unreal developer at Awaken
@@ -73,6 +78,7 @@ implementation authority.
 | Source ID | Source | Direct URL | Scoped support |
 | --- | --- | --- | --- |
 | `SRC-UNITY-TERRAINDATA` | Unity `TerrainData` API | https://docs.unity3d.com/6000.5/Documentation/ScriptReference/TerrainData.html | Generic TerrainData heightmap, size, resolution, scale and height-query semantics; applies to FOA only after a campaign binding is proved |
+| `SRC-UNITY-ADDRESSABLES-CATALOG` | Unity Addressables content catalog documentation | https://docs.unity3d.com/Packages/com.unity.addressables%402.0/manual/build-content-catalogs.html | Catalog maps semantic keys to physical locations; local catalog can be placed/compressed in StreamingAssets; generic until FOA terrain key binding is proved |
 | `SRC-UNITY-COORDS` | Unity coordinate-system documentation | https://docs.unity3d.com/2021.3/Documentation/Manual/QuaternionAndEulerRotationsInUnity.html | Generic Unity left-handed, +X right, +Y up, +Z forward basis |
 | `SRC-O3DE-TERRAIN-WORLD` | O3DE Terrain World component | https://docs.o3de.org/docs/user-guide/components/reference/terrain/world/ | Required terrain min/max height and sample/query resolution concepts |
 | `SRC-O3DE-SCENE-FORMAT` | O3DE Scene Format Support | https://docs.o3de.org/docs/user-guide/assets/scene-settings/scene-format-support/ | Current page statement about O3DE axes/units |
@@ -83,10 +89,8 @@ implementation authority.
 
 1. A preserved input is research context, not an accepted decision.
 2. `design-context` records user-approved product direction; it does not prove a source format or implementation.
-3. `static-report-supported` claims remain static/decompilation claims until independently reproduced or checked
-   against the relevant source/binary evidence.
-4. Generic Unity or O3DE documentation may define identified upstream structures; it may not establish that a
-   particular `CampaignMap_*` uses those structures.
-5. SteamDB establishes public package paths and displayed metadata, not proprietary binary semantics.
-6. No source in this register authorizes commercial asset extraction, live installation inspection, runtime
-   mutation, deployment, packaging, publication, or evidence promotion.
+3. `static-report-supported` claims remain static/decompilation claims until independently reproduced or checked against the relevant source/binary evidence.
+4. Generic Unity or O3DE documentation may define identified upstream structures; it may not establish that a particular `CampaignMap_*` uses those structures.
+5. SteamDB establishes public package paths and displayed metadata, not proprietary binary semantics or source-object membership.
+6. An unsuccessful public search for serialized scene/component metadata is an `input-observed` limitation, not proof that the objects do not exist.
+7. No source in this register authorizes commercial asset extraction, live installation inspection, runtime mutation, deployment, packaging, publication, or evidence promotion.

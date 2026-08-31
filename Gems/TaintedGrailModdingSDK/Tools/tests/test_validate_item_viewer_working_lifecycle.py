@@ -16,10 +16,14 @@ import validate_item_viewer_working_lifecycle as contract
 
 class ItemViewerWorkingLifecycleTests(unittest.TestCase):
     FIXTURE_PATHS = (
+        "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
+        "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualSelectorInstallerSystemComponent.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualSelectorWidget.cpp",
         "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake",
+        "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_framework_files.cmake",
+        "Gems/TaintedGrailModdingSDK/Tools/foa_asset_browser_pane_refresh.py",
         "Gems/TaintedGrailModdingSDK/Tools/editor_tests/alpha_item_viewer_live_smoke.py",
     )
 
@@ -45,7 +49,7 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             self.copy_fixture(root)
             contract.validate_item_viewer(root)
 
-    def test_missing_production_build_registration_fails(self) -> None:
+    def test_missing_editor_build_registration_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.copy_fixture(root)
@@ -55,7 +59,33 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
                 "Source/ItemVisualSelectorWidget.cpp",
                 "Source/RemovedItemVisualSelectorWidget.cpp",
             )
-            with self.assertRaisesRegex(RuntimeError, "production build registration"):
+            with self.assertRaisesRegex(RuntimeError, "Editor production build registration"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_service_must_be_framework_owned(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_framework_files.cmake",
+                "Source/AssetBrowserPreviewRefreshService.cpp",
+                "Source/RemovedAssetBrowserPreviewRefreshService.cpp",
+            )
+            with self.assertRaisesRegex(RuntimeError, "Framework production ownership"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_service_cannot_leak_back_into_editor_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            editor_manifest = root / "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
+            editor_manifest.write_text(
+                editor_manifest.read_text(encoding="utf-8")
+                + "\nset(LEAKED Source/AssetBrowserPreviewRefreshService.cpp)\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "duplicate Editor ownership"):
                 contract.validate_item_viewer(root)
 
     def test_raw_model_chooser_must_remain_hidden(self) -> None:
@@ -83,6 +113,50 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
                 all_occurrences=True,
             )
             with self.assertRaisesRegex(RuntimeError, "exact-profile candidate filtering"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_must_regenerate_the_shared_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
+                "RefreshActiveProfileModel",
+                "LoadLatestAvailableModel",
+            )
+            with self.assertRaisesRegex(RuntimeError, "refresh-to-generation service integration"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_must_use_embedded_python_not_an_external_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp"
+            path.write_text(path.read_text(encoding="utf-8") + "\nQProcess forbidden;\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "remain inside the Editor process"):
+                contract.validate_item_viewer(root)
+
+    def test_embedded_refresh_adapter_cannot_use_process_exit_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / "Gems/TaintedGrailModdingSDK/Tools/foa_asset_browser_pane_refresh.py"
+            path.write_text(path.read_text(encoding="utf-8") + "\nraise SystemExit(0)\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "process-exit contract"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_tooling_must_ship_with_the_installed_editor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
+                "scripts/foa-sdk",
+                "scripts/missing-item-viewer-tool",
+            )
+            with self.assertRaisesRegex(RuntimeError, "private installed refresh tooling location"):
                 contract.validate_item_viewer(root)
 
     def test_internal_model_path_cannot_return_to_settings(self) -> None:

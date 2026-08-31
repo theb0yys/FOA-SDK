@@ -37,6 +37,7 @@ namespace TaintedGrailModdingSDK
         void InstallGrid();
         void SimplifyModelControls();
         void ScheduleAutomaticModelLoad();
+        void RefreshAssets();
         void LoadLatestAvailableModel();
         QString FindLatestModelPath() const;
         QString ResolveExtractedDataRoot() const;

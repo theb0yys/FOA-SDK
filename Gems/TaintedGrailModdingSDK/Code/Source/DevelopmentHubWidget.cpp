@@ -313,6 +313,7 @@ namespace TaintedGrailModdingSDK
         });
 
         contentLayout->addStretch();
+        FoundationService::Get().RefreshLocalSetup();
         Refresh();
     }
 

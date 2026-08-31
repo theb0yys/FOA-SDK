@@ -20,21 +20,16 @@ def reject(text: str, needle: str, label: str) -> None:
 def validate_item_viewer(root: Path = ROOT) -> None:
     code = root / "Gems" / "TaintedGrailModdingSDK" / "Code"
     source = code / "Source"
+    tools = root / "Gems" / "TaintedGrailModdingSDK" / "Tools"
     enhancer = (source / "ItemVisualLifecycleWidget.cpp").read_text(encoding="utf-8")
     refresh_service = (source / "AssetBrowserPreviewRefreshService.cpp").read_text(encoding="utf-8")
+    refresh_adapter = (tools / "foa_asset_browser_pane_refresh.py").read_text(encoding="utf-8")
     installer = (source / "ItemVisualSelectorInstallerSystemComponent.cpp").read_text(encoding="utf-8")
     selector = (source / "ItemVisualSelectorWidget.cpp").read_text(encoding="utf-8")
     editor_manifest = (code / "taintedgrailmoddingsdk_editor_files.cmake").read_text(encoding="utf-8")
     framework_manifest = (code / "taintedgrailmoddingsdk_framework_files.cmake").read_text(encoding="utf-8")
     code_cmake = (code / "CMakeLists.txt").read_text(encoding="utf-8")
-    smoke = (
-        root
-        / "Gems"
-        / "TaintedGrailModdingSDK"
-        / "Tools"
-        / "editor_tests"
-        / "alpha_item_viewer_live_smoke.py"
-    ).read_text(encoding="utf-8")
+    smoke = (tools / "editor_tests" / "alpha_item_viewer_live_smoke.py").read_text(encoding="utf-8")
 
     require(enhancer, "ProductThumbnailKey", "official O3DE product thumbnail key")
     require(enhancer, "ThumbnailWidget", "official O3DE thumbnail widget")
@@ -52,7 +47,7 @@ def validate_item_viewer(root: Path = ROOT) -> None:
     require(enhancer, 'settings.remove(prefix + QStringLiteral("modelPath"));', "internal model-path persistence removal")
 
     require(refresh_service, "EditorPythonRunnerRequestBus::BroadcastResult", "embedded Python execution")
-    require(refresh_service, "foa_asset_browser_pane_model.py", "single pane-model generator owner")
+    require(refresh_service, "foa_asset_browser_pane_refresh.py", "embedded refresh adapter")
     require(refresh_service, 'ownedArgs.emplace_back("--workspace")', "active workspace generator binding")
     require(refresh_service, 'ownedArgs.emplace_back("--import-proof")', "reviewed import-proof generator input")
     require(refresh_service, 'ownedArgs.emplace_back("--replace")', "idempotent generated-model refresh")
@@ -61,9 +56,16 @@ def validate_item_viewer(root: Path = ROOT) -> None:
     require(refresh_service, "FindLatestImportProof", "exact-profile import-proof discovery")
     require(refresh_service, "FindLatestPaneModel", "post-generation exact-profile model resolution")
 
-    require(code_cmake, "TG_SDK_ASSET_BROWSER_PANE_MODEL_TOOL_SOURCE", "developer-checkout generator path")
-    require(code_cmake, "ly_install_files", "installed generator packaging")
-    require(code_cmake, "scripts/foa-sdk", "private installed generator location")
+    require(refresh_adapter, "import foa_asset_browser_pane_model as pane", "single pane-model generator owner")
+    require(refresh_adapter, "pane.build_model", "shared pane-model build call")
+    require(refresh_adapter, "pane.verify_model", "shared pane-model verification call")
+    reject(refresh_adapter, "subprocess", "external process use in embedded adapter")
+    reject(refresh_adapter, "SystemExit", "process-exit contract in embedded adapter")
+
+    require(code_cmake, "TG_SDK_ASSET_BROWSER_PANE_REFRESH_TOOL_SOURCE", "developer-checkout refresh-adapter path")
+    require(code_cmake, "ly_install_files", "installed refresh tooling packaging")
+    require(code_cmake, "scripts/foa-sdk", "private installed refresh tooling location")
+    require(code_cmake, "../Tools/foa_asset_browser_pane_refresh.py", "installed embedded refresh adapter")
     require(code_cmake, "../Tools/foa_asset_browser_pane_model.py", "installed pane-model generator")
 
     require(installer, "new ItemVisualLifecycleEnhancer(selector)", "direct lifecycle integration")
@@ -95,6 +97,9 @@ def validate_item_viewer(root: Path = ROOT) -> None:
 
     require(smoke, "FOAItemViewerThumbnailGrid", "Windows grid evidence")
     require(smoke, "Refresh Assets", "Windows simplified refresh evidence")
+    require(smoke, "refresh_regenerated_model", "Windows refresh-generation evidence")
+    require(smoke, "refresh_loaded_products", "Windows refreshed-product-load evidence")
+    require(smoke, "selection_restored_after_reopen", "Windows selection restore evidence")
     require(smoke, "internal_model_controls_hidden", "Windows internal-control hiding evidence")
     require(smoke, "pane.close()", "Windows close/reopen exercise")
     require(smoke, "general.open_pane(PANE_NAME)", "Windows pane reopen")

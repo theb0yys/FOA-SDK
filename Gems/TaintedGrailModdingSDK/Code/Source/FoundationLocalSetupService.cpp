@@ -11,6 +11,7 @@
 #include "LocalSetupDetectionService.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/utility/move.h>
 
 #include <QByteArray>
 #include <QDir>

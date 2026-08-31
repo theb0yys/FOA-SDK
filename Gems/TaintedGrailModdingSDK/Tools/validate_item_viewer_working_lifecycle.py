@@ -12,6 +12,11 @@ def require(text: str, needle: str, label: str) -> None:
         raise RuntimeError(f"Missing {label}: {needle}")
 
 
+def reject(text: str, needle: str, label: str) -> None:
+    if needle in text:
+        raise RuntimeError(f"Forbidden {label}: {needle}")
+
+
 def validate_item_viewer(root: Path = ROOT) -> None:
     code = root / "Gems" / "TaintedGrailModdingSDK" / "Code"
     source = code / "Source"
@@ -19,7 +24,8 @@ def validate_item_viewer(root: Path = ROOT) -> None:
     refresh_service = (source / "AssetBrowserPreviewRefreshService.cpp").read_text(encoding="utf-8")
     installer = (source / "ItemVisualSelectorInstallerSystemComponent.cpp").read_text(encoding="utf-8")
     selector = (source / "ItemVisualSelectorWidget.cpp").read_text(encoding="utf-8")
-    manifest = (code / "taintedgrailmoddingsdk_editor_files.cmake").read_text(encoding="utf-8")
+    editor_manifest = (code / "taintedgrailmoddingsdk_editor_files.cmake").read_text(encoding="utf-8")
+    framework_manifest = (code / "taintedgrailmoddingsdk_framework_files.cmake").read_text(encoding="utf-8")
     code_cmake = (code / "CMakeLists.txt").read_text(encoding="utf-8")
     smoke = (
         root
@@ -66,9 +72,15 @@ def validate_item_viewer(root: Path = ROOT) -> None:
     require(selector, "LoadedModelFileMatches", "existing source-index drift check")
     require(selector, "LoadedModelMatchesActiveProfile", "existing exact-profile check")
 
-    required_editor_files = (
+    required_framework_files = (
         "Source/AssetBrowserPreviewRefreshService.cpp",
         "Source/AssetBrowserPreviewRefreshService.h",
+    )
+    for relative in required_framework_files:
+        require(framework_manifest, relative, f"Framework production ownership for {relative}")
+        reject(editor_manifest, relative, f"duplicate Editor ownership for {relative}")
+
+    required_editor_files = (
         "Source/ItemVisualLifecycleEnhancer.h",
         "Source/ItemVisualLifecycleWidget.cpp",
         "Source/ItemVisualSelectionRestoreBridge.h",
@@ -79,7 +91,7 @@ def validate_item_viewer(root: Path = ROOT) -> None:
         "Source/ItemVisualSelectorWidget.h",
     )
     for relative in required_editor_files:
-        require(manifest, relative, f"production build registration for {relative}")
+        require(editor_manifest, relative, f"Editor production build registration for {relative}")
 
     require(smoke, "FOAItemViewerThumbnailGrid", "Windows grid evidence")
     require(smoke, "Refresh Assets", "Windows simplified refresh evidence")

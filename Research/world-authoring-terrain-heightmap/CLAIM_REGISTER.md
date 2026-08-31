@@ -7,12 +7,13 @@ deployment, publication, packaging, or promotion authority.
 
 ## State vocabulary
 
+- `design-context` — explicit product direction; not a source-format fact or implementation permit;
 - `repository-observed` — exact repository content at the recorded baseline supports the claim;
 - `source-supported` — one or more durable public sources in `SOURCE_REGISTER.md` support the scoped claim;
 - `static-report-supported` — the supplied static/CIL report supports the claim; underlying binaries and analysis
   were not independently reproduced in this repository change;
-- `input-observed` — a preserved Deep Research report contains the observation but durable source reconciliation
-  is incomplete;
+- `input-observed` — a preserved Deep Research or reconnaissance report contains the observation but durable
+  source reconciliation is incomplete;
 - `inference` — bounded conclusion derived from identified evidence;
 - `unknown` — consequential proof is missing;
 - `contradicted` — accepted evidence conflicts with the claim;
@@ -24,8 +25,8 @@ deployment, publication, packaging, or promotion authority.
 | --- | --- | --- | --- | --- |
 | `TH-C001` | FOA-SDK already defines an explicit canonical terrain document carrying source, grid, vertical, coordinate, tile, provenance, revision, and authority data. | `repository-observed` | `SRC-REPO-TERRAIN-H`, `SRC-REPO-TERRAIN-CPP` | A vanilla provider must resolve these fields rather than hide guesses in the document. |
 | `TH-C002` | WA-TH-001 prohibits guessing raw dimensions, byte order, world scale, vertical range, coordinate basis, row orientation, or sample semantics. | `repository-observed` | `SRC-REPO-WA-TH-001` | Unknown source metadata is a blocker, not normal user configuration. |
-| `TH-C003` | Public package metadata exposes `StreamingAssets/DepthTextures/CampaignMap_Cuanacht`, `CampaignMap_Forlorn`, and `CampaignMap_HOS` tiled `.raw` collections. | `source-supported` | `SRC-PUB-DEPOT`, `SRC-INPUT-DR-TH-001` | Establishes source-scoped inventory only, not terrain semantics. |
-| `TH-C004` | Current public package metadata does not expose a corresponding `DepthTextures/CampaignMap_Sarras` collection. | `source-supported` | `SRC-PUB-DEPOT`, `SRC-INPUT-DR-TH-001` | Absence from this subsystem does not imply that Sarras lacks terrain. |
+| `TH-C003` | Public package metadata exposes `StreamingAssets/DepthTextures/CampaignMap_Cuanacht`, `CampaignMap_Forlorn`, and `CampaignMap_HOS` tiled `.raw` collections. | `source-supported` | `SRC-PUB-DEPOT`, `SRC-INPUT-DR-TH-000`, `SRC-INPUT-DR-TH-001` | Establishes source-scoped inventory only, not terrain semantics. |
+| `TH-C004` | Current public package metadata does not expose a corresponding `DepthTextures/CampaignMap_Sarras` collection. | `source-supported` | `SRC-PUB-DEPOT`, `SRC-INPUT-DR-TH-000`, `SRC-INPUT-DR-TH-001` | Absence from this subsystem does not imply that Sarras lacks terrain. |
 | `TH-C005` | `CampaignMap_Cuanacht` and `CampaignMap_HOS` appear as runtime map-scene strings in a public FOA log. | `source-supported` | `SRC-PUB-MAPSCENE-LOG` | Strong scene/source-scoped identity; not an exact terrain-asset identity. |
 | `TH-C006` | The supplied static report identifies `TopDownDepthTexturesLoadingManager` as the loader for `DepthTextures/<scene>/depth_tex_X_Y.raw`. | `static-report-supported` | `SRC-INPUT-DR-TH-001-STATIC` | Static evidence only; not independently reproduced live runtime proof. |
 | `TH-C007` | The supplied static report identifies `ScreenSpaceWetness`, `VFXTopDownDepthBinder`, and precipitation control as direct consumers/activation of the DepthTextures system. | `static-report-supported` | `SRC-INPUT-DR-TH-001-STATIC` | Classifies observed consumer role as wetness/precipitation/VFX. |
@@ -50,11 +51,18 @@ deployment, publication, packaging, or promotion authority.
 | `TH-C026` | The presence of the Infinity Code Mesh to Terrain package proves that FOA campaign terrain was produced with it. | `unknown` | `SRC-MESH-TO-TERRAIN`, `SRC-INPUT-DR-TH-001-STATIC` | Tool purpose is known; project use and output identities are unproved. |
 | `TH-C027` | A production zero-configuration vanilla Highmap provider can currently resolve source object, resolution, bounds, height range, topology, and transform for any campaign map. | `unknown` | `TH-C021`, `TH-C022` | Current product route remains blocked. |
 | `TH-C028` | The next highest-value evidence unit is a per-map scene component and source-asset inventory covering Terrain, TerrainData, TerrainCollider, landscape meshes, Medusa markers, scene dependencies, and exact transforms/identifiers. | `inference` | `TH-C021`, `TH-C022`, `TH-C023` | Scoped by DR-TH-003; it does not authorize asset extraction or implementation. |
+| `TH-C029` | The intended normal Highmap user experience contains only `Edit Vanilla Map` and `Import New Map` as primary actions. | `design-context` | `SRC-INPUT-HIGHMAP-DESIGN` | Provider uncertainty must not become a technical-user wizard. |
+| `TH-C030` | Vanilla sources must remain read-only and edits must be stored as workspace-owned revisions. | `design-context` | `SRC-INPUT-HIGHMAP-DESIGN`, `SRC-REPO-TERRAIN-H`, `SRC-REPO-WA-TH-001` | Supports reset/reimport and prevents direct source mutation. |
+| `TH-C031` | The repository already implemented raw/image terrain canonicalisation, contained staging, source immutability checks, complete-document validation, and atomic workspace publication. | `repository-observed` | `SRC-INPUT-HIGHMAP-SDK-ASSESSMENT`, `SRC-REPO-TERRAIN-CPP` | Generic terrain-import backend should be reused rather than replaced. |
+| `TH-C032` | The observed TerrainAuthoring shell did not register a visible pane, enable preview projection, or expose its command inventory as available shell commands. | `repository-observed` | `SRC-INPUT-HIGHMAP-SDK-ASSESSMENT`, `SRC-REPO-TERRAIN-CONTRACTS`, `SRC-REPO-TERRAIN-CONTRACTS-CPP` | Explains why the intended two-action UX was not fulfilled. |
+| `TH-C033` | The repository contained no proven vanilla terrain source provider or per-map Edit Vanilla Map workflow at the assessed baseline. | `repository-observed` | `SRC-INPUT-HIGHMAP-SDK-ASSESSMENT` | Vanilla source research remained a prerequisite. |
+| `TH-C034` | Local setup detection at the assessed baseline could validate candidate installations and derive workspace/profile paths, but full automatic machine-level discovery was not established. | `repository-observed` | `SRC-INPUT-HIGHMAP-SDK-ASSESSMENT`, `SRC-REPO-SETUP-DETECTION` | Environment discovery was partial, not complete. |
+| `TH-C035` | DR-TH-000 correctly treated DepthTextures as an unresolved candidate and rejected guessing its technical interpretation; its semantic uncertainty was later superseded by the static report. | `superseded` | `SRC-INPUT-DR-TH-000`, `SRC-INPUT-DR-TH-001-STATIC` | Package inventory remains useful; terrain-source hypothesis is closed. |
 
 ## Current promotion boundary
 
-No claim in this register has been promoted into a normative architecture or implementation decision by this
-research commit. In particular:
+No claim in this register has been promoted into a normative architecture or implementation decision by these
+research commits. In particular:
 
 ```text
 CampaignMap -> TerrainData binding: UNKNOWN

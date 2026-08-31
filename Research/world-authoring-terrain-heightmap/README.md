@@ -8,8 +8,9 @@ Observation and intake date: 31 August 2026
 
 ## Authority boundary
 
-This topic preserves research reports, static/decompilation observations, cleaned derivatives, claim state, and
-bounded follow-up briefs for FOA-SDK Terrain Authoring and the Highmap Importer.
+This topic preserves product-design context, repository assessments, public reconnaissance, Deep Research reports,
+static/decompilation observations, cleaned derivatives, claim state, and bounded follow-up briefs for FOA-SDK
+Terrain Authoring and the Highmap Importer.
 
 Nothing in this directory is an implementation permit, native-identity promotion, source-provider qualification,
 commercial-content extraction permit, runtime-compatibility declaration, deployment authority, publication
@@ -25,22 +26,35 @@ The governing repository sources at the intake baseline are:
 - [`WA_TH_001_TERRAIN_HEIGHTMAP_CONTRACT_AND_EDITOR_GATE.md`](gates/WA_TH_001_TERRAIN_HEIGHTMAP_CONTRACT_AND_EDITOR_GATE.md)
 - [`WA_TH_002_TERRAIN_AUTHORING_UI_PREVIEW_GATE.md`](gates/WA_TH_002_TERRAIN_AUTHORING_UI_PREVIEW_GATE.md)
 
-## Preserved inputs
+## Preserved pre-Deep-Research records
 
-The supplied research reports are preserved below `inputs/` as research context:
+The complete conversation research sequence began before DR-TH-001. These records preserve that earlier work:
+
+- [`HIGHMAP_IMPORTER_ZERO_CONFIGURATION_DESIGN_BASELINE_2026-08-31.md`](inputs/HIGHMAP_IMPORTER_ZERO_CONFIGURATION_DESIGN_BASELINE_2026-08-31.md)
+- [`HIGHMAP_IMPORTER_SDK_ACCOMMODATION_ASSESSMENT_2026-08-31.md`](inputs/HIGHMAP_IMPORTER_SDK_ACCOMMODATION_ASSESSMENT_2026-08-31.md)
+- [`DR_TH_000_PUBLIC_TERRAIN_RECONNAISSANCE_REPORT_2026-08-31.md`](inputs/DR_TH_000_PUBLIC_TERRAIN_RECONNAISSANCE_REPORT_2026-08-31.md)
+
+The design baseline is product context rather than evidence that FOA uses a particular source representation. The
+SDK assessment is repository/static evidence bound to the intake baseline. DR-TH-000 is the public reconnaissance
+that identified package systems and isolated the original terrain-source blocker before Deep Research.
+
+## Preserved Deep Research and static inputs
+
+The supplied/returned reports are preserved below `inputs/` as research context:
 
 - [`DR_TH_001_DEEP_RESEARCH_REPORT_2026-08-31.md`](inputs/DR_TH_001_DEEP_RESEARCH_REPORT_2026-08-31.md)
 - [`DR_TH_001_STATIC_DECOMPILATION_REPORT_2026-08-31.md`](inputs/DR_TH_001_STATIC_DECOMPILATION_REPORT_2026-08-31.md)
 - [`DR_TH_002_DEEP_RESEARCH_REPORT_2026-08-31.md`](inputs/DR_TH_002_DEEP_RESEARCH_REPORT_2026-08-31.md)
 
-The original reports contain conversation-local citation tokens. Those tokens are preserved as part of the input
-but are not durable repository citations. Durable source locators and scoped claim states live in
+The original reports may contain conversation-local citation tokens. Those tokens are preserved as part of the
+input but are not durable repository citations. Durable source locators and scoped claim states live in
 [`SOURCE_REGISTER.md`](SOURCE_REGISTER.md) and [`CLAIM_REGISTER.md`](CLAIM_REGISTER.md).
 
 ## Cleaned derivatives
 
 The repository-facing derivatives are:
 
+- [`DR_TH_000_PUBLIC_RECONNAISSANCE_CLEAN_INTAKE.md`](intakes/DR_TH_000_PUBLIC_RECONNAISSANCE_CLEAN_INTAKE.md)
 - [`DR_TH_001_CLEAN_INTAKE.md`](intakes/DR_TH_001_CLEAN_INTAKE.md)
 - [`DR_TH_002_CLEAN_INTAKE.md`](intakes/DR_TH_002_CLEAN_INTAKE.md)
 
@@ -61,11 +75,31 @@ Current next brief:
 DR-TH-003 is intentionally narrow. It targets only the component and source-asset inventory of the four
 `CampaignMap_*` scenes. It does not authorize another broad survey of FOA world systems.
 
+## Research chronology
+
+```text
+zero-configuration Highmap design
+    -> repository SDK accommodation assessment
+    -> DR-TH-000 public package/source reconnaissance
+    -> DR-TH-001 Deep Research brief and report
+    -> DR-TH-001 static/CIL report
+    -> DR-TH-001 clean intake
+    -> DR-TH-002 Deep Research brief and report
+    -> DR-TH-002 clean intake
+    -> DR-TH-003 bounded scene/source-asset inventory brief
+```
+
 ## Current research disposition
 
 The current E1 research context is:
 
 ```text
+Highmap product objective:
+    zero-configuration normal workflow
+
+Existing canonical terrain backend:
+    substantial and reusable
+
 DepthTextures authoritative-terrain hypothesis:
     FAILED
 
@@ -101,6 +135,7 @@ blocker; it must not become a normal user-facing form.
 
 This topic uses:
 
+- `design-context` — an explicit product requirement/proposal, not a source-format fact;
 - `repository-observed` — exact repository content at the recorded baseline supports the claim;
 - `source-supported` — a durable public source in `SOURCE_REGISTER.md` supports the scoped claim;
 - `static-report-supported` — the preserved decompilation report supports the claim, but the underlying binaries

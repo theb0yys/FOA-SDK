@@ -18,13 +18,19 @@ Preserved inputs may retain their original tokens, but those tokens are not dura
 | `SRC-REPO-TERRAIN-H` | TerrainHeightmapDocument contract | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Gems/TaintedGrailModdingSDK/Code/Source/TerrainHeightmapDocument.h | Canonical terrain identity, source, grid, vertical, coordinate, tile, provenance, revision, and authority fields |
 | `SRC-REPO-TERRAIN-CPP` | TerrainHeightmapDocument implementation | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Gems/TaintedGrailModdingSDK/Code/Source/TerrainHeightmapDocument.cpp | Accepted local source kinds, fail-closed metadata validation, staging and publication behavior |
 | `SRC-REPO-FOUNDATION` | Foundation catalogue and identity models | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Gems/TaintedGrailModdingSDK/Code/Source/FoundationModels.h | Display name, aliases, source-scoped refs, exact native refs, and evidence separation |
+| `SRC-REPO-TERRAIN-CONTRACTS` | TerrainAuthoring contracts | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Plugins/Authoring/TerrainAuthoring/Gem/Code/Source/TerrainAuthoringContracts.h | TerrainAuthoring commands, authority flags, and initial shell status |
+| `SRC-REPO-TERRAIN-CONTRACTS-CPP` | TerrainAuthoring contract implementation | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Plugins/Authoring/TerrainAuthoring/Gem/Code/Source/TerrainAuthoringContracts.cpp | ReadActiveProfile-only declaration, shell-disabled commands, and no visible pane/preview authority |
+| `SRC-REPO-SETUP-DETECTION` | LocalSetupDetectionService | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Gems/TaintedGrailModdingSDK/Code/Source/LocalSetupDetectionService.cpp | Workspace/profile defaults, candidate installation recognition, and bounded path derivation |
 | `SRC-REPO-WA-TH-001` | Terrain Heightmap Contract and Editor Gate | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Research/world-authoring-terrain-heightmap/gates/WA_TH_001_TERRAIN_HEIGHTMAP_CONTRACT_AND_EDITOR_GATE.md | No-guess terrain contract and current direct-game-source restrictions |
 | `SRC-REPO-WA-TH-002` | Terrain Authoring UI/Preview Gate | https://github.com/theb0yys/FOA-SDK/blob/ef86d0542e01c1a1104e0564fd52c0695bd9a50d/Research/world-authoring-terrain-heightmap/gates/WA_TH_002_TERRAIN_AUTHORING_UI_PREVIEW_GATE.md | UI/source-evidence boundaries and no implicit runtime/source authority |
 
-## Preserved research inputs
+## Preserved design, assessment, and research inputs
 
 | Source ID | Input | Repository locator | Evidence lane | Limitation |
 | --- | --- | --- | --- | --- |
+| `SRC-INPUT-HIGHMAP-DESIGN` | Zero-configuration Highmap design baseline | `inputs/HIGHMAP_IMPORTER_ZERO_CONFIGURATION_DESIGN_BASELINE_2026-08-31.md` | Product-design context | Defines intended UX; does not establish FOA source facts or implementation authority |
+| `SRC-INPUT-HIGHMAP-SDK-ASSESSMENT` | SDK accommodation assessment | `inputs/HIGHMAP_IMPORTER_SDK_ACCOMMODATION_ASSESSMENT_2026-08-31.md` | Repository/static assessment | Bound to repository baseline; no build, Editor, or runtime execution |
+| `SRC-INPUT-DR-TH-000` | Public terrain source reconnaissance | `inputs/DR_TH_000_PUBLIC_TERRAIN_RECONNAISSANCE_REPORT_2026-08-31.md` | Public package/runtime/documentation reconnaissance | DepthTextures semantic role was unresolved at this stage and later superseded by static evidence |
 | `SRC-INPUT-DR-TH-001` | DR-TH-001 Deep Research report | `inputs/DR_TH_001_DEEP_RESEARCH_REPORT_2026-08-31.md` | Returned ChatGPT Deep Research report / E1 context | Underlying sources must be checked before consequential promotion |
 | `SRC-INPUT-DR-TH-001-STATIC` | DR-TH-001 static/CIL decompilation report | `inputs/DR_TH_001_STATIC_DECOMPILATION_REPORT_2026-08-31.md` | User-supplied static assembly metadata and CIL analysis | Underlying DLLs were not committed and analysis was not independently reproduced in this change |
 | `SRC-INPUT-DR-TH-002` | DR-TH-002 Deep Research report | `inputs/DR_TH_002_DEEP_RESEARCH_REPORT_2026-08-31.md` | Returned ChatGPT Deep Research report / E1 context | Some original conversation citations remain unreconciled; cleaned intake relies only on registered claims |
@@ -76,10 +82,11 @@ implementation authority.
 ## Source-use rules
 
 1. A preserved input is research context, not an accepted decision.
-2. `static-report-supported` claims remain static/decompilation claims until independently reproduced or checked
+2. `design-context` records user-approved product direction; it does not prove a source format or implementation.
+3. `static-report-supported` claims remain static/decompilation claims until independently reproduced or checked
    against the relevant source/binary evidence.
-3. Generic Unity or O3DE documentation may define identified upstream structures; it may not establish that a
+4. Generic Unity or O3DE documentation may define identified upstream structures; it may not establish that a
    particular `CampaignMap_*` uses those structures.
-4. SteamDB establishes public package paths and displayed metadata, not proprietary binary semantics.
-5. No source in this register authorizes commercial asset extraction, live installation inspection, runtime
+5. SteamDB establishes public package paths and displayed metadata, not proprietary binary semantics.
+6. No source in this register authorizes commercial asset extraction, live installation inspection, runtime
    mutation, deployment, packaging, publication, or evidence promotion.

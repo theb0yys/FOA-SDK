@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Validate lifecycle ownership and Hub reachability for every TG SDK pane."""
+"""Validate lifecycle ownership and Control Center reachability for every TG SDK pane."""
 
 from __future__ import annotations
 
@@ -32,6 +32,9 @@ class Pane:
 BASE_SOURCE = "Gems/TaintedGrailModdingSDK/Code/Source/TaintedGrailModdingSDKSystemComponent.cpp"
 BASE_MANIFEST = "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
 HUB_SOURCE = "Gems/TaintedGrailModdingSDK/Code/Source/DevelopmentHubWidget.cpp"
+PACK_MANAGER_SOURCE = "Gems/TaintedGrailModdingSDK/Code/Source/PackManagerWidget.cpp"
+FOUNDATION_SERVICE_HEADER = "Gems/TaintedGrailModdingSDK/Code/Source/FoundationService.h"
+FOUNDATION_STATUS_SOURCE = "Gems/TaintedGrailModdingSDK/Code/Source/FoundationStatusWidget.cpp"
 EXTENSION_HOST = "Gems/TaintedGrailModdingSDK/Code/Source/FoundationExtensionRequestBus.cpp"
 
 
@@ -111,6 +114,77 @@ def require(text: str, fragment: str, label: str) -> None:
         raise EditorLifecycleError(f"{label} is missing required fragment {fragment!r}")
 
 
+def pane_options_block(registration: str, widget_name: str, pane_name: str) -> tuple[str, str]:
+    pattern = re.compile(
+        rf"AzToolsFramework::ViewPaneOptions\s+(?P<variable>[A-Za-z_]\w*);"
+        rf"(?P<body>(?:(?!AzToolsFramework::ViewPaneOptions).)*?"
+        rf"AzToolsFramework::RegisterViewPane<\s*{re.escape(widget_name)}\s*>)",
+        re.DOTALL,
+    )
+    match = pattern.search(registration)
+    if not match:
+        raise EditorLifecycleError(
+            f"{pane_name} registration does not have a bounded ViewPaneOptions block"
+        )
+    return match.group("variable"), match.group("body")
+
+
+def validate_control_center_contract(repo_root: Path, hub: str) -> None:
+    pack_manager = read(repo_root, PACK_MANAGER_SOURCE)
+    for fragment in (
+        "Saved mods",
+        "MaximumWorkspaceModDirectories",
+        "MaximumManifestSummaryBytes",
+        "pack.tgpack.json",
+        "RefreshWorkspaceMods",
+        "OpenSelectedPack",
+        "FoundationService::Get().LoadPack",
+    ):
+        require(pack_manager, fragment, "Control Center saved-mod selection")
+    if "QFileDialog" in pack_manager:
+        raise EditorLifecycleError(
+            "Control Center normal mod selection must not expose a manifest file picker"
+        )
+
+    foundation_header = read(repo_root, FOUNDATION_SERVICE_HEADER)
+    ready_match = re.search(
+        r"bool\s+IsReady\(\)\s+const\s*\{\s*return\s+(?P<expression>[^;]+);",
+        foundation_header,
+        re.DOTALL,
+    )
+    if not ready_match:
+        raise EditorLifecycleError("Control Center setup readiness expression is unavailable")
+    ready_expression = ready_match.group("expression")
+    for token in (
+        "m_gameInstallDetected",
+        "m_gameProfileComplete",
+        "m_persisted",
+        "m_error.empty()",
+    ):
+        if token not in ready_expression:
+            raise EditorLifecycleError(
+                f"Control Center setup readiness is missing {token}"
+            )
+    if "||" in ready_expression:
+        raise EditorLifecycleError(
+            "Control Center setup readiness must require every readiness condition"
+        )
+
+    require(
+        hub,
+        "LocalSetupDetectionService::LooksLikeTaintedGrailInstall",
+        "FOA-SDK Home live game-install readiness",
+    )
+    foundation_status = read(repo_root, FOUNDATION_STATUS_SOURCE)
+    for fragment in (
+        "const bool ready = workspaceReady && gameFound && profileReady;",
+        "? tr(\"Ready\")",
+        "tr(\"Waiting for game\")",
+        "tr(\"Preparing workspace\")",
+    ):
+        require(foundation_status, fragment, "System Details truthful authoring status")
+
+
 def validate_editor_lifecycle(repo_root: Path) -> None:
     if len(PANES) != 28 or len({pane.name for pane in PANES}) != len(PANES):
         raise EditorLifecycleError("The canonical Editor inventory must contain 28 unique pane names")
@@ -128,17 +202,46 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
         widget = read(repo_root, pane.widget_source)
         manifest = manifest_cache.setdefault(pane.manifest, read(repo_root, pane.manifest))
         widget_name = Path(pane.widget_source).stem
+        options_variable, options_block = pane_options_block(
+            registration,
+            widget_name,
+            pane.name,
+        )
 
         require(registration, pane.name, f"{pane.name} registration")
-        require(registration, "RegisterViewPane<", f"{pane.name} registration")
         require(registration, "UnregisterViewPane", f"{pane.name} lifecycle")
-        require(registration, "isDeletable = true", f"{pane.name} options")
-        require(registration, "isPreview = true", f"{pane.name} options")
-        require(registration, "saveKeyName", f"{pane.name} persistent layout")
+        require(
+            options_block,
+            f"{options_variable}.isDeletable = true",
+            f"{pane.name} options",
+        )
+        require(
+            options_block,
+            f"{options_variable}.isPreview = true",
+            f"{pane.name} options",
+        )
+        require(
+            options_block,
+            f"{options_variable}.saveKeyName",
+            f"{pane.name} persistent layout",
+        )
         require(manifest, f"Source/{widget_name}.cpp", f"{pane.name} build ownership")
         require(widget, f"{widget_name}::", f"{pane.name} widget implementation")
 
-        if pane.name != "FOA Development Hub":
+        if pane.name == "FOA Development Hub":
+            require(
+                options_block,
+                f'{options_variable}.optionalMenuText = QStringLiteral("FOA-SDK Home")',
+                "FOA-SDK Home Tools-menu front door",
+            )
+            if f"{options_variable}.showInMenu = false" in options_block:
+                raise EditorLifecycleError("FOA-SDK Home must remain visible in the Tools menu")
+        else:
+            require(
+                options_block,
+                f"{options_variable}.showInMenu = false",
+                f"{pane.name} menu-hidden Control Center route",
+            )
             require(hub, pane.name, f"{pane.name} Hub route")
 
         if pane.extension_id:
@@ -171,6 +274,8 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
             f"Every pane needs one unique layout save key; found {len(save_keys)} keys and {len(set(save_keys))} unique values"
         )
 
+    validate_control_center_contract(repo_root, hub)
+
     extension_host = read(repo_root, EXTENSION_HOST)
     for fragment in (
         "MaximumExtensionDocumentBytes",
@@ -193,9 +298,9 @@ def main() -> int:
         print(f"TG SDK Editor lifecycle validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "TG SDK Editor lifecycle validation passed: all 28 panes have build ownership, "
-        "registration, deactivation, unique layout state, Hub reachability, and bounded "
-        "optional-Gem persistence."
+        "TG SDK Editor lifecycle validation passed: FOA-SDK Home is the single Tools-menu "
+        "front door, all 28 panes retain build/lifecycle/layout ownership and Hub reachability, "
+        "saved mods require no manifest browsing, and setup readiness remains fail-closed."
     )
     return 0
 

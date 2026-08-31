@@ -6,6 +6,7 @@
  */
 
 #include "FoAInstallDiscoveryService.h"
+#include "FoundationService.h"
 #include "LocalSetupDetectionService.h"
 
 #include <AzTest/AzTest.h>
@@ -104,5 +105,23 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(profile->m_managedAssembliesPath.find("Fall of Avalon_Data/Managed")
             != AZStd::string::npos);
         EXPECT_TRUE(profile->m_pluginPath.find("BepInEx/plugins") != AZStd::string::npos);
+    }
+
+    TEST(FoundationLocalSetupResultTests, ReadyRequiresDetectedGameCompleteProfileAndPersistence)
+    {
+        FoundationLocalSetupResult result;
+        EXPECT_FALSE(result.IsReady());
+
+        result.m_gameProfileComplete = true;
+        EXPECT_FALSE(result.IsReady());
+
+        result.m_gameInstallDetected = true;
+        EXPECT_FALSE(result.IsReady());
+
+        result.m_persisted = true;
+        EXPECT_TRUE(result.IsReady());
+
+        result.m_error = "persistence failure";
+        EXPECT_FALSE(result.IsReady());
     }
 } // namespace TaintedGrailModdingSDK

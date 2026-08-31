@@ -37,6 +37,8 @@ namespace TaintedGrailModdingSDK
         void ClearFormForNewPack();
         void UpdateGeneratedIdentity();
         void UpdateSummary();
+        void RefreshWorkspaceMods(const QString& selectedPath = {});
+        void OpenSelectedPack();
         void SetStatus(const QString& message, bool error = false);
         bool ApplyPack();
         bool SavePack();
@@ -62,11 +64,14 @@ namespace TaintedGrailModdingSDK
         QPlainTextEdit* m_localisationPathsEdit = nullptr;
         QLineEdit* m_buildConfigurationEdit = nullptr;
         QComboBox* m_releaseChannelCombo = nullptr;
+        QComboBox* m_workspaceModsCombo = nullptr;
         QLabel* m_activePackValue = nullptr;
         QLabel* m_manifestPathValue = nullptr;
+        QLabel* m_workspaceModsHint = nullptr;
         QLabel* m_statusLabel = nullptr;
         QGroupBox* m_advancedGroup = nullptr;
         QPushButton* m_advancedToggleButton = nullptr;
+        QPushButton* m_openSelectedButton = nullptr;
         bool m_isNewPack = true;
     };
 } // namespace TaintedGrailModdingSDK

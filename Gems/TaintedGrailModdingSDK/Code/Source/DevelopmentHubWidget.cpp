@@ -9,6 +9,7 @@
 
 #include "FoundationModels.h"
 #include "FoundationService.h"
+#include "LocalSetupDetectionService.h"
 
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
 
@@ -367,13 +368,21 @@ namespace TaintedGrailModdingSDK
 
     void DevelopmentHubWidget::Refresh()
     {
-        const FoundationSnapshot snapshot = FoundationService::Get().GetSnapshot();
+        FoundationService& service = FoundationService::Get();
+        const FoundationSnapshot snapshot = service.GetSnapshot();
+        const WorkspaceModel& workspace = service.GetWorkspace();
+        const GameProfile* profile = workspace.FindActiveGameProfile();
 
-        const bool setupReady =
+        const bool workspaceReady =
             !snapshot.m_workspaceFilePath.empty()
-            && !snapshot.m_activeGameProfile.empty()
-            && !snapshot.m_gameVersion.empty()
-            && !snapshot.m_runtimeTarget.empty();
+            && !workspace.m_rootPath.empty()
+            && !workspace.m_outputPath.empty()
+            && !workspace.m_stagingPath.empty()
+            && !workspace.m_deploymentPath.empty();
+        const bool gameFound = profile
+            && LocalSetupDetectionService::LooksLikeTaintedGrailInstall(profile->m_installPath);
+        const bool profileReady = profile && profile->IsConfigured();
+        const bool setupReady = workspaceReady && gameFound && profileReady;
         const bool hasPack = !snapshot.m_activePackId.empty();
 
         AZ::u64 authoringIssueCount = 0;
@@ -404,10 +413,15 @@ namespace TaintedGrailModdingSDK
                     .arg(DisplayValue(snapshot.m_activeGameProfile, tr("unknown")))
                     .arg(DisplayValue(snapshot.m_branch, tr("unknown"))));
         }
+        else if (gameFound)
+        {
+            m_gameValue->setText(tr("Found · setup incomplete"));
+            m_gameValue->setToolTip(tr("Open System details to complete the automatic workspace/profile check."));
+        }
         else
         {
-            m_gameValue->setText(tr("Not ready"));
-            m_gameValue->setToolTip(tr("Open System details to finish automatic detection."));
+            m_gameValue->setText(tr("Not found"));
+            m_gameValue->setToolTip(tr("Open System details to locate Fall of Avalon."));
         }
 
         if (hasPack)
@@ -438,7 +452,9 @@ namespace TaintedGrailModdingSDK
             m_packButton->setAccessibleName(tr("Create or open a mod"));
             m_packButton->setEnabled(false);
             m_primaryHint->setText(
-                tr("FOA-SDK could not complete automatic setup. Open System details and resolve the single item it reports."));
+                gameFound
+                    ? tr("FOA-SDK found the game but still needs to finish the automatic workspace/profile check. Open System details for the exact item.")
+                    : tr("FOA-SDK could not find Fall of Avalon. Open System details and locate the game once; all dependent paths will be derived automatically."));
         }
         else if (!hasPack)
         {

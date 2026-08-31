@@ -23,7 +23,13 @@ import validate_editor_lifecycle as contract
 
 class EditorLifecycleContractTests(unittest.TestCase):
     def copy_fixture(self, root: Path) -> None:
-        paths = {contract.HUB_SOURCE, contract.EXTENSION_HOST}
+        paths = {
+            contract.HUB_SOURCE,
+            contract.PACK_MANAGER_SOURCE,
+            contract.FOUNDATION_SERVICE_HEADER,
+            contract.FOUNDATION_STATUS_SOURCE,
+            contract.EXTENSION_HOST,
+        }
         for pane in contract.PANES:
             paths.update(
                 {
@@ -84,6 +90,58 @@ class EditorLifecycleContractTests(unittest.TestCase):
                 'QStringLiteral("AvalonAIAuthoring.Editor")',
             )
             with self.assertRaisesRegex(contract.EditorLifecycleError, "unique layout"):
+                contract.validate_editor_lifecycle(root)
+
+    def test_secondary_pane_menu_entry_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            road_module = contract.PANES[-1].registration_source
+            self.mutate(
+                root,
+                road_module,
+                "options.showInMenu = false;",
+                "options.showInMenu = true;",
+            )
+            with self.assertRaisesRegex(contract.EditorLifecycleError, "menu-hidden"):
+                contract.validate_editor_lifecycle(root)
+
+    def test_home_menu_label_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                contract.BASE_SOURCE,
+                'hubOptions.optionalMenuText = QStringLiteral("FOA-SDK Home");',
+                'hubOptions.optionalMenuText = QStringLiteral("Development Hub");',
+            )
+            with self.assertRaisesRegex(contract.EditorLifecycleError, "front door"):
+                contract.validate_editor_lifecycle(root)
+
+    def test_manifest_file_picker_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / contract.PACK_MANAGER_SOURCE
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\nQFileDialog forbidden;\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(contract.EditorLifecycleError, "file picker"):
+                contract.validate_editor_lifecycle(root)
+
+    def test_setup_readiness_without_install_detection_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(
+                root,
+                contract.FOUNDATION_SERVICE_HEADER,
+                "return m_gameInstallDetected",
+                "return true",
+            )
+            with self.assertRaisesRegex(contract.EditorLifecycleError, "readiness"):
                 contract.validate_editor_lifecycle(root)
 
     def test_non_atomic_extension_store_fails(self) -> None:

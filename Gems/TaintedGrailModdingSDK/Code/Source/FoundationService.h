@@ -39,7 +39,10 @@ namespace TaintedGrailModdingSDK
 
         bool IsReady() const
         {
-            return m_gameProfileComplete && m_error.empty();
+            return m_gameInstallDetected
+                && m_gameProfileComplete
+                && m_persisted
+                && m_error.empty();
         }
     };
 

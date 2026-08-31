@@ -19,11 +19,13 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QStringList>
 #include <QVBoxLayout>
+
+#include <cctype>
 
 namespace TaintedGrailModdingSDK
 {
@@ -40,6 +42,42 @@ namespace TaintedGrailModdingSDK
             return QString::fromUtf8(value.c_str());
         }
 
+        QString StableToken(const QString& value)
+        {
+            const QString lowered = value.trimmed().toLower();
+            QString token;
+            token.reserve(lowered.size());
+            bool separatorPending = false;
+            for (const QChar character : lowered)
+            {
+                const ushort code = character.unicode();
+                const bool alphaNumeric =
+                    (code >= 'a' && code <= 'z') || (code >= '0' && code <= '9');
+                if (alphaNumeric)
+                {
+                    if (separatorPending && !token.isEmpty())
+                    {
+                        token += '-';
+                    }
+                    token += character;
+                    separatorPending = false;
+                }
+                else if (!token.isEmpty())
+                {
+                    separatorPending = true;
+                }
+                if (token.size() >= 64)
+                {
+                    break;
+                }
+            }
+            while (token.endsWith('-'))
+            {
+                token.chop(1);
+            }
+            return token;
+        }
+
         AZStd::vector<AZStd::string> ParseLines(const QPlainTextEdit* editor)
         {
             AZStd::vector<AZStd::string> values;
@@ -53,16 +91,7 @@ namespace TaintedGrailModdingSDK
                 }
 
                 const AZStd::string value = ToAzString(trimmed);
-                bool duplicate = false;
-                for (const AZStd::string& existing : values)
-                {
-                    if (existing == value)
-                    {
-                        duplicate = true;
-                        break;
-                    }
-                }
-                if (!duplicate)
+                if (AZStd::find(values.begin(), values.end(), value) == values.end())
                 {
                     values.push_back(value);
                 }
@@ -95,80 +124,99 @@ namespace TaintedGrailModdingSDK
     {
         auto* rootLayout = new QVBoxLayout(this);
 
-        auto* heading = new QLabel(tr("Tainted Grail Mod and Content-Pack Manager"), this);
+        auto* heading = new QLabel(tr("FOA-SDK Mods"), this);
         QFont headingFont = heading->font();
         headingFont.setPointSize(headingFont.pointSize() + 3);
         headingFont.setBold(true);
         heading->setFont(headingFont);
         rootLayout->addWidget(heading);
 
-        auto* boundary = new QLabel(
-            tr("Creates editor-owned pack manifests. Runtime actions remain disabled and are never written as enabled."),
+        auto* description = new QLabel(
+            tr("Create or open a mod. FOA-SDK fills the current game compatibility and stores the manifest inside the workspace automatically."),
             this);
-        boundary->setWordWrap(true);
-        rootLayout->addWidget(boundary);
+        description->setWordWrap(true);
+        rootLayout->addWidget(description);
 
-        auto* summaryGroup = new QGroupBox(tr("Active Pack"), this);
+        auto* summaryGroup = new QGroupBox(tr("Current mod"), this);
         auto* summaryLayout = new QFormLayout(summaryGroup);
         m_activePackValue = new QLabel(summaryGroup);
-        m_manifestPathValue = new QLabel(summaryGroup);
-        m_manifestPathValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        m_manifestPathValue->setWordWrap(true);
-        summaryLayout->addRow(tr("Pack"), m_activePackValue);
-        summaryLayout->addRow(tr("Manifest"), m_manifestPathValue);
+        summaryLayout->addRow(tr("Mod"), m_activePackValue);
         rootLayout->addWidget(summaryGroup);
 
-        auto* scrollArea = new QScrollArea(this);
+        auto* detailsGroup = new QGroupBox(tr("Mod details"), this);
+        auto* detailsLayout = new QFormLayout(detailsGroup);
+        m_displayNameEdit = new QLineEdit(detailsGroup);
+        m_displayNameEdit->setPlaceholderText(tr("My Fall of Avalon mod"));
+        m_ownerIdEdit = new QLineEdit(detailsGroup);
+        m_ownerIdEdit->setPlaceholderText(tr("author or namespace"));
+        detailsLayout->addRow(tr("Mod name"), m_displayNameEdit);
+        detailsLayout->addRow(tr("Author / namespace"), m_ownerIdEdit);
+        rootLayout->addWidget(detailsGroup);
+
+        m_advancedToggleButton = new QPushButton(tr("Show advanced manifest"), this);
+        rootLayout->addWidget(m_advancedToggleButton, 0, Qt::AlignRight);
+
+        m_advancedGroup = new QGroupBox(tr("Advanced manifest"), this);
+        auto* advancedOuterLayout = new QVBoxLayout(m_advancedGroup);
+        auto* advancedDescription = new QLabel(
+            tr("These fields are for deliberate compatibility, dependency, packaging, or release overrides. New mods receive safe defaults from the active FOA-SDK profile."),
+            m_advancedGroup);
+        advancedDescription->setWordWrap(true);
+        advancedOuterLayout->addWidget(advancedDescription);
+
+        auto* scrollArea = new QScrollArea(m_advancedGroup);
         scrollArea->setWidgetResizable(true);
         auto* content = new QWidget(scrollArea);
         auto* contentLayout = new QVBoxLayout(content);
 
-        auto* identityGroup = new QGroupBox(tr("Identity and Ownership"), content);
+        auto* identityGroup = new QGroupBox(tr("Identity"), content);
         auto* identityLayout = new QFormLayout(identityGroup);
         m_packIdEdit = new QLineEdit(identityGroup);
-        m_packIdEdit->setPlaceholderText(tr("owner.pack-name"));
-        m_displayNameEdit = new QLineEdit(identityGroup);
-        m_ownerIdEdit = new QLineEdit(identityGroup);
+        m_packIdEdit->setReadOnly(true);
         m_versionEdit = new QLineEdit(identityGroup);
         m_versionEdit->setPlaceholderText(tr("0.1.0"));
-        identityLayout->addRow(tr("Stable pack ID"), m_packIdEdit);
-        identityLayout->addRow(tr("Display name"), m_displayNameEdit);
-        identityLayout->addRow(tr("Owner ID"), m_ownerIdEdit);
-        identityLayout->addRow(tr("Semantic version"), m_versionEdit);
+        identityLayout->addRow(tr("Mod ID"), m_packIdEdit);
+        identityLayout->addRow(tr("Version"), m_versionEdit);
         contentLayout->addWidget(identityGroup);
 
         auto* compatibilityGroup = new QGroupBox(tr("Compatibility"), content);
         auto* compatibilityLayout = new QFormLayout(compatibilityGroup);
         m_targetGameVersionEdit = new QLineEdit(compatibilityGroup);
         m_targetBranchEdit = new QLineEdit(compatibilityGroup);
-        m_compatibleGameVersionsEdit = AddListField(compatibilityLayout, tr("Additional game versions"), compatibilityGroup);
+        m_compatibleGameVersionsEdit = AddListField(
+            compatibilityLayout,
+            tr("Additional game versions"),
+            compatibilityGroup);
         m_coreVersionEdit = new QLineEdit(compatibilityGroup);
         m_adapterVersionEdit = new QLineEdit(compatibilityGroup);
-        m_dlcScopesEdit = AddListField(compatibilityLayout, tr("DLC / content scopes"), compatibilityGroup);
+        m_dlcScopesEdit = AddListField(
+            compatibilityLayout,
+            tr("DLC / content scopes"),
+            compatibilityGroup);
         compatibilityLayout->insertRow(0, tr("Primary game version"), m_targetGameVersionEdit);
         compatibilityLayout->insertRow(1, tr("Target branch"), m_targetBranchEdit);
-        compatibilityLayout->insertRow(3, tr("Required Avalon Core"), m_coreVersionEdit);
+        compatibilityLayout->insertRow(3, tr("Required core/framework"), m_coreVersionEdit);
         compatibilityLayout->insertRow(4, tr("Required FoA adapter"), m_adapterVersionEdit);
         contentLayout->addWidget(compatibilityGroup);
 
-        auto* relationshipsGroup = new QGroupBox(tr("Dependencies and Compatibility Relationships"), content);
+        auto* relationshipsGroup = new QGroupBox(tr("Dependencies"), content);
         auto* relationshipsLayout = new QFormLayout(relationshipsGroup);
         m_dependenciesEdit = AddListField(relationshipsLayout, tr("Pack dependencies"), relationshipsGroup);
         m_requiredModsEdit = AddListField(relationshipsLayout, tr("Required mods"), relationshipsGroup);
         m_incompatibilitiesEdit = AddListField(relationshipsLayout, tr("Incompatibilities"), relationshipsGroup);
         contentLayout->addWidget(relationshipsGroup);
 
-        auto* contentGroup = new QGroupBox(tr("Content and Resources"), content);
+        auto* contentGroup = new QGroupBox(tr("Content declarations"), content);
         auto* contentForm = new QFormLayout(contentGroup);
         m_saveImpactCombo = new QComboBox(contentGroup);
         m_saveImpactCombo->addItems({ "unknown", "none", "compatible", "migration", "destructive" });
         m_contentDefinitionsEdit = AddListField(contentForm, tr("Content definitions"), contentGroup);
-        m_assetPathsEdit = AddListField(contentForm, tr("Asset declarations"), contentGroup);
-        m_localisationPathsEdit = AddListField(contentForm, tr("Localisation declarations"), contentGroup);
+        m_assetPathsEdit = AddListField(contentForm, tr("Assets"), contentGroup);
+        m_localisationPathsEdit = AddListField(contentForm, tr("Localisation"), contentGroup);
         contentForm->insertRow(0, tr("Save impact"), m_saveImpactCombo);
         contentLayout->addWidget(contentGroup);
 
-        auto* releaseGroup = new QGroupBox(tr("Build and Release"), content);
+        auto* releaseGroup = new QGroupBox(tr("Build and release"), content);
         auto* releaseLayout = new QFormLayout(releaseGroup);
         m_buildConfigurationEdit = new QLineEdit(releaseGroup);
         m_buildConfigurationEdit->setPlaceholderText(tr("Profile"));
@@ -177,50 +225,68 @@ namespace TaintedGrailModdingSDK
         releaseLayout->addRow(tr("Build configuration"), m_buildConfigurationEdit);
         releaseLayout->addRow(tr("Release channel"), m_releaseChannelCombo);
         contentLayout->addWidget(releaseGroup);
+
+        auto* locationGroup = new QGroupBox(tr("Storage"), content);
+        auto* locationLayout = new QFormLayout(locationGroup);
+        m_manifestPathValue = new QLabel(locationGroup);
+        m_manifestPathValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        m_manifestPathValue->setWordWrap(true);
+        locationLayout->addRow(tr("Manifest"), m_manifestPathValue);
+        contentLayout->addWidget(locationGroup);
         contentLayout->addStretch(1);
 
         scrollArea->setWidget(content);
-        rootLayout->addWidget(scrollArea, 1);
+        advancedOuterLayout->addWidget(scrollArea, 1);
+        m_advancedGroup->setVisible(false);
+        rootLayout->addWidget(m_advancedGroup, 1);
 
         auto* buttonLayout = new QHBoxLayout();
-        auto* newButton = new QPushButton(tr("New Pack"), this);
-        auto* applyButton = new QPushButton(tr("Apply"), this);
-        auto* openButton = new QPushButton(tr("Open..."), this);
-        auto* saveButton = new QPushButton(tr("Save"), this);
-        auto* saveAsButton = new QPushButton(tr("Save As..."), this);
+        auto* newButton = new QPushButton(tr("New mod"), this);
+        auto* openButton = new QPushButton(tr("Open existing..."), this);
+        auto* saveButton = new QPushButton(tr("Save mod"), this);
         buttonLayout->addWidget(newButton);
-        buttonLayout->addWidget(applyButton);
-        buttonLayout->addStretch(1);
         buttonLayout->addWidget(openButton);
+        buttonLayout->addStretch(1);
         buttonLayout->addWidget(saveButton);
-        buttonLayout->addWidget(saveAsButton);
         rootLayout->addLayout(buttonLayout);
 
         m_statusLabel = new QLabel(this);
         m_statusLabel->setWordWrap(true);
         rootLayout->addWidget(m_statusLabel);
 
+        connect(m_displayNameEdit, &QLineEdit::textChanged, this, [this]()
+        {
+            UpdateGeneratedIdentity();
+        });
+        connect(m_ownerIdEdit, &QLineEdit::textChanged, this, [this]()
+        {
+            UpdateGeneratedIdentity();
+        });
+        connect(m_advancedToggleButton, &QPushButton::clicked, this, [this]()
+        {
+            const bool show = !m_advancedGroup->isVisible();
+            m_advancedGroup->setVisible(show);
+            m_advancedToggleButton->setText(
+                show ? tr("Hide advanced manifest") : tr("Show advanced manifest"));
+        });
         connect(newButton, &QPushButton::clicked, this, [this]()
         {
             FoundationService::Get().ClearActivePack();
             ClearFormForNewPack();
-            SetStatus(tr("New pack draft created. Apply it before saving."));
-        });
-        connect(applyButton, &QPushButton::clicked, this, [this]()
-        {
-            ApplyPack();
+            SetStatus(tr("New mod ready. Enter a name and author, then Save mod."));
         });
         connect(openButton, &QPushButton::clicked, this, [this]()
         {
             const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
-            const QString startDirectory = workspace.m_rootPath.empty()
+            const QString workspaceRoot = ToQString(workspace.m_rootPath);
+            const QString startDirectory = workspaceRoot.isEmpty()
                 ? QDir::homePath()
-                : ToQString(workspace.m_rootPath);
+                : QDir(workspaceRoot).filePath(QStringLiteral("Packs"));
             const QString filePath = QFileDialog::getOpenFileName(
                 this,
-                tr("Open TG Pack Manifest"),
+                tr("Open FOA-SDK mod"),
                 startDirectory,
-                tr("TG Pack Manifest (*.tgpack.json);;JSON Files (*.json)"));
+                tr("FOA-SDK mod (*.tgpack.json);;JSON files (*.json)"));
             if (filePath.isEmpty())
             {
                 return;
@@ -236,31 +302,11 @@ namespace TaintedGrailModdingSDK
             {
                 PopulateFromPack(*pack);
             }
-            SetStatus(tr("Pack manifest opened."));
+            SetStatus(tr("Mod opened."));
         });
         connect(saveButton, &QPushButton::clicked, this, [this]()
         {
-            if (!ApplyPack())
-            {
-                return;
-            }
-            if (FoundationService::Get().GetActivePackFilePath().empty())
-            {
-                SavePackAs();
-                return;
-            }
-
-            AZStd::string error;
-            if (!FoundationService::Get().SaveActivePack(&error))
-            {
-                SetStatus(ToQString(error), true);
-                return;
-            }
-            SetStatus(tr("Pack manifest saved."));
-        });
-        connect(saveAsButton, &QPushButton::clicked, this, [this]()
-        {
-            SavePackAs();
+            SavePack();
         });
 
         FoundationNotificationBus::Handler::BusConnect();
@@ -287,7 +333,7 @@ namespace TaintedGrailModdingSDK
         PackManifest pack;
         pack.m_packId = ToAzString(m_packIdEdit->text());
         pack.m_displayName = ToAzString(m_displayNameEdit->text());
-        pack.m_ownerId = ToAzString(m_ownerIdEdit->text());
+        pack.m_ownerId = ToAzString(StableToken(m_ownerIdEdit->text()));
         pack.m_version = ToAzString(m_versionEdit->text());
         pack.m_targetGameVersion = ToAzString(m_targetGameVersionEdit->text());
         pack.m_targetBranch = ToAzString(m_targetBranchEdit->text());
@@ -310,6 +356,7 @@ namespace TaintedGrailModdingSDK
 
     void PackManagerWidget::PopulateFromPack(const PackManifest& pack)
     {
+        m_isNewPack = false;
         m_packIdEdit->setText(ToQString(pack.m_packId));
         m_displayNameEdit->setText(ToQString(pack.m_displayName));
         m_ownerIdEdit->setText(ToQString(pack.m_ownerId));
@@ -329,10 +376,12 @@ namespace TaintedGrailModdingSDK
         m_localisationPathsEdit->setPlainText(JoinLines(pack.m_localisationPaths));
         m_buildConfigurationEdit->setText(ToQString(pack.m_buildConfiguration));
         m_releaseChannelCombo->setCurrentText(ToQString(pack.m_releaseChannel));
+        UpdateSummary();
     }
 
     void PackManagerWidget::ClearFormForNewPack()
     {
+        m_isNewPack = true;
         m_packIdEdit->clear();
         m_displayNameEdit->clear();
         m_ownerIdEdit->clear();
@@ -362,15 +411,47 @@ namespace TaintedGrailModdingSDK
             m_targetGameVersionEdit->clear();
             m_targetBranchEdit->clear();
         }
+        UpdateGeneratedIdentity();
+        UpdateSummary();
+    }
+
+    void PackManagerWidget::UpdateGeneratedIdentity()
+    {
+        if (!m_isNewPack)
+        {
+            return;
+        }
+
+        const QString owner = StableToken(m_ownerIdEdit->text());
+        const QString name = StableToken(m_displayNameEdit->text());
+        m_packIdEdit->setText(
+            owner.isEmpty() || name.isEmpty()
+                ? QString()
+                : owner + QStringLiteral(".") + name);
     }
 
     void PackManagerWidget::UpdateSummary()
     {
         const FoundationSnapshot& snapshot = FoundationService::Get().GetSnapshot();
-        m_activePackValue->setText(
-            tr("%1 - %2 (%3)")
-                .arg(ToQString(snapshot.m_activePackId), ToQString(snapshot.m_activePackName), ToQString(snapshot.m_activePackVersion)));
-        m_manifestPathValue->setText(ToQString(snapshot.m_activePackFilePath));
+        if (snapshot.m_activePackId.empty())
+        {
+            m_activePackValue->setText(tr("None selected"));
+            m_manifestPathValue->setText(tr("Not saved"));
+            return;
+        }
+
+        QString text = snapshot.m_activePackName.empty()
+            ? ToQString(snapshot.m_activePackId)
+            : ToQString(snapshot.m_activePackName);
+        if (!snapshot.m_activePackVersion.empty())
+        {
+            text += tr(" · %1").arg(ToQString(snapshot.m_activePackVersion));
+        }
+        m_activePackValue->setText(text);
+        m_manifestPathValue->setText(
+            snapshot.m_activePackFilePath.empty()
+                ? tr("Not saved")
+                : ToQString(snapshot.m_activePackFilePath));
     }
 
     void PackManagerWidget::SetStatus(const QString& message, bool error)
@@ -381,71 +462,88 @@ namespace TaintedGrailModdingSDK
 
     bool PackManagerWidget::ApplyPack()
     {
+        UpdateGeneratedIdentity();
+        if (m_displayNameEdit->text().trimmed().isEmpty())
+        {
+            SetStatus(tr("Enter a mod name."), true);
+            return false;
+        }
+        if (StableToken(m_ownerIdEdit->text()).isEmpty())
+        {
+            SetStatus(tr("Enter an author or namespace."), true);
+            return false;
+        }
+
         AZStd::string error;
         if (!FoundationService::Get().SetActivePack(BuildPackFromForm(), &error))
         {
             SetStatus(ToQString(error), true);
             return false;
         }
-        SetStatus(tr("Pack applied. Review the Foundation Status window for compatibility blockers."));
+        m_isNewPack = false;
         return true;
     }
 
-    bool PackManagerWidget::SavePackAs()
+    QString PackManagerWidget::CanonicalPackFilePath(const PackManifest& pack) const
+    {
+        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
+        if (workspace.m_rootPath.empty() || pack.m_packId.empty())
+        {
+            return {};
+        }
+        return QDir(ToQString(workspace.m_rootPath)).filePath(
+            QStringLiteral("Packs/%1/pack.tgpack.json").arg(ToQString(pack.m_packId)));
+    }
+
+    bool PackManagerWidget::SavePack()
     {
         if (!ApplyPack())
         {
             return false;
         }
 
-        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
-        if (workspace.m_rootPath.empty())
-        {
-            SetStatus(tr("Configure and apply a workspace root before saving pack manifests."), true);
-            return false;
-        }
-
-        const PackManifest* pack = FoundationService::Get().GetActivePack();
+        FoundationService& service = FoundationService::Get();
+        const PackManifest* pack = service.GetActivePack();
         if (!pack)
         {
-            SetStatus(tr("No active pack is available to save."), true);
+            SetStatus(tr("No mod is available to save."), true);
             return false;
         }
 
-        const QString packDirectory = QDir(ToQString(workspace.m_rootPath)).filePath(
-            QStringLiteral("Packs/%1").arg(ToQString(pack->m_packId)));
-        QString filePath = QFileDialog::getSaveFileName(
-            this,
-            tr("Save TG Pack Manifest"),
-            QDir(packDirectory).filePath(QStringLiteral("pack.tgpack.json")),
-            tr("TG Pack Manifest (*.tgpack.json)"));
+        QString filePath = service.GetActivePackFilePath().empty()
+            ? CanonicalPackFilePath(*pack)
+            : ToQString(service.GetActivePackFilePath());
         if (filePath.isEmpty())
         {
+            SetStatus(tr("FOA-SDK could not resolve the mod location inside the workspace."), true);
             return false;
-        }
-        if (!filePath.endsWith(QStringLiteral(".tgpack.json"), Qt::CaseInsensitive))
-        {
-            filePath += QStringLiteral(".tgpack.json");
         }
         if (!IsInsideWorkspace(filePath))
         {
-            SetStatus(tr("Pack manifests must be stored inside the active workspace root."), true);
+            SetStatus(tr("The mod manifest must stay inside the FOA-SDK workspace."), true);
+            return false;
+        }
+        if (!QDir().mkpath(QFileInfo(filePath).absolutePath()))
+        {
+            SetStatus(tr("FOA-SDK could not create the mod folder."), true);
             return false;
         }
 
         AZStd::string error;
-        if (!FoundationService::Get().SaveActivePack(ToAzString(filePath), &error))
+        if (!service.SaveActivePack(ToAzString(filePath), &error))
         {
             SetStatus(ToQString(error), true);
             return false;
         }
-        SetStatus(tr("Pack manifest saved inside the active workspace."));
+        SetStatus(tr("Mod saved. You can start authoring."));
+        UpdateSummary();
         return true;
     }
 
     bool PackManagerWidget::IsInsideWorkspace(const QString& filePath) const
     {
-        const QString workspaceRoot = QDir::cleanPath(ToQString(FoundationService::Get().GetWorkspace().m_rootPath));
+        const QString workspaceRoot = QDir::cleanPath(
+            ToQString(FoundationService::Get().GetWorkspace().m_rootPath));
         const QString absoluteFilePath = QDir::cleanPath(QFileInfo(filePath).absoluteFilePath());
         if (workspaceRoot.isEmpty())
         {

@@ -5,9 +5,13 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - ".github/workflows/item-viewer-windows-validation.yml"
+      - "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.h"
       - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.cpp"
       - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.h"
       - "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
+      - "Gems/TaintedGrailModdingSDK/Tools/foa_asset_browser_pane_model.py"
       - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.py"
       - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.ps1"
       - "Gems/TaintedGrailModdingSDK/Tools/editor_tests/alpha_item_viewer_live_smoke.py"
@@ -16,9 +20,13 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/item-viewer-windows-validation.yml"
+      - "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp"
+      - "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.h"
       - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.cpp"
       - "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisual*.h"
       - "Gems/TaintedGrailModdingSDK/Code/taintedgrailmoddingsdk_editor_files.cmake"
+      - "Gems/TaintedGrailModdingSDK/Tools/foa_asset_browser_pane_model.py"
       - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.py"
       - "Gems/TaintedGrailModdingSDK/Tools/*item_viewer*.ps1"
       - "Gems/TaintedGrailModdingSDK/Tools/editor_tests/alpha_item_viewer_live_smoke.py"

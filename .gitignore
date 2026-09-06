@@ -37,6 +37,7 @@ imgui.ini
 /[Ss]creenshots/
 /[Aa]rtifacts/
 /[Pp]ackages/
+/[Rr]elease/
 /[Rr]elease-[Oo]utput/
 *.dll
 *.pdb

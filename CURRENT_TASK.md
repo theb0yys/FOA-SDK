@@ -2,30 +2,45 @@
 
 ## Status
 
-`Installer + Control Panel completion` — implementation complete; maintainer review candidate.
+`Installer entry-point correction and validation repair` — implementation complete; PR #248 tracks validation evidence and remaining acceptance gates.
 
 ## Goal
 
-Deliver a polished, usable Windows installer and a separate installed FOA-SDK Control Panel that implements the accepted first-release setup boundary from the multi-game installer research.
+Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe` as the only installed user-facing SDK application entry point, and provide a compiled exact-pin Editor session for review.
 
 ## Classification
 
-**Critical/Runtime** for the installer lifecycle, plus **Significant** for the new installed profile, compatibility, diagnostics, and UI surfaces.
+**Critical/Runtime** — installer UI and installed-process launch behavior require Windows operational evidence. Package layout, build registration, validator, and documentation repairs are also included. No released installer or persisted user schema requires migration.
 
-## Completed scope
+## In scope
 
-- self-contained `FOA-SDK-ControlPanel.exe` with Home, Setup, Compatibility, and Diagnostics pages;
-- explicit external workspace and game-folder selection without broad disk or network scanning;
-- versioned `foa.sdk.setup_profile.v1` persistence with bounded legacy Tool Wizard import;
-- separate Mono/IL2CPP/unknown route indications without runtime-proof claims;
-- non-mutating plan preview and path-redacted `foa.sdk.support_report.v1` export;
-- installer finish flow, MSI payload, Start Menu, inventory, smoke, and functional-readiness integration;
-- preserved legacy Tool Setup Wizard command-line compatibility;
-- focused static, build, self-test, and bounded Windows installer evidence.
+- remove the standalone `FOA-SDK-ControlPanel.exe` source and dedicated tests;
+- remove its MSI payload requirement, Start Menu entry, installer finish option, command-line switches, build steps, and self-tests;
+- keep `bin\Windows\profile\Default\FOA-SDK.exe` as the installed application entry point;
+- keep the installer lifecycle, installed launcher validation, desktop shortcut, and legacy Tool Setup Wizard maintenance route;
+- fix the Windows compiler blockers in Fall of Avalon install discovery that prevented the real Editor target from building;
+- build the dedicated Editor against the pinned O3DE revision and open the isolated Developer Preview project for review;
+- update installer documentation and validation contracts to the single-entry-point flow.
+- restore misplaced root documentation and remove superseded task/decision copies;
+- repair stale Foundation/catalog validation contracts and register the existing quest binding contract and tests in their owned build targets;
+- correct the source-policy header and Unicode findings without changing rendered text or runtime behavior;
+- validate the correction, commit it, and update PR #248 for maintainer audit.
 
-## Explicit boundary
+## Out of scope
 
-This milestone does not install loaders, convert or deploy assets, write game files, launch Fall of Avalon, inspect saves, sign artifacts, publish a release, or promote local observations to runtime compatibility evidence.
+- full multi-GB package production, signing, release, or publication;
+- changes to protected Fall of Avalon files, installations, saves, or proprietary material;
+- runtime-adapter compatibility claims;
+- the zero-configuration Highmap Importer follow-on task.
+
+## Acceptance criteria
+
+- no tracked source, packaging, workflow, test, or public documentation requires or launches `FOA-SDK-ControlPanel.exe`;
+- the installer opens `FOA-SDK.exe` directly by default after successful validation;
+- the MSI exposes one Start Menu application entry for `FOA-SDK.exe`;
+- focused installer source, validator, and test lanes pass;
+- the exact-pin Profile Editor and required asset preflight targets build, both mandatory compiled suites pass, and the isolated review level opens in a responsive Editor window;
+- generated Control Panel output is removed from the working checkout.
 
 ## Current branch
 
@@ -33,10 +48,4 @@ This milestone does not install loaders, convert or deploy assets, write game fi
 
 ## Next action
 
-Maintainer audit of this focused installer/Control Panel change. Exact full-product package and clean-machine evidence remains tied to a reviewed canonical inventory and must be recorded separately when that package lane is run.
-
-## Next product task — do not start implicitly
-
-After this change is accepted, the next task is the **zero-configuration Highmap Importer experience** described in `Research/world-authoring-terrain-heightmap/`.
-
-That task must build the two-action Terrain Authoring pane and coordinator over the existing `TerrainHeightmapDocumentV1` backend and current command-line importer. The ordinary path remains **Edit Vanilla Map** or **Import New Map** without a technical path/metadata wizard. The production vanilla-map provider remains `BLOCKED` until an exact lawful CampaignMap-to-terrain source binding is established; missing provider facts must not be guessed or transferred to the user as configuration fields.
+Audit the exact-source validation results in PR #248, complete any remaining host/installer evidence, and perform maintainer UI review before merge. Exact full-product packaging and clean-machine installer evidence remain maintainer-controlled release gates.

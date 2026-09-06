@@ -122,8 +122,25 @@ namespace TaintedGrailModdingSDK
 
         AZStd::string EnvironmentPath(const char* name)
         {
+#if defined(_MSC_VER)
+            char* value = nullptr;
+            size_t valueSize = 0;
+            if (_dupenv_s(&value, &valueSize, name) != 0 || value == nullptr)
+            {
+                return {};
+            }
+
+            AZStd::string result;
+            if (valueSize > 1)
+            {
+                result = value;
+            }
+            std::free(value);
+            return result;
+#else
             const char* value = std::getenv(name);
             return value && *value ? AZStd::string(value) : AZStd::string{};
+#endif
         }
 
         bool IsSafeInstallDirectoryName(const std::string& value)
@@ -150,7 +167,7 @@ namespace TaintedGrailModdingSDK
                 return;
             }
 
-            const std::regex pathPattern(R"("path"\s+"([^"]+)")", std::regex::icase);
+            const std::regex pathPattern(R"vdf("path"\s+"([^"]+)")vdf", std::regex::icase);
             size_t inspected = 0;
             for (std::sregex_iterator it(vdf.begin(), vdf.end(), pathPattern), end;
                  it != end && inspected < MaximumSteamRoots;
@@ -188,7 +205,7 @@ namespace TaintedGrailModdingSDK
             if (!manifestText.empty())
             {
                 const std::regex installDirPattern(
-                    R"("installdir"\s+"([^"]+)")",
+                    R"acf("installdir"\s+"([^"]+)")acf",
                     std::regex::icase);
                 std::smatch match;
                 if (std::regex_search(manifestText, match, installDirPattern)

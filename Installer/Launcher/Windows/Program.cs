@@ -126,10 +126,6 @@ internal static class Program
             }
         }
 
-        if (options.OpenControlPanelAfterInstall && options.Operation is not InstallerOperation.Uninstall)
-        {
-            InstalledEditorLauncher.LaunchControlPanel(options.InstallRoot);
-        }
         if (options.LaunchAfterInstall && options.Operation is not InstallerOperation.Uninstall)
         {
             InstalledEditorLauncher.Launch(options.InstallRoot);

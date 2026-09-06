@@ -56,6 +56,31 @@ class RepositoryStructureContractTests(unittest.TestCase):
     def test_reviewed_product_tree_passes(self) -> None:
         contract.validate_paths(valid_tree())
 
+    def test_required_root_documents_cannot_be_moved_into_docs(self) -> None:
+        for path in (
+            "ROADMAP.md", "CHANGELOG.md", "LICENSE.txt", "CONTRIBUTING.md",
+            "GOVERNANCE.md", "CURRENT_TASK.md", "DECISIONS.md",
+        ):
+            with self.subTest(path=path):
+                paths = (valid_tree() - {path}) | {f"docs/{path}"}
+                with self.assertRaisesRegex(
+                    contract.RepositoryStructureError, "missing required"
+                ):
+                    contract.validate_paths(paths)
+
+    def test_superseded_task_and_decision_copies_are_rejected(self) -> None:
+        for path in ("docs/CURRENT_TASK.md", "docs/DECISIONS.md"):
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(
+                    contract.RepositoryStructureError, "unexpected top-level"
+                ):
+                    contract.validate_paths(valid_tree() | {path})
+
+    def test_existing_item_viewer_workflow_is_allowed(self) -> None:
+        contract.validate_paths(
+            valid_tree() | {".github/workflows/item-viewer-windows-validation.yml"}
+        )
+
     def test_documentation_hub_roots_are_explicitly_governed(self) -> None:
         self.assertEqual(
             contract.ALLOWED_DOC_TREES,

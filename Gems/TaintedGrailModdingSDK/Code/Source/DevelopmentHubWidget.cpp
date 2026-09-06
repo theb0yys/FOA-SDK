@@ -405,7 +405,7 @@ namespace TaintedGrailModdingSDK
         if (setupReady)
         {
             m_gameValue->setText(
-                tr("%1 · %2")
+                tr("%1 \u00b7 %2")
                     .arg(DisplayValue(snapshot.m_gameVersion, tr("version unknown")))
                     .arg(DisplayValue(snapshot.m_runtimeTarget, tr("runtime unknown"))));
             m_gameValue->setToolTip(
@@ -415,7 +415,7 @@ namespace TaintedGrailModdingSDK
         }
         else if (gameFound)
         {
-            m_gameValue->setText(tr("Found · setup incomplete"));
+            m_gameValue->setText(tr("Found \u00b7 setup incomplete"));
             m_gameValue->setToolTip(tr("Open System details to complete the automatic workspace/profile check."));
         }
         else
@@ -429,7 +429,7 @@ namespace TaintedGrailModdingSDK
             QString packText = DisplayValue(snapshot.m_activePackName, tr("Current mod"));
             if (!snapshot.m_activePackVersion.empty())
             {
-                packText += tr(" · %1").arg(ToQString(snapshot.m_activePackVersion));
+                packText += tr(" \u00b7 %1").arg(ToQString(snapshot.m_activePackVersion));
             }
             m_packValue->setText(packText);
         }
@@ -471,7 +471,7 @@ namespace TaintedGrailModdingSDK
         {
             m_statusHeadline->setText(
                 hasAuthoringIssues
-                    ? tr("Ready to author · %1 issue(s) need review").arg(authoringIssueCount)
+                    ? tr("Ready to author \u00b7 %1 issue(s) need review").arg(authoringIssueCount)
                     : tr("Ready to author"));
             m_setupButton->setText(tr("System details"));
             m_setupButton->setAccessibleName(tr("System details"));

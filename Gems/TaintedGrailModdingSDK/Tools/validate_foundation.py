@@ -147,7 +147,7 @@ def validate_editor_foundation(gem_root: Path) -> None:
     _, combined = read_sources(gem_root)
     required = (
         "WorkspaceModel", "GameProfile", "m_runtimeTarget", "m_outputPath", "m_stagingPath",
-        "m_deploymentPath", "class WorkspacePersistenceService", "OpenWorkspace", "SaveWorkspaceAs",
+        "m_deploymentPath", "class WorkspacePersistenceService", "OpenWorkspace", "SaveWorkspace",
         "PackManifest", "HasStableIdentity", "UsesSupportedSchema", "m_requiredCoreVersion",
         "m_requiredAdapterVersion", "m_requiredMods", "m_contentDefinitionPaths", "m_assetPaths",
         "m_localisationPaths", "m_buildConfiguration", "m_releaseChannel", "class PackPersistenceService",
@@ -157,8 +157,8 @@ def validate_editor_foundation(gem_root: Path) -> None:
         "RegisterViewPane<FoundationStatusWidget>", "LoadObjectFromFile", "TaintedGrailModdingSDKService",
         "FoA runtime execution remains disabled", "class DevelopmentHubWidget", "FOA Development Hub",
         "RegisterViewPane<DevelopmentHubWidget>", "OpenViewPane(DevelopmentHubViewPaneName)",
-        'tr("Setup and readiness")', 'tr("Research and author")', 'tr("Package and verify")',
-        'tr("Diagnostics")', 'tr("Advanced")', "FoundationService::Get().GetSnapshot()",
+        'tr("Current project")', 'tr("Start")', 'tr("Create and edit")',
+        'tr("Advanced tools")', 'tr("Show advanced tools")', "FoundationService::Get().GetSnapshot()",
         "class AssetBrowserPreviewService", "class AssetBrowserPreviewWidget",
         "RegisterViewPane<AssetBrowserPreviewWidget>", "Tainted Grail Asset Browser Preview",
     )

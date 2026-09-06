@@ -38,6 +38,25 @@ DISCOVERY_BRIDGE = (
 
 
 class WindowsInstallerWizardTests(unittest.TestCase):
+    def test_package_exposes_only_the_foa_sdk_application_entry(self) -> None:
+        packaging = (REPO_ROOT / "Installer/Packaging/Windows/CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertRegex(
+            packaging,
+            r'set\(CPACK_PACKAGE_EXECUTABLES\s+"FOA-SDK"\s+"FOA-SDK"\s*\)',
+        )
+        for relative in (
+            "Installer/Launcher/Windows/InstallerOptions.cs",
+            "Installer/Launcher/Windows/InstallerWizardForm.cs",
+            "Installer/Launcher/Windows/WindowsInstallerRunner.cs",
+            "Installer/Packaging/Windows/CMakeLists.txt",
+            ".github/workflows/tainted-grail-sdk-installer.yml",
+        ):
+            with self.subTest(path=relative):
+                self.assertNotIn(
+                    "FOA-SDK-ControlPanel",
+                    (REPO_ROOT / relative).read_text(encoding="utf-8"),
+                )
+
     def test_project_builds_self_contained_winforms_exe_with_optional_embedded_msi(self) -> None:
         root = ET.fromstring(PROJECT.read_text(encoding="utf-8"))
         values = {child.tag: (child.text or "") for group in root for child in group}
@@ -160,8 +179,6 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("Checking installed files and startup requirements", wizard)
         self.assertIn("InstalledEditorLauncher.ValidateAsync", wizard)
         self.assertIn('Text = "Open FOA-SDK"', wizard)
-        self.assertIn('Text = "Open FOA-SDK Control Panel"', wizard)
-        self.assertIn("InstalledEditorLauncher.LaunchControlPanel", wizard)
         self.assertIn('Text = "Create desktop shortcut"', wizard)
         self.assertIn("InstalledEditorLauncher.CreateDesktopShortcut", wizard)
         self.assertIn("InstalledEditorLauncher.Launch", wizard)
@@ -180,11 +197,8 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertNotIn("Unity Editor:", wizard)
         self.assertNotIn("TG install:", wizard)
         self.assertIn('"Programs",\n        "FOA-SDK"', options)
-        self.assertIn("bool openControlPanelAfterInstall = false", options)
         self.assertIn("bool openToolWizardAfterInstall = false", options)
-        self.assertIn('case "--open-control-panel-after-install":', options)
         self.assertIn('case "--open-tool-wizard-after-install":', options)
-        self.assertIn('case "--no-open-control-panel-after-install":', options)
         self.assertIn('case "--no-open-tool-wizard-after-install":', options)
 
     def test_tool_wizard_remains_separate_maintenance_surface(self) -> None:
@@ -212,8 +226,6 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("deployment_execution_allowed = false", tool_profile)
         self.assertNotIn("WindowsInstallerRunner.RunAsync", tool_wizard)
         self.assertNotIn("InstallerPayload.Resolve", tool_wizard)
-        self.assertIn("OpenControlPanelAfterInstall", options := OPTIONS.read_text(encoding="utf-8"))
-        self.assertIn("open-control-panel-after-install", options)
 
     def test_build_entrypoints_embed_reviewed_msi_and_default_self_contained(self) -> None:
         cmd = CMD_BUILD.read_text(encoding="utf-8")
@@ -251,15 +263,10 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertIn("installer-clean-install", script)
         self.assertIn("tool-profile-save", script)
         self.assertIn("installed-launcher-self-test", script)
-        self.assertIn("installed-control-panel-self-test", script)
-        self.assertIn("control-panel-profile-and-report", script)
         self.assertIn("installer-repair", script)
         self.assertIn("installer-uninstall", script)
         self.assertIn("functional-readiness-summary.json", script)
         self.assertIn("tool-profile.local.json", script)
-        self.assertIn("foa.sdk.setup_profile.v1", script)
-        self.assertIn("foa.sdk.support_report.v1", script)
-        self.assertIn("Setup Manager support report exposed an unredacted local path", script)
         self.assertIn("installer-logs", script)
         self.assertIn("ProcessStartInfo", script)
         self.assertIn("--save-tool-profile", script)

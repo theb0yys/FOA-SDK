@@ -11,7 +11,10 @@
 #include "FoundationNotificationBus.h"
 
 #include <QString>
+#include <QThreadPool>
 #include <QWidget>
+#include <atomic>
+#include <memory>
 
 class QComboBox;
 class QLabel;
@@ -22,6 +25,7 @@ class QTreeWidgetItem;
 
 namespace TaintedGrailModdingSDK
 {
+    class NativeItemPreviewService;
     class AssetBrowserPreviewWidget final
         : public QWidget
         , private FoundationNotificationBus::Handler
@@ -34,7 +38,11 @@ namespace TaintedGrailModdingSDK
         void OnFoundationChanged() override;
         void RefreshProfileContext();
         void AutoFindEvidence();
+        void RefreshAssets();
         void LoadPreviewEvidence();
+        void ApplyPreviewResult(AZ::Outcome<AssetBrowserPreviewSnapshot, AZStd::string> result);
+        void RebuildCategoryFilters();
+        void RefreshSubcategoryFilter(bool preserveSelection = false);
         void PopulateTree();
         void ShowSelectedEntry(QTreeWidgetItem* current);
         void RouteSelectedEntry();
@@ -51,11 +59,21 @@ namespace TaintedGrailModdingSDK
         QLabel* m_statusLabel = nullptr;
         QLineEdit* m_gameInstallEdit = nullptr;
         QLineEdit* m_customAssetsEdit = nullptr;
+        QLineEdit* m_searchEdit = nullptr;
+        QPushButton* m_refreshButton = nullptr;
+        QPushButton* m_loadButton = nullptr;
+        NativeItemPreviewService* m_nativePreviewService = nullptr;
+        QThreadPool m_previewLoadPool;
+        std::shared_ptr<std::atomic_bool> m_loadCancelled;
+        unsigned int m_loadGeneration = 0;
+        bool m_loading = false;
+        bool m_autoRefreshIfEmpty = true;
         QString m_extractedRootPath;
         QString m_paneModelPath;
         QString m_thumbnailEvidencePath;
         QString m_viewportEvidencePath;
         QComboBox* m_categoryFilter = nullptr;
+        QComboBox* m_subcategoryFilter = nullptr;
         QTreeWidget* m_assetTree = nullptr;
         QLabel* m_thumbnailLabel = nullptr;
         QLabel* m_identityValue = nullptr;

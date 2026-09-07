@@ -76,7 +76,7 @@ def validate_item_viewer(root: Path = ROOT) -> None:
 
     require(code_cmake, "TG_SDK_ASSET_BROWSER_PANE_REFRESH_TOOL_SOURCE", "developer-checkout refresh-adapter path")
     require(code_cmake, "ly_install_files", "installed refresh tooling packaging")
-    require(code_cmake, "scripts/foa-sdk", "private installed refresh tooling location")
+    require(code_cmake, "DESTINATION\n        scripts/foa-sdk\n", "private installed refresh tooling location")
     require(code_cmake, "../Tools/foa_asset_browser_pane_refresh.py", "installed embedded refresh adapter")
     require(code_cmake, "../Tools/foa_asset_browser_pane_model.py", "installed pane-model generator")
 

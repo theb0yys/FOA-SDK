@@ -8,6 +8,8 @@
 set(FILES
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h
+    Source/NativeItemPreviewService.cpp
+    Source/NativeItemPreviewService.h
     Source/AssetBrowserPreviewService.cpp
     Source/AssetBrowserPreviewService.h
     Source/CatalogGovernanceService.cpp

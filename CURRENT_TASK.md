@@ -2,11 +2,11 @@
 
 ## Status
 
-`Installer correction and game-location repair` — owner review found automatic discovery and manual registration failures; PR #248 remains under correction.
+`Installer correction and item-viewer repair` — local implementation and exact-pin Editor validation are complete, including the owner's category correction. Game discovery, registration, installed-item icon previews, and category/search/reload behavior have operational evidence. PR #248 is ready for maintainer audit; release acceptance remains separate.
 
 ## Goal
 
-Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe` as the only installed user-facing SDK application entry point, and provide a compiled exact-pin Editor session for review.
+Restore `FOA-SDK.exe` as the only installed user-facing SDK application entry point, repair game discovery and registration, and make the item viewer populate native icon previews from the registered installation in the compiled exact-pin Editor.
 
 ## Classification
 
@@ -28,6 +28,10 @@ Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe
 - fix game discovery for Steam clients installed outside Program Files;
 - prevent stale Tool Wizard hints without a saved workspace from redirecting fresh setup;
 - honor manual game selection, rebuild dependent paths, and verify registration survives restart in the compiled Editor.
+- make the asset viewer discover installed items and generate local icon previews through a bounded read-only Unity provider;
+- run extraction outside the UI thread, report progress/failures, reload results on Refresh, and resolve custom Assets from the active O3DE project;
+- package the pinned preview-reader dependencies and verify real installed-game item selection in the compiled Editor.
+- replace internal folder categories with readable item groups and subcategories, preserve all records, and validate category/search/reload behavior in the compiled Editor.
 
 ## Out of scope
 
@@ -45,6 +49,9 @@ Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe
 - the exact-pin Profile Editor and required asset preflight targets build, both mandatory compiled suites pass, and the isolated review level opens in a responsive Editor window;
 - generated Control Panel output is removed from the working checkout.
 - automatic discovery and the manual folder picker save the selected installation and reopen it correctly; failures preserve existing configuration and report the cause.
+- Refresh produces visible installed-item rows and selecting an item displays its decoded native icon; no pre-generated fixture is required;
+- stale, malformed, excessive, or escaping inputs fail closed; cancellation preserves previous completed previews; no game files or saves are modified.
+- category counts cover every item; category and subcategory filters match their rows, and reload preserves valid filter selections.
 
 ## Current branch
 
@@ -52,4 +59,4 @@ Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe
 
 ## Next action
 
-Complete the game-location repair and its compiled service and Editor workflow checks, then update PR #248 for maintainer audit. Exact full-product packaging and clean-machine installer evidence remain maintainer-controlled release gates.
+Maintainer audit of PR #248 and the open corrected Editor. The live item-viewer smoke passed Refresh, category/subcategory filtering, search, selection, cancellation, and reload with 3,914 item rows and 3,912 decoded icons; two items have no supported icon reference. Thirteen readable main categories account for every row, and valid filters survive reload. The viewer also opens its saved workspace without requiring System Details first. The final refresh took 73.219 seconds with a maximum measured UI timer gap of 1.329 seconds. Both mandatory compiled suites passed (462 tests passed, two explicit symlink-privilege skips). Static validation passed (803 tests passed, nine explicit skips), and all ten enabled source-policy checks passed. Private source/binary hashes, measurements, logs, and screenshots remain outside the checkout. Exact full-product packaging and clean-machine installer evidence remain maintainer-controlled release gates.

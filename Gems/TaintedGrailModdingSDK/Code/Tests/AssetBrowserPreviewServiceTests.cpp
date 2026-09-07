@@ -11,6 +11,8 @@
 #include <AzTest/AzTest.h>
 
 #include <QByteArray>
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -327,6 +329,111 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(entry.m_canRouteToViewport);
         EXPECT_FALSE(entry.m_canCreateTypedAuthoringBinding);
         EXPECT_TRUE(entry.m_requiresExplicitBindingStep);
+    }
+
+    TEST(AssetBrowserPreviewServiceTests, CancellationStopsThumbnailLoadingBeforePublishingSnapshot)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        ASSERT_TRUE(WriteTextFile(QDir(temporary.path()).filePath("icon.png"), "synthetic-image"));
+        QJsonObject document = ThumbnailEvidenceDocument("$preview/icon.png");
+        QJsonArray artifacts = document.value("ThumbnailArtifacts").toArray();
+        QJsonObject second = artifacts[0].toObject();
+        second.insert("AssetRecordId", "second.icon");
+        artifacts.append(second);
+        document.insert("ThumbnailArtifacts", artifacts);
+        const QString path = WriteJsonFile(temporary, "thumbnails.json", document);
+        auto request = BuildRequest(temporary, {}, path);
+        int checks = 0;
+        request.m_isCancelled = [&checks]() { return ++checks >= 3; };
+        const auto result = AssetBrowserPreviewService().LoadPreview(request);
+        ASSERT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("cancelled"), AZStd::string::npos);
+        EXPECT_EQ(checks, 3);
+    }
+
+    TEST(AssetBrowserPreviewServiceTests, NativeItemPresentationPreservesReadOnlyThumbnailBoundary)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        ASSERT_TRUE(WriteTextFile(QDir(temporary.path()).filePath("icon.png"), "synthetic-image"));
+        QJsonObject document = ThumbnailEvidenceDocument("$preview/icon.png");
+        QJsonArray artifacts = document.value("ThumbnailArtifacts").toArray();
+        QJsonObject artifact = artifacts[0].toObject();
+        artifact.insert("DisplayName", "Test Sword");
+        artifact.insert("Category", "Weapons / Swords");
+        artifact.insert("Fidelity", "native-icon-decoded");
+        artifacts[0] = artifact;
+        document.insert("ThumbnailArtifacts", artifacts);
+        const QString path = WriteJsonFile(temporary, "thumbnails.json", document);
+        const auto result = AssetBrowserPreviewService().LoadPreview(BuildRequest(temporary, {}, path));
+        ASSERT_TRUE(result.IsSuccess());
+        ASSERT_EQ(result.GetValue().m_entries.size(), 1);
+        const auto& entry = result.GetValue().m_entries.front();
+        EXPECT_EQ(entry.m_displayName, "Test Sword");
+        EXPECT_EQ(entry.m_category, "Weapons / Swords");
+        EXPECT_FALSE(entry.m_canRouteToViewport);
+        EXPECT_FALSE(entry.m_canCreateTypedAuthoringBinding);
+        EXPECT_TRUE(entry.m_requiresExplicitBindingStep);
+    }
+
+    TEST(AssetBrowserPreviewServiceTests, NativeItemEvidenceRejectsChangedInstallationAndSources)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString sourcePath = QDir(temporary.path()).filePath("game/items.bundle");
+        ASSERT_TRUE(WriteTextFile(sourcePath, "synthetic-bundle"));
+        ASSERT_TRUE(WriteTextFile(QDir(temporary.path()).filePath("icon.png"), "synthetic-image"));
+        QString install = QFileInfo(sourcePath).absolutePath();
+        QString fingerprintPath = QFileInfo(install).canonicalFilePath();
+        if (QDir::separator() == QLatin1Char('\\'))
+        {
+            fingerprintPath = fingerprintPath.toCaseFolded();
+        }
+        QJsonObject document = ThumbnailEvidenceDocument("$preview/icon.png");
+        document.insert("ToolId", "foa.native-item-preview");
+        QJsonArray artifacts = document.value("ThumbnailArtifacts").toArray();
+        QJsonObject artifact = artifacts[0].toObject();
+        artifact.insert("OutputByteSize", QByteArray("synthetic-image").size());
+        artifact.insert("OutputSha256", QStringLiteral("sha256:") + QString::fromLatin1(
+            QCryptographicHash::hash("synthetic-image", QCryptographicHash::Sha256).toHex()));
+        artifacts[0] = artifact;
+        document.insert("ThumbnailArtifacts", artifacts);
+        document.insert("InstallRootFingerprint", QStringLiteral("sha256:") + QString::fromLatin1(
+            QCryptographicHash::hash(fingerprintPath.toUtf8(), QCryptographicHash::Sha256).toHex()));
+        document.insert("SourceFiles", QJsonArray({ QJsonObject({
+            { "Locator", "$install/items.bundle" },
+            { "ByteSize", QFileInfo(sourcePath).size() },
+            { "ModifiedMs", QFileInfo(sourcePath).lastModified().toMSecsSinceEpoch() },
+        }) }));
+        const QString path = WriteJsonFile(temporary, "thumbnails.json", document);
+        auto request = BuildRequest(temporary, {}, path);
+        request.m_installPath = ToAzString(install);
+        EXPECT_TRUE(AssetBrowserPreviewService().LoadPreview(request).IsSuccess());
+        ASSERT_TRUE(WriteTextFile(QDir(temporary.path()).filePath("icon.png"), "changed-image!!"));
+        EXPECT_FALSE(AssetBrowserPreviewService().LoadPreview(request).IsSuccess());
+        ASSERT_TRUE(WriteTextFile(QDir(temporary.path()).filePath("icon.png"), "synthetic-image"));
+        request.m_installPath = ToAzString(temporary.path());
+        EXPECT_FALSE(AssetBrowserPreviewService().LoadPreview(request).IsSuccess());
+        request.m_installPath = ToAzString(install);
+        ASSERT_TRUE(WriteTextFile(sourcePath, "changed-bundle-size"));
+        EXPECT_FALSE(AssetBrowserPreviewService().LoadPreview(request).IsSuccess());
+    }
+
+    TEST(AssetBrowserPreviewServiceTests, GeneratedModelsDoNotHideUnmatchedItemThumbnails)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        ASSERT_TRUE(WriteTextFile(QDir(temporary.path()).filePath("icon.png"), "synthetic-image"));
+        const QString thumbnails = WriteJsonFile(temporary, "thumbnails.json", ThumbnailEvidenceDocument("$preview/icon.png"));
+        const QString pane = WriteJsonFile(temporary, "pane.json", PaneModelDocument(QJsonArray({
+            ProductEntry("pane.mesh", "Test Model", "source.mesh", "$assetcache/test.azmodel") })));
+        const auto result = AssetBrowserPreviewService().LoadPreview(BuildRequest(temporary, pane, thumbnails));
+        ASSERT_TRUE(result.IsSuccess());
+        EXPECT_EQ(result.GetValue().m_entries.size(), 2);
+        auto bounded = BuildRequest(temporary, pane, thumbnails);
+        bounded.m_maximumEntries = 1;
+        EXPECT_FALSE(AssetBrowserPreviewService().LoadPreview(bounded).IsSuccess());
     }
 
     TEST(AssetBrowserPreviewServiceTests, CustomAssetsFolderLoadsWithoutEvidenceDocuments)

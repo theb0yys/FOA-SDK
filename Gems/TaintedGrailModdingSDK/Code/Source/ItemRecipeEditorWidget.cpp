@@ -30,9 +30,11 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QPointer>
 #include <QScrollArea>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QStandardItemModel>
 #include <QStringList>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -596,18 +598,22 @@ namespace TaintedGrailModdingSDK
         QSignalBlocker ingredientBlocker(m_ingredientItemRecord);
         QSignalBlocker outputBlocker(m_outputItemRecord);
         QSignalBlocker targetBlocker(m_relationshipTargetRecord);
-        m_itemRecord->clear();
-        m_recipeRecord->clear();
-        m_relationshipSource->clear();
-        m_ingredientItemRecord->clear();
-        m_outputItemRecord->clear();
-        m_relationshipTargetRecord->clear();
-        m_itemRecord->addItem(tr("Select canonical item..."), QString());
-        m_recipeRecord->addItem(tr("Select canonical recipe..."), QString());
-        m_relationshipSource->addItem(tr("Select item or recipe..."), QString());
-        m_ingredientItemRecord->addItem(tr("Use unresolved subject ref"), QString());
-        m_outputItemRecord->addItem(tr("Use unresolved subject ref"), QString());
-        m_relationshipTargetRecord->addItem(tr("Use unresolved target subject"), QString());
+        // Populate unattached models, then swap once. Updating six live searchable
+        // choices for every row repeatedly invalidates their completion/layout state.
+        QHash<QComboBox*, QStandardItemModel*> choices;
+        const auto append = [&choices](QComboBox* combo, const QString& label, const QString& id)
+        {
+            if (!choices.contains(combo)) { choices.insert(combo, new QStandardItemModel(combo)); }
+            auto* item = new QStandardItem(label);
+            item->setData(id, Qt::UserRole);
+            choices.value(combo)->appendRow(item);
+        };
+        append(m_itemRecord, tr("Select canonical item..."), {});
+        append(m_recipeRecord, tr("Select canonical recipe..."), {});
+        append(m_relationshipSource, tr("Select item or recipe..."), {});
+        append(m_ingredientItemRecord, tr("Use unresolved subject ref"), {});
+        append(m_outputItemRecord, tr("Use unresolved subject ref"), {});
+        append(m_relationshipTargetRecord, tr("Use unresolved target subject"), {});
 
         AZStd::vector<const CatalogRecord*> sortedRecords;
         sortedRecords.reserve(catalog.GetRecords().size());
@@ -626,19 +632,25 @@ namespace TaintedGrailModdingSDK
             {
                 label = ToQString(record.m_displayName) + QStringLiteral(" [%1]").arg(id.right(8));
             }
-            m_relationshipTargetRecord->addItem(label, id);
+            append(m_relationshipTargetRecord, label, id);
             if (record.m_domain == "economy" && record.m_recordKind == "item")
             {
-                m_itemRecord->addItem(label, id);
-                m_relationshipSource->addItem(label, id);
-                m_ingredientItemRecord->addItem(label, id);
-                m_outputItemRecord->addItem(label, id);
+                append(m_itemRecord, label, id);
+                append(m_relationshipSource, label, id);
+                append(m_ingredientItemRecord, label, id);
+                append(m_outputItemRecord, label, id);
             }
             else if (record.m_domain == "economy" && record.m_recordKind == "recipe")
             {
-                m_recipeRecord->addItem(label, id);
-                m_relationshipSource->addItem(label, id);
+                append(m_recipeRecord, label, id);
+                append(m_relationshipSource, label, id);
             }
+        }
+        for (auto choice = choices.begin(); choice != choices.end(); ++choice)
+        {
+            QPointer<QAbstractItemModel> previous = choice.key()->model();
+            choice.key()->setModel(choice.value());
+            if (previous && previous->parent() == choice.key()) { previous->deleteLater(); }
         }
 
         auto restore = [](QComboBox* combo, const QString& value)

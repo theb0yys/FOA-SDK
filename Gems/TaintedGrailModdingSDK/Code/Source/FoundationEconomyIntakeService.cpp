@@ -410,15 +410,19 @@ namespace TaintedGrailModdingSDK
         }
         WorkspaceModel workspace = m_workspace;
         workspace.m_rootPath = m_workspaceRootPath;
-        if (!candidate.ValidateIntegrity(workspace, *profile, registry, error)) { return false; }
-        if (newIds.isEmpty()) { return true; }
-        // Evidence is durable before a catalog can refer to it. A failed catalog write
-        // may leave unused source evidence, but never a partial catalog or in-memory publish.
-        auto savedEvidence = m_sourceEvidencePersistence.SaveDocuments(
-            imported.m_sourceDocument, imported.m_evidenceDocument, m_workspaceRootPath);
-        if (!savedEvidence.IsSuccess()) { return Fail(error, Q(savedEvidence.GetError())); }
+        if (newIds.isEmpty()) { return candidate.ValidateIntegrity(workspace, *profile, registry, error); }
+        // Commit validates the entire candidate before invoking this writer. Persist
+        // evidence first inside that transaction, avoiding a second full validation.
+        // A failed catalog write can leave unused evidence, never a partial catalog.
         auto committed = m_catalogTransaction.Commit(candidate, workspace, *profile, registry,
-            [this](const CatalogDocument& catalog, const AZStd::string& root) { return m_catalogPersistence.Save(catalog, root); });
+            [this, &imported](const CatalogDocument& catalog, const AZStd::string& root)
+                -> AZ::Outcome<AZStd::string, AZStd::string>
+            {
+                auto savedEvidence = m_sourceEvidencePersistence.SaveDocuments(
+                    imported.m_sourceDocument, imported.m_evidenceDocument, root);
+                if (!savedEvidence.IsSuccess()) { return AZ::Failure(AZStd::string(savedEvidence.GetError())); }
+                return m_catalogPersistence.Save(catalog, root);
+            });
         if (!committed.IsSuccess()) { return Fail(error, Q(committed.GetError())); }
         auto result = committed.TakeValue();
         m_catalog = AZStd::move(result.m_catalog);

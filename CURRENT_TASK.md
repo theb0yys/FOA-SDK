@@ -40,7 +40,7 @@ Game files, saves, engine sources and proprietary assets are read-only. Generate
 - PASSED: 819 Python tests discovered, 810 passed and nine explicit skips; static and fixture validators passed.
 - PASSED: all ten enabled pinned O3DE source-policy validators and the Windows Profile Framework, Catalog test and Editor targets.
 - PASSED: mandatory Catalog suite (424 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
-- PASSED: compiled Editor loaded 3,914 native items and 356 supported recipes; created a saved mod and custom definitions; edited quantities; preserved drafts; removed/re-added links; reopened saved values; cancelled without replacing the catalog. Final measured load was 5.500 seconds with a maximum UI timer gap of 1.532 seconds (limit below three seconds).
+- PASSED: compiled Editor imported into an empty workspace: 3,914 native items and 356 supported recipes; created a saved mod and custom definitions; edited quantities; preserved drafts; removed/re-added links; reopened saved values; cancelled without replacing the catalog. First import took 4.562 seconds with a maximum UI timer gap of 2.688 seconds (limit below three seconds). Dropdown models are published in batches, and the existing transaction validates once before persisting evidence and catalog.
 - PASSED: malformed/profile-mismatched/changed-source intake, failed catalog writes, exact link evidence, wrong-recipe removal and preservation of authored values on a fresh reader run have compiled regression coverage.
 - Four crafting-bundle entries lack supported recipe fields and remain explicitly unsupported. Game runtime, deployment, save mutation and release sign-off are NOT_APPLICABLE to this authoring completion.
 

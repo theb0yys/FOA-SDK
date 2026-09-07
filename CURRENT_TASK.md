@@ -2,7 +2,9 @@
 
 ## Status and goal
 
-`Items and Recipes completion` - IMPLEMENTED AND VALIDATED, authorized by the owner after the item viewer and category correction in PR #248. The local authoring service loads installed item and recipe definitions, resolves exact ingredient and output links, and creates, edits, saves and reopens pack-owned definitions. Maintainer PR review is the remaining repository transition.
+`Items and Recipes completion` - IMPLEMENTED AND VALIDATED. The owner-reported empty Visual Preview is repaired: the selected item's native icon now loads automatically, and recipes preview a resolved output. The authoring workflow and the separate image workflow below have compiled Editor evidence. Maintainer review remains the repository transition.
+
+The bounded repair is a Routine Editor integration fix owned by `content-pack-authoring`, consuming the existing validated preview snapshot and `unity-provider` icon reader. Game icons become the default visual tab; the existing processed-asset binding controls remain under Custom visuals. Exact native references connect item selections and recipe outputs to images. No schema, persisted identity, provider contract, runtime adapter or deployment behavior changes. Validation covers exact/ambiguous/missing image joins, compiled suites, selected-item/recipe switching, cancellation, reopen and absence of catalog writes.
 
 ## Classification and ownership
 
@@ -42,6 +44,8 @@ Game files, saves, engine sources and proprietary assets are read-only. Generate
 - PASSED: mandatory Catalog suite (424 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
 - PASSED: compiled Editor imported into an empty workspace: 3,914 native items and 356 supported recipes; created a saved mod and custom definitions; edited quantities; preserved drafts; removed/re-added links; reopened saved values; cancelled without replacing the catalog. First import took 4.562 seconds with a maximum UI timer gap of 2.688 seconds (limit below three seconds). Dropdown models are published in batches, and the existing transaction validates once before persisting evidence and catalog.
 - PASSED: malformed/profile-mismatched/changed-source intake, failed catalog writes, exact link evidence, wrong-recipe removal and preservation of authored values on a fresh reader run have compiled regression coverage.
+- PASSED: preview repair rebuilt Framework, Catalog.Tests and Editor; Catalog now has 426 passing tests and two explicit symlink-privilege skips, and Canonical Interchange retains 39 passing tests. Exact native-image matching rejects empty, unsupported and ambiguous images.
+- PASSED: nine compiled Editor preview checks verify displayed pixels against the selected native icon, item switching, recipe output and linked-item selection, missing-image clearing, reader cancellation, separate custom binding controls, pane reopen and unchanged persisted catalog. Preview interaction timer gap peaked at 0.234 seconds. Whole-pane construction is measured separately at 3.469 seconds, and the first image appeared after 6.125 seconds; the preview interaction result does not claim sub-three-second pane startup.
 - Four crafting-bundle entries lack supported recipe fields and remain explicitly unsupported. Game runtime, deployment, save mutation and release sign-off are NOT_APPLICABLE to this authoring completion.
 
 Private source observations, screenshots, build logs and the evidence pack remain outside the repository. The focused PR is for maintainer audit; no approval or merge is inferred.

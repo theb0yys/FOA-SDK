@@ -27,6 +27,7 @@ namespace AzToolsFramework::AssetBrowser
 
 namespace TaintedGrailModdingSDK
 {
+    class AssetBrowserPreviewWidget;
     //! Explicit, editor-only visual selection step for the Item and Recipe Editor.
     class ItemVisualSelectorWidget final
         : public QWidget
@@ -35,6 +36,7 @@ namespace TaintedGrailModdingSDK
     public:
         explicit ItemVisualSelectorWidget(QWidget* parent = nullptr);
         ~ItemVisualSelectorWidget() override;
+        void SetTargetRecord(const QString& recordId);
 
     private:
         struct PreviewEntry
@@ -74,6 +76,8 @@ namespace TaintedGrailModdingSDK
         void SetStatus(const QString& message, bool error = false);
 
         QComboBox* m_targetRecord = nullptr;
+        AssetBrowserPreviewWidget* m_gameIcon = nullptr;
+        QString m_recipeContext;
         QLabel* m_recipeItemLabel = nullptr;
         QComboBox* m_recipeItemRecord = nullptr;
         QLineEdit* m_modelPath = nullptr;

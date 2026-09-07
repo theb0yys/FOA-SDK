@@ -245,7 +245,7 @@ namespace TaintedGrailModdingSDK
             m_modelPath->hide();
             if (auto* group = qobject_cast<QGroupBox*>(m_modelPath->parentWidget()))
             {
-                group->setTitle(tr("Item target and game visuals"));
+                group->setTitle(tr("Custom visual assets"));
                 if (auto* form = qobject_cast<QFormLayout*>(group->layout()))
                 {
                     if (QWidget* label = form->labelForField(m_modelPath))

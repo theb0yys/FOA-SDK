@@ -24,6 +24,43 @@
 
 namespace TaintedGrailModdingSDK
 {
+    TEST(AssetBrowserPreviewServiceTests, ItemThumbnailUsesExactIdentityAndRejectsAmbiguousImages)
+    {
+        AssetBrowserPreviewSnapshot snapshot;
+        AssetBrowserPreviewEntry entry;
+        entry.m_displayName = "Same visible item name";
+        entry.m_nativeAssetRef = "items/bullrout.asset";
+        entry.m_thumbnailStatus = "generated";
+        entry.m_thumbnailPath = "validated/bullrout.png";
+        snapshot.m_entries.push_back(entry);
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, entry.m_nativeAssetRef), &snapshot.m_entries[0]);
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, ""), nullptr);
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, entry.m_displayName), nullptr);
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, "items/Bullrout.asset"), nullptr);
+        entry.m_nativeAssetRef = "items/different.asset";
+        snapshot.m_entries.push_back(entry);
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, "items/bullrout.asset"), &snapshot.m_entries[0]);
+        entry.m_nativeAssetRef = "items/bullrout.asset";
+        snapshot.m_entries.push_back(entry);
+        EXPECT_NE(AssetBrowserPreviewService::FindItemThumbnail(snapshot, entry.m_nativeAssetRef), nullptr);
+        snapshot.m_entries.back().m_thumbnailPath = "validated/conflicting.png";
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, entry.m_nativeAssetRef), nullptr);
+    }
+
+    TEST(AssetBrowserPreviewServiceTests, ItemThumbnailDoesNotUseUnsupportedOrUnvalidatedImages)
+    {
+        AssetBrowserPreviewSnapshot snapshot;
+        AssetBrowserPreviewEntry entry;
+        entry.m_nativeAssetRef = "items/missing.asset";
+        entry.m_thumbnailPath = "unvalidated/image.png";
+        entry.m_thumbnailStatus = "unsupported";
+        snapshot.m_entries.push_back(entry);
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, entry.m_nativeAssetRef), nullptr);
+        snapshot.m_entries[0].m_thumbnailStatus = "generated";
+        snapshot.m_entries[0].m_thumbnailPath.clear();
+        EXPECT_EQ(AssetBrowserPreviewService::FindItemThumbnail(snapshot, entry.m_nativeAssetRef), nullptr);
+    }
+
     namespace
     {
         constexpr const char* ProfileId = "tgfoa.profile.test";

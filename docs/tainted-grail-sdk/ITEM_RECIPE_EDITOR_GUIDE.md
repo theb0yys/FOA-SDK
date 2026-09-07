@@ -57,6 +57,22 @@ They still require exact associated evidence and do not grant runtime access.
 
 ## Installed-data coverage
 
+### Preview an item or recipe
+
+Select an item, then open **Visual Preview → Game icon**. Its installed game icon
+loads automatically from the validated local preview cache. Opening Asset Browser
+first is unnecessary. Selecting a recipe opens its first resolved output icon;
+**Recipe-linked item** also lets you inspect its ingredients and other outputs.
+
+**Refresh assets** rebuilds the local icon cache through the existing read-only
+game reader. The button cancels an active refresh and preserves previous previews.
+An item without a supported icon displays an explanation and clears the previous
+image. Local items without a native reference use **Custom visuals** for asset
+selection. That tab retains the processed O3DE preview and explicit binding
+controls. Looking at a game icon never changes an item, recipe or asset binding.
+
+### Reader coverage
+
 The pinned reader supports serialized item fields and recipe ingredients,
 quantities and outputs in the item/crafting bundles. It joins Addressables GUIDs
 only through an exact, unambiguous container path, including abstract ingredient

@@ -1120,6 +1120,30 @@ namespace TaintedGrailModdingSDK
         return AZ::Success(AZStd::move(snapshot));
     }
 
+    const AssetBrowserPreviewEntry* AssetBrowserPreviewService::FindItemThumbnail(
+        const AssetBrowserPreviewSnapshot& snapshot, const AZStd::string& nativeRefExact)
+    {
+        if (nativeRefExact.empty())
+        {
+            return nullptr;
+        }
+        const AssetBrowserPreviewEntry* match = nullptr;
+        for (const auto& entry : snapshot.m_entries)
+        {
+            if (entry.m_nativeAssetRef != nativeRefExact || entry.m_thumbnailStatus != "generated"
+                || entry.m_thumbnailPath.empty())
+            {
+                continue;
+            }
+            if (match && match->m_thumbnailPath != entry.m_thumbnailPath)
+            {
+                return nullptr;
+            }
+            match = &entry;
+        }
+        return match;
+    }
+
     AZStd::string AssetBrowserPreviewService::ClassifyCategory(
         const AssetBrowserPreviewEntry& entry)
     {

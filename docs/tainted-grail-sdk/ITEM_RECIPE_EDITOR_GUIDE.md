@@ -26,19 +26,63 @@ The editor keeps these concepts independent:
 
 A display name never joins these records. Every profile and join uses stable canonical record IDs or an explicit unresolved subject reference.
 
-## Prerequisites
+## Start working
 
-Before authoring economy data:
+The pane opens the saved workspace automatically. Use **Load game items and
+recipes** to read the registered installation. The reader runs in a separate
+process and the same button cancels it. Definitions are saved locally with their
+source evidence; repeated loading preserves existing local profiles, joins and
+governance. Type part of a name in a selection box, then choose a matching result.
 
-1. configure and save a workspace;
-2. configure the exact active FoA game profile;
-3. create or load the owning pack for synthetic records;
-4. import source artifacts;
-5. promote evidence into canonical catalog records;
-6. create canonical records with domain `economy` and the applicable record kind;
-7. review the record in the Catalog Browser and Catalog Governance tools.
+To create your own definitions, use **Choose or create mod**, enter a name and
+author in Pack Manager, and **Save mod**. Return to this pane and choose **New
+item** or **New recipe**. Foundation assigns a new pack-owned identity and records
+the authoring intent as a local source. A custom identity never borrows a native
+game identity. Use **Save Item Profile** or **Save Recipe Profile** after editing.
 
-The Item and Recipe Editor only lists existing canonical records. Missing identities must be researched and promoted through the catalog workflow rather than invented inside the domain tool.
+For recipes, select an ingredient or output row to load its fields. Change the
+item or quantity and use **Add / Update** to save. **New ingredient** and **New
+output** clear the form for another link; link IDs are assigned automatically.
+**Remove selected** removes only that recipe's selected link and saves the change.
+Each link save/removal is a separate catalog transaction. A recipe without an
+output can be saved as incomplete authoring work.
+
+Unsaved form values remain in this pane while switching definitions or receiving
+Foundation updates. Save changes before closing the pane. Saved definitions and
+links reload from catalog schema 2; existing schema 1 catalogs retain their
+supported migration path.
+
+Acquisition relationships and evidence/permission details have separate tabs.
+They still require exact associated evidence and do not grant runtime access.
+
+## Installed-data coverage
+
+The pinned reader supports serialized item fields and recipe ingredients,
+quantities and outputs in the item/crafting bundles. It joins Addressables GUIDs
+only through an exact, unambiguous container path, including abstract ingredient
+templates. Missing or ambiguous references remain explicit unresolved subjects.
+Bundle entries without the supported component fields are recorded as unsupported
+in the private observation document.
+
+Category labels are presentation groups. Stack limits, crafting stations, unlock
+semantics and other fields absent from the supported source are not inferred.
+The resulting records start at research stage S1 without runtime permissions.
+Reading metadata, editing a definition or saving a catalog does not establish
+that the game accepts that definition. Deployment and runtime validation remain
+separate governed services.
+
+The versioned `foa-native-economy-observations` document is local provider output,
+not canonical interchange. Foundation verifies profile and source hashes, builds
+and validates a complete catalog candidate, persists source evidence, then
+publishes the catalog in one transaction. Failed catalog persistence preserves
+the prior catalog and may leave unused source evidence for inspection. Generated
+observations and game-derived content must remain outside the source checkout.
+
+The worker retains the installed-item reader's 180-second deadline and source
+limits. Economy intake accepts at most 10,000 definitions, 256 links per recipe
+collection and a 16 MiB observation document. Quantities must be whole numbers
+from 1 to 1,000,000. A failed save can be retried by loading definitions again;
+each reader run supplies fresh observation and evidence identities.
 
 ## Supported canonical record kinds
 
@@ -275,11 +319,10 @@ Use Catalog Governance to review validation and permissions. A green or `allowed
 
 Item and recipe profile evidence must exist in the active evidence registry and match the canonical record’s subject reference.
 
-Ingredient and output evidence may belong to:
-
-- the recipe subject;
-- the resolved item subject;
-- the explicit unresolved item subject.
+Ingredient and output evidence must bind the exact link subject:
+`economy-recipe-ingredient:<link ID>` or `economy-recipe-output:<link ID>`.
+The pane records local authoring intent for that exact link and its values on
+each save. Installed links receive separate observations from the reader.
 
 Missing or unrelated evidence is rejected before persistence.
 
@@ -293,7 +336,7 @@ Typed economy data is stored in the same canonical document as identities, relat
 Catalog/catalog.tgcatalog.json
 ```
 
-The document uses optional schema-1 fields for backward compatibility:
+The schema-2 document preserves these economy collections from schema 1:
 
 - `EconomyItems`;
 - `EconomyRecipes`;
@@ -324,7 +367,7 @@ Resolve the underlying identity, evidence, profile, join, governance, or adapter
 
 The Item and Recipe Editor does not:
 
-- scan the game installation;
+- scan arbitrary files outside the registered, supported item/recipe sources;
 - fabricate missing item or recipe identities;
 - parse opaque runtime data;
 - grant or remove inventory items;

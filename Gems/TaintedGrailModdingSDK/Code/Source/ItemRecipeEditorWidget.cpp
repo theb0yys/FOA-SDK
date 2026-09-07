@@ -9,17 +9,24 @@
 
 #include "AssetBrowserPreviewService.h"
 #include "FoundationService.h"
+#include "NativeItemPreviewService.h"
+#include <AzToolsFramework/API/ToolsApplicationAPI.h>
 
 #include <QAbstractItemView>
 #include <QByteArray>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
+#include <QInputDialog>
+#include <QTimer>
+#include <QUuid>
 #include <QDoubleSpinBox>
 #include <QFont>
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -33,6 +40,7 @@
 #include <QVBoxLayout>
 
 #include <cstddef>
+#include <AzCore/std/sort.h>
 
 namespace TaintedGrailModdingSDK
 {
@@ -131,15 +139,40 @@ namespace TaintedGrailModdingSDK
         rootLayout->addWidget(heading);
 
         auto* description = new QLabel(
-            tr("Author typed economy profiles on canonical records. This tool does not create identities, grant permissions, register runtime templates, mutate inventories, append recipes, or edit FoA."),
+            tr("Browse game definitions and save local item and recipe changes. Create new definitions for your active mod. Game deployment is a separate step."),
             this);
         description->setWordWrap(true);
         rootLayout->addWidget(description);
 
+        auto* toolbar = new QHBoxLayout();
+        m_readGame = new QPushButton(tr("Load game items and recipes"), this);
+        m_readGame->setObjectName("economyReadGame");
+        m_nativeReader = new NativeItemPreviewService(this);
+        auto* newItem = new QPushButton(tr("New item"), this);
+        auto* newRecipe = new QPushButton(tr("New recipe"), this);
+        newItem->setObjectName("economyNewItem");
+        newRecipe->setObjectName("economyNewRecipe");
+        toolbar->addWidget(m_readGame);
+        toolbar->addWidget(newItem);
+        toolbar->addWidget(newRecipe);
+        auto* manageMod = new QPushButton(tr("Choose or create mod"), this);
+        toolbar->addWidget(manageMod);
+        connect(manageMod, &QPushButton::clicked, this, []() { AzToolsFramework::OpenViewPane("Tainted Grail Pack Manager"); });
+        toolbar->addStretch();
+        rootLayout->addLayout(toolbar);
+        m_catalogSummary = new QLabel(this);
+        m_catalogSummary->setObjectName("economySummary");
+        rootLayout->addWidget(m_catalogSummary);
+        connect(m_readGame, &QPushButton::clicked, this, [this]() { ReadGameDefinitions(); });
+        connect(newItem, &QPushButton::clicked, this, [this]() { CreateRecord(false); });
+        connect(newRecipe, &QPushButton::clicked, this, [this]() { CreateRecord(true); });
+
         m_tabs = new QTabWidget(this);
+        m_tabs->setObjectName("economyTabs");
         rootLayout->addWidget(m_tabs, 1);
 
         auto* itemContent = new QWidget(m_tabs);
+        m_itemForm = itemContent;
         auto* itemLayout = new QVBoxLayout(itemContent);
 
         auto* itemRecordGroup = new QGroupBox(tr("Canonical Item"), itemContent);
@@ -214,6 +247,7 @@ namespace TaintedGrailModdingSDK
         m_tabs->addTab(WrapScrollable(itemContent, m_tabs), tr("Items"));
 
         auto* recipeContent = new QWidget(m_tabs);
+        m_recipeForm = recipeContent;
         auto* recipeLayout = new QVBoxLayout(recipeContent);
 
         auto* recipeRecordGroup = new QGroupBox(tr("Canonical Recipe"), recipeContent);
@@ -302,6 +336,8 @@ namespace TaintedGrailModdingSDK
         m_ingredientConsumed->setChecked(true);
         m_ingredientConditions = new QLineEdit(ingredientGroup);
         m_ingredientEvidence = new QLineEdit(ingredientGroup);
+        m_ingredientEvidence->setReadOnly(true);
+        m_ingredientEvidence->setPlaceholderText(tr("Recorded automatically when saved"));
         ingredientForm->addWidget(new QLabel(tr("Link ID"), ingredientGroup), 0, 0);
         ingredientForm->addWidget(m_ingredientLinkId, 0, 1);
         ingredientForm->addWidget(new QLabel(tr("Item record"), ingredientGroup), 0, 2);
@@ -342,6 +378,8 @@ namespace TaintedGrailModdingSDK
         m_outputByProduct = new QCheckBox(tr("By-product"), outputGroup);
         m_outputConditions = new QLineEdit(outputGroup);
         m_outputEvidence = new QLineEdit(outputGroup);
+        m_outputEvidence->setReadOnly(true);
+        m_outputEvidence->setPlaceholderText(tr("Recorded automatically when saved"));
         outputForm->addWidget(new QLabel(tr("Link ID"), outputGroup), 0, 0);
         outputForm->addWidget(m_outputLinkId, 0, 1);
         outputForm->addWidget(new QLabel(tr("Item record"), outputGroup), 0, 2);
@@ -361,6 +399,21 @@ namespace TaintedGrailModdingSDK
         outputForm->addWidget(saveOutputButton, 4, 3);
         outputLayout->addLayout(outputForm);
         recipeLayout->addWidget(outputGroup);
+        recipeLayout->removeWidget(recipeProfileGroup);
+        recipeLayout->addWidget(recipeProfileGroup);
+        recipeProfileGroup->setTitle(tr("Recipe settings"));
+        recipeProfileGroup->setObjectName("economyRecipeSettings");
+        recipeProfileGroup->setCheckable(true);
+        recipeProfileGroup->setChecked(false);
+        const auto showRecipeSettings = [recipeProfileGroup](bool visible)
+        {
+            for (QWidget* child : recipeProfileGroup->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly))
+            {
+                child->setVisible(visible);
+            }
+        };
+        connect(recipeProfileGroup, &QGroupBox::toggled, this, showRecipeSettings);
+        showRecipeSettings(false);
         recipeLayout->addStretch(1);
         m_tabs->addTab(WrapScrollable(recipeContent, m_tabs), tr("Recipes"));
 
@@ -395,9 +448,16 @@ namespace TaintedGrailModdingSDK
         relationshipLayout->addWidget(m_relationshipAttributes, 3, 1, 1, 2);
         relationshipLayout->addWidget(saveRelationshipButton, 3, 3);
         relationshipLayout->addWidget(m_relationshipTable, 4, 0, 1, 4);
-        rootLayout->addWidget(relationshipGroup);
+        m_tabs->addTab(WrapScrollable(relationshipGroup, m_tabs), tr("Acquisition"));
+        auto* details = new QWidget(m_tabs);
+        auto* detailsLayout = new QVBoxLayout(details);
+        detailsLayout->addWidget(itemLaneGroup);
+        detailsLayout->addWidget(recipeLaneGroup);
+        detailsLayout->addWidget(recipeEvidenceGroup);
+        m_tabs->addTab(WrapScrollable(details, m_tabs), tr("Evidence and permissions"));
 
         m_status = new QLabel(this);
+        m_status->setObjectName("economyStatus");
         m_status->setWordWrap(true);
         rootLayout->addWidget(m_status);
 
@@ -411,6 +471,76 @@ namespace TaintedGrailModdingSDK
         connect(saveOutputButton, &QPushButton::clicked, this, [this]() { SaveOutput(); });
         connect(saveRelationshipButton, &QPushButton::clicked, this, [this]() { SaveAcquisitionRelationship(); });
 
+        m_itemRecord->setObjectName("economyItemChoice");
+        m_recipeRecord->setObjectName("economyRecipeChoice");
+        m_ingredientItemRecord->setObjectName("economyIngredientChoice");
+        m_outputItemRecord->setObjectName("economyOutputChoice");
+        m_itemWeight->setObjectName("economyItemWeight");
+        m_recipeType->setObjectName("economyRecipeType");
+        m_ingredientQuantity->setObjectName("economyIngredientQuantity");
+        m_outputQuantity->setObjectName("economyOutputQuantity");
+        m_ingredientTable->setObjectName("economyIngredients");
+        m_outputTable->setObjectName("economyOutputs");
+        saveItemButton->setObjectName("economySaveItem");
+        saveRecipeButton->setObjectName("economySaveRecipe");
+        saveIngredientButton->setObjectName("economySaveIngredient");
+        saveOutputButton->setObjectName("economySaveOutput");
+        for (QComboBox* combo : {m_itemRecord, m_recipeRecord, m_ingredientItemRecord, m_outputItemRecord,
+            m_relationshipSource, m_relationshipTargetRecord})
+        {
+            combo->setEditable(true);
+            combo->setInsertPolicy(QComboBox::NoInsert);
+            combo->setMaxVisibleItems(15);
+            combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+            combo->setMinimumContentsLength(24);
+            combo->completer()->setCompletionMode(QCompleter::PopupCompletion);
+            combo->completer()->setFilterMode(Qt::MatchContains);
+            combo->completer()->setCaseSensitivity(Qt::CaseInsensitive);
+            combo->lineEdit()->setPlaceholderText(tr("Type to find a definition..."));
+            connect(combo->lineEdit(), &QLineEdit::editingFinished, this, [combo]()
+            {
+                // Free text is a search, never an implicit identity change.
+                if (combo->currentText() != combo->itemText(combo->currentIndex()))
+                {
+                    combo->setEditText(combo->itemText(combo->currentIndex()));
+                }
+            });
+        }
+        for (bool output : {false, true})
+        {
+            auto* table = output ? m_outputTable : m_ingredientTable;
+            table->setColumnHidden(0, true);
+            table->setColumnHidden(5, true);
+            table->setMinimumHeight(170);
+            table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+            auto* buttons = new QHBoxLayout();
+            auto* add = new QPushButton(output ? tr("New output") : tr("New ingredient"), table->parentWidget());
+            auto* remove = new QPushButton(tr("Remove selected"), table->parentWidget());
+            add->setObjectName(output ? "economyNewOutput" : "economyNewIngredient");
+            remove->setObjectName(output ? "economyRemoveOutput" : "economyRemoveIngredient");
+            buttons->addWidget(add);
+            buttons->addWidget(remove);
+            buttons->addStretch();
+            qobject_cast<QVBoxLayout*>(table->parentWidget()->layout())->insertLayout(1, buttons);
+            connect(add, &QPushButton::clicked, this, [this, output]() { NewJoin(output); });
+            connect(remove, &QPushButton::clicked, this, [this, output]() { RemoveJoin(output); });
+            connect(table, &QTableWidget::itemSelectionChanged, this, [this, output]() { SelectJoin(output); });
+        }
+        m_ingredientLinkId->setReadOnly(true);
+        m_outputLinkId->setReadOnly(true);
+        m_ingredientLinkId->setPlaceholderText(tr("Assigned when added"));
+        m_outputLinkId->setPlaceholderText(tr("Assigned when added"));
+        // Name draft fields once; identities use combo item data, never display names.
+        int draftField = 0;
+        for (QWidget* form : {m_itemForm, m_recipeForm})
+        {
+            for (QWidget* child : form->findChildren<QWidget*>())
+            {
+                if (child->objectName().isEmpty()) { child->setObjectName(QString("economyField%1").arg(++draftField)); }
+            }
+        }
+        if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
+        m_workspaceIdentity = ToQString(FoundationService::Get().GetWorkspaceFilePath());
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
     }
@@ -422,6 +552,15 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::OnFoundationChanged()
     {
+        const QString workspace = ToQString(FoundationService::Get().GetWorkspaceFilePath());
+        if (workspace != m_workspaceIdentity)
+        {
+            m_drafts.clear();
+            m_loadedItem.clear();
+            m_loadedRecipe.clear();
+            m_workspaceIdentity = workspace;
+            m_nativeReader->Cancel();
+        }
         RefreshAll();
     }
 
@@ -432,6 +571,8 @@ namespace TaintedGrailModdingSDK
             return;
         }
         m_refreshing = true;
+        StoreDraft("item:" + m_loadedItem, m_itemForm);
+        StoreDraft("recipe:" + m_loadedRecipe, m_recipeForm);
         RefreshRecordChoices();
         LoadCurrentItem();
         LoadCurrentRecipe();
@@ -468,13 +609,22 @@ namespace TaintedGrailModdingSDK
         m_outputItemRecord->addItem(tr("Use unresolved subject ref"), QString());
         m_relationshipTargetRecord->addItem(tr("Use unresolved target subject"), QString());
 
-        for (const CatalogRecord& record : catalog.GetRecords())
+        AZStd::vector<const CatalogRecord*> sortedRecords;
+        sortedRecords.reserve(catalog.GetRecords().size());
+        for (const CatalogRecord& record : catalog.GetRecords()) { sortedRecords.push_back(&record); }
+        AZStd::sort(sortedRecords.begin(), sortedRecords.end(), [](const CatalogRecord* left, const CatalogRecord* right)
         {
+            const int comparison = QString::compare(ToQString(left->m_displayName), ToQString(right->m_displayName), Qt::CaseInsensitive);
+            return comparison == 0 ? left->m_recordId < right->m_recordId : comparison < 0;
+        });
+        for (const CatalogRecord* value : sortedRecords)
+        {
+            const CatalogRecord& record = *value;
             const QString id = ToQString(record.m_recordId);
             QString label = id;
             if (!record.m_displayName.empty())
             {
-                label += QStringLiteral(" - ") + ToQString(record.m_displayName);
+                label = ToQString(record.m_displayName) + QStringLiteral(" [%1]").arg(id.right(8));
             }
             m_relationshipTargetRecord->addItem(label, id);
             if (record.m_domain == "economy" && record.m_recordKind == "item")
@@ -502,11 +652,17 @@ namespace TaintedGrailModdingSDK
         restore(m_ingredientItemRecord, previousIngredient);
         restore(m_outputItemRecord, previousOutput);
         restore(m_relationshipTargetRecord, previousTarget);
+        m_catalogSummary->setText(tr("%1 items  |  %2 recipes  |  Active mod: %3")
+            .arg(m_itemRecord->count() - 1).arg(m_recipeRecord->count() - 1)
+            .arg(FoundationService::Get().GetActivePack()
+                ? ToQString(FoundationService::Get().GetActivePack()->m_displayName) : tr("none selected")));
     }
 
     void ItemRecipeEditorWidget::LoadCurrentItem()
     {
+        if (!m_refreshing) { StoreDraft("item:" + m_loadedItem, m_itemForm); }
         const AZStd::string recordId = ToAzString(m_itemRecord->currentData().toString());
+        m_loadedItem = ToQString(recordId);
         const CatalogDatabase& catalog = FoundationService::Get().GetCatalog();
         const CatalogRecord* record = catalog.FindByRecordId(recordId);
         if (!record)
@@ -580,12 +736,15 @@ namespace TaintedGrailModdingSDK
             m_itemTags->clear();
             m_itemEvidence->setText(JoinValues(record->m_evidenceIds));
         }
+        RestoreDraft("item:" + m_loadedItem, m_itemForm);
         RefreshItemLaneTable();
     }
 
     void ItemRecipeEditorWidget::LoadCurrentRecipe()
     {
+        if (!m_refreshing) { StoreDraft("recipe:" + m_loadedRecipe, m_recipeForm); }
         const AZStd::string recordId = ToAzString(m_recipeRecord->currentData().toString());
+        m_loadedRecipe = ToQString(recordId);
         const CatalogDatabase& catalog = FoundationService::Get().GetCatalog();
         const CatalogRecord* record = catalog.FindByRecordId(recordId);
         if (!record)
@@ -640,6 +799,9 @@ namespace TaintedGrailModdingSDK
         RefreshRecipeLaneTable();
         RefreshRecipeEvidence();
         RefreshRecipeJoins();
+        NewJoin(false);
+        NewJoin(true);
+        RestoreDraft("recipe:" + m_loadedRecipe, m_recipeForm);
     }
 
     void ItemRecipeEditorWidget::ApplyLatestPreviewRouteToItem()
@@ -661,6 +823,13 @@ namespace TaintedGrailModdingSDK
         if (route->m_productAssetId.empty() || route->m_productCachePath.empty())
         {
             SetStatus(tr("Latest preview route is missing product asset refs."), true);
+            return;
+        }
+        const GameProfile* activeProfile = FoundationService::Get().GetWorkspace().FindActiveGameProfile();
+        if (!activeProfile || route->m_profileId != activeProfile->m_profileId
+            || route->m_primarySourceAssetRecordId != recordId)
+        {
+            SetStatus(tr("Prepare a preview route for this exact item and game profile first."), true);
             return;
         }
         if (route->m_o3deViewportMutationAllowed
@@ -734,18 +903,22 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::SaveIngredient()
     {
+        if (m_ingredientLinkId->text().isEmpty())
+        {
+            m_ingredientLinkId->setText("ingredient." + QUuid::createUuid().toString(QUuid::WithoutBraces));
+        }
         EconomyRecipeIngredient ingredient;
         ingredient.m_linkId = ToAzString(m_ingredientLinkId->text());
         ingredient.m_recipeRecordId = ToAzString(m_recipeRecord->currentData().toString());
         ingredient.m_itemRecordId = ToAzString(m_ingredientItemRecord->currentData().toString());
-        ingredient.m_itemSubjectRef = ToAzString(m_ingredientSubjectRef->text());
+        ingredient.m_itemSubjectRef = ingredient.m_itemRecordId.empty() ? ToAzString(m_ingredientSubjectRef->text()) : AZStd::string{};
         ingredient.m_quantity = static_cast<AZ::u32>(m_ingredientQuantity->value());
         ingredient.m_alternativeGroup = ToAzString(m_ingredientAlternativeGroup->text());
         ingredient.m_consumed = m_ingredientConsumed->isChecked();
         ingredient.m_conditions = ParseCommaSeparated(m_ingredientConditions->text());
         ingredient.m_evidenceIds = ParseCommaSeparated(m_ingredientEvidence->text());
         AZStd::string error;
-        if (!FoundationService::Get().UpsertEconomyRecipeIngredient(ingredient, &error))
+        if (!FoundationService::Get().SaveAuthoredRecipeIngredient(ingredient, &error))
         {
             SetStatus(ToQString(error), true);
             return;
@@ -755,18 +928,22 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::SaveOutput()
     {
+        if (m_outputLinkId->text().isEmpty())
+        {
+            m_outputLinkId->setText("output." + QUuid::createUuid().toString(QUuid::WithoutBraces));
+        }
         EconomyRecipeOutput output;
         output.m_linkId = ToAzString(m_outputLinkId->text());
         output.m_recipeRecordId = ToAzString(m_recipeRecord->currentData().toString());
         output.m_itemRecordId = ToAzString(m_outputItemRecord->currentData().toString());
-        output.m_itemSubjectRef = ToAzString(m_outputSubjectRef->text());
+        output.m_itemSubjectRef = output.m_itemRecordId.empty() ? ToAzString(m_outputSubjectRef->text()) : AZStd::string{};
         output.m_quantity = static_cast<AZ::u32>(m_outputQuantity->value());
         output.m_chance = m_outputChance->value();
         output.m_byProduct = m_outputByProduct->isChecked();
         output.m_conditions = ParseCommaSeparated(m_outputConditions->text());
         output.m_evidenceIds = ParseCommaSeparated(m_outputEvidence->text());
         AZStd::string error;
-        if (!FoundationService::Get().UpsertEconomyRecipeOutput(output, &error))
+        if (!FoundationService::Get().SaveAuthoredRecipeOutput(output, &error))
         {
             SetStatus(ToQString(error), true);
             return;
@@ -786,6 +963,7 @@ namespace TaintedGrailModdingSDK
         request.m_attributes = ParseCommaSeparated(m_relationshipAttributes->text());
         AZ::Outcome<CatalogRelationship, AZStd::string> result = m_economyAuthoring.BuildAcquisitionRelationship(
             request,
+            FoundationService::Get().GetSourceRegistry(),
             FoundationService::Get().GetCatalog());
         if (!result.IsSuccess())
         {
@@ -882,6 +1060,8 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::RefreshRecipeJoins()
     {
+        const QSignalBlocker ingredientBlocker(m_ingredientTable);
+        const QSignalBlocker outputBlocker(m_outputTable);
         const AZStd::string recipeRecordId = ToAzString(m_recipeRecord->currentData().toString());
         const CatalogDatabase& catalog = FoundationService::Get().GetCatalog();
         const AZStd::vector<EconomyRecipeIngredient> ingredients = catalog.FindIngredientsForRecipe(recipeRecordId);
@@ -889,9 +1069,10 @@ namespace TaintedGrailModdingSDK
         for (int row = 0; row < static_cast<int>(ingredients.size()); ++row)
         {
             const EconomyRecipeIngredient& ingredient = ingredients[static_cast<size_t>(row)];
+            const CatalogRecord* itemRecord = catalog.FindByRecordId(ingredient.m_itemRecordId);
             const QString item = ingredient.m_itemRecordId.empty()
                 ? ToQString(ingredient.m_itemSubjectRef)
-                : ToQString(ingredient.m_itemRecordId);
+                : ToQString(itemRecord ? itemRecord->m_displayName : ingredient.m_itemRecordId);
             SetCell(m_ingredientTable, row, 0, ToQString(ingredient.m_linkId));
             SetCell(m_ingredientTable, row, 1, item);
             SetCell(m_ingredientTable, row, 2, QString::number(ingredient.m_quantity));
@@ -905,9 +1086,10 @@ namespace TaintedGrailModdingSDK
         for (int row = 0; row < static_cast<int>(outputs.size()); ++row)
         {
             const EconomyRecipeOutput& output = outputs[static_cast<size_t>(row)];
+            const CatalogRecord* itemRecord = catalog.FindByRecordId(output.m_itemRecordId);
             const QString item = output.m_itemRecordId.empty()
                 ? ToQString(output.m_itemSubjectRef)
-                : ToQString(output.m_itemRecordId);
+                : ToQString(itemRecord ? itemRecord->m_displayName : output.m_itemRecordId);
             SetCell(m_outputTable, row, 0, ToQString(output.m_linkId));
             SetCell(m_outputTable, row, 1, item);
             SetCell(m_outputTable, row, 2, QString::number(output.m_quantity));
@@ -939,6 +1121,175 @@ namespace TaintedGrailModdingSDK
             SetCell(m_relationshipTable, row, 1, ToQString(relationship.m_relationshipKind));
             SetCell(m_relationshipTable, row, 2, target);
             SetCell(m_relationshipTable, row, 3, ToQString(relationship.m_validationState));
+        }
+    }
+
+    void ItemRecipeEditorWidget::ReadGameDefinitions()
+    {
+        if (m_nativeReader->IsRunning()) { m_nativeReader->Cancel(); return; }
+        auto& service = FoundationService::Get();
+        const QString workspacePath = ToQString(service.GetWorkspaceFilePath());
+        m_readGame->setText(tr("Cancel loading"));
+        SetStatus(tr("Reading game items and recipes..."));
+        m_nativeReader->Start(workspacePath, [this](const QString& progress) { SetStatus(progress); },
+            [this, workspacePath](const QString& path, const QString& error)
+            {
+                m_readGame->setText(tr("Load game items and recipes"));
+                if (!error.isEmpty())
+                {
+                    const bool cancelled = error.startsWith("Item preview refresh cancelled.");
+                    SetStatus(cancelled ? tr("Loading cancelled. Saved items and recipes are unchanged.") : error, !cancelled);
+                    return;
+                }
+                auto& foundation = FoundationService::Get();
+                if (workspacePath != ToQString(foundation.GetWorkspaceFilePath()))
+                {
+                    SetStatus(tr("The workspace changed during loading. Load definitions again."), true);
+                    return;
+                }
+                AZStd::string intakeError;
+                if (!foundation.ImportNativeEconomy(ToAzString(path), &intakeError))
+                {
+                    SetStatus(ToQString(intakeError), true);
+                    return;
+                }
+                if (m_itemRecord->currentIndex() == 0 && m_itemRecord->count() > 1) { m_itemRecord->setCurrentIndex(1); }
+                if (m_recipeRecord->currentIndex() == 0 && m_recipeRecord->count() > 1) { m_recipeRecord->setCurrentIndex(1); }
+                SetStatus(tr("Game definitions loaded. Existing local changes were preserved. Station and unlock details remain unknown until supplied."));
+            }, true);
+    }
+
+    void ItemRecipeEditorWidget::CreateRecord(bool recipe)
+    {
+        bool accepted = false;
+        const QString name = QInputDialog::getText(this, recipe ? tr("New recipe") : tr("New item"),
+            tr("Name"), QLineEdit::Normal, {}, &accepted).trimmed();
+        if (!accepted || name.isEmpty()) { return; }
+        AZStd::string id;
+        AZStd::string error;
+        if (!FoundationService::Get().CreateEconomyRecord(recipe ? "recipe" : "item", ToAzString(name), id, &error))
+        {
+            SetStatus(ToQString(error), true);
+            return;
+        }
+        auto* combo = recipe ? m_recipeRecord : m_itemRecord;
+        combo->setCurrentIndex(combo->findData(ToQString(id)));
+        m_tabs->setCurrentIndex(recipe ? 1 : 0);
+        SetStatus(tr("Created %1 in the active mod. Edit its fields and save your changes.").arg(name));
+    }
+
+    void ItemRecipeEditorWidget::NewJoin(bool output)
+    {
+        (output ? m_outputTable : m_ingredientTable)->clearSelection();
+        (output ? m_outputLinkId : m_ingredientLinkId)->clear();
+        (output ? m_outputItemRecord : m_ingredientItemRecord)->setCurrentIndex(0);
+        (output ? m_outputSubjectRef : m_ingredientSubjectRef)->clear();
+        (output ? m_outputQuantity : m_ingredientQuantity)->setValue(1);
+        (output ? m_outputConditions : m_ingredientConditions)->clear();
+        (output ? m_outputEvidence : m_ingredientEvidence)->clear();
+        if (output) { m_outputChance->setValue(1); m_outputByProduct->setChecked(false); }
+        else { m_ingredientConsumed->setChecked(true); m_ingredientAlternativeGroup->clear(); }
+    }
+
+    void ItemRecipeEditorWidget::SelectJoin(bool output)
+    {
+        auto* table = output ? m_outputTable : m_ingredientTable;
+        if (table->selectedItems().isEmpty() || table->currentRow() < 0) { return; }
+        const AZStd::string id = ToAzString(table->item(table->currentRow(), 0)->text());
+        const auto& catalog = FoundationService::Get().GetCatalog();
+        const AZStd::string recipeId = ToAzString(m_recipeRecord->currentData().toString());
+        if (output)
+        {
+            for (const auto& link : catalog.FindOutputsForRecipe(recipeId))
+            {
+                if (link.m_linkId != id) { continue; }
+                m_outputLinkId->setText(ToQString(id));
+                m_outputItemRecord->setCurrentIndex(m_outputItemRecord->findData(ToQString(link.m_itemRecordId)));
+                m_outputSubjectRef->setText(ToQString(link.m_itemSubjectRef));
+                m_outputQuantity->setValue(static_cast<int>(link.m_quantity));
+                m_outputChance->setValue(link.m_chance);
+                m_outputByProduct->setChecked(link.m_byProduct);
+                m_outputConditions->setText(JoinValues(link.m_conditions));
+                m_outputEvidence->setText(JoinValues(link.m_evidenceIds));
+            }
+        }
+        else
+        {
+            for (const auto& link : catalog.FindIngredientsForRecipe(recipeId))
+            {
+                if (link.m_linkId != id) { continue; }
+                m_ingredientLinkId->setText(ToQString(id));
+                m_ingredientItemRecord->setCurrentIndex(m_ingredientItemRecord->findData(ToQString(link.m_itemRecordId)));
+                m_ingredientSubjectRef->setText(ToQString(link.m_itemSubjectRef));
+                m_ingredientQuantity->setValue(static_cast<int>(link.m_quantity));
+                m_ingredientAlternativeGroup->setText(ToQString(link.m_alternativeGroup));
+                m_ingredientConsumed->setChecked(link.m_consumed);
+                m_ingredientConditions->setText(JoinValues(link.m_conditions));
+                m_ingredientEvidence->setText(JoinValues(link.m_evidenceIds));
+            }
+        }
+    }
+
+    void ItemRecipeEditorWidget::RemoveJoin(bool output)
+    {
+        auto* table = output ? m_outputTable : m_ingredientTable;
+        if (table->selectedItems().isEmpty() || table->currentRow() < 0)
+        {
+            SetStatus(tr("Select an ingredient or output row to remove."), true);
+            return;
+        }
+        const AZStd::string id = ToAzString(table->item(table->currentRow(), 0)->text());
+        AZStd::string error;
+        if (!FoundationService::Get().RemoveEconomyRecipeJoin(ToAzString(m_recipeRecord->currentData().toString()), id, output, &error))
+        {
+            SetStatus(ToQString(error), true);
+            return;
+        }
+        NewJoin(output);
+        SetStatus(tr("Selected link removed and saved."));
+    }
+
+    void ItemRecipeEditorWidget::StoreDraft(const QString& key, QWidget* form)
+    {
+        if (key.endsWith(':')) { return; }
+        QHash<QString, QVariant> values;
+        for (QWidget* child : form->findChildren<QWidget*>())
+        {
+            if (child == m_itemRecord || child == m_recipeRecord || child->parentWidget() == m_itemRecord
+                || child->parentWidget() == m_recipeRecord || qobject_cast<QAbstractSpinBox*>(child->parentWidget())
+                || qobject_cast<QComboBox*>(child->parentWidget())) { continue; }
+            const QString name = child->objectName();
+            if (auto* edit = qobject_cast<QLineEdit*>(child)) { values.insert(name, edit->text()); }
+            else if (auto* spin = qobject_cast<QSpinBox*>(child)) { values.insert(name, spin->value()); }
+            else if (auto* decimal = qobject_cast<QDoubleSpinBox*>(child)) { values.insert(name, decimal->value()); }
+            else if (auto* check = qobject_cast<QCheckBox*>(child)) { values.insert(name, check->isChecked()); }
+            else if (auto* combo = qobject_cast<QComboBox*>(child))
+            {
+                values.insert(name, QVariantMap{{"data", combo->currentData()}, {"text", combo->currentText()}});
+            }
+        }
+        m_drafts.insert(key, values);
+    }
+
+    void ItemRecipeEditorWidget::RestoreDraft(const QString& key, QWidget* form)
+    {
+        const auto values = m_drafts.value(key);
+        for (QWidget* child : form->findChildren<QWidget*>())
+        {
+            if (!values.contains(child->objectName())) { continue; }
+            const QVariant value = values.value(child->objectName());
+            const QSignalBlocker blocker(child);
+            if (auto* edit = qobject_cast<QLineEdit*>(child)) { edit->setText(value.toString()); }
+            else if (auto* spin = qobject_cast<QSpinBox*>(child)) { spin->setValue(value.toInt()); }
+            else if (auto* decimal = qobject_cast<QDoubleSpinBox*>(child)) { decimal->setValue(value.toDouble()); }
+            else if (auto* check = qobject_cast<QCheckBox*>(child)) { check->setChecked(value.toBool()); }
+            else if (auto* combo = qobject_cast<QComboBox*>(child))
+            {
+                const QVariantMap selection = value.toMap();
+                const int index = selection.value("data").isValid()
+                    ? combo->findData(selection.value("data")) : combo->findText(selection.value("text").toString());
+                combo->setCurrentIndex(index >= 0 ? index : 0);
+            }
         }
     }
 

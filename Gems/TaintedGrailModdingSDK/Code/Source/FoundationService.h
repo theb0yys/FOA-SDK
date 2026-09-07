@@ -98,6 +98,13 @@ namespace TaintedGrailModdingSDK
         bool UpsertEconomyItemProfile(
             const EconomyItemProfile& profile,
             AZStd::string* error = nullptr);
+        bool ImportNativeEconomy(const AZStd::string& path, AZStd::string* error = nullptr);
+        bool CreateEconomyRecord(const AZStd::string& kind, const AZStd::string& name,
+            AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool RemoveEconomyRecipeJoin(const AZStd::string& recipeId, const AZStd::string& linkId,
+            bool output, AZStd::string* error = nullptr);
+        bool SaveAuthoredRecipeIngredient(const EconomyRecipeIngredient& ingredient, AZStd::string* error = nullptr);
+        bool SaveAuthoredRecipeOutput(const EconomyRecipeOutput& output, AZStd::string* error = nullptr);
         bool UpsertEconomyRecipeProfile(
             const EconomyRecipeProfile& profile,
             AZStd::string* error = nullptr);
@@ -190,6 +197,8 @@ namespace TaintedGrailModdingSDK
             AZStd::string* error) const override;
 
     private:
+        bool ImportEconomyDocument(const AZStd::string& path, bool custom, AZStd::string* error);
+        bool WriteAuthoredEconomyDocument(const AZStd::string& json, AZStd::string* error);
         FoundationService();
 
         void ClearWorkspaceScopedState(bool clearWorkspaceLocation);

@@ -71,7 +71,7 @@ namespace TaintedGrailModdingSDK
         return m_process.state() != QProcess::NotRunning;
     }
 
-    void NativeItemPreviewService::Start(const QString& workspacePath, Progress progress, Completion completion)
+    void NativeItemPreviewService::Start(const QString& workspacePath, Progress progress, Completion completion, bool economy)
     {
         if (IsRunning())
         {
@@ -116,9 +116,14 @@ namespace TaintedGrailModdingSDK
         m_process.setProcessChannelMode(QProcess::MergedChannels);
         m_process.setWorkingDirectory(QFileInfo(workspacePath).absolutePath());
         m_process.setProgram(python);
-        m_process.setArguments({ QStringLiteral("-B"), QStringLiteral("-s"), script,
+        QStringList arguments{ QStringLiteral("-B"), QStringLiteral("-s"), script,
             QStringLiteral("--workspace"), workspacePath, QStringLiteral("--vendor"), vendor,
-            QStringLiteral("--forbid-root"), enginePath });
+            QStringLiteral("--forbid-root"), enginePath };
+        if (economy)
+        {
+            arguments.append(QStringLiteral("--economy"));
+        }
+        m_process.setArguments(arguments);
         m_timeout.start(180000);
         m_process.start();
     }

@@ -1,62 +1,47 @@
 # Current Task
 
-## Status
+## Status and goal
 
-`Installer correction and item-viewer repair` — local implementation and exact-pin Editor validation are complete, including the owner's category correction. Game discovery, registration, installed-item icon previews, and category/search/reload behavior have operational evidence. PR #248 is ready for maintainer audit; release acceptance remains separate.
+`Items and Recipes completion` - IMPLEMENTED AND VALIDATED, authorized by the owner after the item viewer and category correction in PR #248. The local authoring service loads installed item and recipe definitions, resolves exact ingredient and output links, and creates, edits, saves and reopens pack-owned definitions. Maintainer PR review is the remaining repository transition.
 
-## Goal
+## Classification and ownership
 
-Restore `FOA-SDK.exe` as the only installed user-facing SDK application entry point, repair game discovery and registration, and make the item viewer populate native icon previews from the registered installation in the compiled exact-pin Editor.
+Significant authoring/persistence work with Critical/Runtime validation for the external reader and compiled Editor integration. Primary owner: `content-pack-authoring`; `catalog-and-identity` owns canonical identities, `schemas-and-persistence` owns durable publication, `workspace-and-packs` owns pack/workspace context, and `unity-provider` supplies read-only observations.
 
-## Classification
+The producer is the existing bounded Unity provider. Foundation validates and persists reviewed intake; Core validates typed records and joins; the Item and Recipe Editor presents those services. Existing catalog schema 2 and workspace schema 1 remain unchanged. New provider output is versioned independently.
 
-**Critical/Runtime** — installer UI and installed-process launch behavior require Windows operational evidence. Package layout, build registration, validator, and documentation repairs are also included. No released installer or persisted user schema requires migration.
+## Bounded scope
 
-## In scope
+- Read installed item/recipe component fields through the pinned isolated reader.
+- Resolve Addressables GUIDs to exact container paths, preserving abstract item templates and unresolved/ambiguous references explicitly.
+- Import source evidence and canonical economy records without runtime grants; refresh preserves existing authored profiles and unrelated catalog records.
+- Add pack-owned item/recipe creation through Foundation and complete join selection, editing, removal, search and automatic link identity generation.
+- Load saved workspace context on pane open and preserve drafts across unrelated Foundation notifications.
+- Update the user guide and prove the real compiled Editor workflow.
 
-- remove the standalone `FOA-SDK-ControlPanel.exe` source and dedicated tests;
-- remove its MSI payload requirement, Start Menu entry, installer finish option, command-line switches, build steps, and self-tests;
-- keep `bin\Windows\profile\Default\FOA-SDK.exe` as the installed application entry point;
-- keep the installer lifecycle, installed launcher validation, desktop shortcut, and legacy Tool Setup Wizard maintenance route;
-- fix the Windows compiler blockers in Fall of Avalon install discovery that prevented the real Editor target from building;
-- build the dedicated Editor against the pinned O3DE revision and open the isolated Developer Preview project for review;
-- update installer documentation and validation contracts to the single-entry-point flow.
-- restore misplaced root documentation and remove superseded task/decision copies;
-- repair stale Foundation/catalog validation contracts and register the existing quest binding contract and tests in their owned build targets;
-- correct the source-policy header and Unicode findings without changing rendered text or runtime behavior;
-- validate the correction, commit it, and update PR #248 for maintainer audit.
-- fix game discovery for Steam clients installed outside Program Files;
-- prevent stale Tool Wizard hints without a saved workspace from redirecting fresh setup;
-- honor manual game selection, rebuild dependent paths, and verify registration survives restart in the compiled Editor.
-- make the asset viewer discover installed items and generate local icon previews through a bounded read-only Unity provider;
-- run extraction outside the UI thread, report progress/failures, reload results on Refresh, and resolve custom Assets from the active O3DE project;
-- package the pinned preview-reader dependencies and verify real installed-game item selection in the compiled Editor.
-- replace internal folder categories with readable item groups and subcategories, preserve all records, and validate category/search/reload behavior in the compiled Editor.
+## Boundaries and compatibility
 
-## Out of scope
+Game files, saves, engine sources and proprietary assets are read-only. Generated metadata, screenshots and logs stay outside the checkout. No runtime adapter, deployment, release, inventory or save behavior is claimed. Unknown station, unlock, stack-limit and runtime semantics remain unknown. Existing persisted catalogs and stable IDs are preserved; no schema migration is introduced.
 
-- full multi-GB package production, signing, release, or publication;
-- changes to protected Fall of Avalon files, installations, saves, or proprietary material;
-- runtime-adapter compatibility claims;
-- the zero-configuration Highmap Importer follow-on task.
+## Acceptance and evidence
 
-## Acceptance criteria
+- Real installation supplies item and recipe choices with exact resolved joins.
+- New local definitions and ingredient/output changes survive save and reopen.
+- Invalid/profile-mismatched/escaping input and failed writes do not publish a partial catalog; repeated import does not overwrite authored data.
+- Responsive bounded reader, cancellation and real Editor selection/edit/reopen checks; applicable static, source-policy and both mandatory compiled suites.
+- Focused DCO commit and PR handoff; maintainer retains approval/merge authority.
 
-- no tracked source, packaging, workflow, test, or public documentation requires or launches `FOA-SDK-ControlPanel.exe`;
-- the installer opens `FOA-SDK.exe` directly by default after successful validation;
-- the MSI exposes one Start Menu application entry for `FOA-SDK.exe`;
-- focused installer source, validator, and test lanes pass;
-- the exact-pin Profile Editor and required asset preflight targets build, both mandatory compiled suites pass, and the isolated review level opens in a responsive Editor window;
-- generated Control Panel output is removed from the working checkout.
-- automatic discovery and the manual folder picker save the selected installation and reopen it correctly; failures preserve existing configuration and report the cause.
-- Refresh produces visible installed-item rows and selecting an item displays its decoded native icon; no pre-generated fixture is required;
-- stale, malformed, excessive, or escaping inputs fail closed; cancellation preserves previous completed previews; no game files or saves are modified.
-- category counts cover every item; category and subcategory filters match their rows, and reload preserves valid filter selections.
+## Branch
 
-## Current branch
+`codex/items-recipes-completion`, based on category fix `dfe5684f7e`.
 
-`codex/installer-control-panel-completion`
+## Executed acceptance
 
-## Next action
+- PASSED: 819 Python tests discovered, 810 passed and nine explicit skips; static and fixture validators passed.
+- PASSED: all ten enabled pinned O3DE source-policy validators and the Windows Profile Framework, Catalog test and Editor targets.
+- PASSED: mandatory Catalog suite (424 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
+- PASSED: compiled Editor loaded 3,914 native items and 356 supported recipes; created a saved mod and custom definitions; edited quantities; preserved drafts; removed/re-added links; reopened saved values; cancelled without replacing the catalog. Final measured load was 5.500 seconds with a maximum UI timer gap of 1.532 seconds (limit below three seconds).
+- PASSED: malformed/profile-mismatched/changed-source intake, failed catalog writes, exact link evidence, wrong-recipe removal and preservation of authored values on a fresh reader run have compiled regression coverage.
+- Four crafting-bundle entries lack supported recipe fields and remain explicitly unsupported. Game runtime, deployment, save mutation and release sign-off are NOT_APPLICABLE to this authoring completion.
 
-Maintainer audit of PR #248 and the open corrected Editor. The live item-viewer smoke passed Refresh, category/subcategory filtering, search, selection, cancellation, and reload with 3,914 item rows and 3,912 decoded icons; two items have no supported icon reference. Thirteen readable main categories account for every row, and valid filters survive reload. The viewer also opens its saved workspace without requiring System Details first. The final refresh took 73.219 seconds with a maximum measured UI timer gap of 1.329 seconds. Both mandatory compiled suites passed (462 tests passed, two explicit symlink-privilege skips). Static validation passed (803 tests passed, nine explicit skips), and all ten enabled source-policy checks passed. Private source/binary hashes, measurements, logs, and screenshots remain outside the checkout. Exact full-product packaging and clean-machine installer evidence remain maintainer-controlled release gates.
+Private source observations, screenshots, build logs and the evidence pack remain outside the repository. The focused PR is for maintainer audit; no approval or merge is inferred.

@@ -693,6 +693,6 @@ namespace TaintedGrailModdingSDK
         const Qt::CaseSensitivity sensitivity = Qt::CaseSensitive;
 #endif
         return absoluteFilePath.compare(workspaceRoot, sensitivity) == 0
-            || absoluteFilePath.startsWith(workspaceRoot + QDir::separator(), sensitivity);
+            || absoluteFilePath.startsWith(workspaceRoot + '/', sensitivity);
     }
 } // namespace TaintedGrailModdingSDK

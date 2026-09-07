@@ -30,6 +30,26 @@ A relative workspace root is resolved from the canonical workspace-document dire
 
 ## Atomic transition
 
+### Automatic local setup
+
+Foundation owns automatic game discovery and workspace registration. On Windows,
+Steam's registered client location and its bounded library metadata provide install
+candidates, including libraries on other drives. A manual game-folder selection
+takes precedence over a saved install path and refreshes derived game paths and
+version observations. The folder picker applies its selection through its completion
+signal; canceling it does not change the workspace. Changing installations clears live workspace-scoped caches;
+it does not rebind existing evidence to the new installation.
+
+Fresh setup uses the per-user `FOA-SDK/Workspace` location. Legacy Tool Wizard
+workspace hints are used only when they point to an existing workspace document,
+and an existing automatic workspace takes precedence. A stale hint alone cannot
+redirect a fresh registration. Existing workspace documents retain schema 1 and
+the same configured-profile and path-containment requirements. Failed registration
+preserves the previous workspace and reports the missing profile prerequisite or
+persistence error. Discovery and registration never create game or loader files.
+
+### Workspace document loading
+
 `FoundationWorkspaceLoadService` creates a temporary `FoundationWorkspaceLoadCandidate` containing the migrated workspace, canonical document and root paths, validated active profile, rebuilt source/evidence registry, import issues, validated catalog and canonical catalog path.
 
 Candidate construction executes in this order:
@@ -50,6 +70,18 @@ Candidate loading does not update the persistence boundary's published path. Pac
 ## Test evidence
 
 Direct `FoundationService` integration tests inject failures at workspace loading, active-profile validation, path validation, source loading, import issues, registry binding, evidence binding, catalog loading, catalog binding and catalog database validation. Every failure compares the complete old live-state signature before and after the attempted transition.
+
+Local-setup integration tests cover stale legacy workspace hints, manual install
+replacement and derived paths, restart persistence, and rejected selections.
+`Tools/editor_tests/game_location_live_smoke.py` exercises the actual status pane,
+folder picker, save, and recheck through Editor Python. Its caller supplies isolated
+`LOCALAPPDATA` and Editor user/log directories, the expected read-only game path,
+and a result file using `FOA_SDK_GAME_LOCATION_EXPECTED`,
+`FOA_SDK_GAME_LOCATION_MODE` (`auto`, `manual`, or `reopen`), and
+`FOA_SDK_GAME_LOCATION_RESULT`. Manual mode starts with a different synthetic
+installation saved in the isolated workspace; reopen mode uses its resulting
+workspace in a fresh Editor process. Launch with `--runpython` and the smoke script;
+the JSON result must report `PASSED`. Process exit alone is insufficient.
 
 Workspace persistence tests cover schema-1 round trips, unknown-version rejection, unknown-version rejection through a legacy-envelope marker, malformed and unsafe schema-0 rejection, and migration plus round trip of the project-owned Developer Preview fixture.
 

@@ -14,4 +14,5 @@ set(FILES
     Tests/CanonicalInterchangeValidationAcceptanceTests.cpp
     Tests/CanonicalInterchangeMigrationAcceptanceTests.cpp
     Tests/QuestDefinitionContractTests.cpp
+    Tests/QuestBindingManifestContractTests.cpp
 )

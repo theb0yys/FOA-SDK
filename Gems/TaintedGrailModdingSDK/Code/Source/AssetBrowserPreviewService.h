@@ -9,6 +9,7 @@
 
 #include <AzCore/Outcome/Outcome.h>
 #include <AzCore/std/containers/vector.h>
+#include <AzCore/std/functional.h>
 #include <AzCore/std/string/string.h>
 
 namespace TaintedGrailModdingSDK
@@ -27,6 +28,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_thumbnailPreviewRootPath;
         AZStd::string m_viewportEvidencePath;
         size_t m_maximumEntries = 10000;
+        AZStd::function<bool()> m_isCancelled;
     };
 
     struct AssetBrowserPreviewEntry

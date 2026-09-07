@@ -9,6 +9,8 @@
 
 #include <AzCore/std/algorithm.h>
 
+#include <QSettings>
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -122,8 +124,25 @@ namespace TaintedGrailModdingSDK
 
         AZStd::string EnvironmentPath(const char* name)
         {
+#if defined(_MSC_VER)
+            char* value = nullptr;
+            size_t valueSize = 0;
+            if (_dupenv_s(&value, &valueSize, name) != 0 || value == nullptr)
+            {
+                return {};
+            }
+
+            AZStd::string result;
+            if (valueSize > 1)
+            {
+                result = value;
+            }
+            std::free(value);
+            return result;
+#else
             const char* value = std::getenv(name);
             return value && *value ? AZStd::string(value) : AZStd::string{};
+#endif
         }
 
         bool IsSafeInstallDirectoryName(const std::string& value)
@@ -150,7 +169,7 @@ namespace TaintedGrailModdingSDK
                 return;
             }
 
-            const std::regex pathPattern(R"("path"\s+"([^"]+)")", std::regex::icase);
+            const std::regex pathPattern(R"vdf("path"\s+"([^"]+)")vdf", std::regex::icase);
             size_t inspected = 0;
             for (std::sregex_iterator it(vdf.begin(), vdf.end(), pathPattern), end;
                  it != end && inspected < MaximumSteamRoots;
@@ -188,7 +207,7 @@ namespace TaintedGrailModdingSDK
             if (!manifestText.empty())
             {
                 const std::regex installDirPattern(
-                    R"("installdir"\s+"([^"]+)")",
+                    R"acf("installdir"\s+"([^"]+)")acf",
                     std::regex::icase);
                 std::smatch match;
                 if (std::regex_search(manifestText, match, installDirPattern)
@@ -228,6 +247,29 @@ namespace TaintedGrailModdingSDK
         {
             steamRoots.push_back(explicitSteamRoot);
         }
+
+#if defined(Q_OS_WIN)
+        // Steam can be installed on any drive. These read-only registry locations
+        // identify the client; its libraryfolders.vdf identifies the game libraries.
+        const struct
+        {
+            const char* m_key;
+            const char* m_value;
+        } registryLocations[] = {
+            { "HKEY_CURRENT_USER\\Software\\Valve\\Steam", "SteamPath" },
+            { "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam", "InstallPath" },
+            { "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam", "InstallPath" },
+        };
+        for (const auto& location : registryLocations)
+        {
+            const QSettings settings(QString::fromUtf8(location.m_key), QSettings::NativeFormat);
+            const QByteArray path = settings.value(QString::fromUtf8(location.m_value)).toString().toUtf8();
+            if (!path.isEmpty())
+            {
+                steamRoots.emplace_back(path.constData(), static_cast<size_t>(path.size()));
+            }
+        }
+#endif
 
         const AZStd::string programFilesX86 = EnvironmentPath("PROGRAMFILES(X86)");
         if (!programFilesX86.empty())

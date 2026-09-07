@@ -1,3 +1,9 @@
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+
 from __future__ import annotations
 
 import shutil
@@ -143,6 +149,18 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             self.copy_fixture(root)
             path = root / "Gems/TaintedGrailModdingSDK/Tools/foa_asset_browser_pane_refresh.py"
             path.write_text(path.read_text(encoding="utf-8") + "\nraise SystemExit(0)\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "process-exit contract"):
+                contract.validate_item_viewer(root)
+
+    def test_qualified_process_exit_reference_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / "Gems/TaintedGrailModdingSDK/Tools/foa_asset_browser_pane_refresh.py"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\nimport builtins\nraise builtins.SystemExit(0)\n",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(RuntimeError, "process-exit contract"):
                 contract.validate_item_viewer(root)
 

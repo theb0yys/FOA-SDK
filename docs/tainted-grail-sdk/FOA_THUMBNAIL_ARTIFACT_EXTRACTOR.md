@@ -76,7 +76,7 @@ Decoded DDS and TGA artefacts are emitted as `.png` with `OutputMediaType: image
 
 Unsupported DDS/TGA sub-formats produce an explicit `unsupported-receipt` and warning. They do not fall back to invented pixels or external tools. Arrays, cubemaps, volume textures, colour-mapped TGA files, unsupported DXGI/FourCC values, excessive dimensions, truncated streams, and other out-of-cohort forms remain unsupported.
 
-The tool does not extract from AssetBundles or Unity serialized object containers. Those require separately reviewed Unity-to-neutral or extractor-specific handoff work.
+This loose-file tool does not extract from AssetBundles or Unity serialized object containers. The separate [installed item preview provider](NATIVE_ITEM_PREVIEW_PROVIDER.md) reads the bounded item/icon bundle cohort and feeds the same read-only thumbnail consumer. Its object discovery contract, dependencies, and limits are separate from this tool.
 
 ## Safety bounds
 

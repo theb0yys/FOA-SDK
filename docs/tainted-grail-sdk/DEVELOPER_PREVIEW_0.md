@@ -204,8 +204,8 @@ python Gems/TaintedGrailModdingSDK/Tools/developer_preview_diagnostics.py verify
 
 Editor-entry diagnostics remain under `release/revisions/diagnostic-entries/`.
 Other diagnostics and screenshot evidence belong under `../foa-build/` or
-another reviewed output directory. Nothing is uploaded automatically; review
-every generated file before sharing.
+another reviewed output directory. Nothing is uploaded automatically;
+review every generated file before sharing.
 
 ## Windows manual UI smoke
 

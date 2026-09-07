@@ -23,6 +23,8 @@ CMakeUserPresets.json
 **/[Cc]ache/
 **/[Uu]ser/
 **/[Ll]og/
+/Installer/**/[Bb]in/
+/Installer/**/[Oo]bj/
 CrashDB/
 FrameCapture/
 imgui.ini

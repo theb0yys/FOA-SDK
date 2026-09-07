@@ -64,7 +64,7 @@ The Developer Preview coordinator resolves `engine_root` in this order:
 3. the sibling directory named by `checkout_directory` in `o3de.lock.json`.
 
 There is no supported combined product/engine route. The source-built Editor
-build root resolves from explicit `--build-dir`, then `FOA_BUILD_ROOT`, then
+`build_root` resolves from explicit `--build-dir`, then `FOA_BUILD_ROOT`, then
 `<product_root>/release/revisions/tg-sdk-developer-preview-0-windows-profile`.
 
 ## Product-owned Gem discovery

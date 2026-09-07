@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) Contributors to the Open 3D Engine Project.
+# For complete copyright and license terms please see the LICENSE at the root of this distribution.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
 """Static boundary validation for the working item-viewer lifecycle."""
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -60,11 +67,16 @@ def validate_item_viewer(root: Path = ROOT) -> None:
     require(refresh_adapter, "pane.build_model", "shared pane-model build call")
     require(refresh_adapter, "pane.verify_model", "shared pane-model verification call")
     reject(refresh_adapter, "subprocess", "external process use in embedded adapter")
-    reject(refresh_adapter, "SystemExit", "process-exit contract in embedded adapter")
+    # Inspect executable references, excluding comments and explanatory docstrings.
+    for node in ast.walk(ast.parse(refresh_adapter)):
+        if (isinstance(node, ast.Name) and node.id == "SystemExit") or (
+            isinstance(node, ast.Attribute) and node.attr == "SystemExit"
+        ):
+            raise RuntimeError("Forbidden process-exit contract in embedded adapter: SystemExit")
 
     require(code_cmake, "TG_SDK_ASSET_BROWSER_PANE_REFRESH_TOOL_SOURCE", "developer-checkout refresh-adapter path")
     require(code_cmake, "ly_install_files", "installed refresh tooling packaging")
-    require(code_cmake, "scripts/foa-sdk", "private installed refresh tooling location")
+    require(code_cmake, "DESTINATION\n        scripts/foa-sdk\n", "private installed refresh tooling location")
     require(code_cmake, "../Tools/foa_asset_browser_pane_refresh.py", "installed embedded refresh adapter")
     require(code_cmake, "../Tools/foa_asset_browser_pane_model.py", "installed pane-model generator")
 

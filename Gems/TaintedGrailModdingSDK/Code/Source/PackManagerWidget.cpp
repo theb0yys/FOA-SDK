@@ -133,14 +133,14 @@ namespace TaintedGrailModdingSDK
             QFile file(manifestInfo.absoluteFilePath());
             if (!file.open(QIODevice::ReadOnly))
             {
-                return QObject::tr("%1 · needs repair").arg(fallback);
+                return QObject::tr("%1 \u00b7 needs repair").arg(fallback);
             }
 
             QJsonParseError parseError;
             const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
             if (parseError.error != QJsonParseError::NoError || !document.isObject())
             {
-                return QObject::tr("%1 · needs repair").arg(fallback);
+                return QObject::tr("%1 \u00b7 needs repair").arg(fallback);
             }
 
             const QJsonObject root = document.object();
@@ -153,7 +153,7 @@ namespace TaintedGrailModdingSDK
                 : displayName;
             if (!version.isEmpty())
             {
-                label += QObject::tr(" · %1").arg(version);
+                label += QObject::tr(" \u00b7 %1").arg(version);
             }
             return label;
         }
@@ -477,7 +477,7 @@ namespace TaintedGrailModdingSDK
             : ToQString(snapshot.m_activePackName);
         if (!snapshot.m_activePackVersion.empty())
         {
-            text += tr(" · %1").arg(ToQString(snapshot.m_activePackVersion));
+            text += tr(" \u00b7 %1").arg(ToQString(snapshot.m_activePackVersion));
         }
         m_activePackValue->setText(text);
         m_manifestPathValue->setText(

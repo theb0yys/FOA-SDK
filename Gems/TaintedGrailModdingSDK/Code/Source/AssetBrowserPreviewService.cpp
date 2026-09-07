@@ -11,6 +11,8 @@
 #include <AzCore/std/sort.h>
 
 #include <QByteArray>
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -21,6 +23,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 
@@ -45,6 +48,9 @@ namespace TaintedGrailModdingSDK
             QString m_status;
             QString m_fidelity;
             QString m_path;
+            QString m_displayName;
+            QString m_category;
+            QString m_issue;
         };
 
         AZStd::string ToAzString(const QString& value)
@@ -136,8 +142,10 @@ namespace TaintedGrailModdingSDK
                 return false;
             }
 
-            const QString cleanPath = CleanAbsolutePath(path);
-            const QString cleanRoot = CleanAbsolutePath(root);
+            const QFileInfo pathInfo(path);
+            const QFileInfo rootInfo(root);
+            const QString cleanPath = pathInfo.exists() ? pathInfo.canonicalFilePath() : CleanAbsolutePath(path);
+            const QString cleanRoot = rootInfo.exists() ? rootInfo.canonicalFilePath() : CleanAbsolutePath(root);
             const QString relative = QDir(cleanRoot).relativeFilePath(cleanPath);
             return relative == "."
                 || (!relative.isEmpty()
@@ -169,6 +177,10 @@ namespace TaintedGrailModdingSDK
             }
 
             QJsonParseError parseError;
+            if (file.size() > 16 * 1024 * 1024)
+            {
+                return AZ::Failure(AZStd::string("Preview evidence exceeds the 16 MiB document limit."));
+            }
             const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
             if (parseError.error != QJsonParseError::NoError)
             {
@@ -436,6 +448,10 @@ namespace TaintedGrailModdingSDK
                 QDirIterator::Subdirectories);
             while (iterator.hasNext())
             {
+                if (request.m_isCancelled && request.m_isCancelled())
+                {
+                    return AZ::Failure(AZStd::string("Asset preview loading was cancelled or timed out."));
+                }
                 const QString path = iterator.next();
                 if (!IsInsideOrEqual(path, assetRootPath))
                 {
@@ -520,6 +536,48 @@ namespace TaintedGrailModdingSDK
                 return AZ::Failure(stage.GetError());
             }
 
+            const bool nativeItems = document.value(QStringLiteral("ToolId")).toString() == QStringLiteral("foa.native-item-preview");
+            if (nativeItems)
+            {
+                QString install = QFileInfo(ToQString(request.m_installPath)).canonicalFilePath();
+                if (install.isEmpty())
+                {
+                    return AZ::Failure(AZStd::string("The item preview installation is unavailable. Refresh assets after setup."));
+                }
+                if (QDir::separator() == QLatin1Char('\\'))
+                {
+                    install = install.toCaseFolded();
+                }
+                const QString fingerprint = QStringLiteral("sha256:")
+                    + QString::fromLatin1(QCryptographicHash::hash(install.toUtf8(), QCryptographicHash::Sha256).toHex());
+                if (document.value(QStringLiteral("InstallRootFingerprint")).toString() != fingerprint)
+                {
+                    return AZ::Failure(AZStd::string("Item previews belong to a different installation. Refresh assets."));
+                }
+                const QJsonArray sources = document.value(QStringLiteral("SourceFiles")).toArray();
+                if (sources.isEmpty() || sources.size() > 2049)
+                {
+                    return AZ::Failure(AZStd::string("Item preview source inventory is missing or exceeds its limit."));
+                }
+                for (const QJsonValue& sourceValue : sources)
+                {
+                    if (request.m_isCancelled && request.m_isCancelled())
+                    {
+                        return AZ::Failure(AZStd::string("Item preview loading was cancelled or timed out."));
+                    }
+                    const QJsonObject source = sourceValue.toObject();
+                    const QString token = source.value(QStringLiteral("Locator")).toString();
+                    const QString path = QDir(install).filePath(token.mid(9));
+                    const QFileInfo info(path);
+                    if (!token.startsWith(QStringLiteral("$install/")) || !IsInsideOrEqual(path, install)
+                        || !info.isFile() || info.size() != source.value(QStringLiteral("ByteSize")).toInteger(-1)
+                        || info.lastModified().toMSecsSinceEpoch() != source.value(QStringLiteral("ModifiedMs")).toInteger(-1))
+                    {
+                        return AZ::Failure(AZStd::string("Installed item sources changed or are unavailable. Refresh assets."));
+                    }
+                }
+            }
+
             QString previewRoot = ToQString(request.m_thumbnailPreviewRootPath);
             if (previewRoot.trimmed().isEmpty())
             {
@@ -532,8 +590,17 @@ namespace TaintedGrailModdingSDK
             }
 
             const QJsonArray artifacts = document.value(QStringLiteral("ThumbnailArtifacts")).toArray();
+            QHash<QString, QString> verifiedHashes;
+            if (static_cast<size_t>(artifacts.size()) > request.m_maximumEntries)
+            {
+                return AZ::Failure(AZStd::string("Thumbnail evidence exceeds the bounded entry limit."));
+            }
             for (const QJsonValue& value : artifacts)
             {
+                if (request.m_isCancelled && request.m_isCancelled())
+                {
+                    return AZ::Failure(AZStd::string("Item preview loading was cancelled or timed out."));
+                }
                 const QJsonObject artifact = value.toObject();
                 const QString assetRecordId = artifact.value(QStringLiteral("AssetRecordId")).toString();
                 if (assetRecordId.isEmpty())
@@ -552,6 +619,9 @@ namespace TaintedGrailModdingSDK
                     artifact.value(QStringLiteral("SourceSha256")).toString();
                 binding.m_status = artifact.value(QStringLiteral("Status")).toString();
                 binding.m_fidelity = artifact.value(QStringLiteral("Fidelity")).toString();
+                binding.m_displayName = artifact.value(QStringLiteral("DisplayName")).toString();
+                binding.m_category = artifact.value(QStringLiteral("Category")).toString();
+                binding.m_issue = artifact.value(QStringLiteral("Issue")).toString();
 
                 const QString artifactPath = FirstString(
                     artifact,
@@ -567,6 +637,24 @@ namespace TaintedGrailModdingSDK
                             ToAzString(assetRecordId).c_str()));
                     }
                     binding.m_path = CleanAbsolutePath(resolved);
+                    if (nativeItems && binding.m_status == QStringLiteral("generated"))
+                    {
+                        QFile image(binding.m_path);
+                        if (!image.open(QIODevice::ReadOnly) || image.size() > 4 * 1024 * 1024
+                            || image.size() != artifact.value(QStringLiteral("OutputByteSize")).toInteger(-1))
+                        {
+                            return AZ::Failure(AZStd::string("An item icon is missing or changed. Refresh assets."));
+                        }
+                        if (!verifiedHashes.contains(binding.m_path))
+                        {
+                            verifiedHashes.insert(binding.m_path, QStringLiteral("sha256:") + QString::fromLatin1(
+                                QCryptographicHash::hash(image.readAll(), QCryptographicHash::Sha256).toHex()));
+                        }
+                        if (verifiedHashes.value(binding.m_path) != artifact.value(QStringLiteral("OutputSha256")).toString())
+                        {
+                            return AZ::Failure(AZStd::string("An item icon fingerprint changed. Refresh assets."));
+                        }
+                    }
                 }
                 else if (binding.m_status == QStringLiteral("generated"))
                 {
@@ -762,7 +850,7 @@ namespace TaintedGrailModdingSDK
                     ? thumbnail.m_assetRecordId
                     : thumbnail.m_artifactId);
             entry.m_displayName = ToAzString(
-                thumbnail.m_nativeAssetRef.isEmpty()
+                !thumbnail.m_displayName.isEmpty() ? thumbnail.m_displayName : thumbnail.m_nativeAssetRef.isEmpty()
                     ? thumbnail.m_assetRecordId
                     : DisplayNameFromNativeRef(thumbnail.m_nativeAssetRef));
             entry.m_entryKind = thumbnail.m_status == QStringLiteral("unsupported")
@@ -780,6 +868,10 @@ namespace TaintedGrailModdingSDK
             entry.m_canCreateTypedAuthoringBinding = false;
             entry.m_requiresExplicitBindingStep = true;
             entry.m_canRouteToViewport = false;
+            if (thumbnail.m_status == QStringLiteral("unsupported"))
+            {
+                entry.m_blocker = ToAzString(thumbnail.m_issue);
+            }
 
             AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_assetRecordId));
             AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_artifactId));
@@ -788,7 +880,8 @@ namespace TaintedGrailModdingSDK
             AddUnique(entry.m_evidenceRefs, ToAzString(thumbnail.m_sourceSha256));
 
             entry.m_fidelityState = AssetBrowserPreviewService::DetermineFidelityState(entry, false);
-            entry.m_category = AssetBrowserPreviewService::ClassifyCategory(entry);
+            entry.m_category = thumbnail.m_category.isEmpty()
+                ? AssetBrowserPreviewService::ClassifyCategory(entry) : ToAzString(thumbnail.m_category);
             return AZ::Success(AZStd::move(entry));
         }
 
@@ -816,6 +909,10 @@ namespace TaintedGrailModdingSDK
     AZ::Outcome<AssetBrowserPreviewSnapshot, AZStd::string> AssetBrowserPreviewService::LoadPreview(
         const AssetBrowserPreviewLoadRequest& request) const
     {
+        if (request.m_isCancelled && request.m_isCancelled())
+        {
+            return AZ::Failure(AZStd::string("Asset preview loading was cancelled or timed out."));
+        }
         if (request.m_maximumEntries == 0)
         {
             return AZ::Failure(AZStd::string("Asset Browser preview maximum entry count must be greater than zero."));
@@ -973,9 +1070,30 @@ namespace TaintedGrailModdingSDK
 
         AssetBrowserPreviewSnapshot snapshot;
         snapshot.m_entries.reserve(static_cast<size_t>(paneEntries.size()));
+        QSet<QString> representedSources;
         for (const QJsonValue& value : paneEntries)
         {
             auto entry = BuildEntry(value.toObject(), thumbnails, viewportRoutes);
+            if (!entry.IsSuccess())
+            {
+                return AZ::Failure(entry.GetError());
+            }
+            AddUnique(snapshot.m_categories, entry.GetValue().m_category);
+            representedSources.insert(ToQString(entry.GetValue().m_primarySourceAssetRecordId));
+            snapshot.m_entries.push_back(entry.TakeValue());
+        }
+
+        for (auto thumbnail = thumbnails.constBegin(); thumbnail != thumbnails.constEnd(); ++thumbnail)
+        {
+            if (representedSources.contains(thumbnail.key()))
+            {
+                continue;
+            }
+            if (snapshot.m_entries.size() >= request.m_maximumEntries)
+            {
+                return AZ::Failure(AZStd::string("Combined item and asset previews exceed the bounded entry limit."));
+            }
+            auto entry = BuildThumbnailOnlyEntry(thumbnail.value());
             if (!entry.IsSuccess())
             {
                 return AZ::Failure(entry.GetError());

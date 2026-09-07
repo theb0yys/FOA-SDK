@@ -274,6 +274,12 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& workspaceRootHint)
     {
         FoundationLocalSetupResult result;
+        if (!explicitInstallPath.empty()
+            && !LocalSetupDetectionService::LooksLikeTaintedGrailInstall(explicitInstallPath))
+        {
+            result.m_error = "The selected folder is not a Fall of Avalon installation. Select the folder containing Fall of Avalon.exe.";
+            return result;
+        }
         const LegacyToolProfileHints legacyHints = ReadLegacyToolProfileHints();
 
         AZStd::string defaultWorkspaceRoot = workspaceRootHint;
@@ -281,7 +287,10 @@ namespace TaintedGrailModdingSDK
         {
             defaultWorkspaceRoot = m_workspace.m_rootPath;
         }
-        if (defaultWorkspaceRoot.empty() && !legacyHints.m_workspaceRoot.isEmpty())
+        if (defaultWorkspaceRoot.empty()
+            && !QFileInfo::exists(ToQString(WorkspaceFilePathForRoot(DefaultWorkspaceRoot())))
+            && !legacyHints.m_workspaceRoot.isEmpty()
+            && QFileInfo(ToQString(WorkspaceFilePathForRoot(ToAzString(legacyHints.m_workspaceRoot)))).isFile())
         {
             defaultWorkspaceRoot = ToAzString(legacyHints.m_workspaceRoot);
         }
@@ -313,6 +322,7 @@ namespace TaintedGrailModdingSDK
         }
 
         LocalSetupDetectionService::Hints hints;
+        hints.m_explicitInstallPath = explicitInstallPath;
         hints.m_workspaceRoot = !workspaceRootHint.empty()
             ? workspaceRootHint
             : (!m_workspace.m_rootPath.empty() ? m_workspace.m_rootPath : defaultWorkspaceRoot);
@@ -322,16 +332,15 @@ namespace TaintedGrailModdingSDK
             AddUnique(hints.m_installPathCandidates, profile->m_installPath);
         }
         AddUnique(hints.m_installPathCandidates, explicitInstallPath);
-        AddUnique(
-            hints.m_installPathCandidates,
-            ToAzString(legacyHints.m_installPath.trimmed()));
-
         const FoAInstallDiscoveryService discoveryService;
         const FoAInstallDiscoveryService::Result discovery = discoveryService.Discover();
         for (const AZStd::string& candidate : discovery.m_installPathCandidates)
         {
             AddUnique(hints.m_installPathCandidates, candidate);
         }
+        AddUnique(
+            hints.m_installPathCandidates,
+            ToAzString(legacyHints.m_installPath.trimmed()));
         for (const AZStd::string& note : discovery.m_notes)
         {
             AddNote(result, note);
@@ -350,6 +359,21 @@ namespace TaintedGrailModdingSDK
 
         if (!detected.m_gameProfileComplete)
         {
+            if (detected.m_gameInstallDetected)
+            {
+                result.m_error = "Fall of Avalon was found, but its profile could not be saved.";
+                if (const GameProfile* profile = detected.m_workspace.FindActiveGameProfile())
+                {
+                    if (profile->m_managedAssembliesPath.empty())
+                    {
+                        result.m_error += " The game has no readable managed-assembly directory.";
+                    }
+                    if (profile->m_runtimeTarget == "Mono" && profile->m_pluginPath.empty())
+                    {
+                        result.m_error += " The Mono profile requires an existing BepInEx/plugins directory.";
+                    }
+                }
+            }
             RefreshSnapshot();
             return result;
         }
@@ -395,6 +419,14 @@ namespace TaintedGrailModdingSDK
         }
 
         result.m_persisted = true;
+        const GameProfile* previousProfile = previousWorkspace.FindActiveGameProfile();
+        const GameProfile* currentProfile = m_workspace.FindActiveGameProfile();
+        if (previousProfile && currentProfile
+            && previousProfile->m_installPath != currentProfile->m_installPath)
+        {
+            ClearWorkspaceScopedState(false);
+            RefreshSnapshot();
+        }
         ReopenSingleWorkspacePack(*this, result);
         return result;
     }

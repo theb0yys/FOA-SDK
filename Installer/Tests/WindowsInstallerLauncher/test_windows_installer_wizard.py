@@ -38,6 +38,25 @@ DISCOVERY_BRIDGE = (
 
 
 class WindowsInstallerWizardTests(unittest.TestCase):
+    def test_package_exposes_only_the_foa_sdk_application_entry(self) -> None:
+        packaging = (REPO_ROOT / "Installer/Packaging/Windows/CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertRegex(
+            packaging,
+            r'set\(CPACK_PACKAGE_EXECUTABLES\s+"FOA-SDK"\s+"FOA-SDK"\s*\)',
+        )
+        for relative in (
+            "Installer/Launcher/Windows/InstallerOptions.cs",
+            "Installer/Launcher/Windows/InstallerWizardForm.cs",
+            "Installer/Launcher/Windows/WindowsInstallerRunner.cs",
+            "Installer/Packaging/Windows/CMakeLists.txt",
+            ".github/workflows/tainted-grail-sdk-installer.yml",
+        ):
+            with self.subTest(path=relative):
+                self.assertNotIn(
+                    "FOA-SDK-ControlPanel",
+                    (REPO_ROOT / relative).read_text(encoding="utf-8"),
+                )
+
     def test_project_builds_self_contained_winforms_exe_with_optional_embedded_msi(self) -> None:
         root = ET.fromstring(PROJECT.read_text(encoding="utf-8"))
         values = {child.tag: (child.text or "") for group in root for child in group}
@@ -46,6 +65,7 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertEqual(values["UseWindowsForms"], "true")
         self.assertEqual(values["AssemblyName"], "FOA-SDK-Installer")
         self.assertEqual(values["PublishSingleFile"], "true")
+        self.assertIn("$(MSBuildProjectDirectory)/obj/**", values["DefaultItemExcludes"])
         project = PROJECT.read_text(encoding="utf-8")
         self.assertIn('LogicalName="FOA.SDK.Payload.msi"', project)
         self.assertIn('LogicalName="FOA.SDK.Payload.msi.sha256"', project)
@@ -178,6 +198,8 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         self.assertNotIn("TG install:", wizard)
         self.assertIn('"Programs",\n        "FOA-SDK"', options)
         self.assertIn("bool openToolWizardAfterInstall = false", options)
+        self.assertIn('case "--open-tool-wizard-after-install":', options)
+        self.assertIn('case "--no-open-tool-wizard-after-install":', options)
 
     def test_tool_wizard_remains_separate_maintenance_surface(self) -> None:
         program = PROGRAM.read_text(encoding="utf-8")
@@ -191,6 +213,8 @@ class WindowsInstallerWizardTests(unittest.TestCase):
         )
         self.assertIn("options.SaveToolProfile", program)
         self.assertIn("ToolSetupProfile.Save", program)
+        self.assertIn("LaunchToolWizardProcess", program)
+        self.assertIn('startInfo.ArgumentList.Add("--tool-wizard")', program)
         self.assertNotIn("ToolSetupWizardLauncher", installer)
         self.assertIn("ToolSetupProfile.Save", tool_wizard)
         self.assertIn("FOA-SDK Tool Setup Wizard", tool_wizard)

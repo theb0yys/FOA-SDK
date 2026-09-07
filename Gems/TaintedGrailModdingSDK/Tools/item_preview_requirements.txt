@@ -1,0 +1,11 @@
+# Pinned binary-only isolated native item preview reader (Python 3.10+).
+UnityPy==1.24.2
+Pillow==11.3.0
+lz4==4.4.5
+Brotli==1.2.0
+texture2ddecoder==1.0.6
+etcpak==0.9.15
+astc-encoder-py==0.1.12
+archspec==0.2.6
+fsspec==2026.7.0
+attrs==26.1.0

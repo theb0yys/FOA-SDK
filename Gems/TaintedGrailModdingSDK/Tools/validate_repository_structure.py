@@ -80,6 +80,7 @@ ALLOWED_GITHUB_FILES = {
     ".github/ISSUE_TEMPLATE/tg_sdk_research.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/workflows/agent-skill-validation.yml",
+    ".github/workflows/item-viewer-windows-validation.yml",
     AUTOMATIC_STATIC_WORKFLOW,
     ".github/workflows/tainted-grail-editor-entry.yml",
     ".github/workflows/tainted-grail-repository-hygiene.yml",
@@ -89,6 +90,18 @@ ALLOWED_GITHUB_FILES = {
 ALLOWED_DOC_ROOT_FILES = {"docs/README.md", "docs/protected-files-policy.md"}
 ALLOWED_DOC_TREES = {"tainted-grail-sdk", "tainted-grail-modding", "systems"}
 REQUIRED_PATHS = {
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "CURRENT_TASK.md",
+    "DECISIONS.md",
+    "GOVERNANCE.md",
+    "LICENSE.txt",
+    "LICENSE_APACHE2.TXT",
+    "LICENSE_MIT.TXT",
+    "ROADMAP.md",
+    "SECURITY.md",
+    "SUPPORT.md",
     ".github/CODEOWNERS",
     AUTOMATIC_STATIC_WORKFLOW,
     "AGENTS.md",

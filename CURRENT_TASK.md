@@ -2,7 +2,7 @@
 
 ## Status
 
-`Installer entry-point correction and validation repair` — implementation complete; PR #248 tracks validation evidence and remaining acceptance gates.
+`Installer correction and game-location repair` — owner review found automatic discovery and manual registration failures; PR #248 remains under correction.
 
 ## Goal
 
@@ -25,6 +25,9 @@ Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe
 - repair stale Foundation/catalog validation contracts and register the existing quest binding contract and tests in their owned build targets;
 - correct the source-policy header and Unicode findings without changing rendered text or runtime behavior;
 - validate the correction, commit it, and update PR #248 for maintainer audit.
+- fix game discovery for Steam clients installed outside Program Files;
+- prevent stale Tool Wizard hints without a saved workspace from redirecting fresh setup;
+- honor manual game selection, rebuild dependent paths, and verify registration survives restart in the compiled Editor.
 
 ## Out of scope
 
@@ -41,6 +44,7 @@ Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe
 - focused installer source, validator, and test lanes pass;
 - the exact-pin Profile Editor and required asset preflight targets build, both mandatory compiled suites pass, and the isolated review level opens in a responsive Editor window;
 - generated Control Panel output is removed from the working checkout.
+- automatic discovery and the manual folder picker save the selected installation and reopen it correctly; failures preserve existing configuration and report the cause.
 
 ## Current branch
 
@@ -48,4 +52,4 @@ Remove the unintended standalone Control Panel application, restore `FOA-SDK.exe
 
 ## Next action
 
-Audit the exact-source validation results in PR #248, complete any remaining host/installer evidence, and perform maintainer UI review before merge. Exact full-product packaging and clean-machine installer evidence remain maintainer-controlled release gates.
+Complete the game-location repair and its compiled service and Editor workflow checks, then update PR #248 for maintainer audit. Exact full-product packaging and clean-machine installer evidence remain maintainer-controlled release gates.

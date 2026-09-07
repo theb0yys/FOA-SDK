@@ -15,6 +15,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 
 #include <cstddef>
@@ -105,6 +107,119 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(profile->m_managedAssembliesPath.find("Fall of Avalon_Data/Managed")
             != AZStd::string::npos);
         EXPECT_TRUE(profile->m_pluginPath.find("BepInEx/plugins") != AZStd::string::npos);
+    }
+
+    TEST(FoAInstallDiscoveryServiceTests, SteamMetadataFindsGameInAnotherLibrary)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        QString libraryRoot;
+        const QString installRoot = BuildCurrentFoAFixture(temporary, libraryRoot);
+        const QString clientRoot = QDir(temporary.path()).filePath("Custom Steam Client");
+        const QByteArray escapedPath = libraryRoot.toUtf8().replace("\\", "\\\\");
+        ASSERT_TRUE(WriteFile(QDir(clientRoot).filePath("steamapps/libraryfolders.vdf"),
+            "\"libraryfolders\" { \"1\" { \"path\" \"" + escapedPath + "\" } }"));
+
+        const auto result = FoAInstallDiscoveryService::DiscoverFromSteamRoots({ ToAzString(clientRoot) });
+        ASSERT_EQ(result.m_installPathCandidates.size(), 1);
+        EXPECT_EQ(QFileInfo(QString::fromUtf8(result.m_installPathCandidates.front().c_str())).canonicalFilePath(),
+            QFileInfo(installRoot).canonicalFilePath());
+    }
+
+    class FoundationLocalSetupIntegrationTests : public ::testing::Test
+    {
+    protected:
+        void SetUp() override
+        {
+            ASSERT_TRUE(m_temporary.isValid());
+            m_hadLocalAppData = qEnvironmentVariableIsSet("LOCALAPPDATA");
+            m_localAppData = qgetenv("LOCALAPPDATA");
+            qputenv("LOCALAPPDATA", m_temporary.path().toUtf8());
+            FoundationService::Get().Shutdown();
+        }
+
+        void TearDown() override
+        {
+            FoundationService::Get().Shutdown();
+            if (m_hadLocalAppData)
+            {
+                qputenv("LOCALAPPDATA", m_localAppData);
+            }
+            else
+            {
+                qunsetenv("LOCALAPPDATA");
+            }
+        }
+
+        QTemporaryDir m_temporary;
+        QByteArray m_localAppData;
+        bool m_hadLocalAppData = false;
+    };
+
+    TEST_F(FoundationLocalSetupIntegrationTests, ManualSelectionIgnoresUninitializedLegacyWorkspaceAndSurvivesRestart)
+    {
+        QString steamRoot;
+        const QString installRoot = BuildCurrentFoAFixture(m_temporary, steamRoot);
+        const QString obsoleteRoot = QDir(m_temporary.path()).filePath("ObsoleteWorkspace");
+        // A file makes the stale legacy location deterministically unwritable as a directory.
+        ASSERT_TRUE(WriteFile(obsoleteRoot));
+        const QJsonObject legacy{
+            { "workspace_root", obsoleteRoot },
+            { "tainted_grail_install_path", QDir(m_temporary.path()).filePath("MissingGame") },
+        };
+        ASSERT_TRUE(WriteFile(QDir(m_temporary.path()).filePath("FOA-SDK/ToolWizard/tool-profile.local.json"),
+            QJsonDocument(legacy).toJson()));
+
+        auto& service = FoundationService::Get();
+        const auto selected = service.RefreshLocalSetup(ToAzString(installRoot));
+        ASSERT_TRUE(selected.IsReady()) << selected.m_error.c_str();
+        const QString workspaceFile = QDir(m_temporary.path()).filePath("FOA-SDK/Workspace/foa-sdk.tgworkspace.json");
+        ASSERT_TRUE(QFileInfo(workspaceFile).isFile());
+        service.Shutdown();
+        const auto reopened = service.RefreshLocalSetup();
+        ASSERT_TRUE(reopened.IsReady()) << reopened.m_error.c_str();
+        ASSERT_NE(service.GetWorkspace().FindActiveGameProfile(), nullptr);
+        EXPECT_EQ(QFileInfo(QString::fromUtf8(service.GetWorkspace().FindActiveGameProfile()->m_installPath.c_str())).canonicalFilePath(),
+            QFileInfo(installRoot).canonicalFilePath());
+        EXPECT_TRUE(QFileInfo(obsoleteRoot).isFile());
+    }
+
+    TEST_F(FoundationLocalSetupIntegrationTests, ManualSelectionReplacesOldInstallAndDerivedPaths)
+    {
+        QString steamRoot;
+        const QString firstRoot = BuildCurrentFoAFixture(m_temporary, steamRoot);
+        QTemporaryDir second;
+        ASSERT_TRUE(second.isValid());
+        const QString secondRoot = BuildCurrentFoAFixture(second, steamRoot);
+        auto& service = FoundationService::Get();
+        ASSERT_TRUE(service.RefreshLocalSetup(ToAzString(firstRoot)).IsReady());
+        const auto selected = service.RefreshLocalSetup(ToAzString(secondRoot));
+        ASSERT_TRUE(selected.IsReady()) << selected.m_error.c_str();
+        const GameProfile* profile = service.GetWorkspace().FindActiveGameProfile();
+        ASSERT_NE(profile, nullptr);
+        EXPECT_EQ(QFileInfo(QString::fromUtf8(profile->m_installPath.c_str())).canonicalFilePath(),
+            QFileInfo(secondRoot).canonicalFilePath());
+        EXPECT_EQ(QFileInfo(QString::fromUtf8(profile->m_managedAssembliesPath.c_str())).canonicalFilePath(),
+            QFileInfo(QDir(secondRoot).filePath("Fall of Avalon_Data/Managed")).canonicalFilePath());
+        EXPECT_EQ(QFileInfo(QString::fromUtf8(profile->m_pluginPath.c_str())).canonicalFilePath(),
+            QFileInfo(QDir(secondRoot).filePath("BepInEx/plugins")).canonicalFilePath());
+        service.Shutdown();
+        ASSERT_TRUE(service.RefreshLocalSetup().IsReady());
+        EXPECT_EQ(QFileInfo(QString::fromUtf8(service.GetWorkspace().FindActiveGameProfile()->m_installPath.c_str())).canonicalFilePath(),
+            QFileInfo(secondRoot).canonicalFilePath());
+    }
+
+    TEST_F(FoundationLocalSetupIntegrationTests, InvalidManualSelectionReportsErrorAndPreservesWorkspace)
+    {
+        QString steamRoot;
+        const QString installRoot = BuildCurrentFoAFixture(m_temporary, steamRoot);
+        auto& service = FoundationService::Get();
+        ASSERT_TRUE(service.RefreshLocalSetup(ToAzString(installRoot)).IsReady());
+        const AZStd::string previous = service.GetWorkspace().FindActiveGameProfile()->m_installPath;
+        const auto result = service.RefreshLocalSetup(ToAzString(m_temporary.path()));
+        EXPECT_FALSE(result.IsReady());
+        EXPECT_FALSE(result.m_error.empty());
+        EXPECT_EQ(service.GetWorkspace().FindActiveGameProfile()->m_installPath, previous);
     }
 
     TEST(FoundationLocalSetupResultTests, ReadyRequiresDetectedGameCompleteProfileAndPersistence)

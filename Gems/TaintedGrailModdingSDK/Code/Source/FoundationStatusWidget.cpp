@@ -244,24 +244,28 @@ namespace TaintedGrailModdingSDK
             startDirectory = ToQString(profile->m_installPath);
         }
 
-        const QString selectedPath = QFileDialog::getExistingDirectory(
-            this,
-            tr("Locate Fall of Avalon"),
-            startDirectory);
-        if (selectedPath.isEmpty())
+        auto* dialog = new QFileDialog(this, tr("Locate Fall of Avalon"), startDirectory);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->setFileMode(QFileDialog::Directory);
+        dialog->setOption(QFileDialog::ShowDirsOnly);
+        dialog->setWindowModality(Qt::WindowModal);
+        connect(dialog, &QFileDialog::fileSelected, this, [this](const QString& selectedPath)
         {
-            return;
-        }
-        if (!LocalSetupDetectionService::LooksLikeTaintedGrailInstall(ToAzString(selectedPath)))
-        {
-            QMessageBox::warning(
-                this,
-                tr("Fall of Avalon not found"),
-                tr("That folder does not look like a Fall of Avalon installation. Select the folder containing Fall of Avalon.exe."));
-            return;
-        }
-
-        DetectAndApply(ToAzString(selectedPath));
+            if (selectedPath.isEmpty())
+            {
+                return;
+            }
+            if (!LocalSetupDetectionService::LooksLikeTaintedGrailInstall(ToAzString(selectedPath)))
+            {
+                QMessageBox::warning(
+                    this,
+                    tr("Fall of Avalon not found"),
+                    tr("That folder does not look like a Fall of Avalon installation. Select the folder containing Fall of Avalon.exe."));
+                return;
+            }
+            DetectAndApply(ToAzString(selectedPath));
+        });
+        dialog->open();
     }
 
     void FoundationStatusWidget::OpenWorkspace()
@@ -367,7 +371,7 @@ namespace TaintedGrailModdingSDK
                 : (!gameFound
                     ? tr("Waiting for game")
                     : (!profileReady ? tr("Resolving profile") : tr("Preparing workspace"))));
-        m_locateGameButton->setVisible(!gameFound);
+        m_locateGameButton->setText(gameFound ? tr("Change game folder...") : tr("Locate Fall of Avalon..."));
 
         UpdateAdvancedDetails();
 

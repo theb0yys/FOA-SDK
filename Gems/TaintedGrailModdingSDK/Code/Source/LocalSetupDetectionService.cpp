@@ -489,7 +489,25 @@ namespace TaintedGrailModdingSDK
 
         const AZStd::string previousActiveProfileId = workspace.m_activeGameProfileId;
         GameProfile profile = SelectEditableProfile(workspace);
-        const bool profileWasConfigured = profile.IsConfigured();
+        bool profileWasConfigured = profile.IsConfigured();
+        Filesystem::path selectedRoot;
+        if (!hints.m_explicitInstallPath.empty()
+            && LooksLikeTaintedGrailInstall(hints.m_explicitInstallPath)
+            && ResolveExistingDirectory(hints.m_explicitInstallPath, selectedRoot)
+            && profile.m_installPath != ToUtf8(selectedRoot))
+        {
+            profile.m_installPath = ToUtf8(selectedRoot);
+            // Paths and observed versions from a previous installation cannot be
+            // carried into the manually selected installation.
+            profile.m_managedAssembliesPath.clear();
+            profile.m_pluginPath.clear();
+            profile.m_gameVersion.clear();
+            profile.m_unityVersion.clear();
+            profile.m_bepInExVersion.clear();
+            profileWasConfigured = false;
+            result.m_changed = true;
+            AddNote(result, "Using the manually selected Fall of Avalon installation.");
+        }
         SetIfEmpty(profile.m_profileId, DefaultMonoProfileId, result);
         SetIfEmpty(profile.m_displayName, DefaultMonoProfileName, result);
         SetIfEmpty(profile.m_branch, "mono", result);

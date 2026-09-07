@@ -20,6 +20,7 @@ namespace TaintedGrailModdingSDK
         struct Hints
         {
             AZStd::string m_workspaceRoot;
+            AZStd::string m_explicitInstallPath;
             AZStd::vector<AZStd::string> m_installPathCandidates;
         };
 

@@ -83,6 +83,14 @@ class PopulationAuthoringValidatorTests(unittest.TestCase):
             "ValidateEvidence(\n"
             "member.m_evidenceIds\n"
             "CatalogDocument document = catalog.BuildDocument(workspace, profile)\n"
+            "for (const auto& id : definition.m_removedMemberIds)\n"
+            "AZStd::find(removedIds.begin(), removedIds.end(), id)\n"
+            "AZStd::find(memberIds.begin(), memberIds.end(), id)\n"
+            "found == document.m_troopMembers.end()\n"
+            "found->m_troopRecordId != definition.m_profile.m_recordId\n"
+            "document.m_troopMembers.erase(found);\n"
+            "removedIds.push_back(id);\n"
+            "bool replacedProfile = false;\n"
             "for (PopulationTroopProfile& existing : document.m_troopProfiles)\n"
             "existing.m_recordId == definition.m_profile.m_recordId\n"
             "existing = definition.m_profile\n"
@@ -168,6 +176,12 @@ class PopulationAuthoringValidatorTests(unittest.TestCase):
             "document.m_troopMembers.erase(\n",
         )
         with self.assertRaisesRegex(RuntimeError, "must not remove"):
+            validate_population_authoring(self.gem_root)
+
+    def test_explicit_removal_requires_exact_troop_ownership(self) -> None:
+        self._replace("PopulationAuthoringService.cpp",
+            "found->m_troopRecordId != definition.m_profile.m_recordId", "ownership-guard-removed")
+        with self.assertRaisesRegex(RuntimeError, "exact ownership"):
             validate_population_authoring(self.gem_root)
 
     def test_incomplete_troop_definition_guards_are_rejected(self) -> None:

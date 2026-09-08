@@ -25,6 +25,9 @@ Framework owns governed candidate publication:
 - candidate actor-profile and atomic troop-definition construction;
 - save-before-publish persistence;
 - notification only after durable success;
+- bounded installed NPC observation intake and explicit pack-owned actor/troop creation;
+- exact ownership checks for explicit member removals, with existing upserts remaining additive;
+- portable workspace portrait references with bounded image decoding for authoring presentation;
 - no direct widget ownership and no runtime authority.
 
 ### Editor
@@ -32,8 +35,9 @@ Framework owns governed candidate publication:
 The Editor pane owns presentation and draft orchestration:
 
 - actor/troop filtering and selection;
+- game loading/cancellation, local creation, and workspace portrait selection;
 - typed field editing;
-- member staging;
+- member staging and explicit removal drafts;
 - save, revert, dirty-draft, close, and deferred-refresh behavior;
 - evidence, governance, blockers, relationships, and action-lane display;
 - no private catalog implementation, permission grant, runtime call, deployment, or save mutation.

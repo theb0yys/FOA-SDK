@@ -114,6 +114,10 @@ namespace TaintedGrailModdingSDK
         bool UpsertEconomyRecipeOutput(
             const EconomyRecipeOutput& output,
             AZStd::string* error = nullptr);
+        bool ImportNativePopulation(const AZStd::string& path, AZStd::string* error = nullptr);
+        bool CreatePopulationRecord(const AZStd::string& kind, const AZStd::string& name,
+            const AZStd::string& leaderActorId, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveAuthoredPopulationTroop(const PopulationTroopDefinition& definition, AZStd::string* error = nullptr);
         bool UpsertPopulationActorProfile(
             const PopulationActorProfile& actor,
             AZStd::string* error = nullptr);
@@ -198,6 +202,10 @@ namespace TaintedGrailModdingSDK
 
     private:
         bool ImportEconomyDocument(const AZStd::string& path, bool custom, AZStd::string* error);
+        bool PrepareAuthoredPopulationEvidence(const AZStd::string& rowsJson, SourceEvidenceRegistry& registry,
+            SourceImportResult& imported, AZStd::string* error);
+        bool CommitPopulationIntake(const CatalogDatabase& candidate, SourceEvidenceRegistry registry,
+            const SourceImportResult& imported, AZStd::string* error);
         bool WriteAuthoredEconomyDocument(const AZStd::string& json, AZStd::string* error);
         FoundationService();
 

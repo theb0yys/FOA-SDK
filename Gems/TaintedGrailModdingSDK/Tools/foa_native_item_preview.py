@@ -464,7 +464,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--vendor", type=Path)
-    parser.add_argument("--economy", action="store_true", help="Read item and recipe definitions without decoding icons.")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--economy", action="store_true", help="Read item and recipe definitions without decoding icons.")
+    mode.add_argument("--population", action="store_true", help="Read supported NPC template definitions.")
     parser.add_argument("--forbid-root", action="append", default=[], type=Path)
     args = parser.parse_args(argv)
     if args.vendor:
@@ -477,7 +479,10 @@ def main(argv=None) -> int:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            if args.economy:
+            if args.population:
+                from foa_native_population import extract as extract_population
+                path = extract_population(args.workspace.resolve(), forbidden, progress)
+            elif args.economy:
                 from foa_native_economy import extract as extract_economy
                 path = extract_economy(args.workspace.resolve(), forbidden, progress)
             else:

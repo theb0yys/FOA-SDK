@@ -28,6 +28,7 @@ class QTabWidget;
 namespace TaintedGrailModdingSDK
 {
     struct CatalogRecord;
+    class NativeItemPreviewService;
 
     //! Thin Editor client for evidence-bound actor and atomic troop authoring.
     //! The widget never writes catalog files or invokes runtime/deployment APIs.
@@ -61,6 +62,11 @@ namespace TaintedGrailModdingSDK
         void LoadCurrentTroop();
         void LoadSelectedMember();
         void ClearMemberEditor();
+        void ReadGameDefinitions();
+        void CreateRecord(bool troop);
+        void RemoveSelectedMember();
+        void ChoosePortrait();
+        void RefreshPortrait();
         bool StageMember();
         void SaveActorProfile();
         void SaveTroopDefinition();
@@ -84,6 +90,13 @@ namespace TaintedGrailModdingSDK
         void UpdateEnabledStates();
 
         QTabWidget* m_tabs = nullptr;
+        NativeItemPreviewService* m_nativeReader = nullptr;
+        QPushButton* m_readGame = nullptr;
+        QPushButton* m_choosePortrait = nullptr;
+        QPushButton* m_removeMember = nullptr;
+        QLabel* m_catalogSummary = nullptr;
+        QLabel* m_portrait = nullptr;
+        QLabel* m_portraitState = nullptr;
 
         QLineEdit* m_actorFilter = nullptr;
         QComboBox* m_actorRecord = nullptr;
@@ -152,6 +165,7 @@ namespace TaintedGrailModdingSDK
 
         QLabel* m_status = nullptr;
         AZStd::vector<PopulationTroopMember> m_draftMembers;
+        AZStd::vector<AZStd::string> m_removedMemberIds;
         AZStd::string m_loadedActorRecordId;
         AZStd::string m_loadedTroopRecordId;
         AZStd::string m_selectedMemberLinkId;

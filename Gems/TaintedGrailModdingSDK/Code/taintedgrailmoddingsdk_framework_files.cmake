@@ -29,6 +29,9 @@ set(FILES
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
     Source/FoundationEconomyIntakeService.cpp
+    Source/FoundationPopulationIntakeService.cpp
+    Source/PopulationPortraitService.cpp
+    Source/PopulationPortraitService.h
     Source/FoundationEvidenceReviewService.cpp
     Source/FoundationExtensionAPI.cpp
     Source/FoundationExtensionRequestBus.cpp

@@ -509,6 +509,23 @@ namespace TaintedGrailModdingSDK
         }
 
         CatalogDocument document = catalog.BuildDocument(workspace, profile);
+        AZStd::vector<AZStd::string> removedIds;
+        for (const auto& id : definition.m_removedMemberIds)
+        {
+            if (AZStd::find(removedIds.begin(), removedIds.end(), id) != removedIds.end()
+                || AZStd::find(memberIds.begin(), memberIds.end(), id) != memberIds.end())
+            {
+                return AZ::Failure(AZStd::string("Duplicate or conflicting troop member removal: ") + id);
+            }
+            const auto found = AZStd::find_if(document.m_troopMembers.begin(), document.m_troopMembers.end(),
+                [&id](const auto& member) { return member.m_linkId == id; });
+            if (found == document.m_troopMembers.end() || found->m_troopRecordId != definition.m_profile.m_recordId)
+            {
+                return AZ::Failure(AZStd::string("The removed member does not belong to this troop: ") + id);
+            }
+            document.m_troopMembers.erase(found);
+            removedIds.push_back(id);
+        }
         bool replacedProfile = false;
         for (PopulationTroopProfile& existing : document.m_troopProfiles)
         {

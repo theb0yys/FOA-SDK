@@ -7,6 +7,7 @@
 
 set(FILES
     Source/ActorTroopEditorWidget.cpp
+    Source/ActorTroopEditorWidgetWorkflow.cpp
     Source/ActorTroopEditorWidget.h
     Source/AdapterBuildManifestWidget.cpp
     Source/AdapterBuildManifestWidget.h

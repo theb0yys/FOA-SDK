@@ -7,6 +7,7 @@
 
 #include "ItemVisualSelectorWidget.h"
 
+#include "AssetBrowserPreviewWidget.h"
 #include "CatalogDatabase.h"
 #include "FoundationModels.h"
 #include "FoundationService.h"
@@ -38,13 +39,16 @@
 #include <QLabel>
 #include <QList>
 #include <QLineEdit>
+#include <QPointer>
 #include <QPushButton>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QSplitter>
+#include <QStandardItemModel>
 #include <QStringList>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QTabWidget>
 #include <QVBoxLayout>
 
 #include <cstddef>
@@ -194,11 +198,7 @@ namespace TaintedGrailModdingSDK
 
         QString RecordLabel(const CatalogRecord& record)
         {
-            QString label = ToQString(record.m_recordId);
-            if (!record.m_displayName.empty())
-            {
-                label += QStringLiteral(" - ") + ToQString(record.m_displayName);
-            }
+            QString label = ToQString(record.m_displayName.empty() ? record.m_recordId : record.m_displayName);
             label += record.m_recordKind == "recipe"
                 ? QStringLiteral(" [recipe]")
                 : QStringLiteral(" [item]");
@@ -211,26 +211,39 @@ namespace TaintedGrailModdingSDK
     {
         setObjectName(QStringLiteral("TaintedGrailItemVisualSelector"));
         auto* rootLayout = new QVBoxLayout(this);
+        auto* previewTabs = new QTabWidget(this);
+        previewTabs->setObjectName(QStringLiteral("economyPreviewTabs"));
+        m_gameIcon = new AssetBrowserPreviewWidget(previewTabs, true);
+        previewTabs->addTab(m_gameIcon, tr("Game icon"));
+        auto* customPage = new QWidget(previewTabs);
+        auto* customLayout = new QVBoxLayout(customPage);
+        previewTabs->addTab(customPage, tr("Custom visuals"));
 
         auto* boundary = new QLabel(
             tr("Editor-preview boundary: this tab consumes an explicit, profile-matched Asset Browser pane model and uses O3DE's registered previewers. Selecting or previewing a product never grants runtime permission, changes FoA, promotes catalog evidence, deploys files, or creates a binding until an explicit button is pressed."),
             this);
         boundary->setWordWrap(true);
         boundary->setProperty("class", QStringLiteral("Card"));
-        rootLayout->addWidget(boundary);
+        customLayout->addWidget(boundary);
 
-        auto* targetGroup = new QGroupBox(tr("Authoring target and bounded preview model"), this);
+        auto* targetGroup = new QGroupBox(tr("Preview item"), this);
         auto* targetLayout = new QFormLayout(targetGroup);
         m_targetRecord = new QComboBox(targetGroup);
+        m_targetRecord->setObjectName(QStringLiteral("economyPreviewTarget"));
+        m_targetRecord->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        m_targetRecord->setMinimumContentsLength(30);
         m_targetRecord->setAccessibleName(tr("Canonical item or recipe target"));
         m_recipeItemLabel = new QLabel(tr("Recipe-linked item"), targetGroup);
         m_recipeItemRecord = new QComboBox(targetGroup);
+        m_recipeItemRecord->setObjectName(QStringLiteral("economyPreviewRecipeItem"));
         m_recipeItemRecord->setAccessibleName(tr("Recipe-linked item receiving the visual binding"));
-        m_modelPath = new QLineEdit(targetGroup);
+        auto* modelGroup = new QGroupBox(tr("Custom visual assets"), customPage);
+        auto* modelLayout = new QFormLayout(modelGroup);
+        m_modelPath = new QLineEdit(modelGroup);
         m_modelPath->setReadOnly(true);
         m_modelPath->setAccessibleName(tr("Loaded Asset Browser pane model path"));
         m_modelPath->setPlaceholderText(tr("Choose foa-asset-browser-pane-model.json"));
-        auto* modelButtons = new QWidget(targetGroup);
+        auto* modelButtons = new QWidget(modelGroup);
         auto* modelButtonLayout = new QHBoxLayout(modelButtons);
         modelButtonLayout->setContentsMargins(0, 0, 0, 0);
         auto* chooseModel = new QPushButton(tr("Choose Model..."), modelButtons);
@@ -241,17 +254,19 @@ namespace TaintedGrailModdingSDK
         modelButtonLayout->addWidget(chooseModel);
         modelButtonLayout->addWidget(m_reloadModel);
         modelButtonLayout->addStretch(1);
-        targetLayout->addRow(tr("Canonical target"), m_targetRecord);
+        targetLayout->addRow(tr("Item or recipe"), m_targetRecord);
         targetLayout->addRow(m_recipeItemLabel, m_recipeItemRecord);
-        targetLayout->addRow(tr("Pane model"), m_modelPath);
-        targetLayout->addRow(QString(), modelButtons);
+        modelLayout->addRow(tr("Pane model"), m_modelPath);
+        modelLayout->addRow(QString(), modelButtons);
+        customLayout->addWidget(modelGroup);
         rootLayout->addWidget(targetGroup);
+        rootLayout->addWidget(previewTabs, 1);
 
         m_search = new QLineEdit(this);
         m_search->setClearButtonEnabled(true);
         m_search->setPlaceholderText(tr("Filter by name, type, source identity, AssetId, cache path, or blocker"));
         m_search->setAccessibleName(tr("Preview entry filter"));
-        rootLayout->addWidget(m_search);
+        customLayout->addWidget(m_search);
 
         auto* splitter = new QSplitter(Qt::Horizontal, this);
         m_entryTable = new QTableWidget(0, 6, splitter);
@@ -271,7 +286,7 @@ namespace TaintedGrailModdingSDK
         splitter->addWidget(m_previewer);
         splitter->setStretchFactor(0, 2);
         splitter->setStretchFactor(1, 3);
-        rootLayout->addWidget(splitter, 1);
+        customLayout->addWidget(splitter, 1);
 
         auto* informationGroup = new QGroupBox(tr("Selection and explicit binding"), this);
         auto* informationLayout = new QVBoxLayout(informationGroup);
@@ -302,12 +317,12 @@ namespace TaintedGrailModdingSDK
         bindingButtonLayout->addWidget(m_applyAsset);
         bindingButtonLayout->addStretch(1);
         informationLayout->addWidget(bindingButtons);
-        rootLayout->addWidget(informationGroup);
+        customLayout->addWidget(informationGroup);
 
         m_status = new QLabel(this);
         m_status->setWordWrap(true);
         m_status->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        rootLayout->addWidget(m_status);
+        customLayout->addWidget(m_status);
 
         connect(chooseModel, &QPushButton::clicked, this, [this]() { ChoosePreviewModel(); });
         connect(m_reloadModel, &QPushButton::clicked, this, [this]() { ReloadPreviewModel(); });
@@ -335,6 +350,12 @@ namespace TaintedGrailModdingSDK
         FoundationNotificationBus::Handler::BusDisconnect();
     }
 
+    void ItemVisualSelectorWidget::SetTargetRecord(const QString& recordId)
+    {
+        const int index = m_targetRecord->findData(recordId);
+        m_targetRecord->setCurrentIndex(index >= 0 ? index : 0);
+    }
+
     void ItemVisualSelectorWidget::OnFoundationChanged()
     {
         if (!LoadedModelMatchesActiveProfile())
@@ -354,15 +375,27 @@ namespace TaintedGrailModdingSDK
         m_refreshing = true;
         const QString previous = m_targetRecord->currentData().toString();
         QSignalBlocker blocker(m_targetRecord);
-        m_targetRecord->clear();
-        m_targetRecord->addItem(tr("Select canonical item or recipe..."), QString());
+        auto* model = new QStandardItemModel(m_targetRecord);
+        auto append = [model](const QString& label, const QString& id)
+        {
+            auto* item = new QStandardItem(label);
+            item->setData(id, Qt::UserRole);
+            model->appendRow(item);
+        };
+        append(tr("Select item or recipe..."), QString());
         for (const CatalogRecord& record : FoundationService::Get().GetCatalog().GetRecords())
         {
             if (record.m_domain == "economy"
                 && (record.m_recordKind == "item" || record.m_recordKind == "recipe"))
             {
-                m_targetRecord->addItem(RecordLabel(record), ToQString(record.m_recordId));
+                append(RecordLabel(record), ToQString(record.m_recordId));
             }
+        }
+        QPointer<QAbstractItemModel> oldModel = m_targetRecord->model();
+        m_targetRecord->setModel(model);
+        if (oldModel && oldModel->parent() == m_targetRecord)
+        {
+            oldModel->deleteLater();
         }
         const int restored = m_targetRecord->findData(previous);
         m_targetRecord->setCurrentIndex(restored >= 0 ? restored : 0);
@@ -373,7 +406,9 @@ namespace TaintedGrailModdingSDK
 
     void ItemVisualSelectorWidget::RefreshRecipeItemChoices()
     {
-        const QString previous = m_recipeItemRecord->currentData().toString();
+        const QString context = m_targetRecord->currentData().toString();
+        const QString previous = context == m_recipeContext ? m_recipeItemRecord->currentData().toString() : QString();
+        m_recipeContext = context;
         QSignalBlocker blocker(m_recipeItemRecord);
         m_recipeItemRecord->clear();
         m_recipeItemRecord->addItem(tr("Select recipe-linked item..."), QString());
@@ -397,11 +432,16 @@ namespace TaintedGrailModdingSDK
                 linkedItems.insert(ToQString(ingredient.m_itemRecordId));
             }
         }
+        QString firstOutput;
         for (const EconomyRecipeOutput& output : catalog.FindOutputsForRecipe(targetId))
         {
             if (!output.m_itemRecordId.empty())
             {
                 linkedItems.insert(ToQString(output.m_itemRecordId));
+                if (firstOutput.isEmpty())
+                {
+                    firstOutput = ToQString(output.m_itemRecordId);
+                }
             }
         }
 
@@ -415,7 +455,7 @@ namespace TaintedGrailModdingSDK
                 m_recipeItemRecord->addItem(RecordLabel(*item), itemId);
             }
         }
-        const int restored = m_recipeItemRecord->findData(previous);
+        const int restored = m_recipeItemRecord->findData(previous.isEmpty() ? firstOutput : previous);
         m_recipeItemRecord->setCurrentIndex(restored >= 0 ? restored : 0);
     }
 
@@ -424,6 +464,8 @@ namespace TaintedGrailModdingSDK
         const QString itemId = ResolveBindingItemRecordId();
         const PreviewEntry* selected = GetSelectedEntry();
         const CatalogDatabase& catalog = FoundationService::Get().GetCatalog();
+        const CatalogRecord* item = catalog.FindByRecordId(ToAzString(itemId));
+        m_gameIcon->SetItemTarget(itemId, item ? ToQString(item->m_nativeRefExact) : QString());
         const EconomyItemProfile* profile = itemId.isEmpty()
             ? nullptr
             : catalog.FindEconomyItem(ToAzString(itemId));

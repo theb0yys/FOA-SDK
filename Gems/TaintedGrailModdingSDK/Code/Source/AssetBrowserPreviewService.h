@@ -93,6 +93,10 @@ namespace TaintedGrailModdingSDK
             const AssetBrowserPreviewEntry& entry) const;
 
         static AZStd::string ClassifyCategory(const AssetBrowserPreviewEntry& entry);
+        //! Resolve only an exact native identity from an already validated snapshot.
+        //! Empty or ambiguous identities have no preview; names and icon GUIDs are not identity joins.
+        static const AssetBrowserPreviewEntry* FindItemThumbnail(
+            const AssetBrowserPreviewSnapshot& snapshot, const AZStd::string& nativeRefExact);
         static AZStd::string DetermineFidelityState(
             const AssetBrowserPreviewEntry& entry,
             bool hasViewportEvidence);

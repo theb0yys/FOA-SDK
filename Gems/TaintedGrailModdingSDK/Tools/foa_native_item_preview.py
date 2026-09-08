@@ -464,6 +464,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--vendor", type=Path)
+    parser.add_argument("--economy", action="store_true", help="Read item and recipe definitions without decoding icons.")
     parser.add_argument("--forbid-root", action="append", default=[], type=Path)
     args = parser.parse_args(argv)
     if args.vendor:
@@ -476,7 +477,11 @@ def main(argv=None) -> int:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            path = extract(args.workspace.resolve(), forbidden, progress)
+            if args.economy:
+                from foa_native_economy import extract as extract_economy
+                path = extract_economy(args.workspace.resolve(), forbidden, progress)
+            else:
+                path = extract(args.workspace.resolve(), forbidden, progress)
         print(json.dumps({"manifest": str(path)}), flush=True)
         return 0
     except (PreviewError, CatalogError, OSError, ValueError, KeyError, ImportError, struct.error) as exc:

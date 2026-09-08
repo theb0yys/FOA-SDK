@@ -7,6 +7,7 @@
 
 #include "CatalogPersistenceService.h"
 #include "CatalogTransactionService.h"
+#include "FoundationService.h"
 #include "PersistenceJsonUtils.h"
 #include "SourceEvidencePersistenceService.h"
 #include "WorkspacePersistenceService.h"
@@ -22,6 +23,7 @@
 #include <AzFramework/IO/LocalFileIO.h>
 #include <AzTest/AzTest.h>
 
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -77,6 +79,7 @@ namespace TaintedGrailModdingSDK
         {
             GameProfile::Reflect(&context);
             WorkspaceModel::Reflect(&context);
+            PackManifest::Reflect(&context);
             SourceRecord::Reflect(&context);
             EvidenceRecord::Reflect(&context);
             ImportIssue::Reflect(&context);
@@ -979,5 +982,192 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(
             candidate.FindPopulationActorProfile(ActorRecordId)->m_archetype,
             "synthetic_veteran_guard");
+    }
+    TEST_F(CatalogSchemaMigrationPersistenceTests, EconomyDefinitionsAndJoinsPersistAndRejectWrongRecipeRemoval)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString root = temporary.path() + "/Workspace";
+        ASSERT_TRUE(QDir().mkpath(root + "/Packs/test.economy"));
+        for (const QString& folder : {QString("Build"), QString("Staging"), QString("Deployment"), QString("Diagnostics"), QString("Extracted")})
+        {
+            ASSERT_TRUE(QDir().mkpath(root + '/' + folder));
+        }
+        ASSERT_TRUE(QDir().mkpath(temporary.path() + "/Game/Managed"));
+        ASSERT_TRUE(QDir().mkpath(temporary.path() + "/Game/BepInEx/plugins"));
+        QFile syntheticAssembly(temporary.path() + "/Game/Managed/Synthetic.dll");
+        ASSERT_TRUE(syntheticAssembly.open(QIODevice::WriteOnly));
+        ASSERT_GT(syntheticAssembly.write("Synthetic path-validation fixture; never executed."), 0);
+        syntheticAssembly.close();
+        WorkspaceModel workspace;
+        workspace.m_workspaceId = "test.economy.workspace";
+        workspace.m_displayName = "Synthetic economy authoring";
+        workspace.m_rootPath = ToAzString(root);
+        workspace.m_outputPath = ToAzString(root + "/Build");
+        workspace.m_stagingPath = ToAzString(root + "/Staging");
+        workspace.m_deploymentPath = ToAzString(root + "/Deployment");
+        workspace.m_activeGameProfileId = "test.economy";
+        GameProfile profile;
+        profile.m_profileId = workspace.m_activeGameProfileId;
+        profile.m_displayName = "Synthetic";
+        profile.m_installPath = ToAzString(temporary.path() + "/Game");
+        profile.m_gameVersion = "1.0.0";
+        profile.m_branch = "mono";
+        profile.m_runtimeTarget = "Mono";
+        profile.m_unityVersion = "6000.0.64f1";
+        profile.m_bepInExVersion = "5.4.23";
+        profile.m_managedAssembliesPath = profile.m_installPath + "/Managed";
+        profile.m_pluginPath = profile.m_installPath + "/BepInEx/plugins";
+        profile.m_diagnosticsPath = ToAzString(root + "/Diagnostics");
+        profile.m_extractedDataPath = ToAzString(root + "/Extracted");
+        workspace.m_gameProfiles.push_back(profile);
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        service.SetWorkspace(workspace);
+        AZStd::string error;
+        ASSERT_TRUE(service.SaveWorkspace(ToAzString(root + "/economy.tgworkspace.json"), &error)) << error.c_str();
+        AZStd::string itemId;
+        EXPECT_FALSE(service.CreateEconomyRecord("item", "Requires a saved mod", itemId, &error));
+        EXPECT_TRUE(service.GetCatalog().GetRecords().empty());
+        PackManifest pack;
+        pack.m_packId = "test.economy";
+        pack.m_ownerId = "test";
+        pack.m_displayName = "Synthetic economy mod";
+        pack.m_version = "1.0.0";
+        ASSERT_TRUE(service.SetActivePack(pack, &error)) << error.c_str();
+        ASSERT_TRUE(service.SaveActivePack(ToAzString(root + "/Packs/test.economy/pack.tgpack.json"), &error)) << error.c_str();
+        ASSERT_TRUE(service.CreateEconomyRecord("item", "Synthetic ingredient", itemId, &error)) << error.c_str();
+        AZStd::string recipeId;
+        ASSERT_TRUE(service.CreateEconomyRecord("recipe", "Synthetic recipe", recipeId, &error)) << error.c_str();
+        const CatalogRecord* recipeRecord = service.GetCatalog().FindByRecordId(recipeId);
+        ASSERT_NE(recipeRecord, nullptr);
+        EXPECT_TRUE(recipeRecord->m_nativeRefExact.empty());
+        EXPECT_TRUE(recipeRecord->m_allowedUsages.empty());
+        EXPECT_EQ(recipeRecord->m_ownerPackId, pack.m_packId);
+        EconomyRecipeIngredient ingredient;
+        ingredient.m_linkId = "test.ingredient";
+        ingredient.m_recipeRecordId = recipeId;
+        ingredient.m_itemRecordId = itemId;
+        ingredient.m_quantity = 3;
+        ingredient.m_evidenceIds = recipeRecord->m_evidenceIds;
+        EconomyRecipeOutput output;
+        output.m_linkId = "test.output";
+        output.m_recipeRecordId = recipeId;
+        output.m_itemRecordId = itemId;
+        output.m_quantity = 2;
+        output.m_evidenceIds = ingredient.m_evidenceIds;
+        EXPECT_FALSE(service.UpsertEconomyRecipeIngredient(ingredient, &error));
+        ASSERT_TRUE(service.SaveAuthoredRecipeIngredient(ingredient, &error)) << error.c_str();
+        ASSERT_TRUE(service.SaveAuthoredRecipeOutput(output, &error)) << error.c_str();
+        ingredient.m_quantity = 7;
+        ASSERT_TRUE(service.SaveAuthoredRecipeIngredient(ingredient, &error)) << error.c_str();
+        ingredient.m_quantity = 0;
+        EXPECT_FALSE(service.SaveAuthoredRecipeIngredient(ingredient, &error));
+        EXPECT_EQ(service.GetCatalog().FindIngredientsForRecipe(recipeId).front().m_quantity, 7);
+        EXPECT_FALSE(service.RemoveEconomyRecipeJoin(itemId, output.m_linkId, true, &error));
+        EXPECT_EQ(service.GetCatalog().FindOutputsForRecipe(recipeId).size(), 1);
+
+        FoundationService reopened(FoundationWorkspaceLoadDependencies{});
+        reopened.SetWorkspace(workspace);
+        ASSERT_TRUE(reopened.SaveWorkspace(ToAzString(root + "/economy.tgworkspace.json"), &error)) << error.c_str();
+        ASSERT_TRUE(reopened.ReloadSourceEvidence(&error)) << error.c_str();
+        ASSERT_TRUE(reopened.ReloadCatalog(&error)) << error.c_str();
+        ASSERT_EQ(reopened.GetCatalog().GetRecords().size(), 2);
+        ASSERT_EQ(reopened.GetCatalog().FindIngredientsForRecipe(recipeId).size(), 1);
+        EXPECT_EQ(reopened.GetCatalog().FindIngredientsForRecipe(recipeId).front().m_quantity, 7);
+        ASSERT_TRUE(reopened.RemoveEconomyRecipeJoin(recipeId, output.m_linkId, true, &error)) << error.c_str();
+        ASSERT_TRUE(reopened.ReloadCatalog(&error)) << error.c_str();
+        EXPECT_TRUE(reopened.GetCatalog().FindOutputsForRecipe(recipeId).empty());
+        EXPECT_FALSE(reopened.ImportNativeEconomy(ToAzString(temporary.path() + "/escape.json"), &error));
+        EXPECT_EQ(reopened.GetCatalog().GetRecords().size(), 2);
+
+        // Synthetic source bytes exercise intake boundaries without parsing or copying game data.
+        const QByteArray sourceBytes("Synthetic serialized-source fixture; never executed.");
+        const QString sourceHash = "sha256:" + QString::fromLatin1(
+            QCryptographicHash::hash(sourceBytes, QCryptographicHash::Sha256).toHex());
+        QJsonArray sources;
+        for (const QString& relative : {
+            QString("Fall of Avalon_Data/StreamingAssets/aa/catalog.json"),
+            QString("Fall of Avalon_Data/StreamingAssets/aa/StandaloneWindows64/templates.items_assets_all.bundle"),
+            QString("Fall of Avalon_Data/StreamingAssets/aa/StandaloneWindows64/templates.crafting_assets_all.bundle")})
+        {
+            const QString sourcePath = ToQString(profile.m_installPath) + '/' + relative;
+            ASSERT_TRUE(QDir().mkpath(QFileInfo(sourcePath).absolutePath()));
+            QFile source(sourcePath);
+            ASSERT_TRUE(source.open(QIODevice::WriteOnly));
+            ASSERT_EQ(source.write(sourceBytes), sourceBytes.size());
+            sources.append(QJsonObject{{"Locator", "$install/" + relative}, {"Sha256", sourceHash},
+                {"ByteSize", sourceBytes.size()}});
+        }
+        QJsonObject nativeRow{{"record_id", "native.item.synthetic"}, {"kind", "item"},
+            {"native_ref", "$install/synthetic#/Assets/Item.prefab"},
+            {"subject_ref", "$install/synthetic#/Assets/Item.prefab"},
+            {"display_name", "Synthetic native item"}, {"evidence_id", "evidence.native.synthetic"},
+            {"confidence", "documented"}, {"claim", "Synthetic fixture observation only."},
+            {"item", QJsonObject{{"weight", 1.0}, {"base_value", 2.0}, {"hidden", false}, {"tags", QJsonArray{}}}}};
+        QJsonObject observation{{"SchemaVersion", 1}, {"DocumentKind", "foa-native-economy-observations"},
+            {"ProfileId", ToQString(profile.m_profileId)}, {"GameVersion", ToQString(profile.m_gameVersion)},
+            {"Branch", ToQString(profile.m_branch)}, {"RuntimeTarget", ToQString(profile.m_runtimeTarget)},
+            {"CapturedAt", "2026-09-07T00:00:00Z"}, {"SourceFiles", sources},
+            {"OperationalAuthority", QJsonObject{{"Runtime", false}}},
+            {"definitions", QJsonArray{nativeRow}}, {"evidence", QJsonArray{nativeRow}}};
+        const QString observationPath = root + "/native-observation.json";
+        const auto importObservation = [&](const QJsonObject& document)
+        {
+            QFile observationFile(observationPath);
+            if (!observationFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) { return false; }
+            const QByteArray payload = QJsonDocument(document).toJson();
+            if (observationFile.write(payload) != payload.size()) { return false; }
+            observationFile.close();
+            return reopened.ImportNativeEconomy(ToAzString(observationPath), &error);
+        };
+        QJsonObject invalid = observation;
+        invalid.insert("ProfileId", "different.profile");
+        EXPECT_FALSE(importObservation(invalid));
+        invalid = observation;
+        invalid.insert("OperationalAuthority", QJsonObject{{"Runtime", true}});
+        EXPECT_FALSE(importObservation(invalid));
+        invalid = observation;
+        QJsonArray staleSources = sources;
+        QJsonObject staleSource = staleSources[0].toObject();
+        staleSource.insert("Sha256", "sha256:changed");
+        staleSources[0] = staleSource;
+        invalid.insert("SourceFiles", staleSources);
+        EXPECT_FALSE(importObservation(invalid));
+        QJsonObject invalidRow = nativeRow;
+        invalidRow.insert("record_id", "native.item.invalid");
+        invalidRow.insert("native_ref", "$install/synthetic#/Assets/Invalid.prefab");
+        invalidRow.insert("subject_ref", "$install/synthetic#/Assets/Invalid.prefab");
+        invalidRow.insert("evidence_id", "evidence.native.invalid");
+        invalidRow.insert("item", QJsonObject{{"weight", -1.0}, {"base_value", 2.0}, {"hidden", false}, {"tags", QJsonArray{}}});
+        invalid = observation;
+        invalid.insert("definitions", QJsonArray{nativeRow, invalidRow});
+        invalid.insert("evidence", QJsonArray{nativeRow, invalidRow});
+        EXPECT_FALSE(importObservation(invalid));
+        EXPECT_EQ(reopened.GetCatalog().GetRecords().size(), 2);
+
+        // Make the exact catalog destination unwritable as a file, then restore it.
+        const QString catalogFile = ToQString(CatalogPath(workspace.m_rootPath));
+        ASSERT_TRUE(QFile::rename(catalogFile, catalogFile + ".baseline"));
+        ASSERT_TRUE(QDir().mkpath(catalogFile));
+        EXPECT_FALSE(importObservation(observation));
+        EXPECT_EQ(reopened.GetCatalog().GetRecords().size(), 2);
+        ASSERT_TRUE(QDir().rmdir(catalogFile));
+        ASSERT_TRUE(QFile::rename(catalogFile + ".baseline", catalogFile));
+        // A new reader run emits a fresh observation and evidence identity.
+        nativeRow.insert("evidence_id", "evidence.native.synthetic.retry");
+        observation.insert("evidence", QJsonArray{nativeRow});
+        observation.insert("definitions", QJsonArray{nativeRow});
+        observation.insert("CapturedAt", "2026-09-07T00:00:01Z");
+        ASSERT_TRUE(importObservation(observation)) << error.c_str();
+        ASSERT_EQ(reopened.GetCatalog().GetRecords().size(), 3);
+        EconomyItemProfile authored = *reopened.GetCatalog().FindEconomyItem("native.item.synthetic");
+        authored.m_weight = 9.0;
+        ASSERT_TRUE(reopened.UpsertEconomyItemProfile(authored, &error)) << error.c_str();
+        nativeRow.insert("evidence_id", "evidence.native.synthetic.refresh");
+        observation.insert("evidence", QJsonArray{nativeRow});
+        observation.insert("definitions", QJsonArray{nativeRow});
+        observation.insert("CapturedAt", "2026-09-07T00:00:02Z");
+        ASSERT_TRUE(importObservation(observation)) << error.c_str();
+        EXPECT_EQ(reopened.GetCatalog().FindEconomyItem("native.item.synthetic")->m_weight, 9.0);
     }
 } // namespace TaintedGrailModdingSDK

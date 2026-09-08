@@ -11,6 +11,8 @@
 #include "FoundationNotificationBus.h"
 
 #include <QString>
+#include <QStringList>
+#include <QPixmap>
 #include <QThreadPool>
 #include <QWidget>
 #include <atomic>
@@ -31,11 +33,15 @@ namespace TaintedGrailModdingSDK
         , private FoundationNotificationBus::Handler
     {
     public:
-        explicit AssetBrowserPreviewWidget(QWidget* parent = nullptr);
+        explicit AssetBrowserPreviewWidget(QWidget* parent = nullptr, bool itemPreviewOnly = false);
         ~AssetBrowserPreviewWidget() override;
+        void SetItemTarget(const QString& recordId, const QString& nativeRefExact);
 
     private:
         void OnFoundationChanged() override;
+        void resizeEvent(QResizeEvent* event) override;
+        void ShowItemThumbnail();
+        void ScaleItemThumbnail();
         void RefreshProfileContext();
         void AutoFindEvidence();
         void RefreshAssets();
@@ -49,11 +55,18 @@ namespace TaintedGrailModdingSDK
         void SetStatus(const QString& message, bool error = false);
         QString ResolveCustomAssetsRoot() const;
         QString FindEvidenceDocument(const QString& documentKind) const;
+        static QString FindEvidenceDocument(const AssetBrowserPreviewLoadRequest& request, const QString& documentKind);
         AssetBrowserPreviewLoadRequest BuildRequest() const;
 
         AssetBrowserPreviewService m_service;
         AssetBrowserPreviewSnapshot m_snapshot;
         AZStd::string m_selectedEntryId;
+        bool m_itemPreviewOnly = false;
+        QString m_itemRecordId;
+        QString m_itemNativeRef;
+        QStringList m_profileContext;
+        QPixmap m_itemPixmap;
+        QLabel* m_itemCaption = nullptr;
 
         QLabel* m_profileValue = nullptr;
         QLabel* m_statusLabel = nullptr;

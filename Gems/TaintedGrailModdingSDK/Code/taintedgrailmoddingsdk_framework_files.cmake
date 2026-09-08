@@ -28,6 +28,7 @@ set(FILES
     Source/FoAInstallDiscoveryService.h
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
+    Source/FoundationEconomyIntakeService.cpp
     Source/FoundationEvidenceReviewService.cpp
     Source/FoundationExtensionAPI.cpp
     Source/FoundationExtensionRequestBus.cpp

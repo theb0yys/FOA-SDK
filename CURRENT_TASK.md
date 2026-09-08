@@ -2,50 +2,39 @@
 
 ## Status and goal
 
-`Items and Recipes completion` - IMPLEMENTED AND VALIDATED. The owner-reported empty Visual Preview is repaired: the selected item's native icon now loads automatically, and recipes preview a resolved output. The authoring workflow and the separate image workflow below have compiled Editor evidence. Maintainer review remains the repository transition.
+Actor and Troop Editor completion: IMPLEMENTED AND VALIDATED. The owner requested supported game actor loading, local actor/troop creation and editing, member addition/change/removal, available portraits and real Editor save/reopen/error acceptance. Spawn and Encounter Editor remains a later task.
 
-The bounded repair is a Routine Editor integration fix owned by `content-pack-authoring`, consuming the existing validated preview snapshot and `unity-provider` icon reader. Game icons become the default visual tab; the existing processed-asset binding controls remain under Custom visuals. Exact native references connect item selections and recipe outputs to images. No schema, persisted identity, provider contract, runtime adapter or deployment behavior changes. Validation covers exact/ambiguous/missing image joins, compiled suites, selected-item/recipe switching, cancellation, reopen and absence of catalog writes.
+Branch: `codex/actors-troops-completion`, based on `c9be3e262bfb3f7f15f8d768fe28766e0fb430e8`. The prerequisite Items and Recipes PR #249 is merged. Deliver this focused DCO commit through a new PR for maintainer audit; no approval or merge is inferred.
 
 ## Classification and ownership
 
-Significant authoring/persistence work with Critical/Runtime validation for the external reader and compiled Editor integration. Primary owner: `content-pack-authoring`; `catalog-and-identity` owns canonical identities, `schemas-and-persistence` owns durable publication, `workspace-and-packs` owns pack/workspace context, and `unity-provider` supplies read-only observations.
+Critical/Runtime for the bounded external reader, with Significant authoring commands and UI. Primary owner: `content-pack-authoring`. Supporting owners: `unity-provider`, `catalog-and-identity`, `schemas-and-persistence`, and `workspace-and-packs`.
 
-The producer is the existing bounded Unity provider. Foundation validates and persists reviewed intake; Core validates typed records and joins; the Item and Recipe Editor presents those services. Existing catalog schema 2 and workspace schema 1 remain unchanged. New provider output is versioned independently.
+The pinned isolated provider publishes version-1 actor observations. Foundation validates exact profile, source hashes, evidence and protected paths before durable catalog publication. Core validates actor/troop definitions and atomic membership changes. Editor widgets present these services and portable local portraits.
 
-## Bounded scope
+## Completed scope
 
-- Read installed item/recipe component fields through the pinned isolated reader.
-- Resolve Addressables GUIDs to exact container paths, preserving abstract item templates and unresolved/ambiguous references explicitly.
-- Import source evidence and canonical economy records without runtime grants; refresh preserves existing authored profiles and unrelated catalog records.
-- Add pack-owned item/recipe creation through Foundation and complete join selection, editing, removal, search and automatic link identity generation.
-- Load saved workspace context on pane open and preserve drafts across unrelated Foundation notifications.
-- Update the user guide and prove the real compiled Editor workflow.
+- Load supported installed NPC templates, preserve exact native identity and authored values on refresh, and report unsupported entries without guessed enum meanings.
+- Create pack-owned actors and valid troops with a first leader; edit typed profiles and add/change/remove members with automatically generated link identity and local authoring intent.
+- Keep troop upserts additive unless explicit owned member IDs are removed; validate the complete composition before durable publication.
+- Preview bounded workspace PNG/JPEG portraits, clear stale or invalid images, and preserve portable references on reopen.
+- Protect dirty drafts, provide cancellation and actionable save errors, fit long record identities within the pane, and populate collapsed review tables when expanded.
 
-## Boundaries and compatibility
+## Compatibility and boundaries
 
-Game files, saves, engine sources and proprietary assets are read-only. Generated metadata, screenshots and logs stay outside the checkout. No runtime adapter, deployment, release, inventory or save behavior is claimed. Unknown station, unlock, stack-limit and runtime semantics remain unknown. Existing persisted catalogs and stable IDs are preserved; no schema migration is introduced.
+Catalog schema 2, workspace schema 1 and persisted stable IDs remain unchanged. The troop command's default-empty explicit removal collection preserves existing additive callers. UnityPy remains pinned at 1.24.2; the actor worker selects its supplied pure-Python type-tree fallback to avoid a native decoder shutdown failure observed on NPC managed references.
 
-## Acceptance and evidence
-
-- Real installation supplies item and recipe choices with exact resolved joins.
-- New local definitions and ingredient/output changes survive save and reopen.
-- Invalid/profile-mismatched/escaping input and failed writes do not publish a partial catalog; repeated import does not overwrite authored data.
-- Responsive bounded reader, cancellation and real Editor selection/edit/reopen checks; applicable static, source-policy and both mandatory compiled suites.
-- Focused DCO commit and PR handoff; maintainer retains approval/merge authority.
-
-## Branch
-
-`codex/items-recipes-completion`, based on category fix `dfe5684f7e`.
+The supported NPC component supplies no portrait, model or localisation binding. Native enum meanings and equipped character appearance remain unresolved; local image preview does not reconstruct Unity prefabs. Game files, saves, engine sources and proprietary material are read-only. Private observations, screenshots and generated output stay outside the checkout. Spawning, encounters, deployment, game execution and release are outside this task.
 
 ## Executed acceptance
 
-- PASSED: 819 Python tests discovered, 810 passed and nine explicit skips; static and fixture validators passed.
-- PASSED: all ten enabled pinned O3DE source-policy validators and the Windows Profile Framework, Catalog test and Editor targets.
-- PASSED: mandatory Catalog suite (424 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
-- PASSED: compiled Editor imported into an empty workspace: 3,914 native items and 356 supported recipes; created a saved mod and custom definitions; edited quantities; preserved drafts; removed/re-added links; reopened saved values; cancelled without replacing the catalog. First import took 4.562 seconds with a maximum UI timer gap of 2.688 seconds (limit below three seconds). Dropdown models are published in batches, and the existing transaction validates once before persisting evidence and catalog.
-- PASSED: malformed/profile-mismatched/changed-source intake, failed catalog writes, exact link evidence, wrong-recipe removal and preservation of authored values on a fresh reader run have compiled regression coverage.
-- PASSED: preview repair rebuilt Framework, Catalog.Tests and Editor; Catalog now has 426 passing tests and two explicit symlink-privilege skips, and Canonical Interchange retains 39 passing tests. Exact native-image matching rejects empty, unsupported and ambiguous images.
-- PASSED: nine compiled Editor preview checks verify displayed pixels against the selected native icon, item switching, recipe output and linked-item selection, missing-image clearing, reader cancellation, separate custom binding controls, pane reopen and unchanged persisted catalog. Preview interaction timer gap peaked at 0.234 seconds. Whole-pane construction is measured separately at 3.469 seconds, and the first image appeared after 6.125 seconds; the preview interaction result does not claim sub-three-second pane startup.
-- Four crafting-bundle entries lack supported recipe fields and remain explicitly unsupported. Game runtime, deployment, save mutation and release sign-off are NOT_APPLICABLE to this authoring completion.
+- PASSED: 827 Python tests discovered, 818 passed and nine explicit platform/privilege skips; applicable static and fixture validators passed.
+- PASSED: all ten enabled source-policy validators against O3DE pin `68683f23fb747380d3efa2424bd5f30242e9c5a2`.
+- PASSED: Windows Profile configure, Core, Framework, Catalog.Tests and Editor builds.
+- PASSED: Catalog compiled suite (429 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
+- PASSED: real provider read 885 supported NPC templates. Nine level-zero templates and 64 non-NPC entries remain explicitly unsupported.
+- PASSED: eight live Editor checks with 3,914 existing items and 356 recipes cover initial native intake, deferred review-table expansion, local creation, exact portrait pixels, member addition/change/removal, invalid-save rollback, dirty drafts, cancellation, saved-workspace reopening and pane width.
+- PASSED: first mixed-catalog intake took 3.046 seconds; maximum UI timer gap was 1.938 seconds, below the three-second limit. The initial failing large-catalog result was corrected by deferring collapsed review tables; full save validation remains mandatory.
+- NOT_APPLICABLE: FoA runtime, spawning, deployment, save mutation and release sign-off. Runtime sign-off was not performed.
 
-Private source observations, screenshots, build logs and the evidence pack remain outside the repository. The focused PR is for maintainer audit; no approval or merge is inferred.
+Private logs, source observations, screenshots and machine-readable evidence remain outside the repository. Maintainer review is the next repository transition. No later feature is started by this task.

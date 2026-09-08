@@ -24,10 +24,12 @@ namespace TaintedGrailModdingSDK
         explicit NativeItemPreviewService(QObject* parent = nullptr);
         ~NativeItemPreviewService() override;
         void Start(const QString& workspacePath, Progress progress, Completion completion, bool economy = false);
+        void StartPopulation(const QString& workspacePath, Progress progress, Completion completion);
         void Cancel();
         bool IsRunning() const;
 
     private:
+        void StartMode(const QString& workspacePath, Progress progress, Completion completion, const QString& mode);
         void ReadOutput();
         void Complete(const QString& error);
 

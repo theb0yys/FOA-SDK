@@ -9,6 +9,7 @@
 #include "FoundationNotificationBus.h"
 #include "FoundationService.h"
 #include "PopulationAuthoringService.h"
+#include "PopulationPortraitService.h"
 
 #include <AzCore/Component/ComponentApplication.h>
 #include <AzCore/IO/FileIO.h>
@@ -21,6 +22,11 @@
 #include <AzTest/AzTest.h>
 
 #include <QByteArray>
+#include <QCryptographicHash>
+#include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
@@ -50,6 +56,7 @@ namespace TaintedGrailModdingSDK
         {
             GameProfile::Reflect(&context);
             WorkspaceModel::Reflect(&context);
+            PackManifest::Reflect(&context);
             SourceRecord::Reflect(&context);
             EvidenceRecord::Reflect(&context);
             ImportIssue::Reflect(&context);
@@ -335,6 +342,21 @@ namespace TaintedGrailModdingSDK
                     QStringLiteral("population.tgworkspace.json")));
             return service.SaveWorkspace(workspacePath, &error)
                 && service.SetActivePack(pack, &error);
+        }
+
+        bool PrepareCompletionService(FoundationService& service, const QString& root, AZStd::string& error)
+        {
+            WorkspaceModel workspace = MakeWorkspace(ToAzString(root));
+            auto& profile = workspace.m_gameProfiles.front();
+            profile.m_installPath = ToAzString(root + "/Game");
+            profile.m_managedAssembliesPath = profile.m_installPath + "/Managed";
+            profile.m_pluginPath = profile.m_installPath + "/BepInEx/plugins";
+            profile.m_diagnosticsPath = ToAzString(root + "/Diagnostics");
+            profile.m_extractedDataPath = ToAzString(root + "/Extracted");
+            if (!QDir().mkpath(root + "/Diagnostics") || !QDir().mkpath(root + "/Extracted")
+                || !QDir().mkpath(root + "/Packs/population.pack.active")) { return false; }
+            return PrepareAuthoringService(service, workspace, MakePack(), error)
+                && service.SaveActivePack(ToAzString(root + "/Packs/population.pack.active/pack.tgpack.json"), &error);
         }
 
         class FoundationChangeCounter final
@@ -1352,5 +1374,186 @@ namespace TaintedGrailModdingSDK
             service.GetCatalog().FindByRecordId(actor.m_recordId),
             nullptr);
         EXPECT_EQ(service.GetSnapshot().m_populationActorProfileCount, 0);
+    }
+    TEST_F(PopulationAuthoringTests, CreatedActorsTroopsAndExplicitMemberChangesSurviveReopen)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        AZStd::string error, first, second, troopId, otherTroop;
+        EXPECT_FALSE(service.CreatePopulationRecord("actor", "Unsaved", {}, first, &error));
+        ASSERT_TRUE(PrepareCompletionService(service, temporary.path(), error)) << error.c_str();
+        EXPECT_FALSE(service.CreatePopulationRecord("actor", " ", {}, first, &error));
+        EXPECT_FALSE(service.CreatePopulationRecord("troop", "Missing leader", "absent", first, &error));
+        ASSERT_TRUE(service.CreatePopulationRecord("actor", "Captain", {}, first, &error)) << error.c_str();
+        ASSERT_TRUE(service.CreatePopulationRecord("actor", "Guard", {}, second, &error)) << error.c_str();
+        ASSERT_TRUE(service.CreatePopulationRecord("troop", "Patrol", first, troopId, &error)) << error.c_str();
+        const auto* record = service.GetCatalog().FindByRecordId(first);
+        ASSERT_NE(record, nullptr);
+        EXPECT_EQ(record->m_ownerPackId, "population.pack.active");
+        EXPECT_TRUE(record->m_nativeRefExact.empty());
+        EXPECT_TRUE(record->m_allowedUsages.empty());
+        auto actor = *service.GetCatalog().FindPopulationActorProfile(first);
+        actor.m_archetype = "veteran";
+        ASSERT_TRUE(service.UpsertPopulationActorProfile(actor, &error)) << error.c_str();
+        PopulationTroopDefinition definition;
+        definition.m_profile = *service.GetCatalog().FindPopulationTroopProfile(troopId);
+        definition.m_members = service.GetCatalog().FindPopulationMembersForTroop(troopId);
+        ASSERT_EQ(definition.m_members.size(), 1);
+        const auto leader = definition.m_members.front();
+        PopulationTroopMember guard;
+        guard.m_linkId = "custom.member.guard"; guard.m_troopRecordId = troopId; guard.m_actorRecordId = second;
+        guard.m_role = "melee"; guard.m_minimumCount = 1; guard.m_maximumCount = 2;
+        definition.m_profile.m_minimumSize = 2; definition.m_profile.m_maximumSize = 3;
+        definition.m_members.push_back(guard);
+        ASSERT_TRUE(service.SaveAuthoredPopulationTroop(definition, &error)) << error.c_str();
+        auto members = service.GetCatalog().FindPopulationMembersForTroop(troopId);
+        ASSERT_EQ(members.size(), 2);
+        for (const auto& member : members)
+        {
+            ASSERT_FALSE(member.m_evidenceIds.empty());
+            const auto* evidence = service.GetSourceRegistry().FindEvidence(member.m_evidenceIds.front());
+            ASSERT_NE(evidence, nullptr);
+            EXPECT_EQ(evidence->m_subjectRef, "population-troop-member:" + member.m_linkId);
+        }
+        definition.m_members.back().m_maximumCount = 4;
+        definition.m_profile.m_maximumSize = 5;
+        ASSERT_TRUE(service.SaveAuthoredPopulationTroop(definition, &error)) << error.c_str();
+        // Omission retains existing members under the original additive command.
+        definition.m_members = {leader};
+        ASSERT_TRUE(service.UpsertPopulationTroopDefinition(definition, &error)) << error.c_str();
+        ASSERT_EQ(service.GetCatalog().FindPopulationMembersForTroop(troopId).size(), 2);
+        definition.m_removedMemberIds = {guard.m_linkId};
+        definition.m_profile.m_minimumSize = 1; definition.m_profile.m_maximumSize = 1;
+        ASSERT_TRUE(service.SaveAuthoredPopulationTroop(definition, &error)) << error.c_str();
+        ASSERT_EQ(service.GetCatalog().FindPopulationMembersForTroop(troopId).size(), 1);
+        EXPECT_FALSE(service.SaveAuthoredPopulationTroop(definition, &error)); // stale removal
+        definition.m_removedMemberIds = {leader.m_linkId};
+        EXPECT_FALSE(service.SaveAuthoredPopulationTroop(definition, &error)); // removal/upsert conflict
+        definition.m_removedMemberIds = {"absent.member"};
+        EXPECT_FALSE(service.SaveAuthoredPopulationTroop(definition, &error));
+        ASSERT_TRUE(service.CreatePopulationRecord("troop", "Other patrol", first, otherTroop, &error)) << error.c_str();
+        definition.m_removedMemberIds = {service.GetCatalog().FindPopulationMembersForTroop(otherTroop).front().m_linkId};
+        EXPECT_FALSE(service.SaveAuthoredPopulationTroop(definition, &error)); // cross-troop removal
+        definition.m_removedMemberIds = {leader.m_linkId}; definition.m_members = {guard};
+        EXPECT_FALSE(service.SaveAuthoredPopulationTroop(definition, &error)); // loses its required leader
+        ASSERT_EQ(service.GetCatalog().FindPopulationMembersForTroop(troopId).size(), 1);
+
+        FoundationService reopened(FoundationWorkspaceLoadDependencies{});
+        reopened.SetWorkspace(service.GetWorkspace());
+        ASSERT_TRUE(reopened.SaveWorkspace(service.GetWorkspaceFilePath(), &error)) << error.c_str();
+        ASSERT_TRUE(reopened.ReloadSourceEvidence(&error)) << error.c_str();
+        ASSERT_TRUE(reopened.ReloadCatalog(&error)) << error.c_str();
+        ASSERT_NE(reopened.GetCatalog().FindPopulationActorProfile(first), nullptr);
+        EXPECT_EQ(reopened.GetCatalog().FindPopulationActorProfile(first)->m_archetype, "veteran");
+        ASSERT_EQ(reopened.GetCatalog().FindPopulationMembersForTroop(troopId).size(), 1);
+        EXPECT_EQ(reopened.GetCatalog().FindPopulationMembersForTroop(troopId).front().m_actorRecordId, first);
+    }
+
+    TEST_F(PopulationAuthoringTests, NativeIntakeRejectsChangedSourcesAndPreservesAuthoredIdentityOnRefresh)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        AZStd::string error;
+        ASSERT_TRUE(PrepareCompletionService(service, temporary.path(), error)) << error.c_str();
+        const auto& profile = *service.GetWorkspace().FindActiveGameProfile();
+        const QString relative = "Fall of Avalon_Data/StreamingAssets/aa/StandaloneWindows64/templates.npc_assets_all.bundle";
+        const QString sourcePath = ToQString(profile.m_installPath) + '/' + relative;
+        ASSERT_TRUE(QDir().mkpath(QFileInfo(sourcePath).absolutePath()));
+        const QByteArray sourceBytes("Synthetic serialized-source fixture; never executed.");
+        QFile source(sourcePath);
+        ASSERT_TRUE(source.open(QIODevice::WriteOnly));
+        ASSERT_EQ(source.write(sourceBytes), sourceBytes.size()); source.close();
+        const QString native = "$install/" + relative + "#/Assets/Synthetic/Actor.prefab";
+        QJsonObject actor{{"actor_kind", "other"}, {"archetype", "native-npc-template"},
+            {"minimum_level", 7}, {"maximum_level", 7}, {"tags", QJsonArray{"fixture:test"}}};
+        QJsonObject row{{"record_id", "native.actor.fixture"}, {"kind", "actor"}, {"display_name", "Fixture"},
+            {"subject_ref", native}, {"native_ref", native}, {"evidence_id", "evidence.native.actor.fixture"},
+            {"confidence", "documented"}, {"claim", "Synthetic NPC field observation."}, {"actor", actor}};
+        QJsonObject document{{"SchemaVersion", 1}, {"DocumentKind", "foa-native-population-observations"},
+            {"ProfileId", ToQString(profile.m_profileId)}, {"GameVersion", ToQString(profile.m_gameVersion)},
+            {"Branch", ToQString(profile.m_branch)}, {"RuntimeTarget", ToQString(profile.m_runtimeTarget)},
+            {"CapturedAt", QDateTime::currentDateTimeUtc().toString("yyyy-MM-ddTHH:mm:ssZ")},
+            {"OperationalAuthority", QJsonObject{{"Runtime", false}}},
+            {"SourceFiles", QJsonArray{QJsonObject{{"Locator", "$install/" + relative},
+                {"ByteSize", sourceBytes.size()}, {"Sha256", "sha256:" + QString::fromLatin1(
+                    QCryptographicHash::hash(sourceBytes, QCryptographicHash::Sha256).toHex())}}}},
+            {"definitions", QJsonArray{row}}, {"evidence", QJsonArray{row}}};
+        const auto path = temporary.path() + "/observations.json";
+        auto import = [&](const QJsonObject& value)
+        {
+            QFile file(path);
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) { return false; }
+            const auto bytes = QJsonDocument(value).toJson();
+            if (file.write(bytes) != bytes.size()) { return false; }
+            file.close();
+            return service.ImportNativePopulation(ToAzString(path), &error);
+        };
+        auto wrong = document; wrong["RuntimeTarget"] = "IL2CPP";
+        EXPECT_FALSE(import(wrong));
+        wrong = document; wrong["OperationalAuthority"] = QJsonObject{{"Runtime", true}};
+        EXPECT_FALSE(import(wrong));
+        wrong = document; wrong["SourceFiles"] = QJsonArray{};
+        EXPECT_FALSE(import(wrong));
+        wrong = document; auto malformed = row; malformed["native_ref"] = "$install/../escape";
+        wrong["definitions"] = QJsonArray{row, malformed};
+        EXPECT_FALSE(import(wrong));
+        EXPECT_TRUE(service.GetCatalog().GetRecords().empty());
+        ASSERT_TRUE(import(document)) << error.c_str();
+        auto authored = *service.GetCatalog().FindPopulationActorProfile("native.actor.fixture");
+        authored.m_archetype = "edited-locally";
+        ASSERT_TRUE(service.UpsertPopulationActorProfile(authored, &error)) << error.c_str();
+        row["record_id"] = "native.actor.new-reader-id";
+        row["evidence_id"] = "evidence.native.actor.refresh";
+        document["definitions"] = QJsonArray{row}; document["evidence"] = QJsonArray{row};
+        ASSERT_TRUE(import(document)) << error.c_str();
+        ASSERT_EQ(service.GetCatalog().GetRecords().size(), 1);
+        EXPECT_EQ(service.GetCatalog().FindPopulationActorProfile("native.actor.fixture")->m_archetype, "edited-locally");
+        EXPECT_EQ(service.GetCatalog().FindByRecordId("native.actor.new-reader-id"), nullptr);
+        ASSERT_TRUE(source.open(QIODevice::WriteOnly | QIODevice::Append));
+        ASSERT_GT(source.write("changed"), 0); source.close();
+        EXPECT_FALSE(import(document));
+        EXPECT_EQ(service.GetCatalog().GetRecords().size(), 1);
+
+        // A failed catalog write must leave both the published catalog and notifications unchanged.
+        const QString catalog = ToQString(service.GetCatalogFilePath());
+        ASSERT_TRUE(QFile::rename(catalog, catalog + ".saved"));
+        ASSERT_TRUE(QDir().mkdir(catalog));
+        FoundationChangeCounter counter;
+        AZStd::string failedId;
+        EXPECT_FALSE(service.CreatePopulationRecord("actor", "Cannot persist", {}, failedId, &error));
+        EXPECT_TRUE(failedId.empty());
+        EXPECT_EQ(counter.m_count, 0);
+        EXPECT_EQ(service.GetCatalog().GetRecords().size(), 1);
+    }
+
+    TEST_F(PopulationAuthoringTests, PortraitsReadExactWorkspaceImagesAndRejectMissingEscapingOrOversizedInput)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const auto root = temporary.path() + "/Workspace";
+        ASSERT_TRUE(QDir().mkpath(root));
+        QImage original(32, 20, QImage::Format_ARGB32);
+        original.fill(qRgba(25, 70, 140, 255));
+        ASSERT_TRUE(original.save(root + "/portrait.png"));
+        auto reference = PopulationPortraitService::ReferenceForFile(root, root + "/portrait.png");
+        ASSERT_TRUE(reference.IsSuccess());
+        EXPECT_EQ(reference.GetValue(), "$workspace/portrait.png");
+        auto read = PopulationPortraitService::Read(root, reference.GetValue());
+        ASSERT_TRUE(read.IsSuccess());
+        EXPECT_EQ(read.GetValue().pixel(4, 4), original.pixel(4, 4));
+        EXPECT_FALSE(PopulationPortraitService::Read(root, "").IsSuccess());
+        EXPECT_FALSE(PopulationPortraitService::Read(root, "$workspace/missing.png").IsSuccess());
+        ASSERT_TRUE(original.save(temporary.path() + "/outside.png"));
+        EXPECT_FALSE(PopulationPortraitService::ReferenceForFile(root, temporary.path() + "/outside.png").IsSuccess());
+        EXPECT_FALSE(PopulationPortraitService::Read(root, "$workspace/../outside.png").IsSuccess());
+        EXPECT_FALSE(PopulationPortraitService::Read(root, temporary.path() + "/outside.png").IsSuccess());
+        QImage oversized(4097, 1, QImage::Format_ARGB32); oversized.fill(Qt::blue);
+        ASSERT_TRUE(oversized.save(root + "/oversized.png"));
+        EXPECT_FALSE(PopulationPortraitService::Read(root, "$workspace/oversized.png").IsSuccess());
+        QFile invalid(root + "/invalid.png");
+        ASSERT_TRUE(invalid.open(QIODevice::WriteOnly)); ASSERT_GT(invalid.write("invalid image bytes"), 0); invalid.close();
+        EXPECT_FALSE(PopulationPortraitService::Read(root, "$workspace/invalid.png").IsSuccess());
     }
 } // namespace TaintedGrailModdingSDK

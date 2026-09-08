@@ -1,5 +1,17 @@
 # Actor and Troop Editor Design
 
+## Current completion increment
+
+The owner has authorized supported installed actor intake, local actor/troop creation, explicit member removal and available portrait presentation. This extends the earlier bootstrap scope below. `FoundationPopulationIntakeService` admits version-1 `foa-native-population-observations` from the bounded Unity provider, checks exact profile/source hashes and preserves existing canonical identity and authored profiles. It imports supported NPC levels/tags; native enum meanings, appearance and runtime behavior are not inferred. The reader uses UnityPy's pure-Python type-tree fallback in its isolated process because the pinned native decoder can fail during shutdown on NPC managed references.
+
+`CreatePopulationRecord` creates a pack-owned actor or a troop atomically with its first selected leader. `SaveAuthoredPopulationTroop` writes explicit local intent for each member, then validates and publishes the complete candidate. `PopulationTroopDefinition.m_removedMemberIds` adds explicit removals; omitted members retain additive semantics. Every removal must identify an existing member of this exact troop and cannot conflict with an upsert or another removal. Final leader/count/reference validation still applies. Catalog schema 2 and existing serialized IDs do not change.
+
+`PopulationPortraitService` reads bounded PNG/JPEG images through portable `$workspace/` references, checks canonical containment and clears invalid/missing selections. These are authoring portraits. The observed NPC component supplies no portrait/model binding; game equipment composition and Unity prefab rendering remain outside this increment. The UI provides loading/cancellation, creation, member editing/removal and portrait selection through these services. Private game-derived output stays outside the source tree.
+
+PASSED: pinned Windows Profile Core, Framework, Editor and Catalog test builds; 827 Python tests discovered (818 passed, nine explicit skips); all ten enabled source-policy checks; Catalog tests (429 passed, two symlink-privilege skips) and Canonical Interchange tests (39 passed). Eight running Editor checks cover game intake alongside the existing economy catalog, creation, portraits, membership edits/removals, invalid-save atomicity, dirty drafts, cancellation, reopening and width. Initial mixed-catalog intake took 3.046 seconds with a maximum UI gap of 1.938 seconds. Actor/troop action matrices and advanced Foundation Status tables materialize when expanded using the current snapshot; save validation remains mandatory. Private observations and UI evidence remain outside the repository. Game runtime, deployment and save-mutation sign-off are not part of this increment.
+
+## Historical bootstrap scope and acceptance
+
 Status: implemented vertical slice — Core contracts/database, schema-2 migration/persistence, Framework
 evidence-bound candidate publication, production-linked population tests, the immutable population action-lane
 contract, Actor and Troop Editor lifecycle, deterministic synthetic fixture, full local-validation integration,
@@ -304,13 +316,14 @@ Add Foundation commands:
 - `UpsertPopulationTroopDefinition` for one atomic troop profile and supplied member upserts;
 - `UpsertPopulationTroopProfile`;
 - `UpsertPopulationTroopMember`;
-- later removal commands only with explicit dependency and rollback validation.
+- `ImportNativePopulation`, `CreatePopulationRecord`, and `SaveAuthoredPopulationTroop` for the completion workflow;
+- explicit `m_removedMemberIds` in the atomic troop-definition command, with ownership and final-composition validation.
 
 `UpsertPopulationTroopDefinition` is the required bootstrap path for a new troop. A complete catalog cannot
 publish a troop profile without at least one typed member, and a member cannot publish without its typed troop
 profile. The compound command therefore upserts the troop profile and supplied members in one candidate before
-integrity validation, persistence, and publication. Existing members omitted from the request remain unchanged;
-this command does not add removal authority. The single-profile and single-member commands remain available
+integrity validation, persistence, and publication. Existing members omitted from the request remain unchanged
+unless explicitly listed in `m_removedMemberIds`. The single-profile and single-member commands remain available
 only for updates that independently preserve complete-catalog integrity.
 
 Membership link identity is immutable across owning troops. Updating an existing `linkId` may change that row's

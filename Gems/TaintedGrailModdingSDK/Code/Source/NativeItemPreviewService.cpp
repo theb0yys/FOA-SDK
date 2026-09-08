@@ -73,6 +73,16 @@ namespace TaintedGrailModdingSDK
 
     void NativeItemPreviewService::Start(const QString& workspacePath, Progress progress, Completion completion, bool economy)
     {
+        StartMode(workspacePath, std::move(progress), std::move(completion), economy ? QStringLiteral("--economy") : QString());
+    }
+
+    void NativeItemPreviewService::StartPopulation(const QString& workspacePath, Progress progress, Completion completion)
+    {
+        StartMode(workspacePath, std::move(progress), std::move(completion), QStringLiteral("--population"));
+    }
+
+    void NativeItemPreviewService::StartMode(const QString& workspacePath, Progress progress, Completion completion, const QString& mode)
+    {
         if (IsRunning())
         {
             return;
@@ -119,9 +129,9 @@ namespace TaintedGrailModdingSDK
         QStringList arguments{ QStringLiteral("-B"), QStringLiteral("-s"), script,
             QStringLiteral("--workspace"), workspacePath, QStringLiteral("--vendor"), vendor,
             QStringLiteral("--forbid-root"), enginePath };
-        if (economy)
+        if (!mode.isEmpty())
         {
-            arguments.append(QStringLiteral("--economy"));
+            arguments.append(mode);
         }
         m_process.setArguments(arguments);
         m_timeout.start(180000);

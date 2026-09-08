@@ -120,6 +120,7 @@ namespace TaintedGrailModdingSDK
         auto* recheckButton = new QPushButton(tr("Check again"), actionRow);
         m_locateGameButton = new QPushButton(tr("Locate Fall of Avalon..."), actionRow);
         m_advancedToggleButton = new QPushButton(tr("Show advanced details"), actionRow);
+        m_advancedToggleButton->setObjectName("foundationAdvancedToggle");
         actionLayout->addWidget(recheckButton);
         actionLayout->addWidget(m_locateGameButton);
         actionLayout->addStretch(1);
@@ -173,6 +174,7 @@ namespace TaintedGrailModdingSDK
         auto* blockersGroup = new QGroupBox(tr("Open blockers"), m_advancedGroup);
         auto* blockersLayout = new QVBoxLayout(blockersGroup);
         m_blockerTable = new QTableWidget(0, 3, blockersGroup);
+        m_blockerTable->setObjectName("foundationBlockers");
         m_blockerTable->setHorizontalHeaderLabels({ tr("Severity"), tr("Area"), tr("Reason") });
         ConfigureReadOnlyTable(m_blockerTable);
         blockersLayout->addWidget(m_blockerTable);
@@ -190,6 +192,7 @@ namespace TaintedGrailModdingSDK
             m_advancedGroup->setVisible(show);
             m_advancedToggleButton->setText(
                 show ? tr("Hide advanced details") : tr("Show advanced details"));
+            if (show) { Refresh(); }
         });
 
         DetectAndApply();
@@ -395,6 +398,9 @@ namespace TaintedGrailModdingSDK
             { "Open blockers", snapshot.m_openBlockerCount },
         };
 
+        // Native intake can publish thousands of review rows. Materialize the
+        // advanced tables when opened, using the latest published snapshot.
+        if (m_advancedGroup->isHidden()) { return; }
         const int countRowCount = static_cast<int>(sizeof(countRows) / sizeof(countRows[0]));
         m_countsTable->setRowCount(countRowCount);
         for (int row = 0; row < countRowCount; ++row)

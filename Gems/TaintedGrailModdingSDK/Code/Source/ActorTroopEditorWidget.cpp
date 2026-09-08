@@ -9,6 +9,9 @@
 
 #include "FoundationService.h"
 #include "PopulationActionLaneService.h"
+#include "NativeItemPreviewService.h"
+#include <AzToolsFramework/API/ViewPaneOptions.h>
+#include <AzToolsFramework/API/ToolsApplicationAPI.h>
 
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/sort.h>
@@ -23,6 +26,7 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
@@ -41,6 +45,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QVariant>
+#include <QUuid>
 
 #include <cmath>
 #include <cstddef>
@@ -114,13 +119,8 @@ namespace TaintedGrailModdingSDK
 
         QString RecordLabel(const CatalogRecord& record)
         {
-            QString label = ToQString(record.m_recordId);
-            if (!record.m_displayName.empty())
-            {
-                label += QStringLiteral(" - ")
-                    + ToQString(record.m_displayName);
-            }
-            return label;
+            return record.m_displayName.empty() ? ToQString(record.m_recordId)
+                : ToQString(record.m_displayName) + " [" + ToQString(record.m_recordId) + "]";
         }
 
         bool MatchesFilter(const CatalogRecord& record, const QString& filter)
@@ -425,12 +425,31 @@ namespace TaintedGrailModdingSDK
 
         auto* description = new QLabel(
             tr(
-                "Author evidence-bound population profiles on existing canonical "
-                "records. This pane cannot create identities, grant permissions, "
-                "spawn actors, mutate saves, invoke adapters, or deploy content."),
+                "Load game actor templates, create actors and troops for your mod, and save local changes. "
+                "Choose a leader and build each troop from saved actors."),
             this);
         description->setWordWrap(true);
         rootLayout->addWidget(description);
+
+        auto* toolbar = new QHBoxLayout();
+        m_readGame = new QPushButton(tr("Load game actors"), this);
+        m_readGame->setObjectName("populationReadGame");
+        m_nativeReader = new NativeItemPreviewService(this);
+        auto* newActor = new QPushButton(tr("New actor"), this);
+        auto* newTroop = new QPushButton(tr("New troop"), this);
+        auto* manageMod = new QPushButton(tr("Choose or create mod"), this);
+        newActor->setObjectName("populationNewActor");
+        newTroop->setObjectName("populationNewTroop");
+        toolbar->addWidget(m_readGame); toolbar->addWidget(newActor); toolbar->addWidget(newTroop);
+        toolbar->addWidget(manageMod); toolbar->addStretch();
+        rootLayout->addLayout(toolbar);
+        m_catalogSummary = new QLabel(this);
+        m_catalogSummary->setObjectName("populationSummary");
+        rootLayout->addWidget(m_catalogSummary);
+        connect(m_readGame, &QPushButton::clicked, this, [this]() { ReadGameDefinitions(); });
+        connect(newActor, &QPushButton::clicked, this, [this]() { CreateRecord(false); });
+        connect(newTroop, &QPushButton::clicked, this, [this]() { CreateRecord(true); });
+        connect(manageMod, &QPushButton::clicked, this, []() { AzToolsFramework::OpenViewPane("Tainted Grail Pack Manager"); });
 
         m_tabs = new QTabWidget(this);
         rootLayout->addWidget(m_tabs, 1);
@@ -457,6 +476,23 @@ namespace TaintedGrailModdingSDK
         actorSelectionLayout->addRow(tr("Exact identity"), m_actorIdentity);
         actorSelectionLayout->addRow(tr("Editor state"), m_actorState);
         actorLayout->addWidget(actorSelection);
+
+        auto* portraitGroup = new QGroupBox(tr("Portrait preview"), actorContent);
+        auto* portraitLayout = new QHBoxLayout(portraitGroup);
+        m_portrait = new QLabel(portraitGroup);
+        m_portrait->setObjectName("populationPortrait");
+        m_portrait->setFixedSize(192, 192);
+        m_portrait->setAlignment(Qt::AlignCenter);
+        auto* portraitDetails = new QVBoxLayout();
+        m_portraitState = new QLabel(portraitGroup);
+        m_portraitState->setObjectName("populationPortraitState");
+        m_portraitState->setWordWrap(true);
+        m_choosePortrait = new QPushButton(tr("Choose workspace portrait"), portraitGroup);
+        m_choosePortrait->setObjectName("populationChoosePortrait");
+        portraitDetails->addWidget(m_portraitState); portraitDetails->addWidget(m_choosePortrait); portraitDetails->addStretch();
+        portraitLayout->addWidget(m_portrait); portraitLayout->addLayout(portraitDetails, 1);
+        actorLayout->addWidget(portraitGroup);
+        connect(m_choosePortrait, &QPushButton::clicked, this, [this]() { ChoosePortrait(); });
 
         auto* actorProfile = new QGroupBox(
             tr("Typed Actor Profile"),
@@ -494,6 +530,8 @@ namespace TaintedGrailModdingSDK
         m_actorNameRef = new QLineEdit(actorProfile);
         m_actorDescriptionRef = new QLineEdit(actorProfile);
         m_actorPortraitRef = new QLineEdit(actorProfile);
+        m_actorPortraitRef->setPlaceholderText(tr("$workspace/Assets/Portraits/actor.png"));
+        connect(m_actorPortraitRef, &QLineEdit::editingFinished, this, [this]() { RefreshPortrait(); });
         m_actorModelRef = new QLineEdit(actorProfile);
         m_actorTags = new QLineEdit(actorProfile);
         m_actorTags->setPlaceholderText(tr("Comma-separated unique tags"));
@@ -550,6 +588,8 @@ namespace TaintedGrailModdingSDK
             tr("Read-only Actor Review Context"),
             actorContent);
         auto* actorReviewLayout = new QVBoxLayout(actorReview);
+        actorSelectionLayout->labelForField(m_actorIdentity)->hide();
+        actorReviewLayout->addWidget(m_actorIdentity);
         auto* actorReviewTabs = new QTabWidget(actorReview);
         m_actorValidationSummary = CreateSummary(
             tr("Actor validation summary"),
@@ -588,7 +628,7 @@ namespace TaintedGrailModdingSDK
         m_saveActor = new QPushButton(tr("Save Actor Profile"), actorButtons);
         actorButtonLayout->addWidget(m_revertActor, 0, 0);
         actorButtonLayout->addWidget(m_saveActor, 0, 1);
-        actorLayout->addWidget(actorButtons);
+        actorLayout->insertWidget(3, actorButtons);
         actorLayout->addStretch(1);
         m_tabs->addTab(WrapScrollable(actorContent, m_tabs), tr("Actors"));
 
@@ -678,9 +718,8 @@ namespace TaintedGrailModdingSDK
         auto* memberLayout = new QVBoxLayout(memberGroup);
         auto* memberHelp = new QLabel(
             tr(
-                "Stage member additions or updates locally, then save the whole "
-                "troop definition once. Existing omitted members are preserved; "
-                "this pane has no removal or link-move authority."),
+                "Add or edit members, or select a row to remove it. Save the troop "
+                "to apply all staged changes together. The leader and size range must match the final members."),
             memberGroup);
         memberHelp->setWordWrap(true);
         memberLayout->addWidget(memberHelp);
@@ -702,7 +741,7 @@ namespace TaintedGrailModdingSDK
         m_memberRole->addItems(
             { "leader", "melee", "ranged", "support", "specialist", "other" });
         m_memberMinimumCount = new QSpinBox(memberGroup);
-        m_memberMinimumCount->setRange(1, 1000);
+        m_memberMinimumCount->setRange(0, 1000);
         m_memberMaximumCount = new QSpinBox(memberGroup);
         m_memberMaximumCount->setRange(1, 1000);
         m_memberWeight = new QLineEdit(memberGroup);
@@ -753,12 +792,16 @@ namespace TaintedGrailModdingSDK
         memberLayout->addWidget(m_memberEvidenceDetails);
         auto* memberButtons = new QWidget(memberGroup);
         auto* memberButtonLayout = new QGridLayout(memberButtons);
-        m_clearMember = new QPushButton(tr("Clear Member Editor"), memberButtons);
+        m_clearMember = new QPushButton(tr("New member / clear form"), memberButtons);
         m_stageMember = new QPushButton(
             tr("Stage Member in Definition"),
             memberButtons);
         memberButtonLayout->addWidget(m_clearMember, 0, 0);
         memberButtonLayout->addWidget(m_stageMember, 0, 1);
+        m_removeMember = new QPushButton(tr("Remove selected member"), memberButtons);
+        m_removeMember->setObjectName("populationRemoveMember");
+        memberButtonLayout->addWidget(m_removeMember, 0, 2);
+        connect(m_removeMember, &QPushButton::clicked, this, [this]() { RemoveSelectedMember(); });
         memberLayout->addWidget(memberButtons);
         troopLayout->addWidget(memberGroup);
 
@@ -766,6 +809,8 @@ namespace TaintedGrailModdingSDK
             tr("Read-only Troop Review Context"),
             troopContent);
         auto* troopReviewLayout = new QVBoxLayout(troopReview);
+        troopSelectionLayout->labelForField(m_troopIdentity)->hide();
+        troopReviewLayout->addWidget(m_troopIdentity);
         auto* troopReviewTabs = new QTabWidget(troopReview);
         m_troopValidationSummary = CreateSummary(
             tr("Troop validation summary"),
@@ -808,7 +853,7 @@ namespace TaintedGrailModdingSDK
             troopButtons);
         troopButtonLayout->addWidget(m_revertTroop, 0, 0);
         troopButtonLayout->addWidget(m_saveTroop, 0, 1);
-        troopLayout->addWidget(troopButtons);
+        troopLayout->insertWidget(3, troopButtons);
         troopLayout->addStretch(1);
         m_tabs->addTab(WrapScrollable(troopContent, m_tabs), tr("Troops"));
 
@@ -1191,6 +1236,70 @@ namespace TaintedGrailModdingSDK
         QWidget::setTabOrder(m_stageMember, m_revertTroop);
         QWidget::setTabOrder(m_revertTroop, m_saveTroop);
 
+        auto* memberEvidenceGroup = new QGroupBox(tr("Member evidence and saved claims"), memberGroup);
+        auto* memberEvidenceLayout = new QVBoxLayout(memberEvidenceGroup);
+        memberEvidenceLayout->addWidget(memberEvidenceLabel);
+        memberEvidenceLayout->addWidget(m_memberEvidence);
+        memberEvidenceLayout->addWidget(m_memberEvidenceDetails);
+        memberLayout->insertWidget(memberLayout->count() - 1, memberEvidenceGroup);
+        for (auto* group : {actorEvidenceGroup, actorReview, actorLaneGroup, troopEvidenceGroup, memberEvidenceGroup, troopReview, troopLaneGroup})
+        {
+            group->setCheckable(true);
+            group->setChecked(false);
+            const auto details = group->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+            for (auto* detail : details) { detail->hide(); }
+            connect(group, &QGroupBox::toggled, this, [details](bool expanded)
+            {
+                for (auto* detail : details) { detail->setVisible(expanded); }
+            });
+        }
+        actorLaneGroup->setObjectName("populationActorLaneGroup");
+        troopLaneGroup->setObjectName("populationTroopLaneGroup");
+        m_actorActionLanes->setObjectName("populationActorLanes");
+        m_troopActionLanes->setObjectName("populationTroopLanes");
+        connect(actorLaneGroup, &QGroupBox::toggled, this, [this](bool expanded)
+        {
+            if (expanded) { RefreshActorActionLanes(FoundationService::Get().GetCatalog().FindByRecordId(m_loadedActorRecordId)); }
+        });
+        connect(troopLaneGroup, &QGroupBox::toggled, this, [this](bool expanded)
+        {
+            if (expanded) { RefreshTroopActionLanes(FoundationService::Get().GetCatalog().FindByRecordId(m_loadedTroopRecordId)); }
+        });
+        m_actorRecord->setObjectName("populationActor");
+        for (auto* combo : {m_actorRecord, m_actorTemplateRecord, m_troopRecord, m_troopLeaderRecord, m_memberActorRecord})
+        {
+            combo->setMinimumContentsLength(20);
+            combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+            combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        }
+        for (auto* label : {m_actorIdentity, m_troopIdentity, m_actorState, m_troopState, m_portraitState})
+        {
+            label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+            label->setTextFormat(Qt::PlainText);
+        }
+        m_troopRecord->setObjectName("populationTroop");
+        m_actorArchetype->setObjectName("populationArchetype");
+        m_actorMinimumLevel->setObjectName("populationMinimumLevel");
+        m_actorMaximumLevel->setObjectName("populationMaximumLevel");
+        m_actorPortraitRef->setObjectName("populationPortraitRef");
+        m_saveActor->setObjectName("populationSaveActor");
+        m_saveTroop->setObjectName("populationSaveTroop");
+        m_revertActor->setObjectName("populationRevertActor");
+        m_revertTroop->setObjectName("populationRevertTroop");
+        m_troopLeaderRecord->setObjectName("populationLeader");
+        m_troopMinimumSize->setObjectName("populationMinimumSize");
+        m_troopMaximumSize->setObjectName("populationMaximumSize");
+        m_memberTable->setObjectName("populationMembers");
+        m_memberActorRecord->setObjectName("populationMemberActor");
+        m_memberRole->setObjectName("populationMemberRole");
+        m_memberMinimumCount->setObjectName("populationMemberMinimum");
+        m_memberMaximumCount->setObjectName("populationMemberMaximum");
+        m_memberWeight->setObjectName("populationMemberWeight");
+        m_stageMember->setObjectName("populationStageMember");
+        m_clearMember->setObjectName("populationNewMember");
+        m_status->setObjectName("populationStatus");
+        m_tabs->setObjectName("populationTabs");
+        if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
     }
@@ -1254,6 +1363,12 @@ namespace TaintedGrailModdingSDK
         LoadCurrentActor();
         LoadCurrentTroop();
         m_refreshing = false;
+        const auto& foundation = FoundationService::Get();
+        const auto* pack = foundation.GetActivePack();
+        m_catalogSummary->setText(tr("%1 actors | %2 troops | Active mod: %3")
+            .arg(foundation.GetCatalog().GetPopulationActorProfiles().size())
+            .arg(foundation.GetCatalog().GetPopulationTroopProfiles().size())
+            .arg(pack ? ToQString(pack->m_displayName) : tr("none selected")));
     }
 
     void ActorTroopEditorWidget::ApplyPendingFoundationRefresh()
@@ -1591,7 +1706,7 @@ namespace TaintedGrailModdingSDK
         const CatalogRecord* record)
     {
         m_actorActionLanes->setRowCount(0);
-        if (!record)
+        if (!record || m_actorActionLanes->isHidden())
         {
             return;
         }
@@ -1633,7 +1748,7 @@ namespace TaintedGrailModdingSDK
         const CatalogRecord* record)
     {
         m_troopActionLanes->setRowCount(0);
-        if (!record)
+        if (!record || m_troopActionLanes->isHidden())
         {
             return;
         }
@@ -1783,6 +1898,7 @@ namespace TaintedGrailModdingSDK
         RefreshActorActionLanes(record);
         UpdateEnabledStates();
         m_loadedActorRecordId = recordId;
+        RefreshPortrait();
         m_actorDirty = false;
         m_loadingActor = false;
 
@@ -1814,9 +1930,8 @@ namespace TaintedGrailModdingSDK
             {
                 SetActorState(
                     tr(
-                        "Blocked state: one or more open blockers affect this "
-                        "actor. Review the Blockers and Action Lanes tabs before "
-                        "saving."));
+                        "This actor has open review notes. Expand Read-only Actor Review Context "
+                        "to inspect Blockers; saving validates your local changes."));
                 break;
             }
         }
@@ -1833,6 +1948,7 @@ namespace TaintedGrailModdingSDK
 
         AZStd::vector<AZStd::string> selectedEvidence;
         m_draftMembers.clear();
+        m_removedMemberIds.clear();
         m_selectedMemberLinkId.clear();
         {
             const QSignalBlocker leaderBlocker(m_troopLeaderRecord);
@@ -1948,9 +2064,8 @@ namespace TaintedGrailModdingSDK
             {
                 SetTroopState(
                     tr(
-                        "Blocked state: one or more open blockers affect this "
-                        "troop. Review the Blockers and Action Lanes tabs before "
-                        "saving."));
+                        "This troop has open review notes. Expand Read-only Troop Review Context "
+                        "to inspect Blockers; saving validates your local changes."));
                 break;
             }
         }
@@ -2065,11 +2180,11 @@ namespace TaintedGrailModdingSDK
             const QSignalBlocker linkBlocker(m_memberLinkId);
             const QSignalBlocker actorBlocker(m_memberActorRecord);
             const QSignalBlocker subjectBlocker(m_memberActorSubject);
-            m_memberLinkId->setReadOnly(false);
+            m_memberLinkId->setReadOnly(true);
             m_memberLinkId->clear();
             m_memberActorRecord->setCurrentIndex(0);
             m_memberActorSubject->clear();
-            m_memberRole->setCurrentIndex(0);
+            m_memberRole->setCurrentText("other");
             m_memberMinimumCount->setValue(1);
             m_memberMaximumCount->setValue(1);
             m_memberWeight->setText(QStringLiteral("1"));
@@ -2185,13 +2300,12 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        const PopulationTroopMember member = BuildMember();
+        PopulationTroopMember member = BuildMember();
         if (member.m_linkId.empty())
         {
-            SetTroopState(
-                tr("Invalid member draft: a stable membership link ID is required."),
-                true);
-            return false;
+            member.m_linkId = ToAzString("custom.member." + QUuid::createUuid().toString(QUuid::WithoutBraces));
+            const QSignalBlocker blocker(m_memberLinkId);
+            m_memberLinkId->setText(ToQString(member.m_linkId));
         }
         if (!m_selectedMemberLinkId.empty()
             && member.m_linkId != m_selectedMemberLinkId)
@@ -2218,13 +2332,7 @@ namespace TaintedGrailModdingSDK
                 true);
             return false;
         }
-        if (member.m_evidenceIds.empty())
-        {
-            SetTroopState(
-                tr("Invalid member draft: select at least one exact-subject evidence record."),
-                true);
-            return false;
-        }
+        // Saving creates exact authoring-intent evidence for each staged link.
 
         const AZStd::string binding = member.m_actorRecordId.empty()
             ? member.m_actorSubjectRef
@@ -2276,9 +2384,7 @@ namespace TaintedGrailModdingSDK
         m_memberEditorDirty = false;
         SetTroopState(
             tr(
-                "Draft state: member %1 is staged locally. Save Atomic Troop "
-                "Definition to validate, persist, and publish the whole additive "
-                "definition.")
+                "Member %1 is staged locally. Save the troop to apply all member changes.")
                 .arg(ToQString(member.m_linkId)));
         return true;
     }
@@ -2352,8 +2458,9 @@ namespace TaintedGrailModdingSDK
         PopulationTroopDefinition definition;
         definition.m_profile = BuildTroopProfile();
         definition.m_members = m_draftMembers;
+        definition.m_removedMemberIds = m_removedMemberIds;
         AZStd::string error;
-        if (!FoundationService::Get().UpsertPopulationTroopDefinition(
+        if (!FoundationService::Get().SaveAuthoredPopulationTroop(
                 definition,
                 &error))
         {
@@ -2373,12 +2480,11 @@ namespace TaintedGrailModdingSDK
         ApplyPendingFoundationRefresh();
         SetTroopState(
             tr(
-                "Saved state: the complete troop profile and additive member draft "
+                "Saved state: the complete troop profile and member changes "
                 "were validated, persisted, and then published atomically."));
         SetStatus(
             tr(
-                "Atomic troop definition saved. Existing members were preserved; "
-                "no removal or runtime authority was introduced."));
+                "Troop saved, including staged additions, edits and removals."));
     }
 
     void ActorTroopEditorWidget::RevertActorProfile()
@@ -2436,6 +2542,7 @@ namespace TaintedGrailModdingSDK
         const bool actorSelected =
             !m_actorRecord->currentData().toString().isEmpty();
         m_actorKind->setEnabled(actorSelected);
+        m_choosePortrait->setEnabled(actorSelected);
         m_actorArchetype->setEnabled(actorSelected);
         m_actorTemplateRecord->setEnabled(actorSelected);
         m_actorTemplateSubject->setEnabled(actorSelected);
@@ -2476,6 +2583,7 @@ namespace TaintedGrailModdingSDK
         m_memberEvidence->setEnabled(troopSelected);
         m_stageMember->setEnabled(troopSelected);
         m_clearMember->setEnabled(troopSelected);
+        m_removeMember->setEnabled(troopSelected);
         m_saveTroop->setEnabled(troopSelected);
         m_revertTroop->setEnabled(troopSelected);
     }

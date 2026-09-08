@@ -107,6 +107,7 @@ ly_install_files(
         ../Tools/foa_asset_browser_pane_model.py
         ../Tools/foa_native_item_preview.py
         ../Tools/foa_native_economy.py
+        ../Tools/foa_native_population.py
         ../Tools/foa_addressables_catalog.py
         ../Tools/item_preview_requirements.txt
     DESTINATION

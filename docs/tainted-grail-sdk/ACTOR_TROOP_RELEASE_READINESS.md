@@ -170,6 +170,6 @@ After this unit:
 
 - deterministic population fixture and public documentation are complete;
 - the Actor/Troop pane remains in active hardening until exact-head host evidence is recorded;
-- Spawn and Encounter Editor remains the next population-domain authoring capability;
+- Spawn and Encounter Editor has a locally validated authoring workflow; see [its design and acceptance](SPAWN_ENCOUNTER_EDITOR_DESIGN.md). Native spawn execution remains separate;
 - runtime population adapters remain deferred;
 - no release claim is made from documentation alone.

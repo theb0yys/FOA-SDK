@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Source/FoundationEncounterService.cpp
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h
     Source/NativeItemPreviewService.cpp

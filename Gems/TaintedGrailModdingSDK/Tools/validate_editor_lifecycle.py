@@ -53,6 +53,7 @@ PANES = (
     base_pane("Tainted Grail Item and Recipe Editor", "ItemRecipeEditorWidget"),
     base_pane("Tainted Grail Quest and State Inspector", "QuestStateInspectorWidget"),
     base_pane("Tainted Grail Actor and Troop Editor", "ActorTroopEditorWidget"),
+    base_pane("Tainted Grail Spawn and Encounter Editor", "SpawnEncounterEditorWidget"),
     base_pane("Tainted Grail Economy Acquisition Coverage", "EconomyCoverageDashboardWidget"),
     base_pane("Tainted Grail Economy Cross-Pack Duplicates", "EconomyDuplicateReportWidget"),
     base_pane("Tainted Grail Adapter Capability Matrix", "AdapterCapabilityMatrixWidget"),
@@ -186,8 +187,8 @@ def validate_control_center_contract(repo_root: Path, hub: str) -> None:
 
 
 def validate_editor_lifecycle(repo_root: Path) -> None:
-    if len(PANES) != 28 or len({pane.name for pane in PANES}) != len(PANES):
-        raise EditorLifecycleError("The canonical Editor inventory must contain 28 unique pane names")
+    if len(PANES) != 29 or len({pane.name for pane in PANES}) != len(PANES):
+        raise EditorLifecycleError("The canonical Editor inventory must contain 29 unique pane names")
 
     hub = read(repo_root, HUB_SOURCE)
     source_cache: dict[str, str] = {}
@@ -269,7 +270,7 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
         for match in re.finditer(r'saveKeyName\s*=\s*QStringLiteral\("([^"]+)"\)', registration):
             save_keys.append(match.group(1))
 
-    if len(save_keys) != 28 or len(set(save_keys)) != 28:
+    if len(save_keys) != 29 or len(set(save_keys)) != 29:
         raise EditorLifecycleError(
             f"Every pane needs one unique layout save key; found {len(save_keys)} keys and {len(set(save_keys))} unique values"
         )
@@ -299,7 +300,7 @@ def main() -> int:
         return 1
     print(
         "TG SDK Editor lifecycle validation passed: FOA-SDK Home is the single Tools-menu "
-        "front door, all 28 panes retain build/lifecycle/layout ownership and Hub reachability, "
+        "front door, all 29 panes retain build/lifecycle/layout ownership and Hub reachability, "
         "saved mods require no manifest browsing, and setup readiness remains fail-closed."
     )
     return 0

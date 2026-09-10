@@ -531,11 +531,12 @@ namespace TaintedGrailModdingSDK
         PopulationActorProfile::Reflect(context);
         PopulationTroopProfile::Reflect(context);
         PopulationTroopMember::Reflect(context);
+        EncounterDefinition::Reflect(context);
 
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(4)
+                ->Version(5)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -551,13 +552,15 @@ namespace TaintedGrailModdingSDK
                 ->Field("RecipeOutputs", &CatalogDocument::m_recipeOutputs)
                 ->Field("ActorProfiles", &CatalogDocument::m_actorProfiles)
                 ->Field("TroopProfiles", &CatalogDocument::m_troopProfiles)
-                ->Field("TroopMembers", &CatalogDocument::m_troopMembers);
+                ->Field("TroopMembers", &CatalogDocument::m_troopMembers)
+                ->Field("EncounterDefinitions", &CatalogDocument::m_encounterDefinitions);
         }
     }
 
     bool CatalogDocument::UsesSupportedSchema() const
     {
         return m_schemaVersion == LegacyCatalogSchemaVersion
+            || m_schemaVersion == PopulationCatalogSchemaVersion
             || m_schemaVersion == CurrentCatalogSchemaVersion;
     }
 

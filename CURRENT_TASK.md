@@ -1,40 +1,22 @@
 # Current Task
 
-## Status and goal
+Status: local implementation and acceptance complete; submit the focused encounter branch for maintainer review.
 
-Actor and Troop Editor completion: IMPLEMENTED AND VALIDATED. The owner requested supported game actor loading, local actor/troop creation and editing, member addition/change/removal, available portraits and real Editor save/reopen/error acceptance. Spawn and Encounter Editor remains a later task.
+The owner approved the Spawn and Encounter Editor. It creates pack-owned encounters from saved actors/troops, edits quantity ranges, placement references, activation descriptions, population limits and cleanup/rollback notes, previews composition, and saves/reopens complete definitions.
 
-Branch: `codex/actors-troops-completion`, based on `c9be3e262bfb3f7f15f8d768fe28766e0fb430e8`. The prerequisite Items and Recipes PR #249 is merged. Deliver this focused DCO commit through a new PR for maintainer audit; no approval or merge is inferred.
+Classification: Significant. Primary owner: `content-pack-authoring`; supporting owners: catalog-and-identity, schemas-and-persistence, workspace-and-packs and ui-framework.
 
-## Classification and ownership
+Implemented: Core models/planning, Foundation commands and exact evidence, catalog schema 3 with schema-1/2 input migration and verified pre-migration backups, registered pane/Development Hub route, guides and compiled/live regression coverage. See docs/tainted-grail-sdk/SPAWN_ENCOUNTER_EDITOR_DESIGN.md and SPAWN_ENCOUNTER_EDITOR_GUIDE.md.
 
-Critical/Runtime for the bounded external reader, with Significant authoring commands and UI. Primary owner: `content-pack-authoring`. Supporting owners: `unity-provider`, `catalog-and-identity`, `schemas-and-persistence`, and `workspace-and-packs`.
+Validation:
+- PASSED: repository static validation and pinned O3DE source policy.
+- PASSED: 438 compiled catalog tests; two explicit Windows symlink-privilege skips from 440 discovered tests.
+- PASSED: all 39 compiled canonical-interchange tests.
+- PASSED: running Editor patrol creation, four-actor preview, quantity edits, removal, invalid-input rejection, failed-save preservation, reopening and further edits.
+- PASSED: private copy migration preserved the exact original catalog backup, 885 existing actors, 3,914 items and 356 recipes.
+- PASSED: measured maximum UI timer gap 2.86 seconds against the three-second workflow budget.
+- NOT_APPLICABLE: scene mutation, native spawn execution, game condition evaluation, deployment, saves, runtime adapters, installer and release evidence.
 
-The pinned isolated provider publishes version-1 actor observations. Foundation validates exact profile, source hashes, evidence and protected paths before durable catalog publication. Core validates actor/troop definitions and atomic membership changes. Editor widgets present these services and portable local portraits.
+The Editor acceptance uses an isolated copy of the authoring workspace. Game files and the normal authoring catalog were not modified. Keep private fixtures, screenshots, logs and generated builds outside source control.
 
-## Completed scope
-
-- Load supported installed NPC templates, preserve exact native identity and authored values on refresh, and report unsupported entries without guessed enum meanings.
-- Create pack-owned actors and valid troops with a first leader; edit typed profiles and add/change/remove members with automatically generated link identity and local authoring intent.
-- Keep troop upserts additive unless explicit owned member IDs are removed; validate the complete composition before durable publication.
-- Preview bounded workspace PNG/JPEG portraits, clear stale or invalid images, and preserve portable references on reopen.
-- Protect dirty drafts, provide cancellation and actionable save errors, fit long record identities within the pane, and populate collapsed review tables when expanded.
-
-## Compatibility and boundaries
-
-Catalog schema 2, workspace schema 1 and persisted stable IDs remain unchanged. The troop command's default-empty explicit removal collection preserves existing additive callers. UnityPy remains pinned at 1.24.2; the actor worker selects its supplied pure-Python type-tree fallback to avoid a native decoder shutdown failure observed on NPC managed references.
-
-The supported NPC component supplies no portrait, model or localisation binding. Native enum meanings and equipped character appearance remain unresolved; local image preview does not reconstruct Unity prefabs. Game files, saves, engine sources and proprietary material are read-only. Private observations, screenshots and generated output stay outside the checkout. Spawning, encounters, deployment, game execution and release are outside this task.
-
-## Executed acceptance
-
-- PASSED: 827 Python tests discovered, 818 passed and nine explicit platform/privilege skips; applicable static and fixture validators passed.
-- PASSED: all ten enabled source-policy validators against O3DE pin `68683f23fb747380d3efa2424bd5f30242e9c5a2`.
-- PASSED: Windows Profile configure, Core, Framework, Catalog.Tests and Editor builds.
-- PASSED: Catalog compiled suite (429 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
-- PASSED: real provider read 885 supported NPC templates. Nine level-zero templates and 64 non-NPC entries remain explicitly unsupported.
-- PASSED: eight live Editor checks with 3,914 existing items and 356 recipes cover initial native intake, deferred review-table expansion, local creation, exact portrait pixels, member addition/change/removal, invalid-save rollback, dirty drafts, cancellation, saved-workspace reopening and pane width.
-- PASSED: first mixed-catalog intake took 3.046 seconds; maximum UI timer gap was 1.938 seconds, below the three-second limit. The initial failing large-catalog result was corrected by deferring collapsed review tables; full save validation remains mandatory.
-- NOT_APPLICABLE: FoA runtime, spawning, deployment, save mutation and release sign-off. Runtime sign-off was not performed.
-
-Private logs, source observations, screenshots and machine-readable evidence remain outside the repository. Maintainer review is the next repository transition. No later feature is started by this task.
+Branch: `codex/spawn-encounter-editor` from merged main `7f5d7bd2211472ac1d261b2969a64fd4e2095007`. The encounter worktree is isolated from the concurrent pack-saving task. Deliver a focused DCO commit and PR. Approval and merge remain with the maintainer; no later feature is authorized.

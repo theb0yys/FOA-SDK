@@ -9,6 +9,7 @@
 
 #include "EconomyModels.h"
 #include "PopulationModels.h"
+#include "EncounterModels.h"
 
 #include <AzCore/RTTI/RTTI.h>
 #include <AzCore/std/containers/vector.h>
@@ -345,6 +346,7 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<PopulationActorProfile> m_actorProfiles;
         AZStd::vector<PopulationTroopProfile> m_troopProfiles;
         AZStd::vector<PopulationTroopMember> m_troopMembers;
+        AZStd::vector<EncounterDefinition> m_encounterDefinitions;
     };
 
     struct CatalogPromotionRequest

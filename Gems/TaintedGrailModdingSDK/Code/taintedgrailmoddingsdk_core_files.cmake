@@ -6,6 +6,11 @@
 #
 
 set(FILES
+    Source/EncounterModels.h
+    Source/EncounterModels.cpp
+    Source/EncounterPlanningService.h
+    Source/EncounterPlanningService.cpp
+    Source/CatalogDatabaseEncounters.cpp
     Source/AvalonAiExtension.cpp
     Source/AvalonAiExtension.h
     Source/AdapterBuildManifestService.cpp

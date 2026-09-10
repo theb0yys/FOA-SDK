@@ -143,7 +143,11 @@ namespace TaintedGrailModdingSDK
                 return QObject::tr("%1 \u00b7 needs repair").arg(fallback);
             }
 
-            const QJsonObject root = document.object();
+            const QJsonObject documentRoot = document.object();
+            const QJsonObject root = documentRoot.value(QStringLiteral("Type")).toString()
+                    == QStringLiteral("JsonSerialization")
+                ? documentRoot.value(QStringLiteral("ClassData")).toObject()
+                : documentRoot;
             const QString packId = root.value(QStringLiteral("PackId")).toString().trimmed();
             const QString displayName = root.value(QStringLiteral("DisplayName")).toString().trimmed();
             const QString version = root.value(QStringLiteral("Version")).toString().trimmed();
@@ -163,6 +167,7 @@ namespace TaintedGrailModdingSDK
         : QWidget(parent)
     {
         auto* rootLayout = new QVBoxLayout(this);
+        setObjectName(QStringLiteral("TaintedGrailPackManager"));
 
         auto* heading = new QLabel(tr("FOA-SDK Mods"), this);
         QFont headingFont = heading->font();
@@ -180,6 +185,7 @@ namespace TaintedGrailModdingSDK
         auto* summaryGroup = new QGroupBox(tr("Current mod"), this);
         auto* summaryLayout = new QFormLayout(summaryGroup);
         m_activePackValue = new QLabel(summaryGroup);
+        m_activePackValue->setObjectName(QStringLiteral("packActiveSummary"));
         summaryLayout->addRow(tr("Mod"), m_activePackValue);
         rootLayout->addWidget(summaryGroup);
 
@@ -189,6 +195,7 @@ namespace TaintedGrailModdingSDK
         auto* workspaceModsRowLayout = new QHBoxLayout(workspaceModsRow);
         workspaceModsRowLayout->setContentsMargins(0, 0, 0, 0);
         m_workspaceModsCombo = new QComboBox(workspaceModsRow);
+        m_workspaceModsCombo->setObjectName(QStringLiteral("packSavedMods"));
         m_workspaceModsCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
         m_workspaceModsCombo->setMinimumContentsLength(28);
         m_openSelectedButton = new QPushButton(tr("Open selected"), workspaceModsRow);
@@ -203,8 +210,10 @@ namespace TaintedGrailModdingSDK
         auto* detailsGroup = new QGroupBox(tr("Mod details"), this);
         auto* detailsLayout = new QFormLayout(detailsGroup);
         m_displayNameEdit = new QLineEdit(detailsGroup);
+        m_displayNameEdit->setObjectName(QStringLiteral("packDisplayName"));
         m_displayNameEdit->setPlaceholderText(tr("My Fall of Avalon mod"));
         m_ownerIdEdit = new QLineEdit(detailsGroup);
+        m_ownerIdEdit->setObjectName(QStringLiteral("packOwner"));
         m_ownerIdEdit->setPlaceholderText(tr("author or namespace"));
         detailsLayout->addRow(tr("Mod name"), m_displayNameEdit);
         detailsLayout->addRow(tr("Author / namespace"), m_ownerIdEdit);
@@ -231,6 +240,7 @@ namespace TaintedGrailModdingSDK
         m_packIdEdit = new QLineEdit(identityGroup);
         m_packIdEdit->setReadOnly(true);
         m_versionEdit = new QLineEdit(identityGroup);
+        m_versionEdit->setObjectName(QStringLiteral("packVersion"));
         m_versionEdit->setPlaceholderText(tr("0.1.0"));
         identityLayout->addRow(tr("Mod ID"), m_packIdEdit);
         identityLayout->addRow(tr("Version"), m_versionEdit);
@@ -306,6 +316,7 @@ namespace TaintedGrailModdingSDK
         rootLayout->addLayout(buttonLayout);
 
         m_statusLabel = new QLabel(this);
+        m_statusLabel->setObjectName(QStringLiteral("packStatus"));
         m_statusLabel->setWordWrap(true);
         rootLayout->addWidget(m_statusLabel);
 
@@ -330,7 +341,6 @@ namespace TaintedGrailModdingSDK
         });
         connect(newButton, &QPushButton::clicked, this, [this]()
         {
-            FoundationService::Get().ClearActivePack();
             ClearFormForNewPack();
             SetStatus(tr("New mod ready. Enter a name and author, then Save mod."));
         });
@@ -601,7 +611,7 @@ namespace TaintedGrailModdingSDK
         m_statusLabel->setStyleSheet(error ? QStringLiteral("color: #d9534f;") : QString());
     }
 
-    bool PackManagerWidget::ApplyPack()
+    bool PackManagerWidget::SavePack()
     {
         UpdateGeneratedIdentity();
         if (m_displayNameEdit->text().trimmed().isEmpty())
@@ -615,44 +625,12 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        AZStd::string error;
-        if (!FoundationService::Get().SetActivePack(BuildPackFromForm(), &error))
-        {
-            SetStatus(ToQString(error), true);
-            return false;
-        }
-        m_isNewPack = false;
-        return true;
-    }
-
-    QString PackManagerWidget::CanonicalPackFilePath(const PackManifest& pack) const
-    {
-        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
-        if (workspace.m_rootPath.empty() || pack.m_packId.empty())
-        {
-            return {};
-        }
-        return QDir(ToQString(workspace.m_rootPath)).filePath(
-            QStringLiteral("Packs/%1/pack.tgpack.json").arg(ToQString(pack.m_packId)));
-    }
-
-    bool PackManagerWidget::SavePack()
-    {
-        if (!ApplyPack())
-        {
-            return false;
-        }
-
         FoundationService& service = FoundationService::Get();
-        const PackManifest* pack = service.GetActivePack();
-        if (!pack)
-        {
-            SetStatus(tr("No mod is available to save."), true);
-            return false;
-        }
-
-        QString filePath = service.GetActivePackFilePath().empty()
-            ? CanonicalPackFilePath(*pack)
+        const PackManifest pack = BuildPackFromForm();
+        const PackManifest* activePack = service.GetActivePack();
+        const QString filePath = m_isNewPack || !activePack
+                || activePack->m_packId != pack.m_packId || service.GetActivePackFilePath().empty()
+            ? CanonicalPackFilePath(pack)
             : ToQString(service.GetActivePackFilePath());
         if (filePath.isEmpty())
         {
@@ -666,15 +644,27 @@ namespace TaintedGrailModdingSDK
         }
 
         AZStd::string error;
-        if (!service.SaveActivePack(ToAzString(filePath), &error))
+        if (!service.SavePackAndActivate(pack, ToAzString(filePath), &error))
         {
             SetStatus(ToQString(error), true);
             return false;
         }
+        m_isNewPack = false;
         SetStatus(tr("Mod saved. You can start authoring."));
         UpdateSummary();
         RefreshWorkspaceMods(filePath);
         return true;
+    }
+
+    QString PackManagerWidget::CanonicalPackFilePath(const PackManifest& pack) const
+    {
+        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
+        if (workspace.m_rootPath.empty() || pack.m_packId.empty())
+        {
+            return {};
+        }
+        return QDir(ToQString(workspace.m_rootPath)).filePath(
+            QStringLiteral("Packs/%1/pack.tgpack.json").arg(ToQString(pack.m_packId)));
     }
 
     bool PackManagerWidget::IsInsideWorkspace(const QString& filePath) const

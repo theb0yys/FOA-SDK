@@ -10,6 +10,7 @@
 #include "FoundationModels.h"
 #include "FoundationNotificationBus.h"
 
+#include <QHash>
 #include <QWidget>
 
 class QComboBox;
@@ -37,6 +38,10 @@ namespace TaintedGrailModdingSDK
         void ClearFormForNewPack();
         void UpdateGeneratedIdentity();
         void UpdateSummary();
+        void UpdateDraftField(QWidget* field, const QString& value);
+        void ResetDraftBaseline();
+        void UpdateDraftStatus();
+        bool ConfirmDraftReplacement(const QString& action);
         void RefreshWorkspaceMods(const QString& selectedPath = {});
         void OpenSelectedPack();
         void SetStatus(const QString& message, bool error = false);
@@ -68,9 +73,12 @@ namespace TaintedGrailModdingSDK
         QLabel* m_manifestPathValue = nullptr;
         QLabel* m_workspaceModsHint = nullptr;
         QLabel* m_statusLabel = nullptr;
+        QLabel* m_draftStatusLabel = nullptr;
         QGroupBox* m_advancedGroup = nullptr;
         QPushButton* m_advancedToggleButton = nullptr;
         QPushButton* m_openSelectedButton = nullptr;
+        QHash<QWidget*, QString> m_formValues;
+        QHash<QWidget*, QString> m_savedFormValues;
         bool m_isNewPack = true;
     };
 } // namespace TaintedGrailModdingSDK

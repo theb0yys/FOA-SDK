@@ -12,6 +12,7 @@
 #include <AzCore/std/algorithm.h>
 
 #include <QByteArray>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDir>
 #include <QFile>
@@ -400,6 +401,18 @@ namespace TaintedGrailModdingSDK
     PackManagerWidget::~PackManagerWidget()
     {
         FoundationNotificationBus::Handler::BusDisconnect();
+    }
+
+    void PackManagerWidget::closeEvent(QCloseEvent* event)
+    {
+        if (ConfirmDraftReplacement(tr("closing Pack Manager")))
+        {
+            QWidget::closeEvent(event);
+        }
+        else
+        {
+            event->ignore();
+        }
     }
 
     void PackManagerWidget::OnFoundationChanged()

@@ -13,6 +13,7 @@
 #include <QHash>
 #include <QWidget>
 
+class QCloseEvent;
 class QComboBox;
 class QGroupBox;
 class QLabel;
@@ -29,6 +30,9 @@ namespace TaintedGrailModdingSDK
     public:
         explicit PackManagerWidget(QWidget* parent = nullptr);
         ~PackManagerWidget() override;
+
+    protected:
+        void closeEvent(QCloseEvent* event) override;
 
     private:
         void OnFoundationChanged() override;

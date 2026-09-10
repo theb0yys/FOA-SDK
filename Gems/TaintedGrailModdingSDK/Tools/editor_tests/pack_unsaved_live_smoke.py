@@ -14,7 +14,7 @@ import time
 import traceback
 
 import azlmbr.legacy.general as general
-from PySide6 import QtCore, QtTest, QtWidgets
+from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 from shiboken6 import isValid
 
 
@@ -90,7 +90,8 @@ def run():
                 assert prompt.defaultButton() == prompt.button(buttons.Cancel)
                 assert prompt.escapeButton() == prompt.button(buttons.Cancel)
                 if capture:
-                    prompt.grab().save(str(output.with_name('unsaved-prompt.png')))
+                    image_name = 'close-prompt.png' if callable(action) else 'unsaved-prompt.png'
+                    assert prompt.grab().save(str(output.with_name(image_name)))
                 if choice == 'Escape':
                     QtTest.QTest.keyClick(prompt, QtCore.Qt.Key_Escape)
                 elif choice == 'Close':
@@ -104,12 +105,15 @@ def run():
 
         timer.timeout.connect(answer)
         timer.start(25)
-        button(action).click()
+        if callable(action):
+            action()
+        else:
+            button(action).click()
         timer.stop()
         elapsed = time.monotonic() - started
         result['transition_seconds'].append(round(elapsed, 4))
         assert not errors, errors
-        assert bool(seen) == (choice is not None), (action, choice, seen)
+        assert len(seen) == (1 if choice is not None else 0), (action, choice, seen)
         assert elapsed < 3.0, 'Draft replacement exceeded the three-second fixture budget'
 
     def save():
@@ -303,6 +307,215 @@ def run():
         root.grab().save(str(output.with_suffix('.png')))
         transition('New mod', 'Cancel')
         dirty()
+
+        def pane_dock():
+            parent = root.parentWidget()
+            while parent and not isinstance(parent, QtWidgets.QDockWidget):
+                parent = parent.parentWidget()
+            assert parent is not None, 'Pack Manager is not hosted in an Editor dock'
+            assert parent.widget() == root
+            return parent
+
+        def floating_container():
+            parent = pane_dock()
+            while parent:
+                if isinstance(parent, QtWidgets.QDockWidget) and parent.isFloating():
+                    return parent
+                parent = parent.parentWidget()
+            return None
+
+        def pane_menu_action(verb):
+            dock = pane_dock()
+            parent = dock.parentWidget()
+            while parent and not isinstance(parent, QtWidgets.QTabWidget):
+                parent = parent.parentWidget()
+            if parent and parent.indexOf(dock) >= 0:
+                index = parent.indexOf(dock)
+                surface = parent.tabBar()
+                point = surface.tabRect(index).center()
+                expected = verb + ' ' + parent.tabText(index)
+            else:
+                surface = dock.titleBarWidget()
+                point = surface.rect().center()
+                expected = verb + ' ' + dock.windowTitle()
+            selected = []
+            errors = []
+            timer = QtCore.QTimer()
+            started = time.monotonic()
+
+            def choose():
+                values = app.allWidgets()
+                keep.extend(values)
+                menus = [w for w in values if isValid(w) and isinstance(w, QtWidgets.QMenu) and w.isVisible()]
+                if not menus:
+                    if time.monotonic() - started > 3:
+                        errors.append('Pane context menu did not open')
+                        timer.stop()
+                    return
+                timer.stop()
+                menu = menus[-1]
+                try:
+                    actions = [a for a in menu.actions() if a.text().startswith(verb + ' ')
+                               and a.text() != verb + ' Tab Group' and a.isEnabled()]
+                    assert len(actions) == 1, (expected, [a.text() for a in menu.actions()])
+                    selected.append(actions[0].text())
+                    QtTest.QTest.mouseClick(menu, QtCore.Qt.LeftButton,
+                                           pos=menu.actionGeometry(actions[0]).center())
+                except Exception:
+                    errors.append(traceback.format_exc())
+                    menu.close()
+
+            timer.timeout.connect(choose)
+            timer.start(25)
+            event = QtGui.QContextMenuEvent(QtGui.QContextMenuEvent.Mouse, point, surface.mapToGlobal(point))
+            app.sendEvent(surface, event)
+            timer.stop()
+            assert not errors and len(selected) == 1, (errors, selected)
+
+        def place_pane(floating):
+            if floating and floating_container() is None:
+                pane_menu_action('Undock')
+                QtTest.QTest.qWait(150)
+            assert (floating_container() is not None) == floating, 'Unexpected pane docking state'
+            assert root.isVisible()
+
+        def request_titlebar_close():
+            container = floating_container()
+            if container is None:
+                pane_menu_action('Close')
+                return
+            # Floating tab groups use a toolbar QAction; standalone panes use DockBarButton.
+            buttons = container.findChildren(QtWidgets.QToolButton)
+            keep.extend(buttons)
+            visible = [button for button in buttons if isValid(button) and button.isVisible()
+                       and not button.visibleRegion().isEmpty()]
+            close = [button for button in visible if button.defaultAction()
+                     and button.defaultAction().objectName() == 'closeButton']
+            if not close:
+                close = [button for button in visible if button.objectName() == 'closeButton'
+                         and not isinstance(button.parentWidget(), QtWidgets.QTabBar)]
+            assert len(close) == 1, [(b.objectName(), b.text(), b.parentWidget().metaObject().className())
+                                     for b in visible]
+            assert close[0].isEnabled()
+            QtTest.QTest.mouseClick(close[0], QtCore.Qt.LeftButton)
+
+        def close_pane(choice=None, accepted=False, capture=False):
+            dock = pane_dock()
+            form = snapshot()
+            active = control('packActiveSummary').text()
+            transition(request_titlebar_close, choice, capture)
+            QtTest.QTest.qWait(100)
+            if accepted:
+                assert not isValid(root) and not isValid(dock), 'Accepted pane close did not destroy the pane'
+            else:
+                assert isValid(root) and root.isVisible()
+                assert isValid(dock) and dock.isVisible() and pane_dock() == dock
+                assert snapshot() == form, 'Cancelled or failed close changed the draft'
+                assert control('packActiveSummary').text() == active
+                dirty()
+
+        def reopen():
+            nonlocal root
+            general.open_pane('Tainted Grail Pack Manager')
+            QtTest.QTest.qWait(150)
+            reopened = control('TaintedGrailPackManager')
+            assert reopened.isVisible()
+            root = reopened
+            place_pane(floating)
+            return reopened
+
+        # Exercise the actual titlebar menu/button and deletable dock, not only a synthetic
+        # QCloseEvent or general.close_pane (the latter forces a host close).
+        select(other)
+        transition('Open selected', 'Discard')
+        for floating, mode in ((False, 'docked'), (True, 'floating')):
+            stage(mode + '_pane_close')
+            place_pane(floating)
+            saved = other.read_bytes()
+            edit('packDisplayName', mode + ' close draft')
+            edit('packVersion', '2.3.4')
+            for choice in ('Cancel', 'Escape', 'Close'):
+                close_pane(choice, capture=(mode == 'docked' and choice == 'Cancel'))
+                assert other.read_bytes() == saved
+            result['checks'].append(mode + '_titlebar_cancel_escape_close_keep_pane_and_full_draft')
+
+            edit('packVersion', 'invalid')
+            close_pane('Save')
+            assert other.read_bytes() == saved
+            assert control('packStatus').text() != 'Mod saved. You can start authoring.'
+            result['checks'].append(mode + '_close_invalid_save_keeps_pane_and_draft')
+
+            edit('packVersion', '2.3.4')
+            handle = kernel.CreateFileW(str(other), 0x80000000, 1, None, 3, 0x80, None)
+            assert handle not in (None, ctypes.c_void_p(-1).value), ctypes.get_last_error()
+            try:
+                close_pane('Save')
+                assert other.read_bytes() == saved
+                assert control('packStatus').text() != 'Mod saved. You can start authoring.'
+            finally:
+                kernel.CloseHandle(handle)
+            result['checks'].append(mode + '_close_real_write_failure_keeps_pane_and_draft')
+            close_pane('Save', accepted=True)
+            assert manifest(other)['DisplayName'] == mode + ' close draft'
+            assert manifest(other)['Version'] == '2.3.4'
+            root = reopen()
+            dirty(False)
+            assert control('packDisplayName').text() == mode + ' close draft'
+            assert control('packVersion').text() == '2.3.4'
+            result['checks'].append(mode + '_close_retry_saves_destroys_and_reopens_equivalent')
+
+            saved = other.read_bytes()
+            edit('packDisplayName', 'Discarded close draft')
+            close_pane('Discard', accepted=True)
+            assert other.read_bytes() == saved
+            root = reopen()
+            dirty(False)
+            assert control('packDisplayName').text() == mode + ' close draft'
+            result['checks'].append(mode + '_close_discard_destroys_without_writing_and_reopens_saved_mod')
+
+            close_pane(accepted=True)
+            root = reopen()
+            dirty(False)
+            result['checks'].append(mode + '_clean_saved_pane_closes_without_prompt')
+
+        stage('new_draft_close')
+        active = control('packActiveSummary').text()
+        transition('New mod')
+        close_pane(accepted=True)
+        root = reopen()
+        assert control('packActiveSummary').text() == active
+        dirty(False)
+        result['checks'].append('pristine_new_pane_closes_without_prompt')
+
+        transition('New mod')
+        edit('packDisplayName', 'Close created')
+        close_pane('Save')
+        assert control('packOwner').text() == ''
+        assert control('packStatus').text() == 'Enter an author or namespace.'
+        edit('packOwner', 'sdkqa')
+        close_pane('Save', accepted=True)
+        created = workspace.parent / 'Packs/sdkqa.close-created/pack.tgpack.json'
+        assert manifest(created)['DisplayName'] == 'Close created'
+        root = reopen()
+        assert control('packDisplayName').text() == 'Close created'
+        dirty(False)
+        result['checks'].append('new_draft_close_failed_save_preserves_identity_and_retry_reopens_saved_mod')
+
+        saved = created.read_bytes()
+        transition('New mod')
+        edit('packDisplayName', 'Abandoned close')
+        edit('packOwner', 'sdkqa')
+        close_pane('Discard', accepted=True)
+        assert not (workspace.parent / 'Packs/sdkqa.abandoned-close').exists()
+        assert created.read_bytes() == saved
+        root = reopen()
+        assert control('packDisplayName').text() == 'Close created'
+        dirty(False)
+        result['checks'].append('new_draft_close_discard_preserves_previous_active_mod_without_writing')
+        edit('packDisplayName', 'Draft preserved after cancelled close')
+        close_pane('Cancel')
+        root.grab().save(str(output.with_name('close-pane.png')))
+
         result['status'] = 'PASSED'
         stage('complete')
     except Exception:

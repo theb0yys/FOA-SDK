@@ -135,6 +135,38 @@ Keep domain logic in services, use stable pane identities, provide accessible/ac
 
 UI behavior needs L3 evidence only when the change can affect actual interaction/rendering.
 
+### Pack Manager shutdown acceptance (Windows)
+
+The pinned Editor's main-window close handler calls `ClosePanesWithRollback`,
+which sends the normal close event to Pack Manager. Its existing draft guard
+therefore protects both pane close and Editor exit. Keep this host route covered
+when changing draft tracking, saving, pane registration, or shutdown integration.
+
+With a built SDK Editor and a prepared engine-asset cache, run from the product
+checkout:
+
+```powershell
+./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_pack_editor_exit_smoke.ps1 -EditorExecutable <build>/bin/profile/Editor.exe -EngineRoot <pinned-engine> -CacheRoot <prepared-cache> -OutputRoot <fresh-external-output>
+```
+
+The runner checks the engine pin, creates synthetic workspaces, and starts nine
+separate Editor processes with normal modal dialogs and NullRenderer. It exercises
+File > Exit, the main-window Close button, and the ordinary Python exit command;
+Cancel/Escape/prompt dismissal, invalid input and a real locked-file save failure;
+save retry, new/saved drafts, discard, clean exit, and three fresh-process reopens.
+
+A passing result requires both the in-process assertions and an actual process
+exit code of zero with an about-to-quit notification. A timeout or forced test
+cleanup is a failure. Inspect `suite-result.json`, each `process-result.json`,
+and the saved prompt/draft images under the output directory. The temporary
+workspace, project user/log data, and environment are isolated; Qt uses normal
+desktop layout preferences. Startup may read installed-game discovery metadata;
+game files and saves are not modified.
+
+The existing `pack_unsaved_live_smoke.py` separately covers New/Open and pane-close
+regressions. These are Editor authoring checks; they do not prove game runtime,
+forced-termination recovery, or another pane's unsaved-state handling.
+
 ## Runtime and external operations
 
 Editor contracts, previews, plans, hashes, receipts, and research are not runtime authority. Process execution, deployment, saves, runtime adapters, signing, and publication are Critical/Runtime work and use their specific designs and L4 evidence.

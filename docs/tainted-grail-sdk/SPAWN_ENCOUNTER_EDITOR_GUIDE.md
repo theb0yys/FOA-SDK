@@ -37,11 +37,12 @@ Warnings about unassigned placement or missing cleanup notes permit saving an un
 
 ## Catalog compatibility
 
-Encounters are stored in catalog schema 3. Schema-1/2 catalogs load through the existing bound validation
-route. Before the first schema-3 overwrite, the writer saves and verifies the exact original bytes in
+Encounters were introduced in catalog schema 3. Current saves use schema 4, which also supports society
+authoring. Schema-1/2/3 catalogs load through bound validation. Before overwriting an older catalog, the
+writer saves and verifies the exact original bytes in
 a sibling migration backup. Failure to create that backup prevents replacement.
 
-Older Editors that support only schema 2 cannot open the new catalog. Preserve your workspace before
+Older Editors that support only schema 2 or 3 cannot open the schema-4 catalog. Preserve your workspace before
 downgrading, then restore the pre-migration catalog backup. New encounter edits do not have a schema-2
 representation. See [catalog recovery](CATALOG_GUIDE.md#encounter-plans-and-migration-recovery).
 

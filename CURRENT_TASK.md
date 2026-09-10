@@ -1,22 +1,28 @@
 # Current Task
 
-Status: local implementation and acceptance complete; submit the focused encounter branch for maintainer review.
+Status: Faction and Authority Editor implementation and local authoring validation complete; maintainer review pending.
 
-The owner approved the Spawn and Encounter Editor. It creates pack-owned encounters from saved actors/troops, edits quantity ranges, placement references, activation descriptions, population limits and cleanup/rollback notes, previews composition, and saves/reopens complete definitions.
+Goal: create and edit local factions and cultures, assign saved actors/troops, describe leadership and jurisdiction, edit directed faction relationships, and save/reopen without losing links.
 
-Classification: Significant. Primary owner: `content-pack-authoring`; supporting owners: catalog-and-identity, schemas-and-persistence, workspace-and-packs and ui-framework.
+Classification: Significant. Primary owner: content-pack-authoring. Supporting owners: catalog-and-identity, schemas-and-persistence, workspace-and-packs and ui-framework.
 
-Implemented: Core models/planning, Foundation commands and exact evidence, catalog schema 3 with schema-1/2 input migration and verified pre-migration backups, registered pane/Development Hub route, guides and compiled/live regression coverage. See docs/tainted-grail-sdk/SPAWN_ENCOUNTER_EDITOR_DESIGN.md and SPAWN_ENCOUNTER_EDITOR_GUIDE.md.
+Delivered: typed society profiles and first-class faction links, exact ownership/evidence, catalog schema 4 with schema-1/2/3 input migration and verified backups, Foundation transactions, a registered Editor pane, guides and compiled/live acceptance.
 
-Validation:
-- PASSED: repository static validation and pinned O3DE source policy.
-- PASSED: 438 compiled catalog tests; two explicit Windows symlink-privilege skips from 440 discovered tests.
-- PASSED: all 39 compiled canonical-interchange tests.
-- PASSED: running Editor patrol creation, four-actor preview, quantity edits, removal, invalid-input rejection, failed-save preservation, reopening and further edits.
-- PASSED: private copy migration preserved the exact original catalog backup, 885 existing actors, 3,914 items and 356 recipes.
-- PASSED: measured maximum UI timer gap 2.86 seconds against the three-second workflow budget.
-- NOT_APPLICABLE: scene mutation, native spawn execution, game condition evaluation, deployment, saves, runtime adapters, installer and release evidence.
+Out of scope: native faction discovery or runtime changes, game relationships/membership, world editing, game/save writes, deployment, installer, engine changes and other feature work.
 
-The Editor acceptance uses an isolated copy of the authoring workspace. Game files and the normal authoring catalog were not modified. Keep private fixtures, screenshots, logs and generated builds outside source control.
+Validation on 2026-09-10:
+- PASSED L0/L1: full static validation, 827 Python tests discovered (818 passed, nine explicit platform skips), all enabled pinned source-policy checks, and 30-pane lifecycle inventory.
+- PASSED L2: exact pinned O3DE configure and changed SDK targets; Catalog tests 445 passed with two explicit Windows symlink-fixture skips; CanonicalInterchange tests 39 passed.
+- PASSED L3: seven running Editor workflow groups cover Town Guard/Bandits, culture editing, membership/leadership, directed hostility, jurisdiction, updates/removal, rejected input, dirty drafts, failed writes, workspace reopening and further edits.
+- PASSED L3 presentation: all three tabs visually reviewed; floating dock verified at 860x640 logical pixels with scrolling, keyboard focus and persistent Save/Revert controls.
+- PASSED measured performance: maximum sampled UI timer gap 2.172 seconds against a three-second budget, using an isolated input catalog with 887 actors, 3,914 items, 356 recipes and one encounter. This is not a maximum-catalog benchmark.
+- PASSED protected-data audit: original authoring catalog hash unchanged; source diff excludes private observations, personal paths, screenshots and build outputs.
+- NOT_APPLICABLE: game/runtime, deployment, installer and release validation. Runtime sign-off not performed.
 
-Branch: `codex/spawn-encounter-editor` from merged main `7f5d7bd2211472ac1d261b2969a64fd4e2095007`. The encounter worktree is isolated from the concurrent pack-saving task. Deliver a focused DCO commit and PR. Approval and merge remain with the maintainer; no later feature is authorized.
+Build evidence reuses unchanged outputs from the same external engine pin while compiling the changed SDK targets from this branch. It is not a full clean engine build claim. Logs, test XML, screenshots and the machine-readable evidence pack remain outside Git.
+
+Branch: codex/faction-authority-editor from encounter commit 9f79f18ea758eec1e55ab365e805a45c9058f956. Encounter PR #252 remains an unmerged prerequisite; the faction review keeps that dependency explicit and its own diff separate.
+
+Design: docs/tainted-grail-sdk/FACTION_AUTHORITY_EDITOR_DESIGN.md.
+
+Next action: maintainer review. The prerequisite must be integrated before the faction change reaches main. No merge or follow-on milestone is authorized by this task record.

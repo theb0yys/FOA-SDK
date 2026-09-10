@@ -120,17 +120,17 @@ Status: implemented vertical slice, continuing hardening and exact-head host/UI 
 - The immutable seven-lane population action contract and registered **Tainted Grail Actor and Troop Editor** pane are implemented.
 - The project-owned deterministic schema-2 population fixture, manifest verification, focused negative tests, public user/architecture/format/release-readiness documentation, and focused Windows evidence checklist are implemented.
 - Typed actor profiles, troop profiles, and troop membership use exact canonical identity and evidence boundaries.
-- Schema-1/2 catalog migration, schema-3 writing, deterministic population ordering, malformed input rejection, and save/reopen equivalence are implemented.
+- Schema-1/2/3 catalog migration, schema-4 writing, deterministic population ordering, malformed input rejection, and save/reopen equivalence are implemented.
 - Atomic troop-definition bootstrap persists a troop profile and supplied members as one validated candidate without removing omitted members; failed evidence, integrity, or persistence never publishes partial state.
 - The Actor/Troop pane derives and presents population action lanes without runtime, spawn, deployment, or save-mutation authority.
 - Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-six-pane evidence pass remain the active acceptance gate; no host-verification result is claimed by documentation or fixture success alone.
-- Spawn and Encounter Editor provides local composition, placement and activation plans with schema-3 persistence; native spawning remains a separate runtime capability.
+- Spawn and Encounter Editor provides local composition, placement and activation plans; native spawning remains a separate runtime capability.
 - Templates, identities, pools, routes, lifecycle, uniqueness, density, cleanup, and rollback research continue behind separate reviewed contracts.
 
 ### World and societies
 
 - World, Road, and Route Editor.
-- Faction and Authority Editor.
+- Faction and Authority Editor: local culture/faction profiles, membership, directed dispositions and jurisdiction plans use schema-4 persistence. Compiled tests and live authoring acceptance passed; runtime integration remains separate.
 - Regions, scenes, locations, roads, factions, cultures, territory, authority, and dispositions.
 
 ### Narrative and state

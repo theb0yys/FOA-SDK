@@ -18,6 +18,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
 - [Item and Recipe Editor Guide](ITEM_RECIPE_EDITOR_GUIDE.md) — typed item and recipe profiles, ingredients, outputs, stations, acquisition relationships, and governed action lanes.
 - [Actor and Troop Editor Guide](ACTOR_TROOP_EDITOR_GUIDE.md) — typed actor and troop authoring, exact template/leader/member bindings, atomic persistence, action lanes, deterministic fixture, dirty-draft protection, and current runtime boundary.
+- [Faction and Authority Editor Guide](FACTION_AUTHORITY_EDITOR_GUIDE.md) — cultures, faction membership, leadership, directed relationships and jurisdiction plans.
+- [Faction and Authority Editor Design](FACTION_AUTHORITY_EDITOR_DESIGN.md) — ownership, schema-4 migration, transactional links and acceptance scope.
 - [Spawn and Encounter Editor Guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md) — compose local encounters, preview quantities, set placement and conditions, save/reopen and recover migrated catalogs.
 - [Spawn and Encounter Editor Design](SPAWN_ENCOUNTER_EDITOR_DESIGN.md) — schema-3 encounter ownership, complete-definition saves, limits and validation scope.
 - [Actor and Troop Windows UI Evidence](ACTOR_TROOP_WINDOWS_UI_EVIDENCE.md) — focused exact-head checks for resolved/unresolved templates, troop composition, governance lanes, dirty drafts, persistence, errors, and runtime separation within the current twenty-six-pane surface.

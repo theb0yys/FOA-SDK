@@ -72,6 +72,14 @@ namespace TaintedGrailModdingSDK
         bool UpsertEncounterDefinition(const EncounterDefinition& definition, AZStd::string* error = nullptr);
         const EncounterDefinition* FindEncounterDefinition(const AZStd::string& recordId) const;
         const AZStd::vector<EncounterDefinition>& GetEncounterDefinitions() const;
+        bool UpsertCultureProfile(const CultureProfile& profile, AZStd::string* error = nullptr);
+        bool ReplaceFactionDefinition(const FactionDefinition& definition, AZStd::string* error = nullptr);
+        const CultureProfile* FindCultureProfile(const AZStd::string& recordId) const;
+        const FactionProfile* FindFactionProfile(const AZStd::string& recordId) const;
+        const AZStd::vector<CultureProfile>& GetCultureProfiles() const;
+        const AZStd::vector<FactionProfile>& GetFactionProfiles() const;
+        const AZStd::vector<FactionLink>& GetFactionLinks() const;
+        AZStd::vector<FactionLink> FindFactionLinks(const AZStd::string& factionRecordId) const;
 
         const CatalogRecord* FindByRecordId(const AZStd::string& recordId) const;
         const CatalogRecord* FindByExactNativeRef(
@@ -134,6 +142,9 @@ namespace TaintedGrailModdingSDK
 
     private:
         friend class CatalogGovernanceService;
+        bool UpsertFactionProfile(const FactionProfile& profile, AZStd::string* error);
+        bool LoadSocietyCollections(const CatalogDocument& document, AZStd::string* error);
+        bool ValidateSocietyIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
         bool ValidateEncounterIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
 
         CatalogRecord* FindMutableRecordById(const AZStd::string& recordId);
@@ -211,5 +222,8 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<PopulationTroopProfile> m_populationTroopProfiles;
         AZStd::vector<PopulationTroopMember> m_populationTroopMembers;
         AZStd::vector<EncounterDefinition> m_encounterDefinitions;
+        AZStd::vector<CultureProfile> m_cultureProfiles;
+        AZStd::vector<FactionProfile> m_factionProfiles;
+        AZStd::vector<FactionLink> m_factionLinks;
     };
 } // namespace TaintedGrailModdingSDK

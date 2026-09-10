@@ -256,7 +256,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(canonical->m_nativeRefExact.empty());
         auto loaded = CatalogPersistenceService().Load(service.GetWorkspaceRootPath());
         ASSERT_TRUE(loaded.IsSuccess()) << loaded.GetError().c_str();
-        EXPECT_EQ(loaded.GetValue().m_schemaVersion, EncounterCatalogSchemaVersion);
+        EXPECT_EQ(loaded.GetValue().m_schemaVersion, CurrentCatalogSchemaVersion);
         CatalogDatabase reopened;
         ASSERT_TRUE(reopened.ReplaceFromBoundDocument(loaded.GetValue(), service.GetWorkspace(),
             *service.GetWorkspace().FindActiveGameProfile(), service.GetSourceRegistry(), &error)) << error.c_str();

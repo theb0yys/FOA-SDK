@@ -68,6 +68,8 @@ namespace TaintedGrailModdingSDK
 
         bool UpsertPack(const PackManifest& pack, AZStd::string* error = nullptr);
         bool SetActivePack(const PackManifest& pack, AZStd::string* error = nullptr);
+        //! Validates and persists a draft before publishing it as the active pack.
+        bool SavePackAndActivate(const PackManifest& pack, const AZStd::string& filePath, AZStd::string* error = nullptr);
         bool SaveActivePack(const AZStd::string& filePath, AZStd::string* error = nullptr);
         bool SaveActivePack(AZStd::string* error = nullptr);
         bool LoadPack(const AZStd::string& filePath, AZStd::string* error = nullptr);

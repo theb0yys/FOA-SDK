@@ -25,6 +25,7 @@
 #include <QJsonParseError>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
@@ -218,6 +219,9 @@ namespace TaintedGrailModdingSDK
         detailsLayout->addRow(tr("Mod name"), m_displayNameEdit);
         detailsLayout->addRow(tr("Author / namespace"), m_ownerIdEdit);
         rootLayout->addWidget(detailsGroup);
+        m_draftStatusLabel = new QLabel(this);
+        m_draftStatusLabel->setObjectName(QStringLiteral("packDraftStatus"));
+        rootLayout->addWidget(m_draftStatusLabel);
 
         m_advancedToggleButton = new QPushButton(tr("Show advanced manifest"), this);
         rootLayout->addWidget(m_advancedToggleButton, 0, Qt::AlignRight);
@@ -320,6 +324,36 @@ namespace TaintedGrailModdingSDK
         m_statusLabel->setWordWrap(true);
         rootLayout->addWidget(m_statusLabel);
 
+        // Track only the changed field. Typing never parses a manifest or scans the workspace.
+        for (QLineEdit* edit : { m_displayNameEdit, m_ownerIdEdit, m_versionEdit,
+                 m_targetGameVersionEdit, m_targetBranchEdit, m_coreVersionEdit,
+                 m_adapterVersionEdit, m_buildConfigurationEdit })
+        {
+            m_formValues.insert(edit, edit->text());
+            connect(edit, &QLineEdit::textChanged, this, [this, edit](const QString& value)
+            {
+                UpdateDraftField(edit, value);
+            });
+        }
+        for (QPlainTextEdit* edit : { m_compatibleGameVersionsEdit, m_dlcScopesEdit,
+                 m_dependenciesEdit, m_requiredModsEdit, m_incompatibilitiesEdit,
+                 m_contentDefinitionsEdit, m_assetPathsEdit, m_localisationPathsEdit })
+        {
+            m_formValues.insert(edit, edit->toPlainText());
+            connect(edit, &QPlainTextEdit::textChanged, this, [this, edit]()
+            {
+                UpdateDraftField(edit, edit->toPlainText());
+            });
+        }
+        for (QComboBox* combo : { m_saveImpactCombo, m_releaseChannelCombo })
+        {
+            m_formValues.insert(combo, combo->currentText());
+            connect(combo, &QComboBox::currentTextChanged, this, [this, combo](const QString& value)
+            {
+                UpdateDraftField(combo, value);
+            });
+        }
+
         connect(m_displayNameEdit, &QLineEdit::textChanged, this, [this]()
         {
             UpdateGeneratedIdentity();
@@ -341,6 +375,10 @@ namespace TaintedGrailModdingSDK
         });
         connect(newButton, &QPushButton::clicked, this, [this]()
         {
+            if (!ConfirmDraftReplacement(tr("creating a new mod")))
+            {
+                return;
+            }
             ClearFormForNewPack();
             SetStatus(tr("New mod ready. Enter a name and author, then Save mod."));
         });
@@ -418,6 +456,7 @@ namespace TaintedGrailModdingSDK
         m_localisationPathsEdit->setPlainText(JoinLines(pack.m_localisationPaths));
         m_buildConfigurationEdit->setText(ToQString(pack.m_buildConfiguration));
         m_releaseChannelCombo->setCurrentText(ToQString(pack.m_releaseChannel));
+        ResetDraftBaseline();
         UpdateSummary();
     }
 
@@ -454,7 +493,50 @@ namespace TaintedGrailModdingSDK
             m_targetBranchEdit->clear();
         }
         UpdateGeneratedIdentity();
+        ResetDraftBaseline();
         UpdateSummary();
+    }
+
+    void PackManagerWidget::UpdateDraftField(QWidget* field, const QString& value)
+    {
+        m_formValues.insert(field, value);
+        UpdateDraftStatus();
+    }
+
+    void PackManagerWidget::ResetDraftBaseline()
+    {
+        m_savedFormValues = m_formValues;
+        UpdateDraftStatus();
+    }
+
+    void PackManagerWidget::UpdateDraftStatus()
+    {
+        m_draftStatusLabel->setText(m_formValues != m_savedFormValues
+                ? tr("Unsaved changes")
+                : (m_isNewPack ? tr("New mod draft") : tr("All changes saved")));
+    }
+
+    bool PackManagerWidget::ConfirmDraftReplacement(const QString& action)
+    {
+        if (m_formValues == m_savedFormValues)
+        {
+            return true;
+        }
+
+        QMessageBox prompt(QMessageBox::Warning, tr("Unsaved mod changes"),
+            tr("Save changes before %1?").arg(action),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+        prompt.setObjectName(QStringLiteral("packUnsavedChangesDialog"));
+        prompt.setTextFormat(Qt::PlainText);
+        prompt.setInformativeText(tr("Discard will lose the changes in this draft."));
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.setEscapeButton(QMessageBox::Cancel);
+        const int choice = prompt.exec();
+        if (choice == QMessageBox::Save)
+        {
+            return SavePack();
+        }
+        return choice == QMessageBox::Discard;
     }
 
     void PackManagerWidget::UpdateGeneratedIdentity()
@@ -591,6 +673,12 @@ namespace TaintedGrailModdingSDK
             return;
         }
 
+        // Saving can refresh the combo selection; retain the requested path above.
+        if (!ConfirmDraftReplacement(tr("opening the selected mod")))
+        {
+            return;
+        }
+
         AZStd::string error;
         if (!FoundationService::Get().LoadPack(ToAzString(filePath), &error))
         {
@@ -650,6 +738,7 @@ namespace TaintedGrailModdingSDK
             return false;
         }
         m_isNewPack = false;
+        ResetDraftBaseline();
         SetStatus(tr("Mod saved. You can start authoring."));
         UpdateSummary();
         RefreshWorkspaceMods(filePath);

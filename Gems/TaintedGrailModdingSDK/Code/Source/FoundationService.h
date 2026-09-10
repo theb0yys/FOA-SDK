@@ -119,6 +119,10 @@ namespace TaintedGrailModdingSDK
         bool ImportNativePopulation(const AZStd::string& path, AZStd::string* error = nullptr);
         bool CreatePopulationRecord(const AZStd::string& kind, const AZStd::string& name,
             const AZStd::string& leaderActorId, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool CreateCultureProfile(const AZStd::string& name, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveCultureProfile(const CultureProfile& profile, const AZStd::string& name, AZStd::string* error = nullptr);
+        bool CreateFactionDefinition(const AZStd::string& name, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveFactionDefinition(const FactionDefinition& definition, const AZStd::string& name, AZStd::string* error = nullptr);
         bool CreateEncounterDefinition(const AZStd::string& name, const AZStd::string& initialTargetId,
             AZStd::string& recordId, AZStd::string* error = nullptr);
         bool SaveEncounterDefinition(const EncounterDefinition& definition, const AZStd::string& name, AZStd::string* error = nullptr);
@@ -207,6 +211,8 @@ namespace TaintedGrailModdingSDK
 
     private:
         bool ImportEconomyDocument(const AZStd::string& path, bool custom, AZStd::string* error);
+        bool CommitAuthoredSociety(CultureProfile culture, FactionDefinition faction, const AZStd::string& name,
+            bool isCulture, bool creating, AZStd::string* error);
         bool CommitAuthoredEncounter(const EncounterDefinition& definition, const AZStd::string& name,
             bool creating, AZStd::string* error);
         bool PrepareAuthoredPopulationEvidence(const AZStd::string& rowsJson, SourceEvidenceRegistry& registry,

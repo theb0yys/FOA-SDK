@@ -498,7 +498,7 @@ The document is bound to one workspace and exact game profile:
 
 ```json
 {
-  "SchemaVersion": 3,
+  "SchemaVersion": 4,
   "WorkspaceId": "owner.workspace",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
@@ -514,13 +514,17 @@ The document is bound to one workspace and exact game profile:
   "ActorProfiles": [],
   "TroopProfiles": [],
   "TroopMembers": [],
-  "EncounterDefinitions": []
+  "EncounterDefinitions": [],
+  "CultureProfiles": [],
+  "FactionProfiles": [],
+  "FactionLinks": []
 }
 ```
 
-Schema 3 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
+Schema 4 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
 older schema-1 documents without them load as empty economy collections. Schema 2 added the three population
 arrays shown above. Schema 3 adds `EncounterDefinitions`; schema-1/2 inputs must not contain encounter rows.
+Schema 4 adds `CultureProfiles`, `FactionProfiles` and `FactionLinks`; schema-1/2/3 inputs must not contain society rows.
 
 Schema-1 migration is read-only and fail-closed:
 
@@ -530,8 +534,8 @@ Schema-1 migration is read-only and fail-closed:
 4. legacy validation and governance compatibility rules run without changing the detected schema version;
 5. the complete candidate is validated against the active workspace, profile, evidence registry, and catalog
    integrity rules before successful bound replacement;
-6. only successful bound replacement followed by `BuildDocument` produces a schema-3 document;
-7. the next successful catalog save writes that schema-3 document, including when every population collection
+6. only successful bound replacement followed by `BuildDocument` produces a schema-4 document;
+7. the next successful catalog save writes that schema-4 document, including when every population collection
    is empty.
 
 A loaded schema-1 candidate remains schema 1 after compatibility normalization.
@@ -541,7 +545,7 @@ and failed persistence are rejected without replacing the published catalog. Mig
 records, relationships, validation history, governance history, economy collections, and their stable order.
 Plain catalog documents require an explicit `SchemaVersion`. A legacy O3DE `JsonSerialization` envelope that
 predates a nested catalog schema is treated only as a schema-1 migration input. Current saves always emit the
-plain schema-3 document with explicit empty collections, not a new O3DE envelope.
+plain schema-4 document with explicit empty collections, not a new O3DE envelope.
 
 Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
 
@@ -567,9 +571,38 @@ condition descriptions and evidence IDs are canonicalized on copies; duplicates 
 constraints include direct entries and troop members.
 
 Schema-1/2 documents containing encounter definitions and future schemas are rejected. Schema-1/2
-inputs are backed up byte-for-byte before a successful schema-3 overwrite; backup failure blocks the
+inputs are backed up byte-for-byte before a successful current-schema overwrite; backup failure blocks the
 write. Restoring the old backup is the downgrade route; new encounter data has no schema-2 projection.
 See [encounter design](SPAWN_ENCOUNTER_EDITOR_DESIGN.md) for the authoring boundary.
+
+## Society profiles and faction links
+
+Catalog schema 4 adds three arrays. Profiles attach to existing synthetic, pack-owned canonical
+society/culture and society/faction records; display names remain on the canonical record.
+
+| Array | Fields |
+| --- | --- |
+| `CultureProfiles` | `RecordId`, `Description` (2048 bytes), `Language` (128 bytes), `EvidenceIds`. |
+| `FactionProfiles` | `RecordId`, optional `CultureRecordId`, `Description` and `AuthorityNotes` (2048 bytes each), `EvidenceIds`. |
+| `FactionLinks` | `LinkId`, `FactionRecordId`, `Kind`, `TargetRecordId`, `TargetSubjectRef`, `Value`, `Notes`, `EvidenceIds`. |
+
+Link kinds: `member` targets a saved actor/troop with `member`, `officer` or `leader`;
+`disposition` targets another saved faction with `friendly`, `neutral` or `hostile`;
+`jurisdiction` targets a saved world location/scene/region (with an agreeing exact subject) or a nonempty
+unverified reference, with `controls`, `claims` or `protects`. References and notes are single-line text
+up to 1024 bytes. A leader must be an individual actor; each faction has at most one. Relationships are
+directed, never automatically reciprocal. These values describe SDK authoring intent, not game enums.
+
+Catalog limits: 1000 cultures, 1000 factions, 10000 links; at most 128 links of each kind per faction.
+Evidence arrays require 1–64 distinct stable IDs. Profiles and links sort by identity; evidence arrays
+sort on copies. Duplicate identities or targets within a kind are rejected. Links cannot move to another
+faction or change kind. Complete-definition saves preserve surviving IDs and remove only omitted links
+belonging to that faction. Invalid evidence, ownership, references or disk writes prevent publication.
+
+Schema-1/2/3 inputs carrying society rows are rejected. Supported older catalogs retain their detected version
+until bound validation and projection; saves write schema 4 and verify the exact original backup before
+overwriting an earlier version. Workspace/pack schemas and canonical interchange are unchanged.
+See [faction design](FACTION_AUTHORITY_EDITOR_DESIGN.md) and [usage](FACTION_AUTHORITY_EDITOR_GUIDE.md).
 
 ## Catalog record
 

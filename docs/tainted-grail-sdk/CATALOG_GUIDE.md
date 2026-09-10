@@ -54,7 +54,7 @@ Catalog schema 1 is a read-only compatibility input. A valid schema-1 document l
 collections, and compatibility normalization leaves its detected version unchanged.
 The loaded candidate remains schema 1.
 Directly saving it is refused; only successful bound replacement followed by `BuildDocument` produces the
-schema-3 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
+schema-4 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
 Newer, malformed, or unsafe versions fail without replacing the published catalog.
 
 ## Search
@@ -322,9 +322,9 @@ The superseding record ID must exist. Supersession does not silently delete evid
 
 Use **Save Catalog** to persist the current canonical document.
 
-Catalog saves write explicit schema 3 even when all population collections are empty. Saving does not publish
+Catalog saves write explicit schema 4 even when all population collections are empty. Saving does not publish
 a new schema-1 document. A loaded schema-1 compatibility candidate must first pass bound replacement; direct
-save remains refused until `BuildDocument` emits the validated schema-3 projection.
+save remains refused until `BuildDocument` emits the validated schema-4 projection.
 
 Use **Reload Catalog** to reload and validate the workspace document. Reload rejects:
 
@@ -343,7 +343,7 @@ Use **Reload Catalog** to reload and validate the workspace document. Reload rej
 
 Legacy O3DE catalog envelopes that predate an explicit nested catalog schema remain a bounded schema-1
 migration input. They retain schema 1 after loading and normalization, just like plain schema-1 input. Current
-saves use the plain schema-3 durable document produced only after successful bound replacement.
+saves use the plain schema-4 durable document produced only after successful bound replacement.
 
 ## Encounter plans and migration recovery
 
@@ -352,17 +352,28 @@ activation and placement descriptions remain local authoring intent. The Spawn a
 previews composition and preserves entry identities when quantities change. Saving a complete encounter
 removes omitted entries from that encounter only.
 
-Schema 2 remains a load-only input and keeps its detected version until bound validation and projection
-succeed. Before replacing a schema-1/2 catalog, the writer creates and verifies an exact sibling
+Schemas 2 and 3 remain load-only inputs and keeps its detected version until bound validation and projection
+succeed. Before replacing a schema-1/2/3 catalog, the writer creates and verifies an exact sibling
 `catalog.tgcatalog.json.schema-<version>.<sha256>.backup.json`. A missing, conflicting or unwritable
 backup prevents replacement. Future versions and malformed originals are not overwritten. Existing catalog files are read within a
 256 MiB limit before replacement; exceeding that limit fails without replacing the file.
 
-A schema-2 Editor cannot read schema 3. To return to it, close the Editor, preserve the current workspace,
-and restore the earlier catalog backup. New encounter edits are not backported. Keep the workspace's
+Editors supporting only schema 2 or 3 cannot read schema 4. To return to it, close the Editor, preserve the current workspace,
+and restore the earlier catalog backup. New encounter or society edits are not backported. Keep the workspace's
 pack manifests and Sources/Evidence directories with the catalog when making recovery copies.
 
 See [Spawn and Encounter Editor guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md).
+
+## Factions, cultures and authority
+
+Schema 4 adds pack-owned society/culture and society/faction profiles, plus first-class FactionLinks.
+Membership binds saved actors/troops; dispositions bind another faction in one direction; jurisdiction
+binds a saved world location/scene/region or an explicitly unverified territory reference. Each link has its
+own stable identity and exact authoring evidence. A complete faction save removes only that faction's omitted
+links; it does not edit target actors, troops or other factions. Surviving links preserve their identities.
+
+See [Data Formats](DATA_FORMATS.md#society-profiles-and-faction-links) and the
+[Faction and Authority Editor guide](FACTION_AUTHORITY_EDITOR_GUIDE.md).
 
 ## Safe workflow
 

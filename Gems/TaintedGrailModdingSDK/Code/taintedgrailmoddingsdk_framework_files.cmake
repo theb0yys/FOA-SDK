@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Source/FoundationSocietyService.cpp
     Source/FoundationEncounterService.cpp
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h

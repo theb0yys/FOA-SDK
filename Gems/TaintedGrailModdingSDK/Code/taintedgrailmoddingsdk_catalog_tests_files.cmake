@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Tests/SocietyAuthoringTests.cpp
     Tests/EncounterAuthoringTests.cpp
     Tests/AdapterContractTests.cpp
     Tests/CanonicalFingerprintTests.cpp

@@ -532,11 +532,14 @@ namespace TaintedGrailModdingSDK
         PopulationTroopProfile::Reflect(context);
         PopulationTroopMember::Reflect(context);
         EncounterDefinition::Reflect(context);
+        CultureProfile::Reflect(context);
+        FactionProfile::Reflect(context);
+        FactionLink::Reflect(context);
 
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(5)
+                ->Version(6)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -553,7 +556,10 @@ namespace TaintedGrailModdingSDK
                 ->Field("ActorProfiles", &CatalogDocument::m_actorProfiles)
                 ->Field("TroopProfiles", &CatalogDocument::m_troopProfiles)
                 ->Field("TroopMembers", &CatalogDocument::m_troopMembers)
-                ->Field("EncounterDefinitions", &CatalogDocument::m_encounterDefinitions);
+                ->Field("EncounterDefinitions", &CatalogDocument::m_encounterDefinitions)
+                ->Field("CultureProfiles", &CatalogDocument::m_cultureProfiles)
+                ->Field("FactionProfiles", &CatalogDocument::m_factionProfiles)
+                ->Field("FactionLinks", &CatalogDocument::m_factionLinks);
         }
     }
 
@@ -561,6 +567,7 @@ namespace TaintedGrailModdingSDK
     {
         return m_schemaVersion == LegacyCatalogSchemaVersion
             || m_schemaVersion == PopulationCatalogSchemaVersion
+            || m_schemaVersion == EncounterCatalogSchemaVersion
             || m_schemaVersion == CurrentCatalogSchemaVersion;
     }
 

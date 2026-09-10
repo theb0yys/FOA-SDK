@@ -6,6 +6,11 @@
 #
 
 set(FILES
+    Source/SocietyModels.h
+    Source/SocietyModels.cpp
+    Source/SocietyPlanningService.h
+    Source/SocietyPlanningService.cpp
+    Source/CatalogDatabaseSociety.cpp
     Source/EncounterModels.h
     Source/EncounterModels.cpp
     Source/EncounterPlanningService.h

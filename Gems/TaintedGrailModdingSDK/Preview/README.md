@@ -9,7 +9,7 @@ plain schema-1 JSON. The catalog deliberately remains a legacy migration fixture
 Loading and compatibility normalization retain schema 1.
 A direct save of that load result is refused.
 Only successful bound replacement followed by `BuildDocument` creates the candidate that the next catalog save
-emits as plain schema 3. The editor persistence services also accept bounded legacy O3DE `JsonSerialization`
+emits as plain schema 4. The editor persistence services also accept bounded legacy O3DE `JsonSerialization`
 envelopes through the same reflected model types.
 Generated output is not committed a second time.
 

@@ -468,7 +468,7 @@ namespace TaintedGrailModdingSDK
         CatalogSchemaMigrationPersistenceTests,
         SchemaOnePreviewMigratesToCurrentWithEmptyPopulationAndPreservesLegacyProjection)
     {
-        EXPECT_EQ(CurrentCatalogSchemaVersion, EncounterCatalogSchemaVersion);
+        EXPECT_EQ(CurrentCatalogSchemaVersion, SocietyCatalogSchemaVersion);
         WorkspacePersistenceService workspacePersistence;
         auto workspaceResult = workspacePersistence.Load(
             PreviewPath("preview.tgworkspace.json"));
@@ -572,7 +572,7 @@ namespace TaintedGrailModdingSDK
         QTemporaryDir futureDirectory;
         ASSERT_TRUE(futureDirectory.isValid());
         QJsonObject future = MakePlainEmptyCatalogObject();
-        future.insert(QStringLiteral("SchemaVersion"), 4);
+        future.insert(QStringLiteral("SchemaVersion"), static_cast<int>(CurrentCatalogSchemaVersion + 1));
         future.insert(QStringLiteral("FuturePopulationData"), QJsonArray{});
         write = WriteCatalogJson(
             ToAzString(futureDirectory.path()),
@@ -580,7 +580,7 @@ namespace TaintedGrailModdingSDK
         ASSERT_TRUE(write.IsSuccess()) << write.GetError().c_str();
         auto futureResult = persistence.Load(ToAzString(futureDirectory.path()));
         ASSERT_FALSE(futureResult.IsSuccess());
-        EXPECT_NE(futureResult.GetError().find("3"), AZStd::string::npos);
+        EXPECT_NE(futureResult.GetError().find("5"), AZStd::string::npos);
         EXPECT_NE(
             futureResult.GetError().find("unsupported"),
             AZStd::string::npos);
@@ -1001,12 +1001,12 @@ namespace TaintedGrailModdingSDK
         CatalogDatabase migrated; AZStd::string error;
         ASSERT_TRUE(migrated.ReplaceFromBoundDocument(loaded.GetValue(), workspace, profile, MakePopulationRegistry(), &error)) << error.c_str();
         const auto document = migrated.BuildDocument(workspace, profile);
-        EXPECT_EQ(document.m_schemaVersion, EncounterCatalogSchemaVersion);
+        EXPECT_EQ(document.m_schemaVersion, CurrentCatalogSchemaVersion);
         EXPECT_EQ(document.m_records.size(), source.m_records.size());
         EXPECT_EQ(document.m_actorProfiles.size(), source.m_actorProfiles.size());
         EXPECT_EQ(document.m_troopProfiles.size(), source.m_troopProfiles.size());
         EXPECT_EQ(document.m_troopMembers.size(), source.m_troopMembers.size());
-        auto expected = source; expected.m_schemaVersion = EncounterCatalogSchemaVersion;
+        auto expected = source; expected.m_schemaVersion = CurrentCatalogSchemaVersion;
         EXPECT_EQ(SerializeObject(expected).GetValue(), SerializeObject(document).GetValue());
         ASSERT_TRUE(persistence.Save(document, root).IsSuccess());
         const auto backups = QDir(directory.path() + "/Catalog").entryList({"*.schema-2.*.backup.json"}, QDir::Files);

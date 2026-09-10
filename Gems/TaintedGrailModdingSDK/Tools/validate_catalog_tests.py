@@ -83,6 +83,17 @@ def main() -> int:
         if "Source/CatalogDatabase.cpp" in cmake:
             fail("Production source ownership must remain in manifests, not the test target block")
 
+        require_fragments(
+            tests_root / "SocietyAuthoringTests.cpp",
+            (
+                "TownGuardCultureMembershipLeadershipAndDirectedRelationshipsSurviveReopen",
+                "CompleteReplacementPreservesLinkIdsAndRemovesOnlyOwnedLinks",
+                "InvalidTargetsRolesDuplicatesAndOwnershipPreservePublishedDefinitions",
+                "EvidenceAndFailedPersistenceNeverPublishCandidateChanges",
+                "SchemaThreeMigrationPreservesEncounterAndExactBackup",
+                "LegacySocietyPayloadsFutureVersionsDuplicateAndOversizedDocumentsAreRejected",
+            ),
+        )
         test_entries = manifest_entries(test_manifest_path)
         expected_tests = {
             "Tests/AdapterContractTests.cpp",
@@ -95,6 +106,7 @@ def main() -> int:
             "Tests/DeveloperPreviewSmokeTests.cpp",
             "Tests/EconomyAuthoringTests.cpp",
             "Tests/EncounterAuthoringTests.cpp",
+            "Tests/SocietyAuthoringTests.cpp",
             "Tests/EconomyCoverageServiceTests.cpp",
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
             "Tests/FoAInstallDiscoveryServiceTests.cpp",
@@ -133,6 +145,9 @@ def main() -> int:
 
         core_entries = manifest_entries(core_manifest_path)
         required_core = {
+            "Source/SocietyModels.cpp",
+            "Source/SocietyPlanningService.cpp",
+            "Source/CatalogDatabaseSociety.cpp",
             "Source/AdapterCompatibilityService.cpp",
             "Source/AdapterContractRegistry.cpp",
             "Source/AdapterWorkOrderPlanningService.cpp",
@@ -159,6 +174,7 @@ def main() -> int:
 
         framework_entries = manifest_entries(framework_manifest_path)
         required_framework = {
+            "Source/FoundationSocietyService.cpp",
             "Source/CatalogGovernanceService.cpp",
             "Source/CatalogPersistenceService.cpp",
             "Source/CatalogPromotionService.cpp",
@@ -497,7 +513,7 @@ def main() -> int:
                 "LegacyCatalogSchemaVersion = 1",
                 "PopulationCatalogSchemaVersion = 2",
                 "CurrentCatalogSchemaVersion =",
-                "EncounterCatalogSchemaVersion;",
+                "SocietyCatalogSchemaVersion;",
             ),
         )
         require_fragments(
@@ -517,7 +533,7 @@ def main() -> int:
                 "SerializePlainCatalog",
                 "Plain canonical catalog documents require an explicit SchemaVersion.",
                 "Catalog schema 1 cannot contain population collections.",
-                "Canonical catalog saves require schema 3; schemas 1/2 are load-only migration inputs.",
+                "Canonical catalog saves require schema 4; schemas 1/2/3 are load-only migration inputs.",
                 "settings.m_keepDefaults = true",
                 "QSaveFile file",
                 "file.setDirectWriteFallback(false)",

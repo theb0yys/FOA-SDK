@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/FactionAuthorityEditorWidget.h
+    Source/FactionAuthorityEditorWidget.cpp
     Source/SpawnEncounterEditorWidget.cpp
     Source/SpawnEncounterEditorWidget.h
     Source/ActorTroopEditorWidget.cpp

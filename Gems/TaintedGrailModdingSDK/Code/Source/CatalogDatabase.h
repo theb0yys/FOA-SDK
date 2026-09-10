@@ -72,6 +72,9 @@ namespace TaintedGrailModdingSDK
         bool UpsertEncounterDefinition(const EncounterDefinition& definition, AZStd::string* error = nullptr);
         const EncounterDefinition* FindEncounterDefinition(const AZStd::string& recordId) const;
         const AZStd::vector<EncounterDefinition>& GetEncounterDefinitions() const;
+        bool UpsertQuestProfile(const QuestAuthoringProfile& profile, AZStd::string* error = nullptr);
+        const QuestAuthoringProfile* FindQuestProfile(const AZStd::string& id) const;
+        const AZStd::vector<QuestAuthoringProfile>& GetQuestProfiles() const;
         bool UpsertWorldPlace(const WorldPlaceProfile& place, AZStd::string* error = nullptr);
         bool ReplaceWorldPath(const WorldPathDefinition& path, AZStd::string* error = nullptr);
         const WorldPlaceProfile* FindWorldPlace(const AZStd::string& id) const;
@@ -153,6 +156,8 @@ namespace TaintedGrailModdingSDK
     private:
         friend class CatalogGovernanceService;
         bool UpsertWorldPathProfile(const WorldPathProfile& path, AZStd::string* error);
+        bool LoadQuestCollections(const CatalogDocument& document, AZStd::string* error);
+        bool ValidateQuestIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
         bool LoadWorldCollections(const CatalogDocument& document, AZStd::string* error);
         bool ValidateWorldIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
         bool UpsertFactionProfile(const FactionProfile& profile, AZStd::string* error);
@@ -238,6 +243,7 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<CultureProfile> m_cultureProfiles;
         AZStd::vector<FactionProfile> m_factionProfiles;
         AZStd::vector<FactionLink> m_factionLinks;
+        AZStd::vector<QuestAuthoringProfile> m_questProfiles;
         AZStd::vector<WorldPlaceProfile> m_worldPlaces;
         AZStd::vector<WorldPathProfile> m_worldPaths;
         AZStd::vector<WorldPathNode> m_worldPathNodes;

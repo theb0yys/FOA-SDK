@@ -71,8 +71,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             source_root + "PopulationModels.h",
             "LegacyCatalogSchemaVersion = 1\n"
             "PopulationCatalogSchemaVersion = 2\n"
-            "Schemas 1, 2, 3 and 4 remain load-only migration inputs\n"
-            "CurrentCatalogSchemaVersion =\nWorldCatalogSchemaVersion;\n",
+            "Schemas 1, 2, 3, 4 and 5 remain load-only migration inputs\n"
+            "CurrentCatalogSchemaVersion =\nQuestCatalogSchemaVersion;\n",
         )
         self._write(source_root + "PopulationModels.cpp", "population models\n")
         self._write(
@@ -115,8 +115,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             'FindMember("ClassData")\n'
             "Plain canonical catalog documents require an explicit SchemaVersion.\n"
             "Catalog SchemaVersion must be an unsigned 32-bit integer.\n"
-            "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4 migration and schema 5.\n"
-            "Canonical catalog saves require schema 5; schemas 1/2/3/4 are load-only migration inputs.\n"
+            "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4/5 migration and schema 6.\n"
+            "Canonical catalog saves require schema 6; schemas 1/2/3/4/5 are load-only migration inputs.\n"
             "document.m_schemaVersion != CurrentCatalogSchemaVersion\n"
             "settings.m_keepDefaults = true\n"
             "AZ::JsonSerialization::Store\n"
@@ -242,14 +242,14 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/DATA_FORMATS.md",
             '## Workspace document\n"SchemaVersion": 1\n'
-            '## Canonical catalog document\n"SchemaVersion": 5\n'
+            '## Canonical catalog document\n"SchemaVersion": 6\n'
             '"ActorProfiles": []\n"TroopProfiles": []\n'
             '"TroopMembers": []\nSchema-1 migration is read-only and fail-closed\n'
             "Population actor profile\nPopulation troop profile\nPopulation troop member\n"
             "no population contract invokes FoA\n"
             "A loaded schema-1 candidate remains schema 1\n"
             "Directly saving that load result is refused\n"
-            "successful bound replacement followed by `BuildDocument` produces a schema-5 document\n"
+            "successful bound replacement followed by `BuildDocument` produces a schema-6 document\n"
             "## Catalog record\n",
         )
         self._write(
@@ -286,7 +286,7 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
             "Catalog schema 1 is a read-only compatibility input\n"
-            "Catalog saves write explicit schema 5\nLegacy O3DE catalog envelopes\n"
+            "Catalog saves write explicit schema 6\nLegacy O3DE catalog envelopes\n"
             "loaded candidate remains schema 1\n"
             "Directly saving it is refused\n"
             "successful bound replacement followed by `BuildDocument`\n",
@@ -296,11 +296,11 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "Loading and compatibility normalization retain schema 1\n"
             "A direct save of that load result is refused\n"
             "successful bound replacement followed by `BuildDocument`\n"
-            "plain schema 5\n",
+            "plain schema 6\n",
         )
         self._write(
             "docs/tainted-grail-sdk/GOVERNANCE_HARDENING.md",
-            "governance values remain string-compatible\ncurrent catalog saves write schema 5\n",
+            "governance values remain string-compatible\ncurrent catalog saves write schema 6\n",
         )
         self._write(
             "docs/tainted-grail-sdk/README.md",
@@ -316,9 +316,9 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
     def test_rejects_current_schema_bound_to_legacy(self) -> None:
         path = self.repo_root / "Gems/TaintedGrailModdingSDK/Code/Source/PopulationModels.h"
         text = path.read_text(encoding="utf-8").replace(
-            "CurrentCatalogSchemaVersion =\nWorldCatalogSchemaVersion;",
+            "CurrentCatalogSchemaVersion =\nQuestCatalogSchemaVersion;",
             "CurrentCatalogSchemaVersion = LegacyCatalogSchemaVersion;\n"
-            "WorldCatalogSchemaVersion;",
+            "QuestCatalogSchemaVersion;",
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(CatalogSchema2ContractError, "must not remain bound"):

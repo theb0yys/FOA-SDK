@@ -464,7 +464,7 @@ namespace TaintedGrailModdingSDK
                 *service.GetWorkspace().FindActiveGameProfile(), service.GetSourceRegistry(), &error));
             EXPECT_EQ(published.GetFactionProfiles().size(), 1);
         };
-        for (AZ::u32 version : {1, 2, 3, 6})
+        for (AZ::u32 version : {1, 2, 3, 7})
         {
             auto bad = good; bad.m_schemaVersion = version; reject(bad);
             auto object = QJsonDocument::fromJson(before).object(); object["SchemaVersion"] = static_cast<int>(version);

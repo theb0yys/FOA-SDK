@@ -498,7 +498,7 @@ The document is bound to one workspace and exact game profile:
 
 ```json
 {
-  "SchemaVersion": 5,
+  "SchemaVersion": 6,
   "WorkspaceId": "owner.workspace",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
@@ -521,11 +521,12 @@ The document is bound to one workspace and exact game profile:
   "WorldPlaces": [],
   "WorldPaths": [],
   "WorldPathNodes": [],
-  "WorldPathEdges": []
+  "WorldPathEdges": [],
+  "QuestProfiles": []
 }
 ```
 
-Schema 5 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
+Schema 6 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
 older schema-1 documents without them load as empty economy collections. Schema 2 added the three population
 arrays shown above. Schema 3 adds `EncounterDefinitions`; schema-1/2 inputs must not contain encounter rows.
 Schema 4 adds `CultureProfiles`, `FactionProfiles` and `FactionLinks`; schema-1/2/3 inputs must not contain society rows.
@@ -538,8 +539,8 @@ Schema-1 migration is read-only and fail-closed:
 4. legacy validation and governance compatibility rules run without changing the detected schema version;
 5. the complete candidate is validated against the active workspace, profile, evidence registry, and catalog
    integrity rules before successful bound replacement;
-6. only successful bound replacement followed by `BuildDocument` produces a schema-5 document;
-7. the next successful catalog save writes that schema-5 document, including when every population collection
+6. only successful bound replacement followed by `BuildDocument` produces a schema-6 document;
+7. the next successful catalog save writes that schema-6 document, including when every population collection
    is empty.
 
 A loaded schema-1 candidate remains schema 1 after compatibility normalization.
@@ -549,7 +550,7 @@ and failed persistence are rejected without replacing the published catalog. Mig
 records, relationships, validation history, governance history, economy collections, and their stable order.
 Plain catalog documents require an explicit `SchemaVersion`. A legacy O3DE `JsonSerialization` envelope that
 predates a nested catalog schema is treated only as a schema-1 migration input. Current saves always emit the
-plain schema-5 document with explicit empty collections, not a new O3DE envelope.
+plain schema-6 document with explicit empty collections, not a new O3DE envelope.
 
 Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
 
@@ -604,11 +605,11 @@ faction or change kind. Complete-definition saves preserve surviving IDs and rem
 belonging to that faction. Invalid evidence, ownership, references or disk writes prevent publication.
 
 Schema-1/2/3 inputs carrying society rows are rejected. Supported older catalogs retain their detected version
-until bound validation and projection; saves write schema 5 and verify the exact original backup before
+until bound validation and projection; saves write schema 6 and verify the exact original backup before
 overwriting an earlier version. Workspace/pack schemas and canonical interchange are unchanged.
 See [faction design](FACTION_AUTHORITY_EDITOR_DESIGN.md) and [usage](FACTION_AUTHORITY_EDITOR_GUIDE.md).
 
-## World places and path graphs (catalog schema 5)
+## World places and path graphs (introduced in catalog schema 5)
 
 `WorldPlaces` stores `RecordId`, `ParentRecordId`, `Description`, `HasPosition`, `X`, `Z` and `EvidenceIds`.
 Only locations may have positions, in scene-local plan units. Region/scene/location hierarchy resolves exact canonical world IDs.
@@ -981,3 +982,11 @@ Breaking changes require:
 - old/new fixtures and tests;
 - changelog and user-guide updates;
 - release notes and rollback guidance.
+
+## Quest authoring profiles (catalog schema 6)
+
+QuestProfiles attach to synthetic narrative/quest canonical records. RecordId equals the embedded QuestDefinition V1 quest_id; owner_pack_id must match the canonical owner. DefinitionJson is deterministic V1 JSON. Labels contain Id/Text; StateKeys contain KeyId/Type/DefaultValue/Description; Bindings contain SubjectId/RecordId; EvidenceIds support the current authored revision. Local bindings and default declarations do not resolve runtime objects or grant execution permission.
+
+Bounds are 256 quest profiles, 8 MiB combined DefinitionJson, 1 MiB per definition and 256 labels/state keys/bindings per quest. Boolean defaults are true/false; integer defaults are bounded to +/-1000000000; text/default descriptions are bounded single-line strings. State uses must match their declared type. Exact catalog actor, item, world-location and quest references are validated.
+
+Readers accept schemas 1–6 and the writer emits 6. Schema-1/2/3/4/5 documents cannot contain nonempty QuestProfiles. Old catalogs retain an exact verified backup before replacement; future versions and malformed input fail closed. See [quest authoring design](QUEST_AUTHORING_DESIGN.md) and [guide](QUEST_AUTHORING_GUIDE.md).

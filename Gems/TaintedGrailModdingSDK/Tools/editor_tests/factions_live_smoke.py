@@ -237,7 +237,7 @@ def run():
         troop = create("Faction QA Patrol", troop=True)
         general.close_pane("Tainted Grail Actor and Troop Editor")
         migrated = json.loads(catalog_bytes())
-        assert migrated["SchemaVersion"] == 5
+        assert migrated["SchemaVersion"] == 6
         backups = list((workspace.parent / "Catalog").glob("*.schema-3.*.backup.json"))
         assert any(p.read_bytes() == before for p in backups)
         for name in ["EconomyItems", "EconomyRecipes", "RecipeIngredients", "RecipeOutputs", "EncounterDefinitions"]:

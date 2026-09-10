@@ -323,17 +323,19 @@ def validate_economy_authoring(gem_root: Path) -> None:
         quest_widget_header,
         (
             "class QuestStateInspectorWidget",
-            "PopulateBindingRequirements",
+            "RefreshRows",
+            "DrawGraph",
+            "FoundationNotificationBus::Handler",
         ),
     )
     require_fragments(
         quest_widget,
         (
-            "ParseQuestDefinitionJsonV1",
-            "CalculateQuestDefinitionFingerprintV1",
-            "MaximumQuestDocumentBytes",
-            "QIODevice::ReadOnly",
-            "does not write files, mutate editor state, execute quests, deploy content, or touch FoA saves",
+            "FoundationService::Get().ReadQuestDocument",
+            "FoundationService::Get().SaveQuestDefinition",
+            "FoundationService::Get().AdoptQuestDefinition",
+            "QuestAuthoringService::Inspect",
+            "this editor does not advance quests or write game state",
         ),
     )
 

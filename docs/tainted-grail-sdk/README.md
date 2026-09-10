@@ -20,6 +20,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Actor and Troop Editor Guide](ACTOR_TROOP_EDITOR_GUIDE.md) — typed actor and troop authoring, exact template/leader/member bindings, atomic persistence, action lanes, deterministic fixture, dirty-draft protection, and current runtime boundary.
 - [Faction and Authority Editor Guide](FACTION_AUTHORITY_EDITOR_GUIDE.md) — cultures, faction membership, leadership, directed relationships and jurisdiction plans.
 - [World and Route Editor Guide](WORLD_ROUTE_EDITOR_GUIDE.md) — saved places, roads, route graph editing and previews.
+- [Quest inspection and authoring](QUEST_AUTHORING_GUIDE.md) — inspect, edit and preview local quests and state keys.
+- [Quest authoring design](QUEST_AUTHORING_DESIGN.md) — ownership, schema-6 compatibility and acceptance.
 - [World and Route Editor Design](WORLD_ROUTE_EDITOR_DESIGN.md) — ownership, schema-5 migration, graph rules and acceptance.
 - [Faction and Authority Editor Design](FACTION_AUTHORITY_EDITOR_DESIGN.md) — ownership, schema-4 migration, transactional links and acceptance scope.
 - [Spawn and Encounter Editor Guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md) — compose local encounters, preview quantities, set placement and conditions, save/reopen and recover migrated catalogs.
@@ -64,7 +66,7 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, installed `FOA-SDK.exe` startup, repair, upgrade, uninstall, and troubleshooting.
 - [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — approved population design and implementation history. The completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source, immutable action-lane, and registered Actor/Troop pane units are recorded here with deterministic fixture, validation, and deferred runtime scope.
 - [Actor and Troop Architecture and Data Formats](ACTOR_TROOP_ARCHITECTURE_AND_DATA_FORMATS.md) — Core/Framework/Editor ownership, schema-2 actor/troop/member shapes, identity, evidence, governance, ordering, fixture format, and deferred contracts.
-- [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE build, compiled-test and Windows evidence requirements, release claims, rollback, and next population work.
+- [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE configure, build, compiled tests and Windows evidence requirements, release claims, rollback, and next population work.
 - [Tainted Framework Canonical Knowledge](TAINTED_FRAMEWORK_KNOWLEDGE.md) — authoritative intake, inventory, schema, fixtures, ExtensionAPI boundary, validation and deferred runtime/editor work.
 - [Tainted Framework Editor Services](TAINTED_FRAMEWORK_EDITOR_SERVICES.md) — reviewed engine-neutral service ownership, exact evidence projection, deterministic plans, tests, validation, and deferred UI/runtime work.
 - [Tainted Interface UI Utilities](TAINTED_INTERFACE_UI_UTILITIES.md) — engine-neutral token/catalog/layout contracts, exact upstream metadata, licence blocking, project-owned fallback assets and runtime separation.

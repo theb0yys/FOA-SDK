@@ -36,9 +36,9 @@ Reopen the workspace and select the faction to recover its culture, members, rel
 
 ## Compatibility
 
-Catalog schema 4 introduced CultureProfiles, FactionProfiles and independently identified FactionLinks. Current saves use schema 5, which also supports world plans. Schema-1/2/3/4 catalogs load through bound validation. Before overwriting an older catalog, the writer preserves and verifies its exact original bytes in a sibling migration backup. A backup failure blocks replacement.
+Catalog schema 4 introduced CultureProfiles, FactionProfiles and independently identified FactionLinks. Current saves use schema 6, which also supports world plans and local quests. Schema-1/2/3/4/5 catalogs load through bound validation. Before overwriting an older catalog, the writer preserves and verifies its exact original bytes in a sibling migration backup. A backup failure blocks replacement.
 
-Editors supporting only schemas 1–4 reject the current schema 5. Downgrade requires restoring the pre-migration backup; newer society edits cannot be represented by the older format. Preserve the catalog with its pack manifests and source/evidence files. See [catalog recovery](CATALOG_GUIDE.md#encounter-plans-and-migration-recovery).
+Editors supporting only schemas 1–5 reject the current schema 6. Downgrade requires restoring the pre-migration backup, which discards later changes. Quest authoring profiles require schema 6. Preserve the catalog with its pack manifests and source/evidence files. See [catalog recovery](CATALOG_GUIDE.md#encounter-plans-and-migration-recovery).
 
 ## Current capability
 

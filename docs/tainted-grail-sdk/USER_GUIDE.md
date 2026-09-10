@@ -155,7 +155,7 @@ The Item and Recipe Editor authors typed profiles, stations, ingredients, output
 
 **Tainted Grail Asset Browser Preview** inspects staged, profile-bound asset-browser pane models, thumbnail evidence, and 3D viewport render evidence. A prepared route can be copied into pending item visual-reference fields, but typed selector binding, scene mutation, catalog promotion, deployment, and runtime authority remain disabled.
 
-**Tainted Grail Quest and State Inspector** opens local `*.tgquest.json` QuestDefinition V1 documents for read-only review. It shows contract issues, deterministic fingerprints, binding requirements, summary counts, and authority flags without writing files, mutating editor state, touching saves, deploying content, extracting assets, or executing quests.
+**Tainted Grail Quest and State Inspector** browses saved quests and opens local `*.tgquest.json` QuestDefinition V1 documents for inspection. It provides typed element forms, state-key declarations, catalog links, a progression graph and validation details. Create a quest for the active mod or explicitly save an editable copy of an imported document; original files remain read-only. Saving uses the workspace catalog transaction. See the [quest authoring guide](QUEST_AUTHORING_GUIDE.md). Game state, saves, deployment and quest execution remain separate.
 
 ## Economy analysis panes
 

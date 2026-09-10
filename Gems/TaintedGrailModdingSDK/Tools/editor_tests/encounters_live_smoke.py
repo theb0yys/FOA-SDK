@@ -219,7 +219,7 @@ def run():
         captain = create("Encounter QA Captain")
         guard = create("Encounter QA Guard")
         migrated = json.loads(catalog_bytes())
-        assert migrated["SchemaVersion"] == 5
+        assert migrated["SchemaVersion"] == 6
         backups = list((workspace.parent / "Catalog").glob("*.schema-2.*.backup.json"))
         assert any(p.read_bytes() == before for p in backups)
         assert migrated["EconomyItems"] == before_data["EconomyItems"]

@@ -114,12 +114,13 @@ namespace TaintedGrailModdingSDK
         const bool isPopulationSchema =
             document.m_schemaVersion == PopulationCatalogSchemaVersion;
         if (!isLegacySchema && !isPopulationSchema && document.m_schemaVersion != EncounterCatalogSchemaVersion
-            && document.m_schemaVersion != SocietyCatalogSchemaVersion)
+            && document.m_schemaVersion != SocietyCatalogSchemaVersion
+            && document.m_schemaVersion != WorldCatalogSchemaVersion)
         {
             if (error)
             {
                 *error = AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3 migration and schema 4.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4 migration and schema 5.",
                     document.m_schemaVersion);
             }
             return false;
@@ -144,6 +145,12 @@ namespace TaintedGrailModdingSDK
             if (error) { *error = "Encounter collections require schema 3 and at most 10,000 unique definition identities."; }
             return false;
         }
+        if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
+            || !document.m_worldPaths.empty() || !document.m_worldPathNodes.empty() || !document.m_worldPathEdges.empty()))
+        {
+            if (error) { *error = "Catalog schemas 1/2/3/4 cannot contain world collections."; }
+            return false;
+        }
         if (document.m_schemaVersion < SocietyCatalogSchemaVersion && (!document.m_cultureProfiles.empty()
             || !document.m_factionProfiles.empty() || !document.m_factionLinks.empty()))
         {
@@ -164,6 +171,10 @@ namespace TaintedGrailModdingSDK
         legacyDocument.m_cultureProfiles.clear();
         legacyDocument.m_factionProfiles.clear();
         legacyDocument.m_factionLinks.clear();
+        legacyDocument.m_worldPlaces.clear();
+        legacyDocument.m_worldPaths.clear();
+        legacyDocument.m_worldPathNodes.clear();
+        legacyDocument.m_worldPathEdges.clear();
 
         CatalogDatabase candidate;
         if (!candidate.ReplaceFromDocumentWithoutPopulation(
@@ -198,6 +209,7 @@ namespace TaintedGrailModdingSDK
         {
             if (!candidate.UpsertEncounterDefinition(definition, error)) { return false; }
         }
+        if (!candidate.LoadWorldCollections(document, error)) { return false; }
         if (!candidate.LoadSocietyCollections(document, error)) { return false; }
         *this = AZStd::move(candidate);
         if (error)
@@ -217,6 +229,10 @@ namespace TaintedGrailModdingSDK
         m_cultureProfiles.clear();
         m_factionProfiles.clear();
         m_factionLinks.clear();
+        m_worldPlaces.clear();
+        m_worldPaths.clear();
+        m_worldPathNodes.clear();
+        m_worldPathEdges.clear();
     }
 
     CatalogDocument CatalogDatabase::BuildDocument(
@@ -233,6 +249,10 @@ namespace TaintedGrailModdingSDK
         document.m_cultureProfiles = m_cultureProfiles;
         document.m_factionProfiles = m_factionProfiles;
         document.m_factionLinks = m_factionLinks;
+        document.m_worldPlaces = m_worldPlaces;
+        document.m_worldPaths = m_worldPaths;
+        document.m_worldPathNodes = m_worldPathNodes;
+        document.m_worldPathEdges = m_worldPathEdges;
 
         SortPopulationDocumentValues(
             document.m_actorProfiles,

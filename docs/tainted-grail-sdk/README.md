@@ -19,6 +19,8 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Item and Recipe Editor Guide](ITEM_RECIPE_EDITOR_GUIDE.md) — typed item and recipe profiles, ingredients, outputs, stations, acquisition relationships, and governed action lanes.
 - [Actor and Troop Editor Guide](ACTOR_TROOP_EDITOR_GUIDE.md) — typed actor and troop authoring, exact template/leader/member bindings, atomic persistence, action lanes, deterministic fixture, dirty-draft protection, and current runtime boundary.
 - [Faction and Authority Editor Guide](FACTION_AUTHORITY_EDITOR_GUIDE.md) — cultures, faction membership, leadership, directed relationships and jurisdiction plans.
+- [World and Route Editor Guide](WORLD_ROUTE_EDITOR_GUIDE.md) — saved places, roads, route graph editing and previews.
+- [World and Route Editor Design](WORLD_ROUTE_EDITOR_DESIGN.md) — ownership, schema-5 migration, graph rules and acceptance.
 - [Faction and Authority Editor Design](FACTION_AUTHORITY_EDITOR_DESIGN.md) — ownership, schema-4 migration, transactional links and acceptance scope.
 - [Spawn and Encounter Editor Guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md) — compose local encounters, preview quantities, set placement and conditions, save/reopen and recover migrated catalogs.
 - [Spawn and Encounter Editor Design](SPAWN_ENCOUNTER_EDITOR_DESIGN.md) — schema-3 encounter ownership, complete-definition saves, limits and validation scope.

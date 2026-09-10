@@ -117,6 +117,13 @@ namespace TaintedGrailModdingSDK
         bool ImportNativePopulation(const AZStd::string& path, AZStd::string* error = nullptr);
         bool CreatePopulationRecord(const AZStd::string& kind, const AZStd::string& name,
             const AZStd::string& leaderActorId, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool CreateWorldPlace(const AZStd::string& kind, const AZStd::string& name, const AZStd::string& parentId,
+            AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveWorldPlace(const WorldPlaceProfile& place, const AZStd::string& name, AZStd::string* error = nullptr);
+        bool CreateWorldPath(const AZStd::string& kind, const AZStd::string& name, const AZStd::string& sceneId,
+            AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveWorldPath(const WorldPathDefinition& path, const AZStd::string& name, AZStd::string* error = nullptr);
+
         bool CreateCultureProfile(const AZStd::string& name, AZStd::string& recordId, AZStd::string* error = nullptr);
         bool SaveCultureProfile(const CultureProfile& profile, const AZStd::string& name, AZStd::string* error = nullptr);
         bool CreateFactionDefinition(const AZStd::string& name, AZStd::string& recordId, AZStd::string* error = nullptr);
@@ -209,6 +216,8 @@ namespace TaintedGrailModdingSDK
 
     private:
         bool ImportEconomyDocument(const AZStd::string& path, bool custom, AZStd::string* error);
+        bool CommitAuthoredWorld(WorldPlaceProfile place, WorldPathDefinition path, const AZStd::string& kind,
+            const AZStd::string& name, bool isPlace, bool creating, AZStd::string* error);
         bool CommitAuthoredSociety(CultureProfile culture, FactionDefinition faction, const AZStd::string& name,
             bool isCulture, bool creating, AZStd::string* error);
         bool CommitAuthoredEncounter(const EncounterDefinition& definition, const AZStd::string& name,

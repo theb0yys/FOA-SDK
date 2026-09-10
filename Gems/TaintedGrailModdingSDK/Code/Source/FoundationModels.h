@@ -11,6 +11,7 @@
 #include "PopulationModels.h"
 #include "EncounterModels.h"
 #include "SocietyModels.h"
+#include "WorldModels.h"
 
 #include <AzCore/RTTI/RTTI.h>
 #include <AzCore/std/containers/vector.h>
@@ -351,6 +352,10 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<CultureProfile> m_cultureProfiles;
         AZStd::vector<FactionProfile> m_factionProfiles;
         AZStd::vector<FactionLink> m_factionLinks;
+        AZStd::vector<WorldPlaceProfile> m_worldPlaces;
+        AZStd::vector<WorldPathProfile> m_worldPaths;
+        AZStd::vector<WorldPathNode> m_worldPathNodes;
+        AZStd::vector<WorldPathEdge> m_worldPathEdges;
     };
 
     struct CatalogPromotionRequest

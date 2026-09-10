@@ -127,8 +127,8 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "LegacyCatalogSchemaVersion = 1",
             "PopulationCatalogSchemaVersion = 2",
             "CurrentCatalogSchemaVersion =",
-            "SocietyCatalogSchemaVersion;",
-            "Schemas 1, 2 and 3 remain load-only migration inputs",
+            "WorldCatalogSchemaVersion;",
+            "Schemas 1, 2, 3 and 4 remain load-only migration inputs",
         ),
         "Population schema constants",
     )
@@ -196,10 +196,10 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             'FindMember("ClassData")',
             "Plain canonical catalog documents require an explicit SchemaVersion.",
             "Catalog SchemaVersion must be an unsigned 32-bit integer.",
-            "Catalog schema version %u is unsupported; this editor supports schema 1/2/3 migration and schema 4.",
+            "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4 migration and schema 5.",
             "Catalog SchemaVersion changed during deserialization; the document was not loaded.",
             "Catalog schema 1 cannot contain population collections.",
-            "Canonical catalog saves require schema 4; schemas 1/2/3 are load-only migration inputs.",
+            "Canonical catalog saves require schema 5; schemas 1/2/3/4 are load-only migration inputs.",
             "document.m_schemaVersion != CurrentCatalogSchemaVersion",
             "document.m_schemaVersion = detectedSchemaVersion",
             "detectedSchemaVersion == LegacyCatalogSchemaVersion",
@@ -468,7 +468,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
     require_fragments(
         data_formats,
         (
-            '"SchemaVersion": 4',
+            '"SchemaVersion": 5',
             '"ActorProfiles": []',
             '"TroopProfiles": []',
             '"TroopMembers": []',
@@ -479,7 +479,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "no population contract invokes FoA",
             "A loaded schema-1 candidate remains schema 1",
             "Directly saving that load result is refused",
-            "successful bound replacement followed by `BuildDocument` produces a schema-4 document",
+            "successful bound replacement followed by `BuildDocument` produces a schema-5 document",
         ),
         "Public data-format contract",
     )
@@ -499,13 +499,13 @@ def validate_catalog_schema2(repo_root: Path) -> None:
     )
     reject_fragments(
         workspace_section,
-        ('"SchemaVersion": 4',),
+        ('"SchemaVersion": 5',),
         "Workspace data-format section",
     )
     require_fragments(
         catalog_section,
         (
-            '"SchemaVersion": 4',
+            '"SchemaVersion": 5',
             '"ActorProfiles": []',
             '"TroopProfiles": []',
             '"TroopMembers": []',
@@ -599,7 +599,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         catalog_guide,
         (
             "Catalog schema 1 is a read-only compatibility input",
-            "Catalog saves write explicit schema 4",
+            "Catalog saves write explicit schema 5",
             "Legacy O3DE catalog envelopes",
             "loaded candidate remains schema 1",
             "Directly saving it is refused",
@@ -614,7 +614,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
             "Loading and compatibility normalization retain schema 1",
             "A direct save of that load result is refused",
             "successful bound replacement followed by `BuildDocument`",
-            "plain schema 4",
+            "plain schema 5",
         ),
         "Developer Preview migration fixture documentation",
     )
@@ -624,7 +624,7 @@ def validate_catalog_schema2(repo_root: Path) -> None:
         (
             "governance values remain string-compatible",
             "current catalog saves",
-            "write schema 4",
+            "write schema 5",
         ),
         "Governance compatibility contract",
     )

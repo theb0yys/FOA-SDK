@@ -6,6 +6,9 @@
 #
 
 set(FILES
+    Source/WorldRouteEditorWidget.h
+    Source/WorldRouteEditorWidget.cpp
+    Source/WorldRouteEditorWidgetPreview.cpp
     Source/FactionAuthorityEditorWidget.h
     Source/FactionAuthorityEditorWidget.cpp
     Source/SpawnEncounterEditorWidget.cpp

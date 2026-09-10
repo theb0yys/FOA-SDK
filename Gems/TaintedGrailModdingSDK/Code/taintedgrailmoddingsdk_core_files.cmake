@@ -6,6 +6,11 @@
 #
 
 set(FILES
+    Source/WorldModels.h
+    Source/WorldModels.cpp
+    Source/WorldPlanningService.h
+    Source/WorldPlanningService.cpp
+    Source/CatalogDatabaseWorld.cpp
     Source/SocietyModels.h
     Source/SocietyModels.cpp
     Source/SocietyPlanningService.h

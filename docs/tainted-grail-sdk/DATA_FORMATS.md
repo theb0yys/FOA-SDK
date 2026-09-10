@@ -498,7 +498,7 @@ The document is bound to one workspace and exact game profile:
 
 ```json
 {
-  "SchemaVersion": 4,
+  "SchemaVersion": 5,
   "WorkspaceId": "owner.workspace",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
@@ -517,11 +517,15 @@ The document is bound to one workspace and exact game profile:
   "EncounterDefinitions": [],
   "CultureProfiles": [],
   "FactionProfiles": [],
-  "FactionLinks": []
+  "FactionLinks": [],
+  "WorldPlaces": [],
+  "WorldPaths": [],
+  "WorldPathNodes": [],
+  "WorldPathEdges": []
 }
 ```
 
-Schema 4 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
+Schema 5 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
 older schema-1 documents without them load as empty economy collections. Schema 2 added the three population
 arrays shown above. Schema 3 adds `EncounterDefinitions`; schema-1/2 inputs must not contain encounter rows.
 Schema 4 adds `CultureProfiles`, `FactionProfiles` and `FactionLinks`; schema-1/2/3 inputs must not contain society rows.
@@ -534,8 +538,8 @@ Schema-1 migration is read-only and fail-closed:
 4. legacy validation and governance compatibility rules run without changing the detected schema version;
 5. the complete candidate is validated against the active workspace, profile, evidence registry, and catalog
    integrity rules before successful bound replacement;
-6. only successful bound replacement followed by `BuildDocument` produces a schema-4 document;
-7. the next successful catalog save writes that schema-4 document, including when every population collection
+6. only successful bound replacement followed by `BuildDocument` produces a schema-5 document;
+7. the next successful catalog save writes that schema-5 document, including when every population collection
    is empty.
 
 A loaded schema-1 candidate remains schema 1 after compatibility normalization.
@@ -545,7 +549,7 @@ and failed persistence are rejected without replacing the published catalog. Mig
 records, relationships, validation history, governance history, economy collections, and their stable order.
 Plain catalog documents require an explicit `SchemaVersion`. A legacy O3DE `JsonSerialization` envelope that
 predates a nested catalog schema is treated only as a schema-1 migration input. Current saves always emit the
-plain schema-4 document with explicit empty collections, not a new O3DE envelope.
+plain schema-5 document with explicit empty collections, not a new O3DE envelope.
 
 Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
 
@@ -600,9 +604,23 @@ faction or change kind. Complete-definition saves preserve surviving IDs and rem
 belonging to that faction. Invalid evidence, ownership, references or disk writes prevent publication.
 
 Schema-1/2/3 inputs carrying society rows are rejected. Supported older catalogs retain their detected version
-until bound validation and projection; saves write schema 4 and verify the exact original backup before
+until bound validation and projection; saves write schema 5 and verify the exact original backup before
 overwriting an earlier version. Workspace/pack schemas and canonical interchange are unchanged.
 See [faction design](FACTION_AUTHORITY_EDITOR_DESIGN.md) and [usage](FACTION_AUTHORITY_EDITOR_GUIDE.md).
+
+## World places and path graphs (catalog schema 5)
+
+`WorldPlaces` stores `RecordId`, `ParentRecordId`, `Description`, `HasPosition`, `X`, `Z` and `EvidenceIds`.
+Only locations may have positions, in scene-local plan units. Region/scene/location hierarchy resolves exact canonical world IDs.
+
+`WorldPaths` stores `RecordId`, `SceneRecordId`, optional `RoadRecordId`, `Description`, `TravelConstraints` and `EvidenceIds`.
+A road reference is permitted only on a route in the same scene.
+
+`WorldPathNodes` stores `NodeId`, `PathRecordId`, `LocationRecordId`, `Notes` and `EvidenceIds`.
+`WorldPathEdges` stores `EdgeId`, `PathRecordId`, `FromNodeId`, `ToNodeId`, `TravelMode`, `Bidirectional`, `TravelCost`, `Notes` and `EvidenceIds`.
+Every node/edge has an independent stable identity and exact author-intent evidence. Modes are `walk`, `ride` or `boat`; cost is a positive finite planning weight.
+
+Schema-1/2/3/4 documents cannot carry these collections; absent arrays load as empty. Schema-4 society data remain supported and preserve their meaning. World authoring never changes Road Atlas, interchange, pack or workspace formats and never grants runtime permissions. See [world contract bounds and graph rules](WORLD_ROUTE_EDITOR_DESIGN.md).
 
 ## Catalog record
 

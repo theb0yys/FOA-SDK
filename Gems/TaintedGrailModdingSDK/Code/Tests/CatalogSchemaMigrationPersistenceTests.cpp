@@ -468,7 +468,7 @@ namespace TaintedGrailModdingSDK
         CatalogSchemaMigrationPersistenceTests,
         SchemaOnePreviewMigratesToCurrentWithEmptyPopulationAndPreservesLegacyProjection)
     {
-        EXPECT_EQ(CurrentCatalogSchemaVersion, SocietyCatalogSchemaVersion);
+        EXPECT_EQ(CurrentCatalogSchemaVersion, WorldCatalogSchemaVersion);
         WorkspacePersistenceService workspacePersistence;
         auto workspaceResult = workspacePersistence.Load(
             PreviewPath("preview.tgworkspace.json"));

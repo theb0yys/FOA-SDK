@@ -1,28 +1,22 @@
-# Current Task
+# World and Route Editor
 
-Status: Faction and Authority Editor implementation and local authoring validation complete; maintainer review pending.
+Owner instruction: continue with the next system after faction and authority authoring.
+Branch: `codex/world-route-editor`; base: `688c6f7cbecfab9c8002e91b353922a253442859`.
+Dependency: faction PR #253 (it depends on encounter PR #252).
+Classification: Significant. Primary owner: world-authoring.
+Supporting owners: catalog-and-identity, schemas-and-persistence, workspace-and-packs, ui-framework.
 
-Goal: create and edit local factions and cultures, assign saved actors/troops, describe leadership and jurisdiction, edit directed faction relationships, and save/reopen without losing links.
+Implemented [World and Route Editor](docs/tainted-grail-sdk/WORLD_ROUTE_EDITOR_GUIDE.md): pack-owned regions, scenes and locations; roads/routes; independently identified nodes/edges; plan-position and schematic graph previews; fixed save controls, dirty-draft guards and existing faction/encounter references. [Design](docs/tainted-grail-sdk/WORLD_ROUTE_EDITOR_DESIGN.md) records bounds, identity, evidence and migration.
 
-Classification: Significant. Primary owner: content-pack-authoring. Supporting owners: catalog-and-identity, schemas-and-persistence, workspace-and-packs and ui-framework.
+Catalog readers accept schemas 1–5; saves emit 5. Older catalogs receive an exact verified backup before replacement. Workspace, pack, interchange and Road Atlas formats are unchanged. No engine, game, save, native-map extraction, deployment or runtime changes.
 
-Delivered: typed society profiles and first-class faction links, exact ownership/evidence, catalog schema 4 with schema-1/2/3 input migration and verified backups, Foundation transactions, a registered Editor pane, guides and compiled/live acceptance.
+Validation:
+- PASSED: full static validation, 827 Python tests (818 passed; nine explicit platform skips), plus all ten enabled source-policy checks per configured Gem.
+- PASSED: pinned-engine configure and SDK Core, Framework, Editor and both compiled test targets. Unchanged exact-pin engine artifacts were reused; this was not a clean engine rebuild.
+- PASSED: 452 catalog tests, including seven world-authoring groups; two Windows symlink tests explicitly skipped because required link privileges were unavailable. All 39 interchange tests passed.
+- PASSED: private schema-4 Editor workflow, exact migration backup and prior economy/population/encounter/society preservation; graph rendering, malformed/dangling/cross-scene rejection, failed write, save/reopen/edit/remove and faction/encounter world references.
+- PASSED: visual review of position/schematic/final graph captures and 860×640 controls. The Qt binding exposes C++ text items as base wrappers, so labels were verified from the actual captured Editor images. Maximum measured UI pause: 1.578 seconds (budget: 3 seconds).
+- NOT_APPLICABLE: runtime, deployment, installer, Unity conversion and release proof. Runtime sign-off not performed.
 
-Out of scope: native faction discovery or runtime changes, game relationships/membership, world editing, game/save writes, deployment, installer, engine changes and other feature work.
-
-Validation on 2026-09-10:
-- PASSED L0/L1: full static validation, 827 Python tests discovered (818 passed, nine explicit platform skips), all enabled pinned source-policy checks, and 30-pane lifecycle inventory.
-- PASSED L2: exact pinned O3DE configure and changed SDK targets; Catalog tests 445 passed with two explicit Windows symlink-fixture skips; CanonicalInterchange tests 39 passed.
-- PASSED L3: seven running Editor workflow groups cover Town Guard/Bandits, culture editing, membership/leadership, directed hostility, jurisdiction, updates/removal, rejected input, dirty drafts, failed writes, workspace reopening and further edits.
-- PASSED L3 presentation: all three tabs visually reviewed; floating dock verified at 860x640 logical pixels with scrolling, keyboard focus and persistent Save/Revert controls.
-- PASSED measured performance: maximum sampled UI timer gap 2.172 seconds against a three-second budget, using an isolated input catalog with 887 actors, 3,914 items, 356 recipes and one encounter. This is not a maximum-catalog benchmark.
-- PASSED protected-data audit: original authoring catalog hash unchanged; source diff excludes private observations, personal paths, screenshots and build outputs.
-- NOT_APPLICABLE: game/runtime, deployment, installer and release validation. Runtime sign-off not performed.
-
-Build evidence reuses unchanged outputs from the same external engine pin while compiling the changed SDK targets from this branch. It is not a full clean engine build claim. Logs, test XML, screenshots and the machine-readable evidence pack remain outside Git.
-
-Branch: codex/faction-authority-editor from encounter commit 9f79f18ea758eec1e55ab365e805a45c9058f956. Encounter PR #252 remains an unmerged prerequisite; the faction review keeps that dependency explicit and its own diff separate.
-
-Design: docs/tainted-grail-sdk/FACTION_AUTHORITY_EDITOR_DESIGN.md.
-
-Next action: maintainer review. The prerequisite must be integrated before the faction change reaches main. No merge or follow-on milestone is authorized by this task record.
+Private evidence and QA data remain outside tracked source. Initial startup/native-picker/graphics-wrapper test harness failures are retained with the successful final run.
+Implementation and local validation are complete. Next transition: focused DCO commit and PR handoff, with maintainer audit/merge left to the owner. No subsequent feature is authorized by this task.

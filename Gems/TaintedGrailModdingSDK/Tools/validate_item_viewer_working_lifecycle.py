@@ -30,9 +30,17 @@ def validate_item_viewer(root: Path = ROOT) -> None:
     engine_checkout = re.search(
         r"(?ms)^      - name: Check out pinned O3DE source\s*\n.*?(?=^      - name:|\Z)", workflow
     )
-    if engine_checkout is None or not re.search(r"(?m)^          lfs: true\s*$", engine_checkout.group()):
-        raise RuntimeError("Pinned O3DE checkout must download Git LFS assets before the Editor build.")
+    if engine_checkout is None or not re.search(r"(?m)^          lfs: false\s*$", engine_checkout.group()):
+        raise RuntimeError("Pinned O3DE LFS assets must be fetched after checkout so .lfsconfig is available.")
     require(engine_checkout.group(), "repository: o3de/o3de", "pinned engine checkout owner")
+    lfs_download = re.search(
+        r"(?ms)^      - name: Download pinned O3DE LFS assets\s*\n.*?(?=^      - name:|\Z)", workflow
+    )
+    build_gate = workflow.find("      - name: Run working Item Viewer lifecycle gate")
+    if lfs_download is None or not engine_checkout.end() <= lfs_download.start() < build_gate:
+        raise RuntimeError("Download Git LFS assets after engine checkout and before the Editor build.")
+    require(lfs_download.group(), "git -C o3de lfs pull", "pinned engine LFS download")
+    require(lfs_download.group(), "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }", "LFS failure propagation")
 
     code = root / "Gems" / "TaintedGrailModdingSDK" / "Code"
     source = code / "Source"

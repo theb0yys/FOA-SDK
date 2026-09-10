@@ -63,7 +63,8 @@ jobs:
           path: o3de
           persist-credentials: false
           fetch-depth: 1
-          lfs: false
+          # Editor resource compilation needs the real icons and other engine assets.
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5

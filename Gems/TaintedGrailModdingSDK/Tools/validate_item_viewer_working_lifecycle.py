@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -25,6 +26,14 @@ def reject(text: str, needle: str, label: str) -> None:
 
 
 def validate_item_viewer(root: Path = ROOT) -> None:
+    workflow = (root / ".github" / "workflows" / "item-viewer-windows-validation.yml").read_text(encoding="utf-8")
+    engine_checkout = re.search(
+        r"(?ms)^      - name: Check out pinned O3DE source\s*\n.*?(?=^      - name:|\Z)", workflow
+    )
+    if engine_checkout is None or not re.search(r"(?m)^          lfs: true\s*$", engine_checkout.group()):
+        raise RuntimeError("Pinned O3DE checkout must download Git LFS assets before the Editor build.")
+    require(engine_checkout.group(), "repository: o3de/o3de", "pinned engine checkout owner")
+
     code = root / "Gems" / "TaintedGrailModdingSDK" / "Code"
     source = code / "Source"
     tools = root / "Gems" / "TaintedGrailModdingSDK" / "Tools"

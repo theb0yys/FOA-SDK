@@ -265,6 +265,37 @@ namespace TaintedGrailModdingSDK
         return true;
     }
 
+    bool FoundationService::SavePackAndActivate(
+        const PackManifest& pack,
+        const AZStd::string& filePath,
+        AZStd::string* error)
+    {
+        // The persistence boundary validates the draft and destination before any
+        // published state changes. Do not call UpsertPack: it notifies observers.
+        const auto result = m_packPersistence.Save(pack, filePath);
+        if (!result.IsSuccess())
+        {
+            if (error)
+            {
+                *error = result.GetError();
+            }
+            return false;
+        }
+
+        if (PackManifest* existing = FindPackById(pack.m_packId))
+        {
+            *existing = pack;
+        }
+        else
+        {
+            m_packs.push_back(pack);
+        }
+        m_activePackId = pack.m_packId;
+        m_activePackFilePath = filePath;
+        RefreshSnapshot();
+        return true;
+    }
+
     bool FoundationService::SaveActivePack(
         const AZStd::string& filePath,
         AZStd::string* error)

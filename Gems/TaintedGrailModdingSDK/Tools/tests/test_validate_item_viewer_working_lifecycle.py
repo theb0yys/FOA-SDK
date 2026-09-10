@@ -22,6 +22,7 @@ import validate_item_viewer_working_lifecycle as contract
 
 class ItemViewerWorkingLifecycleTests(unittest.TestCase):
     FIXTURE_PATHS = (
+        ".github/workflows/item-viewer-windows-validation.yml",
         "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
         "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
@@ -54,6 +55,27 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             root = Path(temporary)
             self.copy_fixture(root)
             contract.validate_item_viewer(root)
+
+    def test_engine_lfs_assets_cannot_be_disabled_or_omitted(self) -> None:
+        for replacement in ("lfs: false", "# LFS omitted"):
+            with self.subTest(replacement=replacement), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                self.copy_fixture(root)
+                self.mutate(root, ".github/workflows/item-viewer-windows-validation.yml",
+                            "lfs: true", replacement)
+                with self.assertRaisesRegex(RuntimeError, "download Git LFS assets"):
+                    contract.validate_item_viewer(root)
+
+    def test_product_lfs_does_not_replace_engine_lfs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(root, ".github/workflows/item-viewer-windows-validation.yml",
+                        "lfs: true", "lfs: false")
+            self.mutate(root, ".github/workflows/item-viewer-windows-validation.yml",
+                        "lfs: false", "lfs: true")
+            with self.assertRaisesRegex(RuntimeError, "download Git LFS assets"):
+                contract.validate_item_viewer(root)
 
     def test_missing_editor_build_registration_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

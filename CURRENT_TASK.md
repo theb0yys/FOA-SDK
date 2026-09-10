@@ -2,14 +2,13 @@
 
 ## Status
 
-PARTIAL: Pack Manager Save mod is implemented and compiled validation passed.
-Live Editor acceptance is BLOCKED during the test instance's startup;
-Computer Use denied access to Editor, so the acceptance script has not run.
+PASSED: Pack Manager Save mod is implemented and validated in the compiled Editor.
+The change is ready for maintainer review in PR #251.
 
 ## Goal
 
-Persist a mod draft successfully before it becomes active. A failed validation or
-write retains the previous active mod, saved bytes, and editable draft.
+Persist a mod draft successfully before it becomes active. Failed validation or
+writes retain the previous active mod, saved bytes, and editable draft.
 
 ## Classification and ownership
 
@@ -36,11 +35,22 @@ installer, releases, and Spawn/Encounter authoring are outside this task.
 - PASSED: pinned Profile Editor and Catalog test builds.
 - PASSED: 13 focused compiled tests; full Catalog suite discovered 436 tests,
   with 434 passed, two existing Windows symlink-privilege skips, and no failures.
-- BLOCKED: live Editor UI acceptance and save-action timing. The first launch
-  lacked processed engine assets. The retry uses a private copy of an existing
-  synthetic project's cache from the same pinned engine, but is paused at the
-  startup window; Computer Use was not approved to inspect or access Editor.
+- PASSED: five real Editor workflow scenarios: create/persist/activate, invalid
+  edits, a Windows file-lock write failure and corrected retry, failed new draft
+  followed by rename/retry, and equivalent reopen/deterministic repeat save.
+- PASSED: seven synchronous save attempts measured at 0-32 ms in the synthetic
+  fixture, below the three-second acceptance guard; this is not a large-catalog
+  or asset-processing performance claim.
+- PASSED: screenshot inspection shows the saved name/version, saved-mod list,
+  editable details, Save mod button, and success status.
 - NOT_APPLICABLE: runtime, installation, deployment, signing, and release.
+
+The live run used the exact pinned Profile Editor, NullRenderer, a private
+processed engine-asset cache, isolated local settings, and the supported
+`wait_for_connect=0` option. It validates the Qt authoring pane, not Asset
+Processor execution or 3D rendering. Automatic setup read installed-game
+discovery metadata during early attempts; all test writes stayed in synthetic
+authoring data and generated host state. No game installation or saves changed.
 
 No manifest migration is required. Rollback is a code revert; existing
 SaveActivePack callers, manifest shapes, and IDs remain compatible.
@@ -49,10 +59,7 @@ SaveActivePack callers, manifest shapes, and IDs remain compatible.
 
 `codex/pack-save-isolated`, based on `origin/main` after actor/troop PR #250.
 
-## Remaining acceptance
+## Handoff
 
-Run `Gems/TaintedGrailModdingSDK/Tools/editor_tests/pack_save_live_smoke.py` in the
-rebuilt Editor using the synthetic pack-save workspace. Verify creation, invalid
-edit and real write failures, correction/retry, saved-mod reopen, and deterministic
-repeat save. Record actual results before claiming this function complete or
-promoting the draft PR to ready for maintainer review.
+PR #251 is the focused maintainer-review handoff. Approval and merge remain with
+the maintainer. No subsequent service or milestone is authorized by this record.

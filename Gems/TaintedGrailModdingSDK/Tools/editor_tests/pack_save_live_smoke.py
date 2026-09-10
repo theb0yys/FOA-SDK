@@ -17,13 +17,12 @@ from shiboken6 import isValid
 def run():
     output = Path(os.environ['FOA_SDK_PACK_RESULT'])
     workspace = Path(os.environ['FOA_SDK_PACK_WORKSPACE'])
-    fixture = json.loads(workspace.read_text(encoding='utf-8'))
-    assert fixture['WorkspaceId'] == 'sdkqa.pack-save', 'Use the synthetic pack-save fixture only'
-    assert Path(fixture['RootPath']).resolve() == workspace.parent.resolve()
     result = {'status': 'FAILED', 'checks': [], 'save_seconds': []}
     app = QtWidgets.QApplication.instance()
     keep = []
-    timers = []
+
+    def wait(seconds):
+        QtTest.QTest.qWait(int(seconds * 1000))
 
     def stage(name):
         result['stage'] = name
@@ -62,47 +61,30 @@ def run():
         return data.get('ClassData', data)
 
     def open_workspace():
+        automatic = Path(os.environ['LOCALAPPDATA']) / 'FOA-SDK/Workspace/foa-sdk.tgworkspace.json'
+        assert workspace.resolve() == automatic.resolve(), 'Preseed the isolated automatic workspace'
         general.open_pane('Tainted Grail SDK Status')
-        general.idle_wait(0.5)
-        accepted = []
-        timer = QtCore.QTimer()
-        timers.append(timer)
-        def accept():
-            dialog = next((value for value in widgets()
-                           if isinstance(value, QtWidgets.QFileDialog) and value.isVisible()), None)
-            if dialog is None:
-                return
-            timer.stop()
-            keep.append(dialog)
-            dialog.setDirectory(str(workspace.parent))
-            dialog.selectFile(workspace.name)
-            def finish():
-                edit = dialog.findChild(QtWidgets.QLineEdit, 'fileNameEdit')
-                assert edit is not None
-                edit.setText(str(workspace))
-                assert Path(dialog.selectedFiles()[0]).resolve() == workspace.resolve()
-                accepted.append(True)
-                dialog.done(QtWidgets.QDialog.Accepted)
-            QtCore.QTimer.singleShot(300, finish)
-        timer.timeout.connect(accept)
-        timer.start(100)
-        QtCore.QMetaObject.invokeMethod(button('Open existing workspace...'), 'click', QtCore.Qt.QueuedConnection)
-        for _ in range(50):
-            general.idle_wait(0.1)
-            if accepted:
-                break
-        timer.stop()
-        assert accepted, 'Workspace dialog did not complete'
-        general.idle_wait(0.5)
+        wait(0.5)
+        button('Show advanced details').click()
+        details = next(value for value in widgets() if isinstance(value, QtWidgets.QPlainTextEdit)
+                       and value.toPlainText().startswith('Workspace file:'))
+        visible_paths = details.toPlainText().replace('\\', '/')
+        assert workspace.as_posix() in visible_paths, visible_paths
+        assert workspace.parent.as_posix() in visible_paths, visible_paths
+
 
     try:
+        stage('validating_fixture')
+        fixture = json.loads(workspace.read_text(encoding='utf-8'))
+        assert fixture['WorkspaceId'] == 'sdkqa.pack-save', 'Use the synthetic pack-save fixture only'
+        assert Path(fixture['RootPath']).resolve() == workspace.parent.resolve()
         app.setAttribute(QtCore.Qt.AA_DontUseNativeDialogs, True)
         general.idle_enable(True)
-        general.idle_wait(3.0)
+        wait(3.0)
         stage('opening_synthetic_workspace')
         open_workspace()
         general.open_pane('Tainted Grail Pack Manager')
-        general.idle_wait(0.5)
+        wait(0.5)
         button('New mod').click()
         type_text('packDisplayName', 'Original')
         type_text('packOwner', 'sdkqa')
@@ -186,16 +168,15 @@ def run():
         assert original.read_bytes() == saved
         result['checks'].append('saved_mod_reopens_equivalent_and_repeated_save_is_deterministic')
         button('Hide advanced manifest').click()
-        general.idle_wait(0.2)
+        wait(0.2)
         control('TaintedGrailPackManager').grab().save(str(output.with_suffix('.png')))
         result['status'] = 'PASSED'
         stage('complete')
     except Exception:
+        result['windows'] = [{'title': w.windowTitle(), 'type': type(w).__name__, 'visible': w.isVisible()} for w in app.topLevelWidgets() if isValid(w) and w.isVisible()]
         result['error'] = traceback.format_exc()
         stage(result.get('stage', 'failed'))
     finally:
-        for timer in timers:
-            timer.stop()
         output.write_text(json.dumps(result, indent=2), encoding='utf-8')
 
 

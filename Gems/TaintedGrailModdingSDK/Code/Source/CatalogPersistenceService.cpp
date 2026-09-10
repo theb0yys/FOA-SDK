@@ -63,10 +63,11 @@ namespace TaintedGrailModdingSDK
             if (version != LegacyCatalogSchemaVersion
                 && version != PopulationCatalogSchemaVersion
                 && version != EncounterCatalogSchemaVersion
+                && version != SocietyCatalogSchemaVersion
                 && version != CurrentCatalogSchemaVersion)
             {
                 return AZ::Failure(AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3 migration and schema 4.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4 migration and schema 5.",
                     version));
             }
             return AZ::Success(version);
@@ -591,7 +592,7 @@ namespace TaintedGrailModdingSDK
         if (document.m_schemaVersion != CurrentCatalogSchemaVersion)
         {
             return AZ::Failure(AZStd::string(
-                "Canonical catalog saves require schema 4; schemas 1/2/3 are load-only migration inputs."));
+                "Canonical catalog saves require schema 5; schemas 1/2/3/4 are load-only migration inputs."));
         }
         if (document.m_workspaceId.empty() || document.m_profileId.empty()
             || document.m_gameVersion.empty() || document.m_branch.empty())
@@ -603,6 +604,9 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Catalog schemas 1/2 cannot contain encounter definitions."));
         }
+        if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
+            || !document.m_worldPaths.empty() || !document.m_worldPathNodes.empty() || !document.m_worldPathEdges.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4 cannot contain world collections.")); }
         if (document.m_schemaVersion < SocietyCatalogSchemaVersion && (!document.m_cultureProfiles.empty()
             || !document.m_factionProfiles.empty() || !document.m_factionLinks.empty()))
         {
@@ -712,6 +716,9 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Catalog schemas 1/2 cannot contain encounter definitions."));
         }
+        if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
+            || !document.m_worldPaths.empty() || !document.m_worldPathNodes.empty() || !document.m_worldPathEdges.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4 cannot contain world collections.")); }
         if (document.m_schemaVersion < SocietyCatalogSchemaVersion && (!document.m_cultureProfiles.empty()
             || !document.m_factionProfiles.empty() || !document.m_factionLinks.empty()))
         {

@@ -72,6 +72,16 @@ namespace TaintedGrailModdingSDK
         bool UpsertEncounterDefinition(const EncounterDefinition& definition, AZStd::string* error = nullptr);
         const EncounterDefinition* FindEncounterDefinition(const AZStd::string& recordId) const;
         const AZStd::vector<EncounterDefinition>& GetEncounterDefinitions() const;
+        bool UpsertWorldPlace(const WorldPlaceProfile& place, AZStd::string* error = nullptr);
+        bool ReplaceWorldPath(const WorldPathDefinition& path, AZStd::string* error = nullptr);
+        const WorldPlaceProfile* FindWorldPlace(const AZStd::string& id) const;
+        const WorldPathProfile* FindWorldPath(const AZStd::string& id) const;
+        const AZStd::vector<WorldPlaceProfile>& GetWorldPlaces() const;
+        const AZStd::vector<WorldPathProfile>& GetWorldPaths() const;
+        const AZStd::vector<WorldPathNode>& GetWorldPathNodes() const;
+        const AZStd::vector<WorldPathEdge>& GetWorldPathEdges() const;
+        WorldPathDefinition FindWorldPathDefinition(const AZStd::string& id) const;
+
         bool UpsertCultureProfile(const CultureProfile& profile, AZStd::string* error = nullptr);
         bool ReplaceFactionDefinition(const FactionDefinition& definition, AZStd::string* error = nullptr);
         const CultureProfile* FindCultureProfile(const AZStd::string& recordId) const;
@@ -142,6 +152,9 @@ namespace TaintedGrailModdingSDK
 
     private:
         friend class CatalogGovernanceService;
+        bool UpsertWorldPathProfile(const WorldPathProfile& path, AZStd::string* error);
+        bool LoadWorldCollections(const CatalogDocument& document, AZStd::string* error);
+        bool ValidateWorldIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
         bool UpsertFactionProfile(const FactionProfile& profile, AZStd::string* error);
         bool LoadSocietyCollections(const CatalogDocument& document, AZStd::string* error);
         bool ValidateSocietyIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
@@ -225,5 +238,9 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<CultureProfile> m_cultureProfiles;
         AZStd::vector<FactionProfile> m_factionProfiles;
         AZStd::vector<FactionLink> m_factionLinks;
+        AZStd::vector<WorldPlaceProfile> m_worldPlaces;
+        AZStd::vector<WorldPathProfile> m_worldPaths;
+        AZStd::vector<WorldPathNode> m_worldPathNodes;
+        AZStd::vector<WorldPathEdge> m_worldPathEdges;
     };
 } // namespace TaintedGrailModdingSDK

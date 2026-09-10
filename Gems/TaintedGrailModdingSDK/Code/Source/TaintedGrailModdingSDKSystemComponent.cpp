@@ -29,6 +29,7 @@
 #include "ActorTroopEditorWidget.h"
 #include "SpawnEncounterEditorWidget.h"
 #include "FactionAuthorityEditorWidget.h"
+#include "WorldRouteEditorWidget.h"
 #include "AssetBrowserPreviewWidget.h"
 #include "CatalogBrowserWidget.h"
 #include "CatalogGovernanceWidget.h"
@@ -68,6 +69,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
         constexpr const char* QuestStateInspectorViewPaneName = "Tainted Grail Quest and State Inspector";
         constexpr const char* SpawnEncounterEditorViewPaneName = "Tainted Grail Spawn and Encounter Editor";
+        constexpr const char* WorldRouteEditorViewPaneName = "Tainted Grail World and Route Editor";
         constexpr const char* FactionAuthorityEditorViewPaneName = "Tainted Grail Faction and Authority Editor";
         constexpr const char* ActorTroopEditorViewPaneName = "Tainted Grail Actor and Troop Editor";
         constexpr const char* EconomyCoverageDashboardViewPaneName = "Tainted Grail Economy Acquisition Coverage";
@@ -163,6 +165,7 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(ActorTroopEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(SpawnEncounterEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(FactionAuthorityEditorViewPaneName);
+            AzToolsFramework::UnregisterViewPane(WorldRouteEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyCoverageDashboardViewPaneName);
             AzToolsFramework::UnregisterViewPane(EconomyDuplicateReportViewPaneName);
             AzToolsFramework::UnregisterViewPane(AdapterCapabilityMatrixViewPaneName);
@@ -330,6 +333,16 @@ namespace TaintedGrailModdingSDK
         encounterOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.SpawnEncounterEditor");
         AzToolsFramework::RegisterViewPane<SpawnEncounterEditorWidget>(
             SpawnEncounterEditorViewPaneName, "Tainted Grail SDK", encounterOptions);
+
+        AzToolsFramework::ViewPaneOptions worldOptions;
+        worldOptions.paneRect = QRect(230, 230, 1200, 900);
+        worldOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        worldOptions.isDeletable = true;
+        worldOptions.isPreview = true;
+        worldOptions.showInMenu = false;
+        worldOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.WorldRouteEditor");
+        AzToolsFramework::RegisterViewPane<WorldRouteEditorWidget>(
+            WorldRouteEditorViewPaneName, "Tainted Grail SDK", worldOptions);
 
         AzToolsFramework::ViewPaneOptions factionOptions;
         factionOptions.paneRect = QRect(225, 225, 1280, 950);

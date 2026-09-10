@@ -535,11 +535,15 @@ namespace TaintedGrailModdingSDK
         CultureProfile::Reflect(context);
         FactionProfile::Reflect(context);
         FactionLink::Reflect(context);
+        WorldPlaceProfile::Reflect(context);
+        WorldPathProfile::Reflect(context);
+        WorldPathNode::Reflect(context);
+        WorldPathEdge::Reflect(context);
 
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(6)
+                ->Version(7)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -559,7 +563,11 @@ namespace TaintedGrailModdingSDK
                 ->Field("EncounterDefinitions", &CatalogDocument::m_encounterDefinitions)
                 ->Field("CultureProfiles", &CatalogDocument::m_cultureProfiles)
                 ->Field("FactionProfiles", &CatalogDocument::m_factionProfiles)
-                ->Field("FactionLinks", &CatalogDocument::m_factionLinks);
+                ->Field("FactionLinks", &CatalogDocument::m_factionLinks)
+                ->Field("WorldPlaces", &CatalogDocument::m_worldPlaces)
+                ->Field("WorldPaths", &CatalogDocument::m_worldPaths)
+                ->Field("WorldPathNodes", &CatalogDocument::m_worldPathNodes)
+                ->Field("WorldPathEdges", &CatalogDocument::m_worldPathEdges);
         }
     }
 
@@ -568,6 +576,7 @@ namespace TaintedGrailModdingSDK
         return m_schemaVersion == LegacyCatalogSchemaVersion
             || m_schemaVersion == PopulationCatalogSchemaVersion
             || m_schemaVersion == EncounterCatalogSchemaVersion
+            || m_schemaVersion == SocietyCatalogSchemaVersion
             || m_schemaVersion == CurrentCatalogSchemaVersion;
     }
 

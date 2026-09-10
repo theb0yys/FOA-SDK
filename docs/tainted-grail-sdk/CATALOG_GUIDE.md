@@ -54,7 +54,7 @@ Catalog schema 1 is a read-only compatibility input. A valid schema-1 document l
 collections, and compatibility normalization leaves its detected version unchanged.
 The loaded candidate remains schema 1.
 Directly saving it is refused; only successful bound replacement followed by `BuildDocument` produces the
-schema-4 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
+schema-5 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
 Newer, malformed, or unsafe versions fail without replacing the published catalog.
 
 ## Search
@@ -322,9 +322,9 @@ The superseding record ID must exist. Supersession does not silently delete evid
 
 Use **Save Catalog** to persist the current canonical document.
 
-Catalog saves write explicit schema 4 even when all population collections are empty. Saving does not publish
+Catalog saves write explicit schema 5 even when all population collections are empty. Saving does not publish
 a new schema-1 document. A loaded schema-1 compatibility candidate must first pass bound replacement; direct
-save remains refused until `BuildDocument` emits the validated schema-4 projection.
+save remains refused until `BuildDocument` emits the validated schema-5 projection.
 
 Use **Reload Catalog** to reload and validate the workspace document. Reload rejects:
 
@@ -343,7 +343,7 @@ Use **Reload Catalog** to reload and validate the workspace document. Reload rej
 
 Legacy O3DE catalog envelopes that predate an explicit nested catalog schema remain a bounded schema-1
 migration input. They retain schema 1 after loading and normalization, just like plain schema-1 input. Current
-saves use the plain schema-4 durable document produced only after successful bound replacement.
+saves use the plain schema-5 durable document produced only after successful bound replacement.
 
 ## Encounter plans and migration recovery
 
@@ -352,14 +352,14 @@ activation and placement descriptions remain local authoring intent. The Spawn a
 previews composition and preserves entry identities when quantities change. Saving a complete encounter
 removes omitted entries from that encounter only.
 
-Schemas 2 and 3 remain load-only inputs and keeps its detected version until bound validation and projection
-succeed. Before replacing a schema-1/2/3 catalog, the writer creates and verifies an exact sibling
+Schemas 1, 2, 3 and 4 remain load-only inputs and retain their detected versions until bound validation and projection
+succeed. Before replacing a schema-1/2/3/4 catalog, the writer creates and verifies an exact sibling
 `catalog.tgcatalog.json.schema-<version>.<sha256>.backup.json`. A missing, conflicting or unwritable
 backup prevents replacement. Future versions and malformed originals are not overwritten. Existing catalog files are read within a
 256 MiB limit before replacement; exceeding that limit fails without replacing the file.
 
-Editors supporting only schema 2 or 3 cannot read schema 4. To return to it, close the Editor, preserve the current workspace,
-and restore the earlier catalog backup. New encounter or society edits are not backported. Keep the workspace's
+Editors supporting only schemas 1–4 cannot read schema 5. To return to an older Editor, close the Editor, preserve the current workspace,
+and restore the earlier catalog backup. New encounter, society or world edits are not backported. Keep the workspace's
 pack manifests and Sources/Evidence directories with the catalog when making recovery copies.
 
 See [Spawn and Encounter Editor guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md).
@@ -414,3 +414,7 @@ The catalog is deliberately scoped to an exact profile/version/branch. Switch ba
 ### Record is visible but blocked for runtime use
 
 Visibility is not permission. Complete the required validation and permission process; do not remove `no_unvalidated_runtime_use` without proof.
+
+## World places, roads and routes
+
+Schema 5 adds pack-owned world profiles and independently identified graph nodes and edges. Places can be referenced by existing faction jurisdiction and encounter placement definitions. See the [World and Route Editor guide](WORLD_ROUTE_EDITOR_GUIDE.md) for creation, visual previews, graph editing and recovery.

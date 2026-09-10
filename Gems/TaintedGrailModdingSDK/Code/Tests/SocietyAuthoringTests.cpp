@@ -286,7 +286,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_TRUE(service.GetCatalog().FindFactionLinks(bandits).empty()); // No implicit reverse relationship.
         auto loaded = CatalogPersistenceService().Load(service.GetWorkspaceRootPath());
         ASSERT_TRUE(loaded.IsSuccess()) << loaded.GetError().c_str();
-        EXPECT_EQ(loaded.GetValue().m_schemaVersion, SocietyCatalogSchemaVersion);
+        EXPECT_EQ(loaded.GetValue().m_schemaVersion, CurrentCatalogSchemaVersion);
         CatalogDatabase reopened;
         ASSERT_TRUE(reopened.ReplaceFromBoundDocument(loaded.GetValue(), service.GetWorkspace(),
             *service.GetWorkspace().FindActiveGameProfile(), service.GetSourceRegistry(), &error)) << error.c_str();
@@ -443,7 +443,7 @@ namespace TaintedGrailModdingSDK
         const auto hash = QCryptographicHash::hash(original, QCryptographicHash::Sha256).toHex();
         QFile backup(path + ".schema-3." + QString::fromLatin1(hash) + ".backup.json");
         ASSERT_TRUE(backup.open(QIODevice::ReadOnly)); EXPECT_EQ(backup.readAll(), original);
-        EXPECT_EQ(QJsonDocument::fromJson(SocietyCatalogBytes(service)).object()["SchemaVersion"].toInt(), 4);
+        EXPECT_EQ(QJsonDocument::fromJson(SocietyCatalogBytes(service)).object()["SchemaVersion"].toInt(), CurrentCatalogSchemaVersion);
         EXPECT_EQ(service.GetCatalog().GetPopulationActorProfiles().size(), 1);
     }
 
@@ -464,7 +464,7 @@ namespace TaintedGrailModdingSDK
                 *service.GetWorkspace().FindActiveGameProfile(), service.GetSourceRegistry(), &error));
             EXPECT_EQ(published.GetFactionProfiles().size(), 1);
         };
-        for (AZ::u32 version : {1, 2, 3, 5})
+        for (AZ::u32 version : {1, 2, 3, 6})
         {
             auto bad = good; bad.m_schemaVersion = version; reject(bad);
             auto object = QJsonDocument::fromJson(before).object(); object["SchemaVersion"] = static_cast<int>(version);

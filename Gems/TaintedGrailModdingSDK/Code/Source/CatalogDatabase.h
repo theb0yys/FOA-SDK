@@ -69,6 +69,9 @@ namespace TaintedGrailModdingSDK
             const SourceEvidenceRegistry& sourceRegistry,
             AZStd::string* error = nullptr) const;
         void Clear();
+        bool UpsertEncounterDefinition(const EncounterDefinition& definition, AZStd::string* error = nullptr);
+        const EncounterDefinition* FindEncounterDefinition(const AZStd::string& recordId) const;
+        const AZStd::vector<EncounterDefinition>& GetEncounterDefinitions() const;
 
         const CatalogRecord* FindByRecordId(const AZStd::string& recordId) const;
         const CatalogRecord* FindByExactNativeRef(
@@ -131,6 +134,7 @@ namespace TaintedGrailModdingSDK
 
     private:
         friend class CatalogGovernanceService;
+        bool ValidateEncounterIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
 
         CatalogRecord* FindMutableRecordById(const AZStd::string& recordId);
         CatalogRelationship* FindMutableRelationshipById(
@@ -206,5 +210,6 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<PopulationActorProfile> m_populationActorProfiles;
         AZStd::vector<PopulationTroopProfile> m_populationTroopProfiles;
         AZStd::vector<PopulationTroopMember> m_populationTroopMembers;
+        AZStd::vector<EncounterDefinition> m_encounterDefinitions;
     };
 } // namespace TaintedGrailModdingSDK

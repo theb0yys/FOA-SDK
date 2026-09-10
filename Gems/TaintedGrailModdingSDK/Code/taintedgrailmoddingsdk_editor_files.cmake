@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/SpawnEncounterEditorWidget.cpp
+    Source/SpawnEncounterEditorWidget.h
     Source/ActorTroopEditorWidget.cpp
     Source/ActorTroopEditorWidgetWorkflow.cpp
     Source/ActorTroopEditorWidget.h

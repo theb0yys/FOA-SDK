@@ -63,7 +63,14 @@ jobs:
           path: o3de
           persist-credentials: false
           fetch-depth: 1
+          # Fetch after checkout so Git LFS can read the pinned .lfsconfig endpoint.
           lfs: false
+
+      - name: Download pinned O3DE LFS assets
+        shell: pwsh
+        run: |
+          git -C o3de lfs pull
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Set up Python
         uses: actions/setup-python@v5

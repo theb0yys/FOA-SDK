@@ -71,8 +71,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             source_root + "PopulationModels.h",
             "LegacyCatalogSchemaVersion = 1\n"
             "PopulationCatalogSchemaVersion = 2\n"
-            "Schema 1 remains a load-only migration input\n"
-            "CurrentCatalogSchemaVersion =\nPopulationCatalogSchemaVersion;\n",
+            "Schemas 1 and 2 remain load-only migration inputs\n"
+            "CurrentCatalogSchemaVersion =\nEncounterCatalogSchemaVersion;\n",
         )
         self._write(source_root + "PopulationModels.cpp", "population models\n")
         self._write(
@@ -115,8 +115,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             'FindMember("ClassData")\n'
             "Plain canonical catalog documents require an explicit SchemaVersion.\n"
             "Catalog SchemaVersion must be an unsigned 32-bit integer.\n"
-            "Catalog schema version %u is unsupported; this editor supports schema 1 migration and schema 2.\n"
-            "Canonical catalog saves require schema 2; schema 1 is a load-only migration input.\n"
+            "Catalog schema version %u is unsupported; this editor supports schema 1/2 migration and schema 3.\n"
+            "Canonical catalog saves require schema 3; schemas 1/2 are load-only migration inputs.\n"
             "document.m_schemaVersion != CurrentCatalogSchemaVersion\n"
             "settings.m_keepDefaults = true\n"
             "AZ::JsonSerialization::Store\n"
@@ -141,7 +141,7 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "Gems/TaintedGrailModdingSDK/Code/Tests/CatalogSchemaMigrationPersistenceTests.cpp",
             "TEST_F(Fixture,\n"
-            "    SchemaOnePreviewMigratesToSchemaTwoWithEmptyPopulationAndPreservesLegacyProjection)\n"
+            "    SchemaOnePreviewMigratesToCurrentWithEmptyPopulationAndPreservesLegacyProjection)\n"
             "{\n"
             "    ASSERT_EQ(loaded.m_schemaVersion, LegacyCatalogSchemaVersion);\n"
             "    persistence.Save(loaded, root);\n"
@@ -149,7 +149,7 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "    QFile::exists(path);\n"
             "    ReplaceFromBoundDocument(loaded);\n"
             "    BuildDocument(workspace);\n"
-            "    EXPECT_EQ(migrated.m_schemaVersion, PopulationCatalogSchemaVersion);\n"
+            "    EXPECT_EQ(migrated.m_schemaVersion, CurrentCatalogSchemaVersion);\n"
             "}\n"
             "\n    TEST_F(Fixture, PlainCatalogRejectsMissingMalformedAndFutureSchemaVersions) {}\n"
             "\n    TEST_F(Fixture,\n"
@@ -159,21 +159,21 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "    LegacyCatalogSchemaVersion;\n"
             "    ReplaceFromBoundDocument(normalizedLegacy);\n"
             "    BuildDocument(workspace);\n"
-            "    PopulationCatalogSchemaVersion;\n"
+            "    CurrentCatalogSchemaVersion;\n"
             "}\n"
             "\n    TEST_F(Fixture, SchemaOnePopulationCollectionsAreRejectedWithoutReplacement) {}\n"
             "\n    TEST_F(Fixture,\n"
-            "        WriterRejectsSchemaOneAndWritesPlainSchemaTwoWithExplicitPopulationArrays)\n"
+            "        WriterRejectsSchemaOneAndWritesPlainCurrentWithExplicitPopulationArrays)\n"
             "{\n"
             "    LegacyCatalogSchemaVersion;\n"
             "    persistence.Save(legacyDocument, root);\n"
             "    EXPECT_FALSE(legacySave.IsSuccess());\n"
             "    BuildDocument(workspace);\n"
-            "    PopulationCatalogSchemaVersion;\n"
+            "    CurrentCatalogSchemaVersion;\n"
             "}\n"
-            "\n    TEST_F(Fixture, SchemaTwoSaveLoadSaveIsByteStable) {}\n"
-            "\n    TEST_F(Fixture, SchemaTwoSaveClearLoadAndReplacePreservesCanonicalState) {}\n"
-            "\n    TEST_F(Fixture, MalformedSchemaTwoDocumentDoesNotReplacePublishedCatalog) {}\n"
+            "\n    TEST_F(Fixture, CurrentSaveLoadSaveIsByteStable) {}\n"
+            "\n    TEST_F(Fixture, CurrentSaveClearLoadAndReplacePreservesCanonicalState) {}\n"
+            "\n    TEST_F(Fixture, MalformedCurrentDocumentDoesNotReplacePublishedCatalog) {}\n"
             "\n    TEST_F(Fixture, PopulationCandidateSaveFailureDoesNotPublish) {}\n"
             '"ActorProfiles"\n"TroopProfiles"\n"TroopMembers"\n',
         )
@@ -217,8 +217,8 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             '"Source/PopulationModels.cpp"\n'
             '"Source/FoundationPopulationService.cpp"\n'
             '"Source/PopulationAuthoringService.cpp"\n'
-            "SchemaOnePreviewMigratesToSchemaTwoWithEmptyPopulationAndPreservesLegacyProjection\n"
-            "SchemaTwoSaveLoadSaveIsByteStable\n"
+            "SchemaOnePreviewMigratesToCurrentWithEmptyPopulationAndPreservesLegacyProjection\n"
+            "CurrentSaveLoadSaveIsByteStable\n"
             "PopulationCandidateSaveFailureDoesNotPublish\n"
             "TroopDefinitionIsAtomicOrderIndependentAndPreservesOmittedMembers\n"
             "PopulationUpsertsDoNotGrantGovernanceOrActionAuthority\n"
@@ -242,14 +242,14 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
         self._write(
             "docs/tainted-grail-sdk/DATA_FORMATS.md",
             '## Workspace document\n"SchemaVersion": 1\n'
-            '## Canonical catalog document\n"SchemaVersion": 2\n'
+            '## Canonical catalog document\n"SchemaVersion": 3\n'
             '"ActorProfiles": []\n"TroopProfiles": []\n'
             '"TroopMembers": []\nSchema-1 migration is read-only and fail-closed\n'
             "Population actor profile\nPopulation troop profile\nPopulation troop member\n"
             "no population contract invokes FoA\n"
             "A loaded schema-1 candidate remains schema 1\n"
             "Directly saving that load result is refused\n"
-            "successful bound replacement followed by `BuildDocument` produces a schema-2 document\n"
+            "successful bound replacement followed by `BuildDocument` produces a schema-3 document\n"
             "## Catalog record\n",
         )
         self._write(
@@ -280,13 +280,13 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "- The immutable seven-lane population action contract and registered **Tainted Grail Actor and Troop Editor** pane are implemented.\n"
             "- The project-owned deterministic schema-2 population fixture, focused negative tests, and local-validation integration are implemented.\n"
             "- Exact-head O3DE configure/build, compiled Catalog test execution, and the real Windows twenty-six-pane evidence pass remain the active acceptance gate.\n"
-            "- Spawn and Encounter Editor is the next population authoring capability.\n"
+            "- Spawn and Encounter Editor provides local composition, placement and activation plans with schema-3 persistence; native spawning remains a separate runtime capability.\n"
             "### World and societies\n",
         )
         self._write(
             "docs/tainted-grail-sdk/CATALOG_GUIDE.md",
             "Catalog schema 1 is a read-only compatibility input\n"
-            "Catalog saves write explicit schema 2\nLegacy O3DE catalog envelopes\n"
+            "Catalog saves write explicit schema 3\nLegacy O3DE catalog envelopes\n"
             "loaded candidate remains schema 1\n"
             "Directly saving it is refused\n"
             "successful bound replacement followed by `BuildDocument`\n",
@@ -296,11 +296,11 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
             "Loading and compatibility normalization retain schema 1\n"
             "A direct save of that load result is refused\n"
             "successful bound replacement followed by `BuildDocument`\n"
-            "plain schema 2\n",
+            "plain schema 3\n",
         )
         self._write(
             "docs/tainted-grail-sdk/GOVERNANCE_HARDENING.md",
-            "governance values remain string-compatible\ncurrent catalog saves write schema 2\n",
+            "governance values remain string-compatible\ncurrent catalog saves write schema 3\n",
         )
         self._write(
             "docs/tainted-grail-sdk/README.md",
@@ -316,9 +316,9 @@ class CatalogSchema2ValidatorTests(unittest.TestCase):
     def test_rejects_current_schema_bound_to_legacy(self) -> None:
         path = self.repo_root / "Gems/TaintedGrailModdingSDK/Code/Source/PopulationModels.h"
         text = path.read_text(encoding="utf-8").replace(
-            "CurrentCatalogSchemaVersion =\nPopulationCatalogSchemaVersion;",
+            "CurrentCatalogSchemaVersion =\nEncounterCatalogSchemaVersion;",
             "CurrentCatalogSchemaVersion = LegacyCatalogSchemaVersion;\n"
-            "PopulationCatalogSchemaVersion;",
+            "EncounterCatalogSchemaVersion;",
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(CatalogSchema2ContractError, "must not remain bound"):

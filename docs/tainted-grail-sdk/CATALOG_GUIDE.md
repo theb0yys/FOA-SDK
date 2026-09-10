@@ -39,7 +39,7 @@ Catalog/catalog.tgcatalog.json
 
 The file contains:
 
-- explicit catalog schema version 2;
+- explicit catalog schema version 3;
 - canonical records;
 - first-class relationships;
 - validation history;
@@ -54,7 +54,7 @@ Catalog schema 1 is a read-only compatibility input. A valid schema-1 document l
 collections, and compatibility normalization leaves its detected version unchanged.
 The loaded candidate remains schema 1.
 Directly saving it is refused; only successful bound replacement followed by `BuildDocument` produces the
-schema-2 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
+schema-3 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
 Newer, malformed, or unsafe versions fail without replacing the published catalog.
 
 ## Search
@@ -322,9 +322,9 @@ The superseding record ID must exist. Supersession does not silently delete evid
 
 Use **Save Catalog** to persist the current canonical document.
 
-Catalog saves write explicit schema 2 even when all population collections are empty. Saving does not publish
+Catalog saves write explicit schema 3 even when all population collections are empty. Saving does not publish
 a new schema-1 document. A loaded schema-1 compatibility candidate must first pass bound replacement; direct
-save remains refused until `BuildDocument` emits the validated schema-2 projection.
+save remains refused until `BuildDocument` emits the validated schema-3 projection.
 
 Use **Reload Catalog** to reload and validate the workspace document. Reload rejects:
 
@@ -343,7 +343,26 @@ Use **Reload Catalog** to reload and validate the workspace document. Reload rej
 
 Legacy O3DE catalog envelopes that predate an explicit nested catalog schema remain a bounded schema-1
 migration input. They retain schema 1 after loading and normalization, just like plain schema-1 input. Current
-saves use the plain schema-2 durable document produced only after successful bound replacement.
+saves use the plain schema-3 durable document produced only after successful bound replacement.
+
+## Encounter plans and migration recovery
+
+Schema 3 adds pack-owned encounter definitions. Their composition binds exact saved actors or troops;
+activation and placement descriptions remain local authoring intent. The Spawn and Encounter Editor
+previews composition and preserves entry identities when quantities change. Saving a complete encounter
+removes omitted entries from that encounter only.
+
+Schema 2 remains a load-only input and keeps its detected version until bound validation and projection
+succeed. Before replacing a schema-1/2 catalog, the writer creates and verifies an exact sibling
+`catalog.tgcatalog.json.schema-<version>.<sha256>.backup.json`. A missing, conflicting or unwritable
+backup prevents replacement. Future versions and malformed originals are not overwritten. Existing catalog files are read within a
+256 MiB limit before replacement; exceeding that limit fails without replacing the file.
+
+A schema-2 Editor cannot read schema 3. To return to it, close the Editor, preserve the current workspace,
+and restore the earlier catalog backup. New encounter edits are not backported. Keep the workspace's
+pack manifests and Sources/Evidence directories with the catalog when making recovery copies.
+
+See [Spawn and Encounter Editor guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md).
 
 ## Safe workflow
 

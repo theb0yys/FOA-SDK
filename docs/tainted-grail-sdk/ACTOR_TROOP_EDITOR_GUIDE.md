@@ -150,4 +150,4 @@ The current editor does not:
 - deploy files or mutate saves;
 - grant validation or governance permission automatically.
 
-The later Spawn and Encounter Editor and separately reviewed runtime adapters must consume these records without weakening this boundary.
+The [Spawn and Encounter Editor](SPAWN_ENCOUNTER_EDITOR_GUIDE.md) consumes these saved records for local composition plans. Separately reviewed runtime adapters must preserve the same boundary.

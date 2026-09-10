@@ -498,7 +498,7 @@ The document is bound to one workspace and exact game profile:
 
 ```json
 {
-  "SchemaVersion": 2,
+  "SchemaVersion": 3,
   "WorkspaceId": "owner.workspace",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
@@ -513,13 +513,14 @@ The document is bound to one workspace and exact game profile:
   "RecipeOutputs": [],
   "ActorProfiles": [],
   "TroopProfiles": [],
-  "TroopMembers": []
+  "TroopMembers": [],
+  "EncounterDefinitions": []
 }
 ```
 
-Schema 2 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
-older schema-1 documents without them load as empty economy collections. Schema 2 adds the three population
-arrays shown above.
+Schema 3 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
+older schema-1 documents without them load as empty economy collections. Schema 2 added the three population
+arrays shown above. Schema 3 adds `EncounterDefinitions`; schema-1/2 inputs must not contain encounter rows.
 
 Schema-1 migration is read-only and fail-closed:
 
@@ -529,8 +530,8 @@ Schema-1 migration is read-only and fail-closed:
 4. legacy validation and governance compatibility rules run without changing the detected schema version;
 5. the complete candidate is validated against the active workspace, profile, evidence registry, and catalog
    integrity rules before successful bound replacement;
-6. only successful bound replacement followed by `BuildDocument` produces a schema-2 document;
-7. the next successful catalog save writes that schema-2 document, including when every population collection
+6. only successful bound replacement followed by `BuildDocument` produces a schema-3 document;
+7. the next successful catalog save writes that schema-3 document, including when every population collection
    is empty.
 
 A loaded schema-1 candidate remains schema 1 after compatibility normalization.
@@ -540,9 +541,35 @@ and failed persistence are rejected without replacing the published catalog. Mig
 records, relationships, validation history, governance history, economy collections, and their stable order.
 Plain catalog documents require an explicit `SchemaVersion`. A legacy O3DE `JsonSerialization` envelope that
 predates a nested catalog schema is treated only as a schema-1 migration input. Current saves always emit the
-plain schema-2 document with explicit empty collections, not a new O3DE envelope.
+plain schema-3 document with explicit empty collections, not a new O3DE envelope.
 
 Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
+
+## Encounter definition
+
+Array: `EncounterDefinitions` (catalog schema 3).
+
+| Field | Meaning |
+| --- | --- |
+| `RecordId` | Existing synthetic, pack-owned population/encounter identity. |
+| `Entries` | 1–128 distinct actor/troop bindings; each has `EntryId`, `TargetRecordId`, `MinimumCount`, `MaximumCount` (1–1000). Entry identities cannot move between encounters. |
+| `PlacementRecordId`, `PlacementSubjectRef` | Optional exact world location/scene/region binding and agreeing subject, or an unverified local reference. |
+| `ActivationMode`, `Conditions` | `manual` with no conditions, or `all_conditions` with 1–64 distinct descriptions of at most 256 bytes. |
+| `MaximumActiveInstances` | 1–1000 planned concurrent instances. |
+| `PopulationLimit` | 1–1,000,000; must cover the maximum declared actors across active instances. |
+| `UniqueEncounter` | Requires exactly one maximum active instance. |
+| `CleanupNotes`, `RollbackNotes` | Single-line authoring descriptions up to 1024 bytes, never executable actions. |
+| `EvidenceIds` | Exact profile-bound authoring evidence for this complete definition and each entry. |
+
+Whole-definition replacement removes omitted entries only from that encounter. Existing records,
+population/economy profiles, relationships, governance and evidence keep their identities. Entry IDs,
+condition descriptions and evidence IDs are canonicalized on copies; duplicates fail. Unique actor
+constraints include direct entries and troop members.
+
+Schema-1/2 documents containing encounter definitions and future schemas are rejected. Schema-1/2
+inputs are backed up byte-for-byte before a successful schema-3 overwrite; backup failure blocks the
+write. Restoring the old backup is the downgrade route; new encounter data has no schema-2 projection.
+See [encounter design](SPAWN_ENCOUNTER_EDITOR_DESIGN.md) for the authoring boundary.
 
 ## Catalog record
 

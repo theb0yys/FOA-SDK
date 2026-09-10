@@ -113,12 +113,12 @@ namespace TaintedGrailModdingSDK
             document.m_schemaVersion == LegacyCatalogSchemaVersion;
         const bool isPopulationSchema =
             document.m_schemaVersion == PopulationCatalogSchemaVersion;
-        if (!isLegacySchema && !isPopulationSchema)
+        if (!isLegacySchema && !isPopulationSchema && document.m_schemaVersion != EncounterCatalogSchemaVersion)
         {
             if (error)
             {
                 *error = AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1 migration and schema 2.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2 migration and schema 3.",
                     document.m_schemaVersion);
             }
             return false;
@@ -134,6 +134,15 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        AZStd::string duplicateEncounter;
+        if ((document.m_schemaVersion < EncounterCatalogSchemaVersion && !document.m_encounterDefinitions.empty())
+            || document.m_encounterDefinitions.size() > 10000
+            || HasDuplicatePopulationIdentity(document.m_encounterDefinitions,
+                [](const EncounterDefinition& definition) { return definition.m_recordId; }, duplicateEncounter))
+        {
+            if (error) { *error = "Encounter collections require schema 3 and at most 10,000 unique definition identities."; }
+            return false;
+        }
         if (!ValidatePopulationDocumentIdentities(document, error))
         {
             return false;
@@ -144,6 +153,7 @@ namespace TaintedGrailModdingSDK
         legacyDocument.m_actorProfiles.clear();
         legacyDocument.m_troopProfiles.clear();
         legacyDocument.m_troopMembers.clear();
+        legacyDocument.m_encounterDefinitions.clear();
 
         CatalogDatabase candidate;
         if (!candidate.ReplaceFromDocumentWithoutPopulation(
@@ -174,6 +184,10 @@ namespace TaintedGrailModdingSDK
             }
         }
 
+        for (const auto& definition : document.m_encounterDefinitions)
+        {
+            if (!candidate.UpsertEncounterDefinition(definition, error)) { return false; }
+        }
         *this = AZStd::move(candidate);
         if (error)
         {
@@ -188,6 +202,7 @@ namespace TaintedGrailModdingSDK
         m_populationActorProfiles.clear();
         m_populationTroopProfiles.clear();
         m_populationTroopMembers.clear();
+        m_encounterDefinitions.clear();
     }
 
     CatalogDocument CatalogDatabase::BuildDocument(
@@ -200,6 +215,7 @@ namespace TaintedGrailModdingSDK
         document.m_actorProfiles = m_populationActorProfiles;
         document.m_troopProfiles = m_populationTroopProfiles;
         document.m_troopMembers = m_populationTroopMembers;
+        document.m_encounterDefinitions = m_encounterDefinitions;
 
         SortPopulationDocumentValues(
             document.m_actorProfiles,

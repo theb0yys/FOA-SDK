@@ -350,6 +350,8 @@ namespace TaintedGrailModdingSDK
             }
         }
 
+        if (!ValidateEncounterIntegrity(profile, sourceRegistry, error)) { return false; }
+
         if (error)
         {
             error->clear();

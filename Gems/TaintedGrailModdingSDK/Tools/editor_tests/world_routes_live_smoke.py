@@ -257,7 +257,7 @@ def run():
             control("worldX").setValue(x); control("worldZ").setValue(z)
             measured("save_position_" + str(x), save_world)
         migrated = json.loads(catalog_bytes())
-        assert migrated["SchemaVersion"] == 5
+        assert migrated["SchemaVersion"] == 6
         backups = list((workspace.parent / "Catalog").glob("*.schema-4.*.backup.json"))
         assert any(p.read_bytes() == before for p in backups)
         for key in ["EconomyItems", "EconomyRecipes", "RecipeIngredients", "RecipeOutputs",

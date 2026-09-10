@@ -115,12 +115,12 @@ namespace TaintedGrailModdingSDK
             document.m_schemaVersion == PopulationCatalogSchemaVersion;
         if (!isLegacySchema && !isPopulationSchema && document.m_schemaVersion != EncounterCatalogSchemaVersion
             && document.m_schemaVersion != SocietyCatalogSchemaVersion
-            && document.m_schemaVersion != WorldCatalogSchemaVersion)
+            && document.m_schemaVersion != WorldCatalogSchemaVersion && document.m_schemaVersion != QuestCatalogSchemaVersion)
         {
             if (error)
             {
                 *error = AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4 migration and schema 5.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4/5 migration and schema 6.",
                     document.m_schemaVersion);
             }
             return false;
@@ -171,6 +171,7 @@ namespace TaintedGrailModdingSDK
         legacyDocument.m_cultureProfiles.clear();
         legacyDocument.m_factionProfiles.clear();
         legacyDocument.m_factionLinks.clear();
+        legacyDocument.m_questProfiles.clear();
         legacyDocument.m_worldPlaces.clear();
         legacyDocument.m_worldPaths.clear();
         legacyDocument.m_worldPathNodes.clear();
@@ -211,6 +212,7 @@ namespace TaintedGrailModdingSDK
         }
         if (!candidate.LoadWorldCollections(document, error)) { return false; }
         if (!candidate.LoadSocietyCollections(document, error)) { return false; }
+        if (!candidate.LoadQuestCollections(document, error)) { return false; }
         *this = AZStd::move(candidate);
         if (error)
         {
@@ -229,6 +231,7 @@ namespace TaintedGrailModdingSDK
         m_cultureProfiles.clear();
         m_factionProfiles.clear();
         m_factionLinks.clear();
+        m_questProfiles.clear();
         m_worldPlaces.clear();
         m_worldPaths.clear();
         m_worldPathNodes.clear();
@@ -249,6 +252,7 @@ namespace TaintedGrailModdingSDK
         document.m_cultureProfiles = m_cultureProfiles;
         document.m_factionProfiles = m_factionProfiles;
         document.m_factionLinks = m_factionLinks;
+        document.m_questProfiles = m_questProfiles;
         document.m_worldPlaces = m_worldPlaces;
         document.m_worldPaths = m_worldPaths;
         document.m_worldPathNodes = m_worldPathNodes;

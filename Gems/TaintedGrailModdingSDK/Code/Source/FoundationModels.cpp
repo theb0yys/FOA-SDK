@@ -535,6 +535,7 @@ namespace TaintedGrailModdingSDK
         CultureProfile::Reflect(context);
         FactionProfile::Reflect(context);
         FactionLink::Reflect(context);
+        QuestAuthoringProfile::Reflect(context);
         WorldPlaceProfile::Reflect(context);
         WorldPathProfile::Reflect(context);
         WorldPathNode::Reflect(context);
@@ -543,7 +544,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(7)
+                ->Version(8)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -567,7 +568,8 @@ namespace TaintedGrailModdingSDK
                 ->Field("WorldPlaces", &CatalogDocument::m_worldPlaces)
                 ->Field("WorldPaths", &CatalogDocument::m_worldPaths)
                 ->Field("WorldPathNodes", &CatalogDocument::m_worldPathNodes)
-                ->Field("WorldPathEdges", &CatalogDocument::m_worldPathEdges);
+                ->Field("WorldPathEdges", &CatalogDocument::m_worldPathEdges)
+                ->Field("QuestProfiles", &CatalogDocument::m_questProfiles);
         }
     }
 

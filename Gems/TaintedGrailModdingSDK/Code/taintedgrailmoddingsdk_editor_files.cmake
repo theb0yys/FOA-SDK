@@ -77,6 +77,8 @@ set(FILES
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
     Source/QuestStateInspectorWidget.cpp
+    Source/QuestStateInspectorWidgetElements.cpp
+    Source/QuestStateInspectorWidgetGraph.cpp
     Source/QuestStateInspectorWidget.h
     Source/SourceEvidenceIntakeWidget.cpp
     Source/SourceEvidenceIntakeWidget.h

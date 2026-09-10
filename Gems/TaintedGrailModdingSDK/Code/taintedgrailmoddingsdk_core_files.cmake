@@ -7,6 +7,11 @@
 
 set(FILES
     Source/WorldModels.h
+    Source/QuestAuthoringModels.h
+    Source/QuestAuthoringModels.cpp
+    Source/QuestAuthoringService.h
+    Source/QuestAuthoringService.cpp
+    Source/CatalogDatabaseQuest.cpp
     Source/WorldModels.cpp
     Source/WorldPlanningService.h
     Source/WorldPlanningService.cpp

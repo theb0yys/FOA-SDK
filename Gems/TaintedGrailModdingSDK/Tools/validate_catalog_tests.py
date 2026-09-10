@@ -95,6 +95,18 @@ def main() -> int:
             ),
         )
         require_fragments(
+            tests_root / "QuestAuthoringTests.cpp",
+            (
+                "CreateEditReopenPreservesIdentityMetadataAndCanonicalBytes",
+                "StateTypesMissingReferencesAndMalformedGraphFailWithoutPublication",
+                "ExactCatalogBindingsSupportActorsItemsLocationsAndRejectWrongKinds",
+                "ReadOnlyInspectionAndEditableCopyKeepV1AndRejectAuthorityPayloads",
+                "OptimisticConflictWrongPackAndFailedWriteKeepSavedQuest",
+                "SchemaFiveMigrationRetainsWorldAndExactBackup",
+                "OldFutureDuplicateOversizedAndUnrelatedEvidenceFailAtomically",
+            ),
+        )
+        require_fragments(
             tests_root / "WorldAuthoringTests.cpp",
             (
                 "PlacesRoadAndDirectedRouteSurviveReopenAndDeterministicSave",
@@ -120,6 +132,7 @@ def main() -> int:
             "Tests/EncounterAuthoringTests.cpp",
             "Tests/SocietyAuthoringTests.cpp",
             "Tests/WorldAuthoringTests.cpp",
+            "Tests/QuestAuthoringTests.cpp",
             "Tests/EconomyCoverageServiceTests.cpp",
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
             "Tests/FoAInstallDiscoveryServiceTests.cpp",
@@ -159,6 +172,9 @@ def main() -> int:
         core_entries = manifest_entries(core_manifest_path)
         required_core = {
             "Source/SocietyModels.cpp",
+            "Source/QuestAuthoringModels.cpp",
+            "Source/QuestAuthoringService.cpp",
+            "Source/CatalogDatabaseQuest.cpp",
             "Source/WorldModels.cpp",
             "Source/WorldPlanningService.cpp",
             "Source/CatalogDatabaseWorld.cpp",
@@ -191,6 +207,7 @@ def main() -> int:
         framework_entries = manifest_entries(framework_manifest_path)
         required_framework = {
             "Source/FoundationSocietyService.cpp",
+            "Source/FoundationQuestService.cpp",
             "Source/FoundationWorldService.cpp",
             "Source/CatalogGovernanceService.cpp",
             "Source/CatalogPersistenceService.cpp",
@@ -530,7 +547,7 @@ def main() -> int:
                 "LegacyCatalogSchemaVersion = 1",
                 "PopulationCatalogSchemaVersion = 2",
                 "CurrentCatalogSchemaVersion =",
-                "WorldCatalogSchemaVersion;",
+                "QuestCatalogSchemaVersion;",
             ),
         )
         require_fragments(
@@ -550,7 +567,7 @@ def main() -> int:
                 "SerializePlainCatalog",
                 "Plain canonical catalog documents require an explicit SchemaVersion.",
                 "Catalog schema 1 cannot contain population collections.",
-                "Canonical catalog saves require schema 5; schemas 1/2/3/4 are load-only migration inputs.",
+                "Canonical catalog saves require schema 6; schemas 1/2/3/4/5 are load-only migration inputs.",
                 "settings.m_keepDefaults = true",
                 "QSaveFile file",
                 "file.setDirectWriteFallback(false)",

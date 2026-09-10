@@ -8,7 +8,7 @@ This document records the corrective hardening applied after professional review
 
 The governance values remain string-compatible across the catalog schema-1 to schema-2 migration. Existing
 schema-1 `catalog.tgcatalog.json` documents remain read-only migration inputs, while current catalog saves
-write schema 5. Later schema versions add population, encounter and society collections without reinterpreting the established
+write schema 6. Later schema versions add population, encounter and society collections without reinterpreting the established
 governance vocabulary.
 
 Strings are accepted only at persistence and user-interface boundaries. Before a governance transition executes, values are parsed into strong internal types:

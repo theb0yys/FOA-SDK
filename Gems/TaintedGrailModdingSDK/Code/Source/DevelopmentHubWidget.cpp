@@ -285,7 +285,7 @@ namespace TaintedGrailModdingSDK
                 { tr("Spawns and encounters"), tr("Plan encounter composition, placement and population limits."), SpawnEncounterEditorPane },
                 { tr("World and routes"), tr("Create places, roads and routes with a visual graph."), WorldRouteEditorPane },
                 { tr("Factions and authority"), tr("Edit cultures, membership, relationships and jurisdiction."), FactionAuthorityEditorPane },
-                { tr("Quests and state"), tr("Inspect and work with quest/state definitions."), QuestStateInspectorPane },
+                { tr("Quests and state"), tr("Browse quests, edit local definitions and preview progression."), QuestStateInspectorPane },
                 { tr("Avalon AI"), tr("Create and edit Avalon AI packages and plans."), AvalonAIEditorPane },
             });
         contentLayout->addWidget(m_authoringGroup);

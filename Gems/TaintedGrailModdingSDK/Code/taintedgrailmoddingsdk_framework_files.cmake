@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Source/FoundationQuestService.cpp
     Source/FoundationWorldService.cpp
     Source/FoundationSocietyService.cpp
     Source/FoundationEncounterService.cpp

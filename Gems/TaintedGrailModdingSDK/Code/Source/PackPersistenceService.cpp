@@ -9,8 +9,13 @@
 
 #include "PersistenceJsonUtils.h"
 
+#include <AzCore/IO/ByteContainerStream.h>
 #include <AzCore/Serialization/Json/JsonUtils.h>
 #include <AzCore/std/utility/move.h>
+
+#include <QDir>
+#include <QFileInfo>
+#include <QSaveFile>
 
 namespace TaintedGrailModdingSDK
 {
@@ -40,7 +45,30 @@ namespace TaintedGrailModdingSDK
             return AZ::Failure(AZStd::move(packagePathError));
         }
 
-        return AZ::JsonSerializationUtils::SaveObjectToFile(&pack, filePath);
+        // Preserve the existing envelope without truncating the previous manifest.
+        AZStd::string bytes;
+        AZ::IO::ByteContainerStream<AZStd::string> stream(&bytes);
+        const auto serialized = AZ::JsonSerializationUtils::SaveObjectToStream(&pack, stream);
+        if (!serialized.IsSuccess())
+        {
+            return AZ::Failure(AZStd::string(serialized.GetError()));
+        }
+
+        const QString path = QString::fromUtf8(filePath.c_str());
+        if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+        {
+            return AZ::Failure(AZStd::string("Could not create the mod manifest folder."));
+        }
+        QSaveFile file(path);
+        file.setDirectWriteFallback(false);
+        if (!file.open(QIODevice::WriteOnly)
+            || file.write(bytes.data(), static_cast<qint64>(bytes.size())) != static_cast<qint64>(bytes.size())
+            || !file.commit())
+        {
+            return AZ::Failure(AZStd::string("Could not save the mod manifest: ")
+                + file.errorString().toUtf8().constData());
+        }
+        return AZ::Success();
     }
 
     AZ::Outcome<PackManifest, AZStd::string> PackPersistenceService::Load(

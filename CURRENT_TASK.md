@@ -1,40 +1,58 @@
 # Current Task
 
-## Status and goal
+## Status
 
-Actor and Troop Editor completion: IMPLEMENTED AND VALIDATED. The owner requested supported game actor loading, local actor/troop creation and editing, member addition/change/removal, available portraits and real Editor save/reopen/error acceptance. Spawn and Encounter Editor remains a later task.
+PARTIAL: Pack Manager Save mod is implemented and compiled validation passed.
+Live Editor acceptance is BLOCKED during the test instance's startup;
+Computer Use denied access to Editor, so the acceptance script has not run.
 
-Branch: `codex/actors-troops-completion`, based on `c9be3e262bfb3f7f15f8d768fe28766e0fb430e8`. The prerequisite Items and Recipes PR #249 is merged. Deliver this focused DCO commit through a new PR for maintainer audit; no approval or merge is inferred.
+## Goal
+
+Persist a mod draft successfully before it becomes active. A failed validation or
+write retains the previous active mod, saved bytes, and editable draft.
 
 ## Classification and ownership
 
-Critical/Runtime for the bounded external reader, with Significant authoring commands and UI. Primary owner: `content-pack-authoring`. Supporting owners: `unity-provider`, `catalog-and-identity`, `schemas-and-persistence`, and `workspace-and-packs`.
+Significant: additive Foundation command `SavePackAndActivate`. Primary owner
+`workspace-and-packs`; supporting owners `schemas-and-persistence` and
+`foundation-services`. The pane forwards the draft; Foundation validates and
+publishes after persistence; PackPersistenceService atomically replaces the file.
 
-The pinned isolated provider publishes version-1 actor observations. Foundation validates exact profile, source hashes, evidence and protected paths before durable catalog publication. Core validates actor/troop definitions and atomic membership changes. Editor widgets present these services and portable local portraits.
+## Implemented scope
 
-## Completed scope
+- Save-before-activation and one coherent notification after successful saving.
+- Atomic replacement with existing schema-1 serialization and directory creation.
+- New drafts retain the previous active mod until saved.
+- Saved-list labels support plain manifests and serialization envelopes.
+- Five compiled regression tests, a synthetic live Editor script, and user guide.
 
-- Load supported installed NPC templates, preserve exact native identity and authored values on refresh, and report unsupported entries without guessed enum meanings.
-- Create pack-owned actors and valid troops with a first leader; edit typed profiles and add/change/remove members with automatically generated link identity and local authoring intent.
-- Keep troop upserts additive unless explicit owned member IDs are removed; validate the complete composition before durable publication.
-- Preview bounded workspace PNG/JPEG portraits, clear stale or invalid images, and preserve portable references on reopen.
-- Protect dirty drafts, provide cancellation and actionable save errors, fit long record identities within the pane, and populate collapsed review tables when expanded.
+Other Pack Manager workflows, schema migration, game data, deployment, runtime,
+installer, releases, and Spawn/Encounter authoring are outside this task.
 
-## Compatibility and boundaries
+## Validation
 
-Catalog schema 2, workspace schema 1 and persisted stable IDs remain unchanged. The troop command's default-empty explicit removal collection preserves existing additive callers. UnityPy remains pinned at 1.24.2; the actor worker selects its supplied pure-Python type-tree fallback to avoid a native decoder shutdown failure observed on NPC managed references.
+- PASSED: focused Foundation, Editor lifecycle, and path-policy static validators.
+- PASSED: 15 Python validator tests and 10 enabled pinned O3DE source validators.
+- PASSED: pinned Profile Editor and Catalog test builds.
+- PASSED: 13 focused compiled tests; full Catalog suite discovered 436 tests,
+  with 434 passed, two existing Windows symlink-privilege skips, and no failures.
+- BLOCKED: live Editor UI acceptance and save-action timing. The first launch
+  lacked processed engine assets. The retry uses a private copy of an existing
+  synthetic project's cache from the same pinned engine, but is paused at the
+  startup window; Computer Use was not approved to inspect or access Editor.
+- NOT_APPLICABLE: runtime, installation, deployment, signing, and release.
 
-The supported NPC component supplies no portrait, model or localisation binding. Native enum meanings and equipped character appearance remain unresolved; local image preview does not reconstruct Unity prefabs. Game files, saves, engine sources and proprietary material are read-only. Private observations, screenshots and generated output stay outside the checkout. Spawning, encounters, deployment, game execution and release are outside this task.
+No manifest migration is required. Rollback is a code revert; existing
+SaveActivePack callers, manifest shapes, and IDs remain compatible.
 
-## Executed acceptance
+## Current branch
 
-- PASSED: 827 Python tests discovered, 818 passed and nine explicit platform/privilege skips; applicable static and fixture validators passed.
-- PASSED: all ten enabled source-policy validators against O3DE pin `68683f23fb747380d3efa2424bd5f30242e9c5a2`.
-- PASSED: Windows Profile configure, Core, Framework, Catalog.Tests and Editor builds.
-- PASSED: Catalog compiled suite (429 passed, two symlink-privilege skips) and Canonical Interchange suite (39 passed).
-- PASSED: real provider read 885 supported NPC templates. Nine level-zero templates and 64 non-NPC entries remain explicitly unsupported.
-- PASSED: eight live Editor checks with 3,914 existing items and 356 recipes cover initial native intake, deferred review-table expansion, local creation, exact portrait pixels, member addition/change/removal, invalid-save rollback, dirty drafts, cancellation, saved-workspace reopening and pane width.
-- PASSED: first mixed-catalog intake took 3.046 seconds; maximum UI timer gap was 1.938 seconds, below the three-second limit. The initial failing large-catalog result was corrected by deferring collapsed review tables; full save validation remains mandatory.
-- NOT_APPLICABLE: FoA runtime, spawning, deployment, save mutation and release sign-off. Runtime sign-off was not performed.
+`codex/pack-save-isolated`, based on `origin/main` after actor/troop PR #250.
 
-Private logs, source observations, screenshots and machine-readable evidence remain outside the repository. Maintainer review is the next repository transition. No later feature is started by this task.
+## Remaining acceptance
+
+Run `Gems/TaintedGrailModdingSDK/Tools/editor_tests/pack_save_live_smoke.py` in the
+rebuilt Editor using the synthetic pack-save workspace. Verify creation, invalid
+edit and real write failures, correction/retry, saved-mod reopen, and deterministic
+repeat save. Record actual results before claiming this function complete or
+promoting the draft PR to ready for maintainer review.

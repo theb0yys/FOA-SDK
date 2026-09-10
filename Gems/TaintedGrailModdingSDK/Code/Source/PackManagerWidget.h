@@ -40,7 +40,6 @@ namespace TaintedGrailModdingSDK
         void RefreshWorkspaceMods(const QString& selectedPath = {});
         void OpenSelectedPack();
         void SetStatus(const QString& message, bool error = false);
-        bool ApplyPack();
         bool SavePack();
         QString CanonicalPackFilePath(const PackManifest& pack) const;
         bool IsInsideWorkspace(const QString& filePath) const;

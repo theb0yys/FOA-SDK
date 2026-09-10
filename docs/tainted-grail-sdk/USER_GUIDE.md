@@ -85,7 +85,7 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 
 1. Start from **FOA Development Hub** and review the live workspace, game-profile, active-pack, validation, blocker, and persistence context. The Hub only orchestrates existing panes and never grants execution or release permission.
 2. Use **Setup and readiness** to configure and save a workspace, exact game profile, active pack, and adapter capability context.
-3. Create or load pack manifests.
+3. In **Pack Manager**, choose **New mod**, enter a name and author, and select **Save mod**. Saving validates and writes the manifest before activating it. A failed save keeps your draft and the previous active mod; correct the reported problem and retry. Saved mods can be selected and reopened from the list. Starting a new draft leaves the previous mod active until the new one is saved.
 4. Import sources and evidence.
 5. Promote reviewed claims into canonical records.
 6. Inspect records, relationships, and blockers.

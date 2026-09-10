@@ -22,6 +22,7 @@ import validate_item_viewer_working_lifecycle as contract
 
 class ItemViewerWorkingLifecycleTests(unittest.TestCase):
     FIXTURE_PATHS = (
+        ".github/workflows/item-viewer-windows-validation.yml",
         "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
         "Gems/TaintedGrailModdingSDK/Code/Source/AssetBrowserPreviewRefreshService.cpp",
         "Gems/TaintedGrailModdingSDK/Code/Source/ItemVisualLifecycleWidget.cpp",
@@ -54,6 +55,47 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             root = Path(temporary)
             self.copy_fixture(root)
             contract.validate_item_viewer(root)
+
+    def test_engine_lfs_fetch_must_wait_for_pinned_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(root, ".github/workflows/item-viewer-windows-validation.yml",
+                        "lfs: false", "lfs: true", all_occurrences=True)
+            with self.assertRaisesRegex(RuntimeError, "after checkout so .lfsconfig is available"):
+                contract.validate_item_viewer(root)
+
+    def test_engine_lfs_download_cannot_be_removed_or_retargeted(self) -> None:
+        for replacement in ("# download omitted", "git lfs pull"):
+            with self.subTest(replacement=replacement), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                self.copy_fixture(root)
+                self.mutate(root, ".github/workflows/item-viewer-windows-validation.yml",
+                            "git -C o3de lfs pull", replacement)
+                with self.assertRaisesRegex(RuntimeError, "pinned engine LFS download"):
+                    contract.validate_item_viewer(root)
+
+    def test_engine_lfs_download_must_precede_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / ".github/workflows/item-viewer-windows-validation.yml"
+            workflow = path.read_text(encoding="utf-8")
+            start = workflow.index("      - name: Download pinned O3DE LFS assets")
+            end = workflow.index("      - name: Set up Python", start)
+            step = workflow[start:end]
+            path.write_text(workflow[:start] + workflow[end:] + "\n" + step, encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "before the Editor build"):
+                contract.validate_item_viewer(root)
+
+    def test_engine_lfs_failure_must_stop_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            self.mutate(root, ".github/workflows/item-viewer-windows-validation.yml",
+                        "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }", "# error ignored")
+            with self.assertRaisesRegex(RuntimeError, "LFS failure propagation"):
+                contract.validate_item_viewer(root)
 
     def test_missing_editor_build_registration_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

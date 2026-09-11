@@ -2,9 +2,9 @@
 
 ## Status and scope
 
-PARTIAL: workspace-switch protection is implemented and its focused validation passed.
-The broader Editor-exit regression suite failed and remains unresolved. Handoff is a
-draft PR, not a claim that all Editor regressions are clear.
+PASSED: workspace-switch protection and the focused Editor shutdown regression.
+PR #260 is ready for maintainer review. Expanded suites remain PARTIAL only for
+the Windows symlink tests that could not run on this host.
 
 Significant: adds a trusted-host workspace admission/commit notification contract.
 Primary owner: workspace-and-packs (Foundation); UI owns draft presentation.
@@ -38,13 +38,23 @@ No serialized format, stable identity, migration, dependency or engine-source ch
   paths and hashes were recorded. Coverage includes Save/Discard/Cancel, Escape and
   prompt dismissal, picker cancellation, invalid destination, invalid and locked-file
   Save, retry, old-root writes, new/saved drafts and same-workspace reloads.
-- PASSED: Foundation, Editor lifecycle and path-policy validators; 15 focused Python
-  tests; all 10 enabled pinned source validators; diff whitespace.
-- FAILED: the unchanged Editor-exit regression suite did not reach its final Save
-  prompt in the save case. Later diagnostic attempts were inconsistent, including
-  a destroyed pane assertion after a cancelled titlebar close. No root cause or fix
-  is established. The owner stopped that investigation. Diagnostic-only edits to the
-  shutdown test were removed from the source diff; evidence remains outside source.
+- PASSED: complete static validator/fixture pipeline and all 10 enabled pinned
+  source validators. Python discovery: 826 passed, zero failed; nine unrelated
+  symlink cases NOT_RUN because Windows symlink privileges are unavailable.
+  All four new atomicity-validator tests passed, including missing/reordered-step
+  mutations. The validator follows FinishWorkspaceChange rather than requiring
+  RefreshSnapshot directly inside LoadWorkspace.
+- PASSED: all nine shutdown/reopen Editor processes, 27 assertions, 22 measured
+  transitions (maximum 1.922 seconds), initialization and about-to-quit events,
+  exit code zero, no forced cleanup. Cancel/Escape/dismissal, invalid input and
+  locked-file Save preserve the full draft; successful Save/Discard exits and
+  three fresh-process reopens verify persistence.
+  The shutdown harness previously ran synchronously during InitInstance. It now
+  waits for NotifyEditorInitialized and queues its actions onto the event loop.
+  Tests used an external private-desktop launch adapter to avoid visible dialogs;
+  all committed cases and parent assertions were retained. Earlier failed runs
+  remain in external evidence. No production C++ or Editor binary changed for
+  this correction; the validated module hash still matches the workspace run.
 - NOT_RUN: separate New/Open/pane-close live suite for this change.
 - NOT_APPLICABLE: Asset Processor, game runtime, installer, deployment and release.
 
@@ -58,9 +68,9 @@ setting is restored by the new test. No game files or saves were modified.
 
 Branch: codex/pack-workspace-switch-protection, based on main
 7720e036ebd8a946364bbd5b4ad3de6bfe1912ce after the prerequisite PRs merged.
-The owner requested the next useful handoff step. Deliver this focused change as a
-DCO-signed commit and draft PR with the unresolved regression reported explicitly.
-Approval and merge remain with the maintainer.
+The owner authorized resolving the shutdown regression and completing the handoff.
+Deliver the focused correction as a DCO-signed commit on PR #260; preserve its
+ready-for-review state. Approval and merge remain with the maintainer.
 
 Local setup's game-profile detection, other panes' drafts, forced-exit recovery
 and autosave are outside this feature's scope.

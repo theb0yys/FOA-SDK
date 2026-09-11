@@ -155,9 +155,11 @@ File > Exit, the main-window Close button, and the ordinary Python exit command;
 Cancel/Escape/prompt dismissal, invalid input and a real locked-file save failure;
 save retry, new/saved drafts, discard, clean exit, and three fresh-process reopens.
 
-A passing result requires both the in-process assertions and an actual process
-exit code of zero with an about-to-quit notification. A timeout or forced test
-cleanup is a failure. Inspect `suite-result.json`, each `process-result.json`,
+The script waits for `EditorEventBus.NotifyEditorInitialized` before testing;
+`--runpython` itself runs inside host initialization, so a fixed startup delay is
+insufficient. A passing result requires that initialization event, the in-process
+assertions, and an actual process exit code of zero with an about-to-quit notification.
+A timeout or forced test cleanup is a failure. Inspect `suite-result.json`, each `process-result.json`,
 and the saved prompt/draft images under the output directory. The temporary
 workspace, project user/log data, and environment are isolated; Qt uses normal
 desktop layout preferences. Startup may read installed-game discovery metadata;

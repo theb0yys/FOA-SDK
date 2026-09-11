@@ -134,11 +134,12 @@ function Invoke-ExitCase([string]$Name, [string]$Case, [string]$Reuse = '',
     }
     $test = $null
     if (Test-Path -LiteralPath "$caseRoot/result.json") { $test = Get-Content "$caseRoot/result.json" -Raw | ConvertFrom-Json }
-    $passed = -not $forcedStop -and $editor.ExitCode -eq 0 -and $test.status -eq 'PASSED' -and $test.about_to_quit
+    $passed = -not $forcedStop -and $editor.ExitCode -eq 0 -and $test.status -eq 'PASSED' -and $test.about_to_quit -and $test.editor_initialized
     if ($Case -eq 'new-discard' -and (Test-Path -LiteralPath "$workspaceRoot/Packs/sdkqa.new-exit-draft")) { $passed = $false }
     $row = [ordered]@{
         status=$(if ($passed) {'PASSED'} else {'FAILED'}); case=$Case; pid=$editor.Id
         exit_code=$editor.ExitCode; forced_stop=$forcedStop; about_to_quit=$test.about_to_quit
+        editor_initialized=$test.editor_initialized
         elapsed_seconds=[Math]::Round($clock.Elapsed.TotalSeconds, 3)
         workspace=$workspaceRoot; checks=$test.checks; result="$caseRoot/result.json"
     }

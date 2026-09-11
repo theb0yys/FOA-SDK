@@ -65,6 +65,15 @@ Candidate construction executes in this order:
 
 `FoundationService::LoadWorkspace` publishes only after every stage succeeds. Publication replaces the workspace, document path, canonical root, registry, import issues, catalog and catalog path, then builds one new snapshot. Failure publishes nothing and leaves all previous objects, paths, packs and the previous snapshot unchanged.
 
+After candidate validation, `BeginWorkspaceChange` asks trusted host handlers for
+admission before clearing or replacing live state. Cancel or a failed draft Save
+vetoes the switch; Save writes to the original workspace. A completed Save remains
+saved if another handler later vetoes. After all workspace objects are published,
+`FinishWorkspaceChange` refreshes the snapshot, sends `OnWorkspaceChanged`, and
+releases the reentrancy guard. Pack Manager resets its draft only on that commit
+notification. The atomicity validator checks this ordering across both functions;
+mutation tests reject missing steps and premature publication or notification.
+
 Candidate loading does not update the persistence boundary's published path. Pack containment reads the live `FoundationService` workspace path, so a failed candidate cannot redirect a later pack operation.
 
 ## Test evidence

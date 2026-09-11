@@ -15,18 +15,20 @@ from pathlib import Path
 import time
 import traceback
 
+import azlmbr.editor as editor
 import azlmbr.legacy.general as general
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 from shiboken6 import isValid
 
 
 def run():
+    assert _editor_initialized, 'Shutdown acceptance must run after Editor initialization'
     output = Path(os.environ['FOA_SDK_PACK_RESULT'])
     workspace = Path(os.environ['FOA_SDK_PACK_WORKSPACE'])
     case = os.environ['FOA_SDK_PACK_EXIT_CASE']
     assert case in ('save', 'discard', 'clean', 'pristine', 'new-save', 'new-discard', 'reopen')
     result = {'status': 'PARTIAL', 'case': case, 'checks': [], 'transition_seconds': [],
-              'about_to_quit': False}
+              'about_to_quit': False, 'editor_initialized': _editor_initialized}
     app = QtWidgets.QApplication.instance()
     keep = []
     root = None
@@ -351,4 +353,18 @@ def run():
         fail()
 
 
-run()
+# --runpython executes inside InitInstance, before the host enters its main loop.
+# Fixed delays can still fire in a nested startup loop; wait for the actual host event.
+_editor_initialized = False
+
+
+def on_editor_initialized(_args):
+    global _editor_initialized
+    _editor_initialized = True
+    _initialization_handler.disconnect()
+    QtCore.QTimer.singleShot(0, run)
+
+
+_initialization_handler = editor.EditorEventBusHandler()
+_initialization_handler.connect()
+_initialization_handler.add_callback('NotifyEditorInitialized', on_editor_initialized)

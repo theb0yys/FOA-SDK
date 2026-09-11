@@ -8,6 +8,8 @@
 #include "PackManagerWidget.h"
 
 #include "FoundationService.h"
+#include "ModPackageWidget.h"
+#include <QDialog>
 
 #include <AzCore/std/algorithm.h>
 
@@ -319,6 +321,21 @@ namespace TaintedGrailModdingSDK
         buttonLayout->addStretch(1);
         buttonLayout->addWidget(saveButton);
         rootLayout->addLayout(buttonLayout);
+
+        auto* packageButton = new QPushButton(tr("Build and export package"), this);
+        packageButton->setObjectName("packBuildExport");
+        rootLayout->addWidget(packageButton);
+        connect(packageButton, &QPushButton::clicked, this, [this]()
+        {
+            if (!ConfirmDraftReplacement(tr("opening package export"))) { return; }
+            auto* dialog = new QDialog(this, Qt::Window);
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+            dialog->setWindowTitle(tr("Mod Package Builder"));
+            auto* layout = new QVBoxLayout(dialog);
+            layout->addWidget(new ModPackageWidget(dialog));
+            dialog->resize(1000, 700);
+            dialog->show();
+        });
 
         m_statusLabel = new QLabel(this);
         m_statusLabel->setObjectName(QStringLiteral("packStatus"));

@@ -6,6 +6,10 @@
 #
 
 set(FILES
+    Source/ModPackageService.h
+    Source/ModPackageIo.h
+    Source/ModPackageService.cpp
+    Source/ModPackageImportService.cpp
     Source/FoundationAssetLocalisationService.cpp
     Source/ProjectImageService.cpp
     Source/ProjectImageService.h

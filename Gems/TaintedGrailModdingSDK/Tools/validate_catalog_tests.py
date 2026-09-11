@@ -142,6 +142,7 @@ def main() -> int:
             "Tests/WorldAuthoringTests.cpp",
             "Tests/QuestAuthoringTests.cpp",
             "Tests/AssetLocalisationAuthoringTests.cpp",
+            "Tests/ModPackageExportTests.cpp",
             "Tests/EconomyCoverageServiceTests.cpp",
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
             "Tests/FoAInstallDiscoveryServiceTests.cpp",

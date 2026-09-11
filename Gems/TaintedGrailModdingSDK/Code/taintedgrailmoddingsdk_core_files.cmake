@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/ModPackagePlan.h
+    Source/ModPackagePlan.cpp
     Source/WorldModels.h
     Source/QuestAuthoringModels.h
     Source/AssetLocalisationModels.cpp

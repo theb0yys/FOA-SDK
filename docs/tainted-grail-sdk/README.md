@@ -154,4 +154,5 @@ The actual Windows screenshot pass remains pending. Trusted identity/time provid
 Documentation changes must describe current behavior honestly, distinguish implemented from planned behavior, avoid proprietary content and private paths, use stable links, and include migration notes for breaking format changes.
 
 - [Asset and Localisation Manager](ASSET_LOCALISATION_MANAGER_GUIDE.md) — images, translations, assignments and recovery.
+- [Mod Package Builder guide](MOD_PACKAGE_EXPORT_GUIDE.md) and [design](MOD_PACKAGE_EXPORT_DESIGN.md): portable local authoring packages and clean-workspace reopening.
 - [Asset and Localisation Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) — ownership, schema 7 and validation.

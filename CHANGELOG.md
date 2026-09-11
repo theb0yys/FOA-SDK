@@ -8,6 +8,7 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Mod Package Builder in Pack Manager with reviewed inventory, deterministic .tgmod authoring archives, declared dependency closure, verified managed images/translations/assignments, and inspect/import/open into a new workspace. Checksums, bounded background work, cancellation and non-replacing writes protect existing files; runtime deployment remains a separate capability.
 - Asset and Localisation Manager with bounded PNG/JPEG intake, image and translated-text previews, language variants and fallback, assignments to items/actors/quests, custom item icons and actor portraits, and save/reopen/draft/recovery checks.
 - Catalog schema 7 project assets, localisation entries and pack-scoped presentation bindings, with revision-bound author intent, portable managed image paths and verified schema-1–6 migration backups. Native deployment, runtime localisation and mesh/audio conversion remain separate capabilities.
 

@@ -1005,3 +1005,7 @@ PresentationBindings store BindingId, OwnerPackId, TargetRecordId, Slot, ValueRe
 Collections are bounded to 4096 images, 8192 text entries / 16 MiB total text, and 32768 assignments. Schemas 1–6 cannot carry these nonempty collections. Their load results retain their old version until validated projection. Saves emit schema 7 and preserve a verified exact older-catalog backup. Older Editors require that backup to downgrade; later changes are not backported. Missing image bytes do not prevent catalog metadata loading; selected previews and image assignments verify content so the user can repair the source.
 
 See [Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) for ownership, immutable file storage and failure behavior.
+
+## Local authoring package version 1
+
+The .tgmod archive uses the foa-authoring-package format, version 1, with a canonical manifest, manifest SHA-256 and ordered base64 payload entries. It preserves existing catalog schema 7 and pack schema 1 types without changing their readers. Unknown versions or fields are rejected. The [package design](MOD_PACKAGE_EXPORT_DESIGN.md) owns bounds, path rules, exact profile binding, portable metadata, provenance, reconstruction and failure behavior. The [guide](MOD_PACKAGE_EXPORT_GUIDE.md) covers the Editor workflow. This archive is for editable authoring data; it does not define a FoA runtime loader format.

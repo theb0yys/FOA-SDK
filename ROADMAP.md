@@ -143,6 +143,10 @@ Status: implemented vertical slice, continuing hardening and exact-head host/UI 
 - Asset and Localisation Manager: local PNG/JPEG images, translations, content assignments and previews are implemented and passed compiled and live Editor acceptance. See the [Manager guide](docs/tainted-grail-sdk/ASSET_LOCALISATION_MANAGER_GUIDE.md).
 - Addresses, bundles, source/cooked assets, localisation keys, evidence, and compatibility.
 
+### Local authoring packages
+
+- Mod Package Builder: export selected mod definitions, declared local dependencies, reviewed images, translations and assignments into a verified authoring archive; reopen it in a new workspace. See the [guide](docs/tainted-grail-sdk/MOD_PACKAGE_EXPORT_GUIDE.md). Runtime materialisation remains a separate capability.
+
 ## Phase 7 — FoA adapter contracts
 
 Status: active development.

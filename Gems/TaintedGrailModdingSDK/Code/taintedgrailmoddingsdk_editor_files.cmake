@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/ModPackageWidget.h
+    Source/ModPackageWidget.cpp
     Source/AssetLocalisationManagerWidget.h
     Source/AssetLocalisationManagerWidget.cpp
     Source/AssetLocalisationManagerWidgetWorkflow.cpp

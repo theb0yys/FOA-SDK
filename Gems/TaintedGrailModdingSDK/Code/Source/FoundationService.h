@@ -61,10 +61,13 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& explicitInstallPath = {},
             const AZStd::string& workspaceRootHint = {});
 
-        void SetWorkspace(const WorkspaceModel& workspace);
+        //! Returns false if a draft owner vetoes replacement or a replacement is already in progress.
+        bool SetWorkspace(const WorkspaceModel& workspace);
         bool SaveWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr);
         bool SaveWorkspace(AZStd::string* error = nullptr);
-        bool LoadWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr);
+        //! Validates the candidate before asking draft owners, then publishes it atomically.
+        //! cancelled distinguishes a veto (including failed draft save) from a load error.
+        bool LoadWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr, bool* cancelled = nullptr);
 
         bool UpsertPack(const PackManifest& pack, AZStd::string* error = nullptr);
         bool SetActivePack(const PackManifest& pack, AZStd::string* error = nullptr);
@@ -236,6 +239,8 @@ namespace TaintedGrailModdingSDK
         bool WriteAuthoredEconomyDocument(const AZStd::string& json, AZStd::string* error);
         FoundationService();
 
+        bool BeginWorkspaceChange();
+        void FinishWorkspaceChange();
         void ClearWorkspaceScopedState(bool clearWorkspaceLocation);
         bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
         bool PersistCatalogCandidate(const CatalogDatabase& candidate, AZStd::string* error);
@@ -276,5 +281,6 @@ namespace TaintedGrailModdingSDK
         FoundationWorkspaceLoadService m_workspaceLoadService;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;
+        bool m_workspaceChangeInProgress = false;
     };
 } // namespace TaintedGrailModdingSDK

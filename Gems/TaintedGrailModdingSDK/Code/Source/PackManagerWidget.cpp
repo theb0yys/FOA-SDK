@@ -421,6 +421,21 @@ namespace TaintedGrailModdingSDK
         RefreshWorkspaceMods(ToQString(FoundationService::Get().GetActivePackFilePath()));
     }
 
+    bool PackManagerWidget::CanChangeWorkspace(const FoundationService& service)
+    {
+        return &service != &FoundationService::Get()
+            || ConfirmDraftReplacement(tr("switching workspaces"));
+    }
+
+    void PackManagerWidget::OnWorkspaceChanged(const FoundationService& service)
+    {
+        if (&service == &FoundationService::Get())
+        {
+            ClearFormForNewPack();
+            SetStatus(tr("Workspace changed. Create a new mod or open a saved mod."));
+        }
+    }
+
     PackManifest PackManagerWidget::BuildPackFromForm() const
     {
         PackManifest pack;

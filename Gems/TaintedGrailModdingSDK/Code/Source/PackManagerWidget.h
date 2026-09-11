@@ -36,6 +36,8 @@ namespace TaintedGrailModdingSDK
 
     private:
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
 
         PackManifest BuildPackFromForm() const;
         void PopulateFromPack(const PackManifest& pack);

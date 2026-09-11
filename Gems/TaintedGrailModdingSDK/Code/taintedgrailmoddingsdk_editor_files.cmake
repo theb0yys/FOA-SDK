@@ -74,6 +74,7 @@ set(FILES
     Source/ItemVisualSelectorInstallerSystemComponent.h
     Source/ItemVisualSelectorWidget.cpp
     Source/ItemVisualSelectorWidget.h
+    Source/PackManagerWidgetRecovery.cpp
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
     Source/QuestStateInspectorWidget.cpp

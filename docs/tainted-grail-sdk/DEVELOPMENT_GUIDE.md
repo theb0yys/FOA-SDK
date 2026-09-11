@@ -135,6 +135,13 @@ Keep domain logic in services, use stable pane identities, provide accessible/ac
 
 UI behavior needs L3 evidence only when the change can affect actual interaction/rendering.
 
+### Pack Manager crash recovery (Windows)
+
+[Draft recovery](PACK_DRAFT_RECOVERY.md) defines the separate raw-form schema, per-user
+store, workspace binding, background checkpointing and lifecycle cleanup. Its compiled
+persistence tests and private-desktop recovery runner must both pass when these paths
+change. Recovery does not make the normal shutdown or workspace admission guards optional.
+
 ### Pack Manager shutdown acceptance (Windows)
 
 The pinned Editor's main-window close handler calls `ClosePanesWithRollback`,

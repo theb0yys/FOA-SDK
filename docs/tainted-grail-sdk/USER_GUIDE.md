@@ -88,6 +88,16 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 3. In **Pack Manager**, choose **New mod**, enter a name and author, and select **Save mod**. Saving validates and writes the manifest before activating it. A failed save keeps your draft and the previous active mod; correct the reported problem and retry. Saved mods can be selected and reopened from the list. Starting a new draft leaves the previous mod active until the new one is saved. The pane shows **Unsaved changes** when you edit normal or advanced fields. Before **New mod**, **Open selected**, or closing Pack Manager removes those edits, choose **Save**, **Discard**, or **Cancel**. Save continues only after a successful write. Cancel (also Escape or closing the prompt) or a failed Save keeps the pane open with the full draft. Discard closes the pane without writing, or replaces the draft once the new form or selected mod is ready. Reopening the pane shows the active saved mod. Reverting edits to saved or initial values clears the unsaved warning, and a clean pane closes without prompting. The same protection applies when exiting the Editor: Save writes the mod before exit, Discard exits without writing it, and Cancel or a failed Save stops exit with the draft intact.
 
 Opening another workspace from **SDK Status** or **Catalog Browser** also offers **Save**, **Discard**, or **Cancel** for an unsaved Pack Manager draft. Save writes the draft into the current workspace before switching. Cancel or a failed Save preserves the current workspace and full draft. A successful switch starts a clean form using the new workspace's profile; choose a saved mod from that workspace to reopen it. Reloading the same workspace has the same protection. An invalid workspace file leaves the draft untouched.
+
+Pack Manager also keeps a separate recovery copy while you edit. After a crash or forced
+shutdown, reopen the same workspace and Pack Manager, then choose **Restore draft** or
+**Discard recovery copy**. Restore includes unfinished normal and advanced fields; use
+**Save mod** to write the recovered changes. Recovery never automatically overwrites your
+saved mod. Cancel and failed Save preserve the copy. Recovery errors appear in the pane;
+**Retry recovery** is available when a copy cannot be opened. Another Editor using the
+same workspace must release its recovery lock first. Edits since the latest completed
+checkpoint may be lost; copies have a 256 KiB limit. See [draft recovery](PACK_DRAFT_RECOVERY.md).
+
 4. Import sources and evidence.
 5. Promote reviewed claims into canonical records.
 6. Inspect records, relationships, and blockers.

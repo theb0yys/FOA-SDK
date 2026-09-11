@@ -536,6 +536,9 @@ namespace TaintedGrailModdingSDK
         FactionProfile::Reflect(context);
         FactionLink::Reflect(context);
         QuestAuthoringProfile::Reflect(context);
+        ProjectAssetProfile::Reflect(context);
+        LocalisationEntry::Reflect(context);
+        PresentationBinding::Reflect(context);
         WorldPlaceProfile::Reflect(context);
         WorldPathProfile::Reflect(context);
         WorldPathNode::Reflect(context);
@@ -544,7 +547,7 @@ namespace TaintedGrailModdingSDK
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(8)
+                ->Version(9)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -569,7 +572,10 @@ namespace TaintedGrailModdingSDK
                 ->Field("WorldPaths", &CatalogDocument::m_worldPaths)
                 ->Field("WorldPathNodes", &CatalogDocument::m_worldPathNodes)
                 ->Field("WorldPathEdges", &CatalogDocument::m_worldPathEdges)
-                ->Field("QuestProfiles", &CatalogDocument::m_questProfiles);
+                ->Field("QuestProfiles", &CatalogDocument::m_questProfiles)
+                ->Field("ProjectAssets", &CatalogDocument::m_projectAssets)
+                ->Field("LocalisationEntries", &CatalogDocument::m_localisationEntries)
+                ->Field("PresentationBindings", &CatalogDocument::m_presentationBindings);
         }
     }
 
@@ -579,6 +585,8 @@ namespace TaintedGrailModdingSDK
             || m_schemaVersion == PopulationCatalogSchemaVersion
             || m_schemaVersion == EncounterCatalogSchemaVersion
             || m_schemaVersion == SocietyCatalogSchemaVersion
+            || m_schemaVersion == WorldCatalogSchemaVersion
+            || m_schemaVersion == QuestCatalogSchemaVersion
             || m_schemaVersion == CurrentCatalogSchemaVersion;
     }
 

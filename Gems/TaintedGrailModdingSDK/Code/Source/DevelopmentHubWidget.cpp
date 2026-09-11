@@ -39,6 +39,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogBrowserPane = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernancePane = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorPane = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* AssetLocalisationPane = "Tainted Grail Asset and Localisation Manager";
         constexpr const char* QuestStateInspectorPane = "Tainted Grail Quest and State Inspector";
         constexpr const char* SpawnEncounterEditorPane = "Tainted Grail Spawn and Encounter Editor";
         constexpr const char* WorldRouteEditorPane = "Tainted Grail World and Route Editor";
@@ -285,6 +286,7 @@ namespace TaintedGrailModdingSDK
                 { tr("Spawns and encounters"), tr("Plan encounter composition, placement and population limits."), SpawnEncounterEditorPane },
                 { tr("World and routes"), tr("Create places, roads and routes with a visual graph."), WorldRouteEditorPane },
                 { tr("Factions and authority"), tr("Edit cultures, membership, relationships and jurisdiction."), FactionAuthorityEditorPane },
+                { tr("Assets and text"), tr("Manage images, translations and content assignments."), AssetLocalisationPane },
                 { tr("Quests and state"), tr("Browse quests, edit local definitions and preview progression."), QuestStateInspectorPane },
                 { tr("Avalon AI"), tr("Create and edit Avalon AI packages and plans."), AvalonAIEditorPane },
             });

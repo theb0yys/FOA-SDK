@@ -1,13 +1,17 @@
-# Open PR integration
+# Asset and Localisation Manager
 
-Status: all seven PR changes integrated and locally validated.
+Status: local implementation and validation complete.
 
-Scope: the owner explicitly authorized merging PRs #252-#258 and fixing conflicts. The combined source retains Pack Manager draft/exit protection and encounter, faction, world/route and quest authoring. No release, deployment, game/save changes, branch deletion or history rewrite is included.
+The Manager provides project-owned PNG/JPEG images, translated text and assignments to items, actors and quests, with visible previews, save/reopen and actionable errors.
 
-Classification: Significant integration of existing authoring/persistence surfaces. The focused CI checkout correction is Routine; primary owner validation-and-evidence. Supporting owners: workspace-and-packs, content-pack-authoring, schemas-and-persistence and ui-framework.
+Classification: Significant. Primary owner content-pack-authoring; supporting owners catalog-and-identity, schemas-and-persistence, workspace-and-packs, artifact-ownership and ui-framework.
 
-Conflicts were confined to CURRENT_TASK. Foundation's pack-save and authoring declarations combine without changing their contracts. Item Viewer CI fetches Git LFS assets after the pinned O3DE source checkout, so it reads the pinned .lfsconfig endpoint and receives real image/icon data. Negative coverage checks missing or retargeted downloads, ordering and failure propagation.
+Catalog schema 7 adds images, localisation entries and presentation bindings. Schemas 1–6 remain validated load inputs; upgrades preserve a verified exact backup. Workspace/pack and runtime contracts and the O3DE pin are unchanged.
 
-Validation: PASSED combined Core.Static, Framework.Static, Editor, Catalog.Tests and CanonicalInterchange.Tests builds against O3DE pin 68683f23fb747380d3efa2424bd5f30242e9c5a2. Catalog: 464 passed, two explicit Windows symlink skips. Canonical Interchange: 39 passed. Static Python: 822 passed, nine explicit skips from 831 discovered. All four pinned source-policy suites passed 10 checks each. All 16 focused CI regression tests passed. Unchanged engine artifacts were reused; all SDK targets were rebuilt. The original PRs retain their per-feature live Editor evidence; no new combined-tree interactive UI or runtime sign-off is claimed. Hosted jobs retain their actual pending/skipped/passed states; the corrected engine checkout and LFS download succeeded.
+Validation: all static validators and four ten-check source-policy suites passed. Python discovered 831 tests (822 passed, nine explicit skips). Core, Framework, Editor, Catalog and Canonical targets built against the pinned O3DE host. Catalog: 474 passed, two explicit Windows symlink skips. Canonical: 39 passed. Actual Editor acceptance passed image/text previews, language fallback, duplicate keys, item/actor/quest assignments, consumer previews, missing-file errors, failed-save recovery, reopening, draft cancellation and small-window layout. Maximum measured UI timer gap: 0.157 seconds on the synthetic acceptance fixture.
 
-Source reconciliation used isolated non-main branches. Other active worktrees and drafts were left alone. GitHub PR records hold the authorized merge outcomes and validation notes. No follow-on feature is authorized by this record.
+Design and guide: docs/tainted-grail-sdk/ASSET_LOCALISATION_MANAGER_DESIGN.md and ASSET_LOCALISATION_MANAGER_GUIDE.md. Reproducible Editor fixture and smoke scripts are under Gems/TaintedGrailModdingSDK/Tools/editor_tests/.
+
+Out of scope: native game extraction, mesh/audio conversion, translation import/export, packaging/deployment, game/save writes, release and other worktrees.
+
+Delivery branch: codex/asset-localisation-manager, based on main 7720e036ebd8a946364bbd5b4ad3de6bfe1912ce. Submit through a focused PR for maintainer audit; no new merge or follow-on milestone is inferred.

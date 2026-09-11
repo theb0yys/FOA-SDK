@@ -37,12 +37,12 @@ Warnings about unassigned placement or missing cleanup notes permit saving an un
 
 ## Catalog compatibility
 
-Encounters were introduced in catalog schema 3. Current saves use schema 6, which also supports world, society and quest
-authoring. Schema-1/2/3/4/5 catalogs load through bound validation. Before overwriting an older catalog, the
+Encounters were introduced in catalog schema 3. Current saves use schema 7, which also supports world, society and quest
+authoring. Schema-1/2/3/4/5/6 catalogs load through bound validation. Before overwriting an older catalog, the
 writer saves and verifies the exact original bytes in
 a sibling migration backup. Failure to create that backup prevents replacement.
 
-Older Editors that support only schemas 1–5 cannot open the schema-6 catalog. Preserve your workspace before
+Older Editors that support only schemas 1–6 cannot open the schema-7 catalog. Preserve your workspace before
 downgrading, then restore the pre-migration catalog backup. New encounter edits do not have a schema-2
 representation. See [catalog recovery](CATALOG_GUIDE.md#encounter-plans-and-migration-recovery).
 
@@ -51,3 +51,5 @@ representation. See [catalog recovery](CATALOG_GUIDE.md#encounter-plans-and-migr
 This is a composition preview and authoring workflow. It does not render or place a 3D scene, spawn
 characters, evaluate game conditions, or execute cleanup/rollback notes. Deployment and native
 encounter execution require a separately supported game integration.
+
+Schema 7 also carries project images, translations and presentation assignments; see [Asset and Localisation Manager](ASSET_LOCALISATION_MANAGER_GUIDE.md).

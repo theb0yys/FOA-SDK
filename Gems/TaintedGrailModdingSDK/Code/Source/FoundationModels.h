@@ -13,6 +13,7 @@
 #include "SocietyModels.h"
 #include "WorldModels.h"
 #include "QuestAuthoringModels.h"
+#include "AssetLocalisationModels.h"
 
 #include <AzCore/RTTI/RTTI.h>
 #include <AzCore/std/containers/vector.h>
@@ -358,6 +359,9 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<WorldPathNode> m_worldPathNodes;
         AZStd::vector<WorldPathEdge> m_worldPathEdges;
         AZStd::vector<QuestAuthoringProfile> m_questProfiles;
+        AZStd::vector<ProjectAssetProfile> m_projectAssets;
+        AZStd::vector<LocalisationEntry> m_localisationEntries;
+        AZStd::vector<PresentationBinding> m_presentationBindings;
     };
 
     struct CatalogPromotionRequest

@@ -28,6 +28,8 @@
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QImage>
+#include <QPixmap>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QPointer>
@@ -186,6 +188,9 @@ namespace TaintedGrailModdingSDK
         itemRecordLayout->addRow(tr("Item record"), m_itemRecord);
         itemRecordLayout->addRow(tr("Identity and governance"), m_itemIdentity);
         itemLayout->addWidget(itemRecordGroup);
+        m_assignedIcon = new QLabel(itemContent); m_assignedIcon->setObjectName("economyAssignedIcon");
+        m_assignedIcon->setTextFormat(Qt::PlainText); m_assignedIcon->setWordWrap(true);
+        m_assignedIcon->setMinimumHeight(96); itemLayout->addWidget(m_assignedIcon);
 
         auto* itemProfileGroup = new QGroupBox(tr("Typed Item Profile"), itemContent);
         auto* itemProfileLayout = new QFormLayout(itemProfileGroup);
@@ -675,6 +680,18 @@ namespace TaintedGrailModdingSDK
         if (!m_refreshing) { StoreDraft("item:" + m_loadedItem, m_itemForm); }
         const AZStd::string recordId = ToAzString(m_itemRecord->currentData().toString());
         m_loadedItem = ToQString(recordId);
+        m_assignedIcon->clear();
+        auto& presentationService = FoundationService::Get(); const auto* presentationPack = presentationService.GetActivePack();
+        const auto* iconBinding = presentationPack ? presentationService.GetCatalog().FindPresentationBinding(
+            presentationPack->m_packId, recordId, "icon") : nullptr;
+        if (iconBinding && !iconBinding->m_valueRecordId.empty())
+        {
+            QImage icon; AZStd::string error;
+            if (presentationService.ReadProjectAssetImage(iconBinding->m_valueRecordId, icon, &error))
+            { m_assignedIcon->setPixmap(QPixmap::fromImage(icon).scaled(QSize(128, 128), Qt::KeepAspectRatio, Qt::SmoothTransformation)); }
+            else { m_assignedIcon->setText(ToQString(error)); }
+        }
+        else { m_assignedIcon->setText(tr("Assign a custom icon in Assets and text.")); }
         const CatalogDatabase& catalog = FoundationService::Get().GetCatalog();
         const CatalogRecord* record = catalog.FindByRecordId(recordId);
         if (!record)

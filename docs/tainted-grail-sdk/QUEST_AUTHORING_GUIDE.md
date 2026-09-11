@@ -17,6 +17,6 @@ State keys describe authored boolean, integer (±1,000,000,000) or text defaults
 
 Switching workspace, profile or active mod preserves a dirty draft but prevents saving it into the wrong context. Return to its original workspace/mod to save, or revert. Imported drafts are saved only as new definitions in the selected active mod.
 
-QuestDefinition V1 files and QuestBindingManifest V1 retain their original contract. Catalog schema 6 stores authoring profiles, labels, state declarations and local bindings. Schemas 1–5 load with validation; the first schema-6 save preserves and verifies an exact pre-migration backup. An older Editor requires that backup for downgrade. Keep pack manifests and source/evidence documents with the catalog.
+QuestDefinition V1 files and QuestBindingManifest V1 retain their original contract. Catalog schema 6 stores authoring profiles, labels, state declarations and local bindings. Current saves use schema 7, which adds project images, translations and presentation assignments. Schemas 1–6 load with validation; the first schema-7 save preserves and verifies an exact pre-migration backup. An older Editor requires that backup for downgrade. Keep pack manifests and source/evidence documents with the catalog.
 
 Local authoring does not execute quests, resolve runtime bindings, modify game state, edit saves or deploy content. Conditions and actions retain their existing inert V1 vocabulary.

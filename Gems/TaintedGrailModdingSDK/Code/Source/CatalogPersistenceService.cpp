@@ -65,10 +65,11 @@ namespace TaintedGrailModdingSDK
                 && version != EncounterCatalogSchemaVersion
                 && version != SocietyCatalogSchemaVersion
                 && version != WorldCatalogSchemaVersion
+                && version != QuestCatalogSchemaVersion
                 && version != CurrentCatalogSchemaVersion)
             {
                 return AZ::Failure(AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4/5 migration and schema 6.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4/5/6 migration and schema 7.",
                     version));
             }
             return AZ::Success(version);
@@ -593,7 +594,7 @@ namespace TaintedGrailModdingSDK
         if (document.m_schemaVersion != CurrentCatalogSchemaVersion)
         {
             return AZ::Failure(AZStd::string(
-                "Canonical catalog saves require schema 6; schemas 1/2/3/4/5 are load-only migration inputs."));
+                "Canonical catalog saves require schema 7; schemas 1/2/3/4/5/6 are load-only migration inputs."));
         }
         if (document.m_workspaceId.empty() || document.m_profileId.empty()
             || document.m_gameVersion.empty() || document.m_branch.empty())
@@ -605,6 +606,9 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Catalog schemas 1/2 cannot contain encounter definitions."));
         }
+        if (document.m_schemaVersion < AssetLocalisationCatalogSchemaVersion && (!document.m_projectAssets.empty()
+            || !document.m_localisationEntries.empty() || !document.m_presentationBindings.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1-6 cannot contain asset/localisation collections.")); }
         if (document.m_schemaVersion < QuestCatalogSchemaVersion && !document.m_questProfiles.empty())
         { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4/5 cannot contain quest collections.")); }
         if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
@@ -719,6 +723,9 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Catalog schemas 1/2 cannot contain encounter definitions."));
         }
+        if (document.m_schemaVersion < AssetLocalisationCatalogSchemaVersion && (!document.m_projectAssets.empty()
+            || !document.m_localisationEntries.empty() || !document.m_presentationBindings.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1-6 cannot contain asset/localisation collections.")); }
         if (document.m_schemaVersion < QuestCatalogSchemaVersion && !document.m_questProfiles.empty())
         { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4/5 cannot contain quest collections.")); }
         if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()

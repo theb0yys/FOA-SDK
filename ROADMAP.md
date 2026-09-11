@@ -140,7 +140,7 @@ Status: implemented vertical slice, continuing hardening and exact-head host/UI 
 
 ### Assets and localisation
 
-- Asset and Localisation Manager.
+- Asset and Localisation Manager: local PNG/JPEG images, translations, content assignments and previews are implemented and passed compiled and live Editor acceptance. See the [Manager guide](docs/tainted-grail-sdk/ASSET_LOCALISATION_MANAGER_GUIDE.md).
 - Addresses, bundles, source/cooked assets, localisation keys, evidence, and compatibility.
 
 ## Phase 7 — FoA adapter contracts

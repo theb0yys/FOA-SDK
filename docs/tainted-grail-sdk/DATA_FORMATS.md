@@ -498,7 +498,7 @@ The document is bound to one workspace and exact game profile:
 
 ```json
 {
-  "SchemaVersion": 6,
+  "SchemaVersion": 7,
   "WorkspaceId": "owner.workspace",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
@@ -522,7 +522,10 @@ The document is bound to one workspace and exact game profile:
   "WorldPaths": [],
   "WorldPathNodes": [],
   "WorldPathEdges": [],
-  "QuestProfiles": []
+  "QuestProfiles": [],
+  "ProjectAssets": [],
+  "LocalisationEntries": [],
+  "PresentationBindings": []
 }
 ```
 
@@ -539,8 +542,8 @@ Schema-1 migration is read-only and fail-closed:
 4. legacy validation and governance compatibility rules run without changing the detected schema version;
 5. the complete candidate is validated against the active workspace, profile, evidence registry, and catalog
    integrity rules before successful bound replacement;
-6. only successful bound replacement followed by `BuildDocument` produces a schema-6 document;
-7. the next successful catalog save writes that schema-6 document, including when every population collection
+6. only successful bound replacement followed by `BuildDocument` produces a schema-7 document;
+7. the next successful catalog save writes that schema-7 document, including when every population collection
    is empty.
 
 A loaded schema-1 candidate remains schema 1 after compatibility normalization.
@@ -550,7 +553,7 @@ and failed persistence are rejected without replacing the published catalog. Mig
 records, relationships, validation history, governance history, economy collections, and their stable order.
 Plain catalog documents require an explicit `SchemaVersion`. A legacy O3DE `JsonSerialization` envelope that
 predates a nested catalog schema is treated only as a schema-1 migration input. Current saves always emit the
-plain schema-6 document with explicit empty collections, not a new O3DE envelope.
+plain schema-7 document with explicit empty collections, not a new O3DE envelope.
 
 Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
 
@@ -605,7 +608,7 @@ faction or change kind. Complete-definition saves preserve surviving IDs and rem
 belonging to that faction. Invalid evidence, ownership, references or disk writes prevent publication.
 
 Schema-1/2/3 inputs carrying society rows are rejected. Supported older catalogs retain their detected version
-until bound validation and projection; saves write schema 6 and verify the exact original backup before
+until bound validation and projection; saves write schema 7 and verify the exact original backup before
 overwriting an earlier version. Workspace/pack schemas and canonical interchange are unchanged.
 See [faction design](FACTION_AUTHORITY_EDITOR_DESIGN.md) and [usage](FACTION_AUTHORITY_EDITOR_GUIDE.md).
 
@@ -990,3 +993,15 @@ QuestProfiles attach to synthetic narrative/quest canonical records. RecordId eq
 Bounds are 256 quest profiles, 8 MiB combined DefinitionJson, 1 MiB per definition and 256 labels/state keys/bindings per quest. Boolean defaults are true/false; integer defaults are bounded to +/-1000000000; text/default descriptions are bounded single-line strings. State uses must match their declared type. Exact catalog actor, item, world-location and quest references are validated.
 
 Readers accept schemas 1–6 and the writer emits 6. Schema-1/2/3/4/5 documents cannot contain nonempty QuestProfiles. Old catalogs retain an exact verified backup before replacement; future versions and malformed input fail closed. See [quest authoring design](QUEST_AUTHORING_DESIGN.md) and [guide](QUEST_AUTHORING_GUIDE.md).
+
+## Images, translations and presentation assignments (catalog schema 7)
+
+ProjectAssets are synthetic, pack-owned assets/image canonical records. Their typed profile stores RecordId, SourcePath, Fingerprint, MediaType, Provenance, SourceRights, Licence, Redistribution, ByteSize, Width, Height and EvidenceIds. SourcePath is a portable workspace-relative Media/Owned/<owner SHA-256>/<content SHA-256>.png or .jpg path; hashes in the path omit the sha256: prefix. The fingerprint includes that prefix. Limits are 8 MiB, 4096 pixels per side and 4,194,304 pixels total. SourceRights is original_work or licensed (with licence details). Redistribution is not_reviewed, declared_permitted or prohibited; declarations do not establish legal permission.
+
+LocalisationEntries are synthetic, pack-owned localisation/text records. RecordId is stable; Key is case-sensitive and unique per pack, at most 256 ASCII letters, digits, dots, underscores or hyphens. DefaultLanguage must have a variant. Variants contain Language and Text; 1–32 unique lowercase language codes with alphabetic segments of at least two characters, separated by hyphens, up to 16 characters. Each translation allows 8192 UTF-8 bytes of nonempty plain text. Resolution uses an exact language match, otherwise the explicitly selected default, and reports fallback.
+
+PresentationBindings store BindingId, OwnerPackId, TargetRecordId, Slot, ValueRecordId and EvidenceIds. Binding identity is deterministically derived from length-framed owner, target and slot. Empty ValueRecordId clears the assignment while retaining identity. Targets are native or same-pack synthetic items, actors or quests. Slots are item icon, actor portrait, and name/description for all three target types. Values must belong to the same pack and match the slot type. Revision-bound author intent and target/value evidence are validated before publication.
+
+Collections are bounded to 4096 images, 8192 text entries / 16 MiB total text, and 32768 assignments. Schemas 1–6 cannot carry these nonempty collections. Their load results retain their old version until validated projection. Saves emit schema 7 and preserve a verified exact older-catalog backup. Older Editors require that backup to downgrade; later changes are not backported. Missing image bytes do not prevent catalog metadata loading; selected previews and image assignments verify content so the user can repair the source.
+
+See [Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) for ownership, immutable file storage and failure behavior.

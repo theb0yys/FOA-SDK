@@ -8,6 +8,11 @@
 set(FILES
     Source/WorldModels.h
     Source/QuestAuthoringModels.h
+    Source/AssetLocalisationModels.cpp
+    Source/AssetLocalisationModels.h
+    Source/AssetLocalisationService.cpp
+    Source/AssetLocalisationService.h
+    Source/CatalogDatabaseAssets.cpp
     Source/QuestAuthoringModels.cpp
     Source/QuestAuthoringService.h
     Source/QuestAuthoringService.cpp

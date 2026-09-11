@@ -8,8 +8,11 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- Asset and Localisation Manager with bounded PNG/JPEG intake, image and translated-text previews, language variants and fallback, assignments to items/actors/quests, custom item icons and actor portraits, and save/reopen/draft/recovery checks.
+- Catalog schema 7 project assets, localisation entries and pack-scoped presentation bindings, with revision-bound author intent, portable managed image paths and verified schema-1–6 migration backups. Native deployment, runtime localisation and mesh/audio conversion remain separate capabilities.
+
 - Quest and State Inspector with searchable saved/imported definitions, local quest creation, typed element and state-key forms, exact catalog links, a progression graph, and save/reopen/recovery validation.
-- Catalog schema 6 quest authoring profiles with canonical QuestDefinition V1 payloads, display labels, authored state defaults and local subject bindings. Readers accept schemas 1–6; saves emit 6 and retain an exact pre-migration backup. Older Editors require restoring that backup. Quest execution and game-state mutation remain outside this authoring workflow.
+- Catalog schema 6 quest authoring profiles with canonical QuestDefinition V1 payloads, display labels, authored state defaults and local subject bindings. Current readers accept schemas 1–7; saves emit 7 and retain an exact pre-migration backup. Older Editors require restoring that backup. Quest execution and game-state mutation remain outside this authoring workflow.
 - Governed optional O3DE Tool Gem infrastructure with exact schema-1 package validation, dependency-cycle rejection, deterministic project selection, cross-module ExtensionAPI registration/revocation, and host-owned atomic extension documents without workspace-path disclosure.
 - Independently selectable Road Atlas and Avalon AI authoring Tool Gems with registered panes, typed JSON parsing, exact contract validation, deterministic planning fingerprints, atomic save/load/revert workflows, Hub routes, and no runtime authority.
 - Twenty-six-pane lifecycle and Windows evidence coverage with adversarial checks for missing routes, missing deactivation, duplicate layout keys, non-atomic writes, unsafe capabilities, and process leakage.

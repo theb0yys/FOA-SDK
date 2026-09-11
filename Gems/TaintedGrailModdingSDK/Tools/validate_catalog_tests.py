@@ -118,6 +118,14 @@ def main() -> int:
                 "FailedSaveKeepsPublishedGraphAndSchematicFallbackIsExplicit",
             ),
         )
+        require_fragments(
+            tests_root / "AssetLocalisationAuthoringTests.cpp",
+            ("TextCreateEditReopenDuplicateAndStaleWrite",
+             "ImageContentSignatureSizeCorruptionAndProtectedPaths",
+             "AssignReplaceClearReopenAndRejectWrongTypes",
+             "SchemaSixMigrationPreservesQuestAndVerifiedBackup",
+             "CatalogWriteFailureKeepsPublishedTextAndAssignments"),
+        )
         test_entries = manifest_entries(test_manifest_path)
         expected_tests = {
             "Tests/AdapterContractTests.cpp",
@@ -133,6 +141,7 @@ def main() -> int:
             "Tests/SocietyAuthoringTests.cpp",
             "Tests/WorldAuthoringTests.cpp",
             "Tests/QuestAuthoringTests.cpp",
+            "Tests/AssetLocalisationAuthoringTests.cpp",
             "Tests/EconomyCoverageServiceTests.cpp",
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
             "Tests/FoAInstallDiscoveryServiceTests.cpp",
@@ -547,7 +556,7 @@ def main() -> int:
                 "LegacyCatalogSchemaVersion = 1",
                 "PopulationCatalogSchemaVersion = 2",
                 "CurrentCatalogSchemaVersion =",
-                "QuestCatalogSchemaVersion;",
+                "AssetLocalisationCatalogSchemaVersion;",
             ),
         )
         require_fragments(
@@ -567,7 +576,7 @@ def main() -> int:
                 "SerializePlainCatalog",
                 "Plain canonical catalog documents require an explicit SchemaVersion.",
                 "Catalog schema 1 cannot contain population collections.",
-                "Canonical catalog saves require schema 6; schemas 1/2/3/4/5 are load-only migration inputs.",
+                "Canonical catalog saves require schema 7; schemas 1/2/3/4/5/6 are load-only migration inputs.",
                 "settings.m_keepDefaults = true",
                 "QSaveFile file",
                 "file.setDirectWriteFallback(false)",

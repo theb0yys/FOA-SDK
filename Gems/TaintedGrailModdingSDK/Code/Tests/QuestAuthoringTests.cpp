@@ -352,7 +352,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(service.GetCatalog().FindWorldPlace(region),nullptr);
         const auto hash=QCryptographicHash::hash(original,QCryptographicHash::Sha256).toHex();
         QFile backup(path+".schema-5."+QString::fromLatin1(hash)+".backup.json"); ASSERT_TRUE(backup.open(QIODevice::ReadOnly)); EXPECT_EQ(backup.readAll(),original);
-        EXPECT_EQ(QJsonDocument::fromJson(QuestBytes(service)).object()["SchemaVersion"].toInt(),6);
+        EXPECT_EQ(QJsonDocument::fromJson(QuestBytes(service)).object()["SchemaVersion"].toInt(),static_cast<int>(CurrentCatalogSchemaVersion));
     }
     TEST_F(QuestAuthoringTests, OldFutureDuplicateOversizedAndUnrelatedEvidenceFailAtomically)
     {
@@ -365,7 +365,7 @@ namespace TaintedGrailModdingSDK
             EXPECT_FALSE(published.ReplaceFromBoundDocument(doc,service.GetWorkspace(),*service.GetWorkspace().FindActiveGameProfile(),service.GetSourceRegistry(),&error));
             EXPECT_EQ(published.GetQuestProfiles().size(),2);
         };
-        for (AZ::u32 version : {1,2,3,4,5,7}) { auto bad=good; bad.m_schemaVersion=version; reject(bad); }
+        for (AZ::u32 version : {1u,2u,3u,4u,5u,CurrentCatalogSchemaVersion + 1}) { auto bad=good; bad.m_schemaVersion=version; reject(bad); }
         auto bad=good; bad.m_questProfiles.push_back(bad.m_questProfiles.front()); reject(bad);
         bad=good; bad.m_questProfiles.front().m_definitionJson="{}"; reject(bad);
         bad=good; bad.m_questProfiles.front().m_definitionJson=AZStd::string(1024*1024+1,'x'); reject(bad);

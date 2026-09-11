@@ -23,15 +23,16 @@ namespace TaintedGrailModdingSDK
     inline constexpr AZ::u32 LegacyCatalogSchemaVersion = 1;
     inline constexpr AZ::u32 PopulationCatalogSchemaVersion = 2;
 
-    // Schemas 1, 2, 3, 4 and 5 remain load-only migration inputs. New documents use schema 6;
+    // Schemas 1-6 remain load-only migration inputs. New documents use schema 7;
     // a schema-1 load retains its version until bound validation succeeds and
     // CatalogDatabase rebuilds it under the population-capable current schema.
     inline constexpr AZ::u32 EncounterCatalogSchemaVersion = 3;
     inline constexpr AZ::u32 SocietyCatalogSchemaVersion = 4;
     inline constexpr AZ::u32 WorldCatalogSchemaVersion = 5;
     inline constexpr AZ::u32 QuestCatalogSchemaVersion = 6;
+    inline constexpr AZ::u32 AssetLocalisationCatalogSchemaVersion = 7;
     inline constexpr AZ::u32 CurrentCatalogSchemaVersion =
-        QuestCatalogSchemaVersion;
+        AssetLocalisationCatalogSchemaVersion;
 
     enum class PopulationActorKind : AZ::u8
     {

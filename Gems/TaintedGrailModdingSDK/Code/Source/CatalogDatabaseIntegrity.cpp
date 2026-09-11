@@ -353,6 +353,7 @@ namespace TaintedGrailModdingSDK
         if (!ValidateEncounterIntegrity(profile, sourceRegistry, error)) { return false; }
         if (!ValidateWorldIntegrity(profile, sourceRegistry, error)) { return false; }
         if (!ValidateQuestIntegrity(profile, sourceRegistry, error)) { return false; }
+        if (!ValidateAssetLocalisationIntegrity(profile, sourceRegistry, error)) { return false; }
         if (!ValidateSocietyIntegrity(profile, sourceRegistry, error)) { return false; }
 
         if (error)

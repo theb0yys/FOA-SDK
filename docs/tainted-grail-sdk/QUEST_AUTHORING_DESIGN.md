@@ -11,7 +11,7 @@ State keys declare boolean, integer or text defaults; they do not expose or writ
 Bounds: 256 profiles and 8 MiB total definition JSON per catalog; 1 MiB per V1 document; 256 labels, state declarations and bindings per quest; existing V1 limits remain. Search and rendering use loaded snapshots without filesystem scans. Graph nodes represent phases, edges represent transitions; disconnected phases and repeat transitions are displayed without simulating execution. Graph rendering is capped by the V1 phase/transition bounds.
 
 ## Persistence and failure
-Readers accept catalog versions 1–6; saves emit 6. Versions 1–5 with nonempty quest collections and future versions are rejected. Exact pre-migration backup is retained before schema-6 replacement. Downgrade requires the older build plus that backup. Other schemas, engine pins and runtime contracts are unchanged.
+Quest profiles were introduced in version 6. Current readers accept catalog versions 1–7; saves emit 7. Versions 1–5 with nonempty quest collections and future versions are rejected. Exact pre-migration backup is retained before schema-7 replacement. Downgrade requires the older build plus that backup. Other schemas, engine pins and runtime contracts are unchanged.
 
 Every save verifies active compatible pack, exact owner and expected previous quest payload (optimistic conflict check), validates a candidate and creates author-intent evidence before durable catalog publication. Failed writes retain published state and UI drafts. Imported file reads are bounded and read-only; imported input never silently gains authority. Dirty selection/close/workspace/profile/pack transitions retain drafts or require explicit discard.
 

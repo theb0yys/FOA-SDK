@@ -68,6 +68,7 @@ namespace TaintedGrailModdingSDK
 
         QComboBox* m_itemRecord = nullptr;
         QLabel* m_itemIdentity = nullptr;
+        QLabel* m_assignedIcon = nullptr;
         QLineEdit* m_itemCategory = nullptr;
         QLineEdit* m_itemSubtype = nullptr;
         QSpinBox* m_itemStackLimit = nullptr;

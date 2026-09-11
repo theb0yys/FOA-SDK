@@ -43,6 +43,7 @@
 #include "ItemRecipeEditorWidget.h"
 #include "PackManagerWidget.h"
 #include "QuestStateInspectorWidget.h"
+#include "AssetLocalisationManagerWidget.h"
 #include "SourceEvidenceIntakeWidget.h"
 
 #include <AzCore/Debug/Trace.h>
@@ -67,6 +68,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogBrowserViewPaneName = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernanceViewPaneName = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorViewPaneName = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* AssetLocalisationViewPaneName = "Tainted Grail Asset and Localisation Manager";
         constexpr const char* QuestStateInspectorViewPaneName = "Tainted Grail Quest and State Inspector";
         constexpr const char* SpawnEncounterEditorViewPaneName = "Tainted Grail Spawn and Encounter Editor";
         constexpr const char* WorldRouteEditorViewPaneName = "Tainted Grail World and Route Editor";
@@ -162,6 +164,7 @@ namespace TaintedGrailModdingSDK
             AzToolsFramework::UnregisterViewPane(CatalogGovernanceViewPaneName);
             AzToolsFramework::UnregisterViewPane(ItemRecipeEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(QuestStateInspectorViewPaneName);
+            AzToolsFramework::UnregisterViewPane(AssetLocalisationViewPaneName);
             AzToolsFramework::UnregisterViewPane(ActorTroopEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(SpawnEncounterEditorViewPaneName);
             AzToolsFramework::UnregisterViewPane(FactionAuthorityEditorViewPaneName);
@@ -299,6 +302,16 @@ namespace TaintedGrailModdingSDK
             ItemRecipeEditorViewPaneName,
             "Tainted Grail SDK",
             itemRecipeOptions);
+
+        AzToolsFramework::ViewPaneOptions assetLocalisationOptions;
+        assetLocalisationOptions.paneRect = QRect(210, 210, 1080, 900);
+        assetLocalisationOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        assetLocalisationOptions.isDeletable = true;
+        assetLocalisationOptions.isPreview = true;
+        assetLocalisationOptions.showInMenu = false;
+        assetLocalisationOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.AssetLocalisationManager");
+        AzToolsFramework::RegisterViewPane<AssetLocalisationManagerWidget>(
+            AssetLocalisationViewPaneName, "Tainted Grail", assetLocalisationOptions);
 
         AzToolsFramework::ViewPaneOptions questStateOptions;
         questStateOptions.paneRect = QRect(205, 205, 1040, 900);

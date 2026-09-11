@@ -152,3 +152,6 @@ The actual Windows screenshot pass remains pending. Trusted identity/time provid
 ## Documentation contribution rules
 
 Documentation changes must describe current behavior honestly, distinguish implemented from planned behavior, avoid proprietary content and private paths, use stable links, and include migration notes for breaking format changes.
+
+- [Asset and Localisation Manager](ASSET_LOCALISATION_MANAGER_GUIDE.md) — images, translations, assignments and recovery.
+- [Asset and Localisation Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) — ownership, schema 7 and validation.

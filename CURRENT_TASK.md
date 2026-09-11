@@ -20,7 +20,7 @@ M1 completion does not start M2. Runtime sign-off not performed.
 
 Implemented: 25 versioned value types, 23 typed enums, checked scalar/collection/canonical budgets, exact contextual plan/provider/artifact/rollback/receipt bindings, separate authorization intent and exact-plan observations, a Core-only compiled test target and read-only local/CI guards.
 
-Executed before commit: 48 new compiled tests passed; Core, Framework, Catalog.Tests, CanonicalInterchange.Tests, SDK Editor, consumer Tool Gems, Editor and AssetProcessorBatch built against the exact O3DE pin. Legacy CTest passed after precreating its output XML file; no source or generated test command was changed. Final full validation is pending.
+Executed before commit: 48 initial compiled tests passed; two additional regression tests exposed and now guard rollback-plan identity and immutable-input path aliasing; Core, Framework, Catalog.Tests, CanonicalInterchange.Tests, SDK Editor, consumer Tool Gems, Editor and AssetProcessorBatch built against the exact O3DE pin. Legacy CTest passed after precreating its output XML file; no source or generated test command was changed. Final full validation is pending.
 
 Evidence limitation: M0 declares Editor/UI execution NOT_APPLICABLE, while the existing validation-receipt tool requires a passed windows-ui row or explicit maintainer risk acceptance for merge-ready finalization. M1 does not edit that tool or invent UI proof. This mismatch will remain explicit in the exact-head receipt and PR until the maintainer resolves it.
 

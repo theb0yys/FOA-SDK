@@ -332,10 +332,11 @@ namespace TaintedGrailModdingSDK::CapabilityExecution
             && SameReference(v.m_authorizationIntent.m_scope, v.m_request), "Plan decision scopes differ from its request.");
         CE_REQUIRE(v.m_authorizationIntent.m_state == AuthorizationState::PENDING
             || v.m_authorizationIntent.m_state == AuthorizationState::NOT_REQUIRED, "The immutable plan contains authorization intent; exact-plan grants follow separately.");
-        Ids fingerprints; AZStd::set<Phase> phases;
+        Ids fingerprints, rollbackIds; AZStd::set<Phase> phases;
         for (const auto& phase : v.m_phases)
         {
             CE_REQUIRE(phases.insert(phase.m_phase).second, "Execution plan repeats a phase.");
+            CE_REQUIRE(rollbackIds.insert(phase.m_rollback.m_id).second, "Rollback plan identity must identify exactly one phase.");
             CE_REQUIRE(fingerprints.insert(phase.m_binding.m_fingerprint).second, "Execution plan reuses a phase-specific binding.");
         }
         for (const auto* decisions : {&v.m_support.m_bindingFingerprints, &v.m_qualification.m_bindingFingerprints,
@@ -549,6 +550,12 @@ namespace TaintedGrailModdingSDK::CapabilityExecution
             return output != produced.end() && ArtifactMatchesExpected(artifact, *output->second, true);
         };
         AZStd::set<Phase> phases; Ids selected, targets, locations;
+        for (const auto& input : request.m_inputs)
+        {
+            AZStd::string path = input.m_relativePath;
+            for (auto& c : path) { if (c >= 'A' && c <= 'Z') { c += 'a' - 'A'; } }
+            CE_REQUIRE(locations.insert(input.m_storageRootId + "/" + path).second, "Input artifact storage locations alias.");
+        }
         Phase previous = Phase::INVALID;
         for (const auto& phase : v.m_phases)
         {
@@ -566,7 +573,7 @@ namespace TaintedGrailModdingSDK::CapabilityExecution
                     && produced.emplace(output.m_id, &output).second, "Duplicate/cross-owner expected output.");
                 AZStd::string path = output.m_relativePath;
                 for (auto& c : path) { if (c >= 'A' && c <= 'Z') { c += 'a' - 'A'; } }
-                CE_REQUIRE(locations.insert(output.m_storageRootId + "/" + path).second, "Expected output paths collide.");
+                CE_REQUIRE(locations.insert(output.m_storageRootId + "/" + path).second, "Expected output location collides with an input or another output.");
             }
             for (const auto& mutation : phase.m_mutations)
             {

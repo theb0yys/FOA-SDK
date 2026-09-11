@@ -684,7 +684,7 @@ are rejected. Symbolic identities remain case-sensitive; path collision checks f
 case for Windows compatibility. Provider versions are exact numeric three-part versions,
 and the version constraint must equal the pinned provider version.
 
-Plans consume request inputs or earlier declared outputs. A consumed expected output needs a
+Plans consume request inputs or earlier declared outputs. Output locations cannot reuse an immutable input location, and rollback-plan IDs identify exactly one phase. A consumed expected output needs a
 known digest; a terminal output can omit its expected digest until its producer reports it.
 Artifact ownership, custodian, payload contract, location, digest and byte limits are checked
 against the supplied declaration. Immutable backups must be exact supplied request inputs.

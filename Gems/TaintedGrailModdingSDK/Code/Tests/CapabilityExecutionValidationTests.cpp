@@ -347,3 +347,23 @@ TEST(CapabilityExecutionValidation, CreateAndRemoveHaveDifferentInverseShapes)
     restore.m_expectedCurrentFingerprint.clear(); restore = Seal(restore); p.m_rollback = Seal(p.m_rollback); p = Seal(p);
     Valid(Validate(p));
 }
+
+TEST(CapabilityExecutionValidation, ProducedLocationCannotOverwriteAnImmutableInput)
+{
+    Chain c; auto& phase = c.plan.m_phases.front();
+    auto& output = phase.m_expectedOutputs.front();
+    output.m_relativePath = c.original.m_relativePath;
+    output = Seal(output); phase = Seal(phase);
+    c.produced.m_relativePath = c.original.m_relativePath; c.produced = Seal(c.produced);
+    auto& deploy = c.plan.m_phases[1]; deploy.m_inputs.front() = c.produced;
+    deploy.m_mutations.front().m_desiredArtifact = c.produced; deploy.m_mutations.front() = Seal(deploy.m_mutations.front());
+    deploy = Seal(deploy); c.plan = Seal(c.plan);
+    EXPECT_FALSE(c.CheckPlan().IsSuccess());
+}
+TEST(CapabilityExecutionValidation, RollbackPlanIdentityMustIdentifyOnePhase)
+{
+    Chain c; auto& phase = c.plan.m_phases.back();
+    phase.m_rollback.m_id = c.plan.m_phases.front().m_rollback.m_id;
+    phase.m_rollback = Seal(phase.m_rollback); phase = Seal(phase); c.plan = Seal(c.plan);
+    EXPECT_FALSE(Validate(c.plan).IsSuccess());
+}

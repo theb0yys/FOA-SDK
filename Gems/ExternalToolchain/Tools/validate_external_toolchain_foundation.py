@@ -56,6 +56,15 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def validate_registration(root: Path) -> None:
+    project = root / "TaintedGrailModdingEditor" / "project.json"
+    project_json = json.loads(read(project))
+    require("../Gems/ExternalToolchain" in project_json.get("external_subdirectories", []),
+            "project.json does not register the ExternalToolchain source directory")
+    require("ExternalToolchain" in project_json.get("gem_names", []),
+            "TaintedGrailModdingEditor does not enable ExternalToolchain")
+
+
 def main() -> int:
     for path in REQUIRED_FILES:
         require(path.is_file(), f"missing required file: {path.relative_to(ROOT)}")
@@ -65,19 +74,7 @@ def main() -> int:
     require(gem_json.get("type") == "Tool", "Gem must remain host-tools-only")
     require(gem_json.get("version") == "0.2.0", "discovery slice Gem version must be 0.2.0")
 
-    engine_json = json.loads(read(ROOT / "engine.json"))
-    require(
-        "Gems/ExternalToolchain" in engine_json.get("external_subdirectories", []),
-        "engine.json does not register Gems/ExternalToolchain",
-    )
-
-    project_json = json.loads(
-        read(ROOT / "TaintedGrailModdingEditor" / "project.json")
-    )
-    require(
-        "ExternalToolchain" in project_json.get("gem_names", []),
-        "TaintedGrailModdingEditor does not enable ExternalToolchain",
-    )
+    validate_registration(ROOT)
 
     cmake = read(CODE / "CMakeLists.txt")
     require("${gem_name}.API INTERFACE" in cmake, "public provider API target missing")

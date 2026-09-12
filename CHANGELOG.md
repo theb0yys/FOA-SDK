@@ -8,6 +8,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- M2 Tool Execution Service: separate V2 contracts, a bounded asynchronous supervisor, explicit admission, Windows LPAC/Job Object containment, output verification and a durable private journal. Native fixture tests cover execution, denial, cancellation, timeout, recovery and filesystem isolation. The Editor supervisor joins on the early Qt quit notification before the pinned host terminates. A bounded job-drain period avoids false console-host cleanup failures. The accepted registryRead profile enables native Windows APIs while retaining network denial, exact capability checks and explicit admission. Old profile requests refuse; Editor execution stays disabled pending Framework integration.
+
 - M1 Core execution contracts with independent decision axes, exact plan/provider/artifact and inverse rollback bindings, bounded deterministic fingerprints, contextual receipt validation and dedicated compiled/static gates. No execution service, persisted format or Editor workflow is introduced.
 
 - Asset and Localisation Manager with bounded PNG/JPEG intake, image and translated-text previews, language variants and fallback, assignments to items/actors/quests, custom item icons and actor portraits, and save/reopen/draft/recovery checks.

@@ -105,3 +105,33 @@ owner behavior; adapter work is linear in the canonical bytes it handles.
 Generated build logs, receipts and fixture output remain outside source. Report
 failed/skipped hosted rows separately. The focused PR remains unmerged for
 maintainer review.
+
+## Recorded local validation — 12 September 2026
+
+Implementation acea9f1 was validated against pinned O3DE
+68683f23fb747380d3efa2424bd5f30242e9c5a2 on Windows, MSVC Profile. Final documentation
+updates do not alter the compiled source. Private logs, source hashes, screenshots
+and the machine-readable evidence pack stay outside the checkout.
+
+- PASSED: configure and ordered affected product/test/Editor builds. The existing
+  pinned engine dependencies were reused; this is not a fresh whole-engine build.
+- PASSED: static validation, 956 Python cases with 33 explicit skips, and four
+  pinned source-policy selections of ten tests each.
+- PASSED: Catalog (539 passed, two symlink-privilege skips), Framework contracts
+  (13), Framework native operations (20), and M1 contracts (50). All 21 new M4
+  compiled cases passed; no M4 case was skipped.
+- PASSED: all six existing panes opened, closed and reopened with their read-only
+  tables in the empty disposable project. Screenshots were inspected and the
+  Editor exited normally after aboutToQuit. This proves lifecycle, not populated
+  data presentation or game behavior.
+- PASSED: 100 representative direct previews took 8.694 ms, the Framework route
+  took 8.532 ms, and 100 source bindings took 21.964 ms. The exact 1 MiB source
+  bound/read in 10.583 ms; one byte over the limit was rejected.
+- NOT_APPLICABLE: game deployment, saves, runtime, release, signing and installer
+  operations. Runtime sign-off not performed.
+
+The inherited M3 hosted metadata-reopen performance check failed at roughly
+49.6 seconds against a ten-second budget. The unchanged production path passed
+locally at 5.551 and 5.509 seconds. M3's installer smoke itself passed; its hosted
+job lost runner communication during evidence upload. These hosted failures are
+not reclassified as passes by this local M4 validation.

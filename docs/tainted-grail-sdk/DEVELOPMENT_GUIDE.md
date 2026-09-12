@@ -141,6 +141,9 @@ UI behavior needs L3 evidence only when the change can affect actual interaction
 store, workspace binding, background checkpointing and lifecycle cleanup. Its compiled
 persistence tests and private-desktop recovery runner must both pass when these paths
 change. Recovery does not make the normal shutdown or workspace admission guards optional.
+Use the recovery runner with `-Suite docked` for the 12-process docked close/recovery
+lane, including the complete New/Open/docked/floating regression. See the recovery
+design for pinned default-state setup, actual action routing and pass requirements.
 
 ### Pack Manager shutdown acceptance (Windows)
 

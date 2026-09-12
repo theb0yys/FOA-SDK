@@ -96,3 +96,30 @@ workspace switch/return, failed Save and Cancel, failed recovery writes and retr
 copy rejection and explicit removal, and fresh-process checks that retired copies do not
 reappear. Relevant normal shutdown and workspace-switch suites remain separate regressions.
 Logs, fixtures, images and receipts stay outside source. No game/runtime sign-off is claimed.
+
+### Docked pane close and recovery
+
+Add `-Suite docked` to the recovery command to run 12 processes: the same 11 recovery
+phases with docked close assertions, followed by the complete New/Open/docked/floating
+regression in `pack_unsaved_live_smoke.py`. The lane requires four verified intentional
+terminations and eight clean exits. Recovered drafts exercise Cancel, Escape, prompt
+close and invalid Save; valid Save must destroy the dock, retire recovery and reopen the
+saved mod. A real locked manifest must retain the saved draft and recovery, followed by
+Discard removing only recovery and reopening the unchanged saved mod.
+
+`pack_pane_test_support.py` opens the registered pane through
+`QtViewPaneManager::OpenPane(..., UseDefaultState)` for each docked test open. This avoids
+old floating-layout caches without reparenting widgets through generic Qt docking calls.
+The setup bridge uses already-loaded public C++ exports and the inspected QString ABI;
+it is restricted to Windows x64 / Qt 6.10.2 and the runner's exact pinned engine. Missing
+exports or a different Qt ABI fail setup. A pin/Qt migration must review this test bridge.
+It is test-only and adds no product API or engine modification.
+
+Close assertions target the actual dock tab's Close action or floating close button.
+If Windows immediately dismisses a popup on the inactive private desktop, the test
+activates the exact enabled QAction created by that tab's context-menu event and records
+that route. It never uses Python's forced pane-close command to prove a veto. Initial
+clean/unresolved forms may be closed through their registered dock before fixture setup;
+no test edits exist at that boundary. Reopen assertions verify form and manifest behavior,
+not persistence of the user's chosen window layout. Screenshots and module hashes remain
+part of the external evidence; the desktop is never activated.

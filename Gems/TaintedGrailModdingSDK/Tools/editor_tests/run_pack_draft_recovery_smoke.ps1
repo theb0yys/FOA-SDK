@@ -18,7 +18,7 @@ param(
     [Parameter(Mandatory)][string]$CacheRoot,
     [Parameter(Mandatory)][string]$OutputRoot,
     [ValidateRange(30, 300)][int]$TimeoutSeconds = 120,
-    [ValidateSet('all', 'new', 'saved', 'failures')][string]$Suite = 'all'
+    [ValidateSet('all', 'new', 'saved', 'failures', 'docked')][string]$Suite = 'all'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'The file-lock and Editor acceptance cases require Windows.' }
@@ -45,7 +45,7 @@ $testScript = Join-Path $PSScriptRoot 'pack_draft_recovery_live_smoke.py'
 New-Item -ItemType Directory -Path $OutputRoot | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $OutputRoot 'tmp') | Out-Null
 $environmentNames = @('LOCALAPPDATA', 'TEMP', 'TMP', 'QT_QPA_PLATFORM', 'FOA_SDK_PACK_RESULT',
-    'FOA_SDK_PACK_WORKSPACE', 'FOA_SDK_RECOVERY_CASE', 'FOA_SDK_RECOVERY_RESULT', 'FOA_SDK_RECOVERY_EXPECTED')
+    'FOA_SDK_PACK_WORKSPACE', 'FOA_SDK_PACK_DOCKED', 'FOA_SDK_RECOVERY_CASE', 'FOA_SDK_RECOVERY_RESULT', 'FOA_SDK_RECOVERY_EXPECTED')
 $savedEnvironment = @{}
 foreach ($name in $environmentNames) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 
@@ -65,7 +65,7 @@ function Invoke-RecoveryCase([string]$Name, [string]$Case, [string]$Reuse = '',
             New-Item -ItemType Directory -Force -Path "$workspaceRoot/$leaf" | Out-Null
         }
         $fixture = [ordered]@{
-            SchemaVersion=1; WorkspaceId='sdkqa.pack-editor-exit'; DisplayName='Synthetic Editor exit acceptance'
+            SchemaVersion=1; WorkspaceId=$(if ($Case -eq 'docked-close') {'sdkqa.pack-unsaved'} else {'sdkqa.pack-editor-exit'}); DisplayName='Synthetic Editor exit acceptance'
             RootPath=$workspaceRoot; OutputPath="$workspaceRoot/Output"; StagingPath="$workspaceRoot/Staging"
             DeploymentPath="$workspaceRoot/Deployment"; ActiveGameProfileId='sdkqa.synthetic'
             GameProfiles=@(@{
@@ -87,6 +87,9 @@ function Invoke-RecoveryCase([string]$Name, [string]$Case, [string]$Reuse = '',
     $env:TEMP = Join-Path $OutputRoot 'tmp'
     $env:TMP = $env:TEMP
     $env:FOA_SDK_RECOVERY_RESULT = "$caseRoot/result.json"
+    $env:FOA_SDK_PACK_RESULT = "$caseRoot/result.json"
+    $env:FOA_SDK_PACK_DOCKED = $(if ($Suite -eq 'docked') {'1'} else {'0'})
+    $caseScript = $(if ($Case -eq 'docked-close') {Join-Path $PSScriptRoot 'pack_unsaved_live_smoke.py'} else {$testScript})
     $env:FOA_SDK_PACK_WORKSPACE = "$workspaceRoot/foa-sdk.tgworkspace.json"
     $env:FOA_SDK_RECOVERY_CASE = $Case
     $env:FOA_SDK_RECOVERY_EXPECTED = $ExpectedResult
@@ -107,7 +110,7 @@ function Invoke-RecoveryCase([string]$Name, [string]$Case, [string]$Reuse = '',
         '--regset=/Amazon/AzCore/Bootstrap/wait_for_connect=0',
         '--regset=/Amazon/AzCore/Bootstrap/connect_ap_timeout=1',
         '--regset=/Amazon/AzCore/Bootstrap/launch_ap_timeout=1',
-        '--runpython', $testScript
+        '--runpython', $caseScript
     )
     # Start-Process joins ArgumentList into one Windows command line; quote path arguments.
     $quoted = $arguments | ForEach-Object {
@@ -222,7 +225,7 @@ $rows = @()
 $status = 'FAILED'
 $expectedCount = 0
 try {
-    if ($Suite -in @('all', 'new')) {
+    if ($Suite -in @('all', 'new', 'docked')) {
         $seed = Invoke-RecoveryCase -Name seed-new -Case seed-new -ForceExit $true
         $rows += $seed
         $rows += Invoke-RecoveryCase -Name isolate -Case isolate -Reuse $seed.workspace -ExpectedResult $seed.result
@@ -232,7 +235,7 @@ try {
         $rows += Invoke-RecoveryCase -Name verify-save -Case verify-save -Reuse $seed.workspace -ExpectedResult $saved.result
         $expectedCount += 5
     }
-    if ($Suite -in @('all', 'saved')) {
+    if ($Suite -in @('all', 'saved', 'docked')) {
         $seed = Invoke-RecoveryCase -Name seed-saved -Case seed-saved -ForceExit $true
         $rows += $seed
         $saved = Invoke-RecoveryCase -Name restore-discard -Case restore-discard -Reuse $seed.workspace -ExpectedResult $seed.result
@@ -240,12 +243,16 @@ try {
         $rows += Invoke-RecoveryCase -Name verify-discard -Case verify-discard -Reuse $seed.workspace -ExpectedResult $saved.result
         $expectedCount += 3
     }
-    if ($Suite -in @('all', 'failures')) {
+    if ($Suite -in @('all', 'failures', 'docked')) {
         $rows += Invoke-RecoveryCase -Name failure -Case failure
         $seed = Invoke-RecoveryCase -Name seed-corrupt -Case seed-new -ForceExit $true
         $rows += $seed
         $rows += Invoke-RecoveryCase -Name reject-corrupt -Case reject-corrupt -Reuse $seed.workspace -ExpectedResult $seed.result -Corrupt $true
         $expectedCount += 3
+    }
+    if ($Suite -eq 'docked') {
+        $rows += Invoke-RecoveryCase -Name docked-close -Case docked-close
+        $expectedCount += 1
     }
     if ($expectedCount -eq 0 -or $rows.Count -ne $expectedCount) { throw 'Missing required recovery phases.' }
     $status = 'PASSED'

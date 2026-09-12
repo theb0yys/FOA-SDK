@@ -6,6 +6,7 @@ import ctypes
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 import time
 import traceback
@@ -15,11 +16,15 @@ import azlmbr.legacy.general as general
 from PySide6 import QtCore, QtTest, QtWidgets
 from shiboken6 import isValid
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pack_pane_test_support as pane_test
+
 
 def run():
     output = Path(os.environ['FOA_SDK_RECOVERY_RESULT'])
     workspace = Path(os.environ['FOA_SDK_PACK_WORKSPACE'])
     case = os.environ['FOA_SDK_RECOVERY_CASE']
+    docked = os.environ.get('FOA_SDK_PACK_DOCKED') == '1'
     expected_path = os.environ.get('FOA_SDK_RECOVERY_EXPECTED', '')
     expected = json.loads(Path(expected_path).read_text(encoding='utf-8')) if expected_path else None
     result = {'status': 'PARTIAL', 'case': case, 'checks': [], 'transition_seconds': [],
@@ -91,25 +96,61 @@ def run():
         result['record'] = json.loads(path.read_text(encoding='utf-8'))
         return path
 
-    def close_pane(choice):
-        seen = []
+    def close_pane(choice, accepted=False):
+        seen, errors = [], []
         timer = QtCore.QTimer()
         keep.append(timer)
+        dock = pane_test.pane_dock(root)
+        before = snapshot()
+        identity = [e.text() for e in root.findChildren(QtWidgets.QLineEdit) if e.isReadOnly()]
+        if docked:
+            assert pane_test.floating_container(root) is None
         def answer():
             prompt = next((value for value in widgets() if isinstance(value, QtWidgets.QMessageBox)
                            and value.isVisible()), None)
             if prompt:
-                seen.append(prompt.objectName())
-                prompt.button(getattr(QtWidgets.QMessageBox, choice)).click()
+                timer.stop()
+                try:
+                    assert prompt.objectName() == 'packUnsavedChangesDialog'
+                    seen.append(prompt.objectName())
+                    if choice == 'Escape':
+                        QtTest.QTest.keyClick(prompt, QtCore.Qt.Key_Escape)
+                    elif choice == 'Close':
+                        prompt.close()
+                    else:
+                        prompt.button(getattr(QtWidgets.QMessageBox, choice)).click()
+                except Exception:
+                    errors.append(traceback.format_exc())
+                    prompt.reject()
         timer.timeout.connect(answer)
         timer.start(25)
         try:
-            closed = root.close()
+            if docked:
+                pane_test.request_titlebar_close(root, result, keep)
+            else:
+                root.close()
             QtTest.QTest.qWait(100)
         finally:
             timer.stop()
-        assert seen == ['packUnsavedChangesDialog'], seen
-        assert closed == (choice != 'Cancel')
+        assert not errors and seen == ['packUnsavedChangesDialog'], (errors, seen)
+        if accepted:
+            assert not isValid(root) and not isValid(dock), 'Accepted close must destroy the registered pane'
+        else:
+            assert isValid(root) and root.isVisible() and isValid(dock) and dock.isVisible()
+            assert snapshot() == before
+            assert [e.text() for e in root.findChildren(QtWidgets.QLineEdit) if e.isReadOnly()] == identity
+            assert control('packDraftStatus').text() == 'Unsaved changes'
+            if docked:
+                assert pane_test.floating_container(root) is None
+
+    def reopen_docked():
+        nonlocal root
+        pane_test.open_default_pack()
+        root = control('TaintedGrailPackManager')
+        wait_for(lambda: control('packRecoveryStatus').text() != 'Checking draft recovery...', 'reopened recovery read')
+        assert root.isVisible() and pane_test.floating_container(root) is None
+        assert not control('packRecoveryPrompt').isVisible() and not copies()
+        assert control('packDraftStatus').text() != 'Unsaved changes'
 
     def normal_exit(choice=None):
         timer = QtCore.QTimer()
@@ -143,11 +184,14 @@ def run():
         stage('exit_scheduled')
         QtCore.QTimer.singleShot(0, general.exit)
 
-    def save_valid(name='Recovered mod'):
+    def save_valid(name='Recovered mod', via_close=False):
         apply(result.get('baseline') or expected['record']['Baseline'])
         apply({'displayName': name, 'owner': 'sdkqa', 'version': '1.0.0'})
-        button('Save mod').click()
-        assert control('packStatus').text() == 'Mod saved. You can start authoring.'
+        if via_close:
+            close_pane('Save', accepted=True)
+        else:
+            button('Save mod').click()
+            assert control('packStatus').text() == 'Mod saved. You can start authoring.'
         assert not copies(), 'Successful save must retire recovery'
         saved = list((workspace.parent / 'Packs').glob('*/pack.tgpack.json'))
         assert len(saved) == 1
@@ -156,6 +200,11 @@ def run():
         assert manifest['DisplayName'] == name and manifest['Version'] == '1.0.0'
         result['manifest'] = str(saved[0])
         result['manifest_sha256'] = hashlib.sha256(saved[0].read_bytes()).hexdigest()
+        if via_close:
+            reopen_docked()
+            assert control('packDisplayName').text() == name
+            assert control('packDraftStatus').text() == 'All changes saved'
+            result['checks'].append('docked_recovered_save_destroys_pane_retires_copy_and_reopens_saved_mod')
 
     def assert_original():
         if expected.get('manifest'):
@@ -189,10 +238,23 @@ def run():
         details = next(value for value in widgets() if isinstance(value, QtWidgets.QPlainTextEdit)
                        and value.toPlainText().startswith('Workspace file:'))
         assert workspace.as_posix() in details.toPlainText().replace('\\', '/')
-        general.open_pane('Tainted Grail Pack Manager')
+        if docked:
+            initial = [w for w in widgets() if w.objectName() == 'TaintedGrailPackManager']
+            for form in initial:
+                assert form.findChild(QtWidgets.QLabel, 'packDraftStatus').text() != 'Unsaved changes'
+                assert pane_test.pane_dock(form).close()
+            QtTest.QTest.qWait(100)
+            pane_test.open_default_pack()
+        else:
+            general.open_pane('Tainted Grail Pack Manager')
         QtTest.QTest.qWait(350)
         root = control('TaintedGrailPackManager')
         wait_for(lambda: control('packRecoveryStatus').text() != 'Checking draft recovery...', 'recovery read')
+
+        if docked:
+            assert pane_test.floating_container(root) is None and root.isVisible()
+            result['docked_setup'] = 'QtViewPaneManager UseDefaultState, Windows x64 Qt 6.10.2'
+            assert pane_test.pane_dock(root).grab().save(str(output.with_suffix('.docked.png')))
 
         if case.startswith('seed-') or case == 'failure':
             assert not control('packRecoveryPrompt').isVisible()
@@ -331,6 +393,13 @@ def run():
         assert_original()
         assert root.grab().save(str(output.with_suffix('.restored.png')))
         result['checks'].append('fresh_process_restores_all_raw_fields_and_advanced_state_without_manifest_write')
+        if docked:
+            recovery_bytes = path.read_bytes()
+            for choice in ('Cancel', 'Escape', 'Close', 'Save'):
+                close_pane(choice)
+                assert snapshot() == expected['fields'] and path.read_bytes() == recovery_bytes
+                assert_original()
+            result['checks'].append('docked_recovered_cancel_escape_prompt_close_and_invalid_save_keep_full_draft_and_copy')
         if case == 'restore-again':
             button('Save mod').click()
             assert snapshot() == expected['fields'] and path.exists()
@@ -343,14 +412,45 @@ def run():
             stage('checkpoint_durable')
             return
         if case == 'restore-save':
-            save_valid()
+            save_valid(via_close=docked)
             result['checks'].append('successful_save_is_explicit_and_retires_recovery')
         elif case == 'restore-discard':
             # Exercise the host's real shutdown path; QWidget.close() only hides
             # the inner form and leaves its registered dock alive.
             result['manifest'] = expected['manifest']
             result['manifest_sha256'] = expected['manifest_sha256']
-            normal_exit('Discard')
+            if docked:
+                apply(expected['record']['Baseline'])
+                apply({'displayName': 'Recovered locked save', 'version': '1.0.0'})
+                checkpoint(snapshot())
+                recovery_bytes = path.read_bytes()
+                kernel.CreateFileW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_uint32,
+                                              ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p]
+                kernel.CreateFileW.restype = ctypes.c_void_p
+                kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+                handle = kernel.CreateFileW(expected['manifest'], 0x80000000, 1, None, 3, 0x80, None)
+                assert handle not in (None, ctypes.c_void_p(-1).value)
+                try:
+                    close_pane('Save')
+                    assert path.read_bytes() == recovery_bytes
+                    assert_original()
+                finally:
+                    kernel.CloseHandle(handle)
+                result['checks'].append('docked_recovered_real_manifest_write_failure_keeps_pane_fields_and_recovery')
+                close_pane('Discard', accepted=True)
+                assert not path.exists()
+                assert_original()
+                reopen_docked()
+                combo = control('packSavedMods')
+                saved = Path(expected['manifest'])
+                combo.setCurrentIndex(next(i for i in range(combo.count()) if Path(combo.itemData(i)).resolve() == saved.resolve()))
+                button('Open selected').click()
+                assert control('packDisplayName').text() == expected['record']['Baseline']['displayName']
+                assert_original()
+                result['checks'].append('docked_recovered_discard_destroys_pane_retires_copy_and_reopens_unchanged_saved_mod')
+                normal_exit()
+            else:
+                normal_exit('Discard')
             return
         else:
             raise AssertionError('Unknown recovery case ' + case)

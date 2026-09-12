@@ -158,4 +158,9 @@ Documentation changes must describe current behavior honestly, distinguish imple
 
 - [Capability execution M1 Core API](CAPABILITY_EXECUTION_CONTRACT.md#m1-core-value-api):
   bounded values, canonical fingerprints and contextual plan/receipt validation. Process
-  supervision and the operational Build and Test Runner remain later authorized work.
+  supervision is the accepted M2 scope; the operational Build and Test Runner remains later work.
+
+- [Tool Execution Service M2 accepted scope and implementation status](TOOL_EXECUTION_M2_DESIGN.md):
+  Windows batch supervision, V2 invocation records and required isolation proof.
+  The accepted registryRead profile supports native batch supervision with exact
+  capability checks; Editor execution remains disabled pending Framework admission.

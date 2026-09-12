@@ -730,3 +730,12 @@ breaking canonical or semantic changes require a new contract/profile version or
 reviewed migration. The dedicated `TaintedGrailModdingSDK.CapabilityExecution.Tests` target
 links Core and AzTest only. M1 does not make the Build and Test Runner operational; M2
 process supervision requires its own authorized scope. Runtime sign-off not performed.
+
+### M2 implementation boundary
+
+The owner accepted [the M2 scope](TOOL_EXECUTION_M2_DESIGN.md) on 12 September
+2026. ExternalToolchain now contains the separate execution V2 API, supervisor,
+Windows isolation backend and private invocation journal. Full M2 acceptance is
+PARTIAL pending all required operational and host evidence. The Editor service
+is disabled by default, and M3 admission/orchestration remains outside this work.
+M2 observations do not replace or write the M1 plan/phase/execution receipts.

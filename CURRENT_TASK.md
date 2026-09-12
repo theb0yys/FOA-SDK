@@ -1,33 +1,14 @@
-# Current Task
+# M2 - Tool Execution Service
 
-Goal: protect unsaved Item and Recipe Editor drafts when closing the pane.
-Classification: Routine Editor/UI behavior inside the existing authoring boundary.
-Primary owner: ui-framework (ItemRecipeEditorWidget); catalog-and-identity and
-Foundation remain the owners of existing save validation and persistence.
-
-Scope: Save / Discard / Cancel for item profiles, recipe profiles, ingredient and
-output forms, and acquisition fields, including retained drafts for other selected
-definitions. Cancel, Escape, and failed saves keep the pane open and preserve
-remaining drafts. Each existing save command remains a separate transaction;
-earlier successful saves are retained if a later draft fails. No format, public
-contract, engine, game, workspace admission, or crash-recovery change is included.
-
-Branch: codex/item-recipe-close-protection, based on main 9264f11d95.
-Authority: owner request, AGENTS.md, ENGINEERING_PROCESS.md, ARCHITECTURE.md,
-ITEM_RECIPE_EDITOR_GUIDE.md and CI_AND_LOCAL_VALIDATION.md.
-
-Validation: focused compiled catalog/economy tests, pinned Editor build and actual
-native docked/floating pane close tests with synthetic external fixtures, plus L0
-static and pinned source-policy checks. Required cases cover clean and reverted
-forms, Cancel/Escape, Discard, multi-definition Save, manual saves, invalid data,
-persistence failure, partial success and retry. Validation PASSED: pinned Editor configure/build; the focused compiled Catalog
-registration (492 cases passed, two symlink-privilege skips); static validation
-(854 discovered Python tests: 845 passed, nine symlink-privilege skips, zero
-failures); all 10 enabled pinned source-policy validators; and 25 actual Editor
-acceptance checks across docked/floating panes with 45 editable fields exercised
-in each mode and verified clean process exit. The receipt binds the final source
-inputs to the loaded module SHA-256 and external test artifacts. Host tests cover
-all four definitions, partial saves, acquisition evidence, real catalog locking,
-and retry. No FoA runtime or deployment result is claimed.
-Generated fixtures, logs and evidence remain outside source. No protected game
-inputs, runtime, deployment, release, workflow or maintainer merge action is needed.
+Status: IMPLEMENTED; submit for maintainer review with exact-head validation.
+Goal: ExternalToolchain supervisor, V2 API, cancellation, bounded diagnostics, verified outputs and durable records.
+Classification: Critical/Runtime. Primary owner: external-toolchain.
+Authority: original M2 scope and amendment B accepted by the owner on 12 September 2026; commit and PR explicitly requested.
+In scope: the exact 43 paths in TOOL_EXECUTION_M2_DESIGN.md; Windows LPAC registryRead batch profile and synthetic proof.
+Implemented: V2 contracts, admission and bounded workers, LPAC/Job Object backend, output validation, private journal/recovery, native fixture and Editor lifecycle integration. Editor execution remains default-disabled pending separate Framework integration.
+Compatibility: windows-lpac-registry-read-batch-v1 requires exactly one enabled registryRead SID. Old profile commands and their request fingerprints refuse. Historical records do not grant replay authority.
+Validation: final production-source results belong to the exact-head private receipt and PR. Earlier amendment A experimental results remain separate evidence.
+Current branch: codex/tool-execution-m2-design, isolated from concurrent SDK-client work.
+Next action: maintainer review of the M2 PR. M3 requires a new owner instruction.
+Out of scope: interactive tools, secrets, game/Unity launch, deployment, release and protected data.
+Runtime sign-off not performed.

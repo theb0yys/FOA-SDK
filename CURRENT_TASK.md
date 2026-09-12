@@ -1,26 +1,31 @@
-# M5 — Isolated Synthetic Spine
+# M6 - Heightmap Vertical Slice
 
-Status: implementation and applicable local validation PASSED; exact-commit receipt
-and pull-request handoff pending.
-Goal: supervised Build -> Package -> Deploy -> Launch -> Verify -> Rollback in a
-new disposable target, with failure, cancellation and recovery evidence.
-Owner: capability-execution. Classification: Critical/Runtime.
-Scope: docs/tainted-grail-sdk/FRAMEWORK_SYNTHETIC_M5_DESIGN.md.
-Branch: codex/framework-synthetic-m5, based on M4 028a58f220.
+Status: PARTIAL. Milestone requested by the owner; native execution is BLOCKED
+pending the concrete provider/profile qualification described below. M6 has not
+built or deployed terrain, launched Fall of Avalon, verified terrain in the game,
+or performed game rollback.
 
-Validation on 13 September 2026:
-- PASSED: static validation, 960 Python cases with 33 explicit skips; additional
-  10 tooling tests and four exact-pin source-policy selections.
-- PASSED: affected native provider, Framework and Editor Profile builds.
-- PASSED: four compiled selections, 641 passed and two explicit Catalog symlink
-  skips. All 19 M5 native cases passed, including failure, cancellation, timeout,
-  drift, revoked admission, recovery and full observation storage.
-- PASSED: disposable exact-pin Editor success, cancel, hard crash and fresh
-  confirmation recovery; six artifacts on success, restored target and joined
-  workers on normal shutdown. These are programmatic Editor lifecycle checks.
-- NOT_RUN: manual visual acceptance; no UI controls or pane behavior changed.
-- NOT_APPLICABLE: Fall of Avalon runtime, general deployment, installer or release
-  sign-off. Only repository-owned synthetic data was deployed and restored.
+Primary owner: world-authoring. The Framework owns the shared execution workflow;
+ExternalToolchain owns process isolation, and the deployment/runtime providers own
+their effects. Classification: Significant for this design; Critical/Runtime for
+its subsequent executable implementation.
 
-The owner has requested M6. Keep its terrain/provider work on a separate branch
-following this prerequisite; do not treat M5 observations as terrain runtime proof.
+Branch: codex/heightmap-vertical-slice-m6.
+Prerequisite: M5 at 523cfbc4a862c98f56fffd2769d11eff43b5bb17. M5's six-process native
+and actual Editor success/cancel/crash/recovery checks passed locally. Its
+exact-commit receipt and unmerged PR handoff are separate from M6 acceptance.
+
+Scope and acceptance: [Heightmap M6 design](docs/tainted-grail-sdk/HEIGHTMAP_VERTICAL_SLICE_M6_DESIGN.md).
+Blocking questions and required evidence:
+[M6 native execution brief](Research/world-authoring-terrain-heightmap/briefs/M6_NATIVE_EXECUTION_QUALIFICATION_BRIEF.md).
+
+Initial target assumption: one small SDK-owned terrain in a disposable test scene.
+Existing campaign replacement and the separate campaign importer PR are excluded
+from this first slice. No uncommitted work from other terrain tasks is included.
+
+Next concrete work: qualify the native build and game-launch process profiles,
+then implement terrain materialisation and the exact target-owned deployment and
+runtime observation bindings through the existing Framework. Do not enable a
+terrain command, weaken the existing sandbox, or flip V1 authority flags to bypass
+missing qualification. Any actual game operation needs its final artifact
+inventory, exact destination and rollback review first.

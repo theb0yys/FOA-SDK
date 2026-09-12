@@ -544,6 +544,8 @@ are not Fall of Avalon runtime evidence.
 
 Connect terrain canonical documents through native materialisation and the shared production spine. Require exact profile, deployment, runtime observation, and rollback proof.
 
+The owner requested M6 on 13 September 2026. The [bounded M6 intake](HEIGHTMAP_VERTICAL_SLICE_M6_DESIGN.md) records the initial SDK-owned terrain fixture and missing native execution qualification. M6 is PARTIAL; no terrain runtime or rollback pass is claimed.
+
 ### M7 — Ordered Domain Migration
 
 Migrate Road Atlas, Avalon AI, items/recipes, actors/troops, then model/texture/animation/audio/material importers. Each domain supplies only native materialisation and domain verification.

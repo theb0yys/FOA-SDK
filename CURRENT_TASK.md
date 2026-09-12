@@ -30,6 +30,9 @@ Validation:
 
 - PASSED: focused population/workspace validators and 23 validator unit tests;
   10 applicable SDK source validators; final fixture syntax and diff hygiene.
+- PASSED: complete static CI lane after registering the new recovery test file
+  in validate_catalog_tests.py: 918 Python tests and 10 ExternalToolchain tests;
+  33 conditional/privilege cases skipped. All static validators and fixtures passed.
 - PASSED: configure and build at pinned O3DE
   68683f23fb747380d3efa2424bd5f30242e9c5a2, Windows x64 Profile / Qt 6.10.2.
 - PASSED: 541 Catalog compiled tests, including 11 new recovery tests.

@@ -139,7 +139,7 @@ namespace TaintedGrailModdingSDK
     {
         struct Stream { AZ::RHI::ShaderSemantic semantic; AZ::u32 components{},type{}; Bytes bytes; AZStd::shared_ptr<SharedGeometryBuffer> shared; };
         struct Constant { AZ::u32 slot{}; Bytes bytes; AZ::Data::Instance<AZ::RPI::Buffer> buffer; };
-        struct DataBuffer { AZ::u32 slot{},type{},stride{}; Bytes bytes; };
+        struct DataBuffer { AZ::u32 slot{},type{},stride{}; Bytes bytes; AZ::Data::Instance<AZ::RPI::Buffer> buffer; };
         struct Matrix { AZ::u32 stage{}, slot{}, offset{}, value{}, size{64}; };
         struct Image { AZ::u32 slot{}; AZStd::string path; AZ::Data::Asset<AZ::RPI::StreamingImageAsset> asset; };
         struct Sampling { AZ::u32 slot{}; AZ::RHI::SamplerState state; };
@@ -156,7 +156,7 @@ namespace TaintedGrailModdingSDK
         AZ::u32 vertexCount{},sortKey{},instanceCount{1};
         AZ::EntityId entity;
         AZStd::string status = "LOADING";
-        AZStd::vector<Matrix> matrices;
+        AZStd::vector<Matrix> matrices, bufferMatrices;
         size_t residentBytes = 0, dataBufferBytes = 0;
         bool dirty = false, visible = true, camera = false;
         Clock::time_point started = Clock::now();
@@ -274,12 +274,12 @@ namespace TaintedGrailModdingSDK
             Matrix matrix{value["stage"].GetUint(),value["slot"].GetUint(),value["offset"].GetUint()};
             if (vector)
             {
-                if (version!=2 || value["value"]!="viewport_source_camera_position") { return false; }
+                if (version<2 || value["value"]!="viewport_source_camera_position") { return false; }
                 matrix.value=3; matrix.size=16;
             }
             else if (value["value"]=="source_object_to_world") { matrix.value=0; }
-            else if (version==2 && value["value"]=="viewport_source_world_to_clip") { matrix.value=1; }
-            else if (version==2 && value["value"]=="viewport_source_relative_world_to_clip") { matrix.value=2; }
+            else if (version>=2 && value["value"]=="viewport_source_world_to_clip") { matrix.value=1; }
+            else if (version>=2 && value["value"]=="viewport_source_relative_world_to_clip") { matrix.value=2; }
             else { return false; }
             bool found=false;
             for (const auto& constant : stages[matrix.stage].constants)
@@ -292,18 +292,45 @@ namespace TaintedGrailModdingSDK
             }
             camera |= matrix.value!=0; matrices.push_back(matrix); return true;
         }
+        bool BufferDestination(const Json& value)
+        {
+            if (!Keys(value,{"stage","slot","offset","layout","value"}) || !Uint(value["stage"],1) ||
+                !Uint(value["slot"],127) || !Uint(value["offset"],8*1024*1024-48) || value["offset"].GetUint()%16 ||
+                !value["layout"].IsString() || value["layout"]!="float3_columns" ||
+                !value["value"].IsString() || value["value"]!="source_object_to_world") { return false; }
+            Matrix matrix{value["stage"].GetUint(),value["slot"].GetUint(),value["offset"].GetUint(),0,48};
+            bool found=false;
+            for (const auto& buffer : stages[matrix.stage].dataBuffers)
+            { found |= buffer.slot==matrix.slot && buffer.type==4 && buffer.stride==4 && matrix.offset+48<=buffer.bytes.size(); }
+            if (!found) { return false; }
+            for (const auto& previous : bufferMatrices)
+            {
+                if (previous.stage==matrix.stage && previous.slot==matrix.slot &&
+                    previous.offset<matrix.offset+48 && matrix.offset<previous.offset+48) { return false; }
+            }
+            bufferMatrices.push_back(matrix); return true;
+        }
         bool ParseEntity(const Json& doc)
         {
-            if (!doc.IsObject() || !doc.HasMember("version") || !Uint(doc["version"],2,1)) { return false; }
+            if (!doc.IsObject() || !doc.HasMember("version") || !Uint(doc["version"],4,1) || doc["version"].GetUint()==3) { return false; }
             const auto version=doc["version"].GetUint();
-            if (!(version==1 ? Keys(doc,{"version","draw","matrices"}) : Keys(doc,{"version","draw","matrices","vectors"})) ||
-                !doc["matrices"].IsArray() || doc["matrices"].Empty() || doc["matrices"].Size()>8) { return false; }
+            const bool keys=version==1 ? Keys(doc,{"version","draw","matrices"}) : version==2 ?
+                Keys(doc,{"version","draw","matrices","vectors"}) : Keys(doc,{"version","draw","matrices","vectors","buffer_matrices"});
+            if (!keys || !doc["matrices"].IsArray() || doc["matrices"].Size()>8 || (version<4 && doc["matrices"].Empty())) { return false; }
             if (!ParseFields(doc["draw"])) { return false; }
             for (const auto& value : doc["matrices"].GetArray()) { if (!Destination(value,false,version)) { return false; } }
-            if (version==2)
+            if (version>=2)
             {
                 if (!doc["vectors"].IsArray() || doc["vectors"].Size()>8) { return false; }
                 for (const auto& value : doc["vectors"].GetArray()) { if (!Destination(value,true,version)) { return false; } }
+            }
+            if (version==4)
+            {
+                // An individual placement owns one rendered instance. Shared batch editing needs
+                // a separate explicit ownership contract; a GPU slot is never a source ordinal.
+                if (instanceCount!=1 || !doc["buffer_matrices"].IsArray() || doc["buffer_matrices"].Empty() ||
+                    doc["buffer_matrices"].Size()>8) { return false; }
+                for (const auto& value : doc["buffer_matrices"].GetArray()) { if (!BufferDestination(value)) { return false; } }
             }
             dirty=true; return true;
         }
@@ -452,7 +479,7 @@ namespace TaintedGrailModdingSDK
         if (binding.empty() || binding.size()>MaxDescriptor) { return "REJECTED: entity descriptor budget"; }
         rapidjson::Document document;
         document.Parse<rapidjson::kParseIterativeFlag | rapidjson::kParseValidateEncodingFlag | rapidjson::kParseFullPrecisionFlag>(binding.data(),binding.size());
-        if (document.HasParseError() || !document.IsObject() || !document.HasMember("version") || !Uint(document["version"],3,1))
+        if (document.HasParseError() || !document.IsObject() || !document.HasMember("version") || !Uint(document["version"],4,1))
         { return "REJECTED: invalid source entity draw binding"; }
         const bool grouped=document["version"].GetUint()==3;
         size_t count=1;
@@ -585,6 +612,19 @@ namespace TaintedGrailModdingSDK
             }
             if (changed && upload && (!constant.buffer || !constant.buffer->UpdateData(constant.bytes.data(),constant.bytes.size()))) { return false; }
         }
+        if (!draw.bufferMatrices.empty())
+        {
+            if (packed[0][3]!=0.f || packed[0][7]!=0.f || packed[0][11]!=0.f || packed[0][15]!=1.f) { return false; }
+            float columns[12];
+            for (AZ::u32 col=0;col<4;++col) for (AZ::u32 row=0;row<3;++row) { columns[col*3+row]=packed[0][col*4+row]; }
+            for (const auto& matrix : draw.bufferMatrices) for (auto& data : draw.stages[matrix.stage].dataBuffers)
+            {
+                if (data.slot!=matrix.slot) { continue; }
+                memcpy(data.bytes.data()+matrix.offset,columns,sizeof(columns));
+                // Update only this matrix, retaining unrelated properties and sparse slot gaps.
+                if (upload && (!data.buffer || !data.buffer->UpdateData(columns,sizeof(columns),matrix.offset))) { return false; }
+            }
+        }
         draw.dirty=false; return true;
     }
     void SourceShaderRenderComponent::OnTick(float, AZ::ScriptTimePoint)
@@ -680,6 +720,7 @@ namespace TaintedGrailModdingSDK
         {
             auto& source=draw.stages[stage]; bool dynamic=false;
             for (const auto& destination : draw.matrices) { dynamic |= destination.stage==stage; }
+            for (const auto& destination : draw.bufferMatrices) { dynamic |= destination.stage==stage; }
             AZStd::string signature, key;
             if (!dynamic)
             {
@@ -712,7 +753,7 @@ namespace TaintedGrailModdingSDK
                 auto buffer=Buffer(constant.bytes,AZ::RPI::CommonBufferPoolType::Constant,16);
                 if (!buffer || !srg->SetBuffer(index,buffer)) { return false; } constant.buffer=buffer; draw.buffers.push_back(buffer);
             }
-            for (const auto& data : source.dataBuffers)
+            for (auto& data : source.dataBuffers)
             {
                 const auto index=srg->FindShaderInputBufferIndex(AZ::Name(AZStd::string::format("t%u",data.slot)));
                 if (!index.IsValid()) { return false; }
@@ -720,7 +761,7 @@ namespace TaintedGrailModdingSDK
                 if (input.m_access!=AZ::RHI::ShaderInputBufferAccess::Read || AZ::u32(input.m_type)!=data.type || input.m_strideSize!=data.stride) { return false; }
                 auto buffer=Buffer(data.bytes,AZ::RPI::CommonBufferPoolType::ReadOnly,data.stride,data.type==4);
                 if (!buffer || !srg->SetBuffer(index,buffer)) { return false; }
-                draw.buffers.push_back(buffer);
+                data.buffer=buffer; draw.buffers.push_back(buffer);
             }
             for (const auto& image : source.images)
             {

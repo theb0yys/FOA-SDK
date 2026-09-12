@@ -39,6 +39,23 @@ class RenderAssemblyTests(unittest.TestCase):
         changed = json.loads(payload); changed['renderers'][0]['binding']['draws'][0]['draw']['sort_key'] = 9
         self.assertEqual(json.loads(validated.bindings[r.placement_digest(rows[0])]), group())
 
+    def test_explicit_v4_instance_binding_survives_assembly_and_grouping(self):
+        raw = packet(); source = r.placement_digest(a.validate_batch(raw)[0])
+        binding = dict(version=4, draw={'sort_key': 0}, matrices=[], vectors=[],
+                       buffer_matrices=[dict(stage=0, slot=3, offset=256, layout='float3_columns', value='source_object_to_world')])
+        for value in (binding, {'version': 3, 'draws': [binding, draw(2, 1)]}):
+            result = r.validate_render_batch(raw, r.prepare_render_batch(raw, [(source, value)]))
+            self.assertEqual(json.loads(result.bindings[source]), value)
+        for count in (0, 9):
+            value = copy.deepcopy(binding); value['buffer_matrices'] *= count
+            with self.assertRaises(a.HeightmapImportError): r.prepare_render_batch(raw, [(source, value)])
+        for field in ('buffer_matrices', 'vectors', 'matrices'):
+            value = copy.deepcopy(binding); del value[field]
+            with self.assertRaises(a.HeightmapImportError): r.prepare_render_batch(raw, [(source, value)])
+        for version in (1, 2, 5):
+            value = dict(binding, version=version)
+            with self.assertRaises(a.HeightmapImportError): r.prepare_render_batch(raw, [(source, value)])
+
     def test_caller_mutation_cannot_change_prepared_packet(self):
         raw = packet(); binding = group(); source = r.placement_digest(a.validate_batch(raw)[0])
         payload = r.prepare_render_batch(raw, [(source, binding)]); binding['draws'].clear()

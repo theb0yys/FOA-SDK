@@ -26,9 +26,13 @@ def placement_digest(row):
 def draw_count(value):
     require(type(value) is dict and type(value.get('version')) is int, 'Invalid native render binding version.')
     version = value['version']
-    if version in (1, 2):
-        keys(value, {'version', 'draw', 'matrices'} | ({'vectors'} if version == 2 else set()))
+    if version in (1, 2, 4):
+        keys(value, {'version', 'draw', 'matrices'} | ({'vectors'} if version >= 2 else set())
+             | ({'buffer_matrices'} if version == 4 else set()))
         require(type(value['draw']) is dict and type(value['matrices']) is list, 'Invalid explicit native render binding.')
+        if version == 4:
+            require(type(value['buffer_matrices']) is list and 0 < len(value['buffer_matrices']) <= 8,
+                    'Invalid explicit instance-matrix binding count.')
         return 1
     require(version == 3, 'Unsupported native render binding version.')
     keys(value, {'version', 'draws'})
@@ -36,7 +40,7 @@ def draw_count(value):
     require(type(members) is list and 0 < len(members) <= MAX_GROUP_DRAWS, 'Invalid native render group size.')
     previous = -1
     for member in members:
-        require(type(member) is dict and type(member.get('version')) is int and member['version'] in (1, 2),
+        require(type(member) is dict and type(member.get('version')) is int and member['version'] in (1, 2, 4),
                 'Nested or unsupported native render member.')
         draw_count(member)
         ordinal = member['draw'].get('sort_key')

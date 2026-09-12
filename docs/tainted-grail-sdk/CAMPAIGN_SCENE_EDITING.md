@@ -1881,3 +1881,51 @@ checks. The fixture tests transfer of the records, not light shading equivalence
 Full game visibility, final cookies and shadow atlases, light-volume construction,
 remaining source shader passes, complete scenes, four-map UI and game export
 remain unfinished. These receipts do not qualify full maps for 1:1 testing.
+
+
+### Editable raw instance matrices
+
+Private entity binding v4 adds `buffer_matrices` alongside `draw`, `matrices` and
+`vectors`. Each destination explicitly names `stage`, `slot`, `offset`,
+`layout: "float3_columns"` and `value: "source_object_to_world"`. The native
+renderer converts the source placement to four float3 columns and updates only
+that 48-byte range in the raw buffer. The initial serialized binding remains
+immutable; the saved placement supplies the current transform when reopened.
+
+The destination must resolve to a raw read-only buffer (type 4, stride 4), fit in
+its payload, start at a 16-byte aligned offset and overlap no other destination.
+There are at most eight destinations, and v4 requires exactly one rendered
+instance per draw. A sparse GPU index is explicitly caller-qualified; it is not
+inferred from a source renderer ordinal. Shared batches with several placement
+owners and inverse-matrix synthesis remain unsupported. Affine source matrices
+are required. Invalid descriptors reject before resident resources are admitted.
+
+Stages with mutable instance matrices are never shared across draws. Identical
+bindings on two entities therefore retain independent GPU storage. Geometry can
+still share the existing cache. Matrix uploads remain inside the existing four
+updates/64 visits per tick and 64 MiB resident-payload limits; each dirty instance
+destination uploads only 48 bytes. No JSON parsing or buffer allocation is added
+to the transform-update path.
+
+Existing single-binding v1/v2 formats and v3 groups retain their meaning. A v3
+group can contain v4 members; older native readers reject the new leaf version.
+The outer render-assembly format remains v1. Python assembly compatibility and
+malformed-shape tests cover direct and grouped v4 bindings. Native validation
+covers stage/slot/type/range/alignment, empty/excess/overlapping destinations,
+unknown or duplicate fields, versions, multi-owner counts and immutable rebinding.
+
+`editor_tests/source_instance_edit_editor.py` uses `FOA_INSTANCE_EDIT_ROOT` for a
+private fixture outside Git and `FOA_INSTANCE_EDIT_REOPEN=1` for a fresh-process
+saved-level check. The qualified original DOTS vertex/fragment programs remain
+unchanged. Two entities start with identical bindings to sparse slot 4 and have
+separate scale/reflection/shear placements. Independent reference geometry is
+transformed on the CPU, with the selected reference GPU matrix reset to identity.
+Move, scale, parent rotation, transform undo/redo, hide/show, delete/restore and
+fresh reopen produced 13 full-frame reference pairs with zero differing pixels
+across 69,705,792 pixels. Saved source identities, bindings and transforms matched.
+Twenty-one invalid/immutable attempts left residency unchanged; eight draws hit
+the four-update bound, and final resource counts returned to zero.
+
+This is original-shader editing proof using synthetic geometry and explicit
+instance input. It does not qualify actual campaign slot ownership, shared-batch
+editing, complete scenes, remaining materials, lighting, four-map UI or export.

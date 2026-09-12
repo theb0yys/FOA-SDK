@@ -10,6 +10,7 @@
 #include "FoundationNotificationBus.h"
 #include "PopulationModels.h"
 
+#include <QSharedPointer>
 #include <QWidget>
 
 class QCheckBox;
@@ -41,6 +42,7 @@ namespace TaintedGrailModdingSDK
         ~ActorTroopEditorWidget() override;
 
     private:
+        class EditorCloseGuard;
         void closeEvent(QCloseEvent* event) override;
         void OnFoundationChanged() override;
         bool CanChangeWorkspace(const FoundationService& service) override;
@@ -93,6 +95,7 @@ namespace TaintedGrailModdingSDK
         void SetStatus(const QString& message, bool error = false);
         void UpdateEnabledStates();
 
+        QSharedPointer<EditorCloseGuard> m_editorCloseGuard;
         QTabWidget* m_tabs = nullptr;
         NativeItemPreviewService* m_nativeReader = nullptr;
         QPushButton* m_readGame = nullptr;

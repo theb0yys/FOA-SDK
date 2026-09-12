@@ -16,7 +16,7 @@ param(
     [Parameter(Mandatory)][string]$CacheRoot,
     [Parameter(Mandatory)][string]$OutputRoot,
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 240,
-    [ValidateSet('close','workspace-status','workspace-catalog')][string]$Suite = 'close'
+    [ValidateSet('close','workspace-status','workspace-catalog','exit-save','exit-discard','exit-clean','exit-rollback')][string]$Suite = 'close'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'Windows is required for the native file-lock cases.' }
@@ -39,7 +39,7 @@ $lock = Get-Content (Join-Path $productRoot 'o3de.lock.json') -Raw | ConvertFrom
 $engineCommit = (git -C $EngineRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $engineCommit -ne $lock.commit) { throw 'Engine pin mismatch.' }
 $expectedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path (Split-Path $EditorExecutable) 'TaintedGrailModdingSDK.Editor.dll')).Hash
-$testScript = Join-Path $PSScriptRoot $(if ($Suite -eq 'close') { 'actor_troop_close_live_smoke.py' } else { 'actor_troop_workspace_live_smoke.py' })
+$testScript = Join-Path $PSScriptRoot $(if ($Suite -eq 'close') { 'actor_troop_close_live_smoke.py' } elseif ($Suite.StartsWith('exit-')) { 'actor_troop_editor_exit_live_smoke.py' } else { 'actor_troop_workspace_live_smoke.py' })
 $names = @('LOCALAPPDATA','TEMP','TMP','QT_QPA_PLATFORM','FOA_SDK_POPULATION_WORKSPACE','FOA_SDK_POPULATION_RESULT','FOA_SDK_POPULATION_WORKSPACE_ROUTE')
 $savedEnvironment = @{}
 foreach ($name in $names) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
@@ -147,7 +147,10 @@ try {
     }
     $editor.WaitForExit()
     $test = Get-Content "$OutputRoot/result.json" -Raw | ConvertFrom-Json
-    $minimumChecks = $(if ($Suite -eq 'close') { 33 } else { 45 })
+    $minimumChecks = switch ($Suite) {
+        'close' { 33 }; 'exit-save' { 31 }; 'exit-rollback' { 13 }
+        'exit-discard' { 3 }; 'exit-clean' { 3 }; default { 45 }
+    }
     if ($forcedStop -or [PopulationCloseTestDesktop]::ExitCode() -ne 0 -or
         $test.status -ne 'PASSED' -or -not $test.about_to_quit -or -not $test.editor_initialized -or
         $test.sdk_module_sha256 -ne $expectedHash -or $test.checks.Count -lt $minimumChecks) {

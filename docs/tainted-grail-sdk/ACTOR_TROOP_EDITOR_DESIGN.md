@@ -523,3 +523,21 @@ Approval authorises this actor/troop authoring vertical slice and the schema-2 m
 It does not authorise spawn or encounter execution, faction mutation, world placement, quest behavior, asset
 extraction, runtime adapters, process launch, deployment, save mutation, telemetry, proprietary fixtures, or
 later Phase 6 schemas not covered by a focused review.
+
+
+### Whole-Editor close transaction
+
+The ui-framework-owned Actor/Troop pane uses the same transaction-local guard
+pattern as the existing Item/Recipe pane. At the pinned host's main-window close
+dispatch, accepted panes can be destroyed before later panes or independent files
+veto shutdown. A shared guard therefore retains authoring controls, stable
+selections, staged member rows/removals and dirty flags after this pane accepts.
+If shutdown is vetoed, it reopens and restores the pane only in the same workspace.
+The retained snapshot is released at the end of the synchronous close dispatch.
+Repeated/nested close events cannot overwrite the outer snapshot.
+
+The guard captures raw UI values rather than serializing population models, so
+invalid member text remains editable after rollback. Save uses existing actor
+and atomic troop commands; the snapshot is taken after successful saves so later
+cancellation never marks saved forms dirty again. Workspace commit forgets any
+retained exit snapshot. No public contract or durable recovery format is added.

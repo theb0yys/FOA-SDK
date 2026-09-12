@@ -21,6 +21,9 @@
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QCoreApplication>
+#include <QEvent>
+#include <QPointer>
 #include <QFont>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -408,8 +411,224 @@ namespace TaintedGrailModdingSDK
         }
     } // namespace
 
+
+    // The pinned host destroys accepted panes before later panes/files can veto
+    // exit. This in-memory snapshot lives only for the main-window close dispatch.
+    class ActorTroopEditorWidget::EditorCloseGuard final : public QObject
+    {
+    public:
+        static QSharedPointer<EditorCloseGuard> Get()
+        {
+            static QWeakPointer<EditorCloseGuard> weakGuard;
+            auto guard = weakGuard.toStrongRef();
+            if (!guard)
+            {
+                guard.reset(new EditorCloseGuard());
+                weakGuard = guard;
+                guard->m_self = guard;
+            }
+            return guard;
+        }
+
+        void Attach(ActorTroopEditorWidget* pane)
+        {
+            m_pane = pane;
+            QWidget* mainWindow = nullptr;
+            AzToolsFramework::EditorRequests::Bus::BroadcastResult(
+                mainWindow, &AzToolsFramework::EditorRequests::GetMainWindow);
+            if (m_mainWindow != mainWindow)
+            {
+                if (m_mainWindow) { m_mainWindow->removeEventFilter(this); }
+                m_mainWindow = mainWindow;
+                if (m_mainWindow) { m_mainWindow->installEventFilter(this); }
+            }
+        }
+
+        bool IsClosingEditor() const { return m_forwardedEvent != nullptr; }
+        void ForgetDrafts() { m_values.clear(); m_members.clear(); m_removed.clear(); }
+
+        void RememberDrafts(ActorTroopEditorWidget* pane)
+        {
+            if (!IsClosingEditor()) { return; }
+            m_workspaceFile = ToQString(FoundationService::Get().GetWorkspaceFilePath());
+            m_workspaceRoot = ToQString(FoundationService::Get().GetWorkspaceRootPath());
+            m_actor = pane->m_loadedActorRecordId;
+            m_troop = pane->m_loadedTroopRecordId;
+            m_member = pane->m_selectedMemberLinkId;
+            m_members = pane->m_draftMembers;
+            m_removed = pane->m_removedMemberIds;
+            m_actorDirty = pane->m_actorDirty;
+            m_troopDirty = pane->m_troopDirty;
+            m_memberDirty = pane->m_memberEditorDirty;
+            m_refreshPending = pane->m_foundationRefreshPending;
+            m_tab = pane->m_tabs->currentIndex();
+            m_values.clear();
+            for (QWidget* field : Controls(pane))
+            {
+                if (auto* line = qobject_cast<QLineEdit*>(field)) { m_values.push_back(line->text()); }
+                else if (auto* spin = qobject_cast<QSpinBox*>(field)) { m_values.push_back(spin->value()); }
+                else if (auto* check = qobject_cast<QCheckBox*>(field)) { m_values.push_back(check->isChecked()); }
+                else if (auto* combo = qobject_cast<QComboBox*>(field))
+                {
+                    QVariantList items;
+                    if (combo == pane->m_actorRecord || combo == pane->m_troopRecord)
+                    {
+                        // Filters can be edited while dirty, with their refresh
+                        // deferred. Preserve the displayed choices independently.
+                        for (int index = 0; index < combo->count(); ++index)
+                        {
+                            items.push_back(QVariantList{combo->itemData(index), combo->itemText(index)});
+                        }
+                    }
+                    m_values.push_back(QVariantList{combo->currentData(), combo->currentText(), items});
+                }
+                else if (auto* list = qobject_cast<QListWidget*>(field))
+                {
+                    QStringList selected;
+                    for (const auto& id : SelectedEvidenceIds(list)) { selected.push_back(ToQString(id)); }
+                    m_values.push_back(selected);
+                }
+            }
+        }
+
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (watched != m_mainWindow || event->type() != QEvent::Close) { return false; }
+            const auto keepAlive = m_self.toStrongRef();
+            if (m_forwardedEvent)
+            {
+                if (event == m_forwardedEvent) { return false; }
+                event->ignore();
+                return true;
+            }
+            if (!m_pane) { return false; }
+            const QScopedValueRollback<QEvent*> forwarding(m_forwardedEvent, event);
+            ForgetDrafts();
+            QCoreApplication::sendEvent(watched, event);
+            if (!event->isAccepted() && m_mainWindow && !m_values.isEmpty()
+                && m_workspaceFile == ToQString(FoundationService::Get().GetWorkspaceFilePath())
+                && m_workspaceRoot == ToQString(FoundationService::Get().GetWorkspaceRootPath()))
+            {
+                // Immediate reopening also covers a later file veto, for which
+                // the host does not schedule its pane-layout rollback.
+                AzToolsFramework::OpenViewPane("Tainted Grail Actor and Troop Editor");
+                if (m_pane) { RestoreDrafts(m_pane); }
+            }
+            ForgetDrafts();
+            return true;
+        }
+
+    private:
+        // Explicit authoring controls avoid capturing presentation-only review
+        // widgets or normalizing invalid/raw text through the domain models.
+        static QList<QWidget*> Controls(ActorTroopEditorWidget* p)
+        {
+            return {
+                p->m_actorFilter, p->m_troopFilter, p->m_actorRecord, p->m_troopRecord,
+                p->m_actorKind, p->m_actorArchetype, p->m_actorTemplateRecord, p->m_actorTemplateSubject,
+                p->m_actorMinimumLevel, p->m_actorMaximumLevel, p->m_actorUnique, p->m_actorEssential,
+                p->m_actorPersistent, p->m_actorNameRef, p->m_actorDescriptionRef, p->m_actorPortraitRef,
+                p->m_actorModelRef, p->m_actorTags, p->m_actorEvidence,
+                p->m_troopKind, p->m_troopLeaderRecord, p->m_troopLeaderSubject,
+                p->m_troopMinimumSize, p->m_troopMaximumSize, p->m_troopFormation, p->m_troopTags, p->m_troopEvidence,
+                p->m_memberLinkId, p->m_memberActorRecord, p->m_memberActorSubject, p->m_memberRole,
+                p->m_memberMinimumCount, p->m_memberMaximumCount, p->m_memberWeight,
+                p->m_memberRequired, p->m_memberConditions, p->m_memberEvidence};
+        }
+
+        void RestoreDrafts(ActorTroopEditorWidget* pane)
+        {
+            const QScopedValueRollback<bool> refreshing(pane->m_refreshing, true);
+            // Load the saved identities first to rebuild review context. Restore
+            // raw fields and staging only afterwards, without emitting edits.
+            {
+                const QSignalBlocker actorBlocker(pane->m_actorRecord);
+                const QSignalBlocker troopBlocker(pane->m_troopRecord);
+                pane->m_actorRecord->setCurrentIndex(qMax(0, pane->m_actorRecord->findData(ToQString(m_actor))));
+                pane->m_troopRecord->setCurrentIndex(qMax(0, pane->m_troopRecord->findData(ToQString(m_troop))));
+            }
+            pane->LoadCurrentActor();
+            pane->LoadCurrentTroop();
+            const auto controls = Controls(pane);
+            for (int index = 0; index < controls.size(); ++index)
+            {
+                QWidget* field = controls[index];
+                const auto& value = m_values[index];
+                const QSignalBlocker blocker(field);
+                if (auto* line = qobject_cast<QLineEdit*>(field)) { line->setText(value.toString()); }
+                else if (auto* spin = qobject_cast<QSpinBox*>(field)) { spin->setValue(value.toInt()); }
+                else if (auto* check = qobject_cast<QCheckBox*>(field)) { check->setChecked(value.toBool()); }
+                else if (auto* combo = qobject_cast<QComboBox*>(field))
+                {
+                    const auto pair = value.toList();
+                    if (combo == pane->m_actorRecord || combo == pane->m_troopRecord)
+                    {
+                        combo->clear();
+                        for (const auto& item : pair[2].toList())
+                        {
+                            const auto entry = item.toList();
+                            combo->addItem(entry[1].toString(), entry[0]);
+                        }
+                    }
+                    int selected = pair[0].isValid() ? combo->findData(pair[0]) : combo->findText(pair[1].toString());
+                    if (selected < 0 && !pair[1].toString().isEmpty())
+                    {
+                        combo->addItem(pair[1].toString(), pair[0]);
+                        selected = combo->count() - 1;
+                    }
+                    combo->setCurrentIndex(qMax(0, selected));
+                }
+                else if (auto* list = qobject_cast<QListWidget*>(field))
+                {
+                    AZStd::vector<AZStd::string> selected;
+                    for (const auto& id : value.toStringList()) { selected.push_back(ToAzString(id)); }
+                    PopulateEvidenceSelector(list, {}, selected, FoundationService::Get().GetSourceRegistry());
+                }
+            }
+            pane->m_loadedActorRecordId = m_actor;
+            pane->m_loadedTroopRecordId = m_troop;
+            pane->m_selectedMemberLinkId = m_member;
+            pane->m_draftMembers = m_members;
+            pane->m_removedMemberIds = m_removed;
+            pane->m_actorDirty = m_actorDirty;
+            pane->m_troopDirty = m_troopDirty;
+            pane->m_memberEditorDirty = m_memberDirty;
+            pane->m_foundationRefreshPending = m_refreshPending;
+            pane->RefreshActorEvidenceChoices();
+            pane->RefreshTroopEvidenceChoices();
+            pane->RefreshMemberEvidenceChoices();
+            pane->RefreshMemberTable();
+            pane->RefreshPortrait();
+            pane->m_tabs->setCurrentIndex(m_tab);
+            pane->UpdateEnabledStates();
+            pane->SetActorState(m_actorDirty ? tr("Draft state: unsaved actor changes restored.") : tr("Draft state: saved."));
+            pane->SetTroopState(m_troopDirty || m_memberDirty
+                ? tr("Draft state: unsaved troop/member changes restored.") : tr("Draft state: saved."));
+            pane->SetStatus(tr("Editor exit cancelled. Your actor, troop, and member forms have been restored."));
+        }
+
+        QWeakPointer<EditorCloseGuard> m_self;
+        QPointer<QWidget> m_mainWindow;
+        QPointer<ActorTroopEditorWidget> m_pane;
+        QEvent* m_forwardedEvent = nullptr;
+        QVariantList m_values;
+        QString m_workspaceFile;
+        QString m_workspaceRoot;
+        AZStd::string m_actor;
+        AZStd::string m_troop;
+        AZStd::string m_member;
+        AZStd::vector<PopulationTroopMember> m_members;
+        AZStd::vector<AZStd::string> m_removed;
+        bool m_actorDirty = false;
+        bool m_troopDirty = false;
+        bool m_memberDirty = false;
+        bool m_refreshPending = false;
+        int m_tab = 0;
+    };
+
     ActorTroopEditorWidget::ActorTroopEditorWidget(QWidget* parent)
         : QWidget(parent)
+        , m_editorCloseGuard(EditorCloseGuard::Get())
     {
         setObjectName(QStringLiteral("TaintedGrailActorTroopEditor"));
         setAccessibleName(tr("Tainted Grail Actor and Troop Editor"));
@@ -1303,6 +1522,7 @@ namespace TaintedGrailModdingSDK
         if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
+        m_editorCloseGuard->Attach(this);
     }
 
     ActorTroopEditorWidget::~ActorTroopEditorWidget()
@@ -1312,8 +1532,10 @@ namespace TaintedGrailModdingSDK
 
     void ActorTroopEditorWidget::closeEvent(QCloseEvent* event)
     {
-        if (ConfirmDraftReplacement(tr("closing the pane")))
+        auto& guard = *m_editorCloseGuard;
+        if (ConfirmDraftReplacement(guard.IsClosingEditor() ? tr("exiting the Editor") : tr("closing the pane")))
         {
+            guard.RememberDrafts(this);
             QWidget::closeEvent(event);
         }
         else
@@ -1356,6 +1578,7 @@ namespace TaintedGrailModdingSDK
     void ActorTroopEditorWidget::OnWorkspaceChanged(const FoundationService& service)
     {
         if (&service != &FoundationService::Get()) { return; }
+        m_editorCloseGuard->ForgetDrafts();
         m_nativeReader->Cancel();
         m_actorDirty = false;
         m_troopDirty = false;

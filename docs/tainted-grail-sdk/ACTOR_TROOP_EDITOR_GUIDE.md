@@ -123,7 +123,7 @@ The pane protects unsaved work:
 
 - record, troop, and member selection changes are refused while the corresponding draft is dirty;
 - Foundation refreshes are deferred until drafts are saved or reverted;
-- closing the pane or switching workspaces offers **Save / Discard / Cancel** for actor, troop and member drafts;
+- closing the pane, switching workspaces or exiting the Editor offers **Save / Discard / Cancel** for actor, troop and member drafts;
 - each save command publishes only after its validation and persistence succeed.
 
 Save includes the current unstaged member form and staged member additions, edits
@@ -206,6 +206,47 @@ fixture, not arbitrary catalog sizes.
 
 The pinned Windows Profile acceptance passed all 90 workspace checks with normal
 Editor exits. Maximum measured workspace interaction was 1.204 seconds.
+
+### Exiting the entire Editor
+
+**File → Exit** and the main Editor window close control offer **Save / Discard /
+Cancel** for dirty Actor/Troop forms, in both docked and floating layouts. Cancel,
+Escape and dismissing the prompt keep the Editor open with the drafts intact.
+Failed validation or persistence also cancels exit so the remaining drafts can
+be corrected or saved again. A nested exit request while a prompt is open is refused.
+
+Save includes actor, troop, staged member additions/edits/removals and the current
+unstaged member form. The actor saves first; a later troop failure keeps that
+successful actor save. Clean forms do not prompt or get saved again.
+
+Discard takes effect only when the entire Editor exit succeeds. If another pane
+later cancels exit, the Actor/Troop pane reopens with its raw fields (including
+invalid member text), selected records/member, staged changes and dirty flags.
+Successful saves remain saved if a later pane cancels. The retained state belongs
+only to this close attempt and the same workspace; it is not crash recovery.
+
+### Whole-Editor exit acceptance
+
+Run each suite with a separate fresh external output directory:
+
+```powershell
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $FreshOutputRoot `
+  -Suite exit-save
+```
+
+Repeat with `exit-discard`, `exit-clean` and `exit-rollback`. These native suites
+exercise File → Exit, the main window close control and cancellation through
+legacy Python exit; they do not use forced pane-close APIs. They check raw forms,
+catalog bytes, actual locked-file failure and retry, partial saves, staged member
+changes, repeated later-pane rollback and clean reopening after a successful save.
+Each successful final case must load the expected module and exit normally.
+The five-second interaction budget applies only to the synthetic fixture.
+
+The pinned Windows Profile acceptance passed all 50 whole-exit checks with normal
+Editor exits. The maximum recorded whole-exit interaction was 1.500 seconds.
+Pane-close and both workspace-picker regressions also passed (123 checks).
 
 ## Persistence expectations
 

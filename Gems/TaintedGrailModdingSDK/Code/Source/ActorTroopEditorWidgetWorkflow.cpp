@@ -154,7 +154,18 @@ namespace TaintedGrailModdingSDK
         {
             m_portraitState->setText(tr("Select an actor to preview its assigned portrait.")); return;
         }
-        auto image = PopulationPortraitService::Read(Q(FoundationService::Get().GetWorkspaceRootPath()), m_actorPortraitRef->text());
+        auto& foundation = FoundationService::Get();
+        const auto* pack = foundation.GetActivePack();
+        const auto* binding = pack ? foundation.GetCatalog().FindPresentationBinding(
+            pack->m_packId, m_loadedActorRecordId, "portrait") : nullptr;
+        if (binding && !binding->m_valueRecordId.empty())
+        {
+            QImage managed; AZStd::string error;
+            if (!foundation.ReadProjectAssetImage(binding->m_valueRecordId, managed, &error)) { m_portraitState->setText(Q(error)); return; }
+            m_portrait->setPixmap(QPixmap::fromImage(managed).scaled(m_portrait->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            m_portraitState->setText(tr("Active mod portrait from Assets and text. Change this assignment in the Manager.")); return;
+        }
+        auto image = PopulationPortraitService::Read(Q(foundation.GetWorkspaceRootPath()), m_actorPortraitRef->text());
         if (!image.IsSuccess()) { m_portraitState->setText(image.GetError()); return; }
         m_portrait->setPixmap(QPixmap::fromImage(image.GetValue()).scaled(m_portrait->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
         m_portraitState->setText(tr("Local authoring portrait: %1").arg(m_actorPortraitRef->text()));

@@ -26,6 +26,8 @@
 #include "TaintedFrameworkEditorServices.h"
 #include "TaintedInterfaceUiUtilities.h"
 
+class QImage;
+
 namespace TaintedGrailModdingSDK
 {
     struct FoundationLocalSetupResult
@@ -122,6 +124,13 @@ namespace TaintedGrailModdingSDK
         bool ImportNativePopulation(const AZStd::string& path, AZStd::string* error = nullptr);
         bool CreatePopulationRecord(const AZStd::string& kind, const AZStd::string& name,
             const AZStd::string& leaderActorId, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveProjectAsset(ProjectAssetProfile asset, const AZStd::string& name, const AZStd::string& sourceFile,
+            const AZStd::string& expectedRevision, AZStd::string& id, AZStd::string* error = nullptr);
+        bool SaveLocalisationEntry(LocalisationEntry entry, const AZStd::string& expectedRevision,
+            AZStd::string& id, AZStd::string* error = nullptr);
+        bool SavePresentationBinding(const AZStd::string& target, const AZStd::string& slot,
+            const AZStd::string& value, const AZStd::string& expectedRevision, AZStd::string* error = nullptr);
+        bool ReadProjectAssetImage(const AZStd::string& id, QImage& image, AZStd::string* error = nullptr) const;
         bool ReadQuestDocument(const AZStd::string& path, QuestAuthoringDraft& draft, AZStd::string* error = nullptr) const;
         bool CreateQuestDefinition(const AZStd::string& name, AZStd::string& id, AZStd::string* error = nullptr);
         bool AdoptQuestDefinition(QuestAuthoringDraft draft, AZStd::string& id, AZStd::string* error = nullptr);
@@ -225,6 +234,9 @@ namespace TaintedGrailModdingSDK
 
     private:
         bool ImportEconomyDocument(const AZStd::string& path, bool custom, AZStd::string* error);
+        bool CanAuthorPresentation(AZStd::string* error) const;
+        bool CommitPresentationEdit(ProjectAssetProfile asset, LocalisationEntry entry, PresentationBinding binding,
+            const AZStd::string& name, int kind, AZStd::string* error);
         bool CommitQuestDefinition(QuestAuthoringDraft draft, const AZStd::string& expectedRevision, bool creating, AZStd::string* error);
         bool CommitAuthoredWorld(WorldPlaceProfile place, WorldPathDefinition path, const AZStd::string& kind,
             const AZStd::string& name, bool isPlace, bool creating, AZStd::string* error);

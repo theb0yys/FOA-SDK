@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Tests/AssetLocalisationAuthoringTests.cpp
     Tests/WorldAuthoringTests.cpp
     Tests/QuestAuthoringTests.cpp
     Tests/SocietyAuthoringTests.cpp

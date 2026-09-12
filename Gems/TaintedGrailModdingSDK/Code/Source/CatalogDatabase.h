@@ -72,6 +72,15 @@ namespace TaintedGrailModdingSDK
         bool UpsertEncounterDefinition(const EncounterDefinition& definition, AZStd::string* error = nullptr);
         const EncounterDefinition* FindEncounterDefinition(const AZStd::string& recordId) const;
         const AZStd::vector<EncounterDefinition>& GetEncounterDefinitions() const;
+        bool UpsertProjectAsset(const ProjectAssetProfile&, AZStd::string* error = nullptr);
+        bool UpsertLocalisationEntry(const LocalisationEntry&, AZStd::string* error = nullptr);
+        bool UpsertPresentationBinding(const PresentationBinding&, AZStd::string* error = nullptr);
+        const ProjectAssetProfile* FindProjectAsset(const AZStd::string& id) const;
+        const LocalisationEntry* FindLocalisationEntry(const AZStd::string& id) const;
+        const PresentationBinding* FindPresentationBinding(const AZStd::string& owner, const AZStd::string& target, const AZStd::string& slot) const;
+        const AZStd::vector<ProjectAssetProfile>& GetProjectAssets() const;
+        const AZStd::vector<LocalisationEntry>& GetLocalisationEntries() const;
+        const AZStd::vector<PresentationBinding>& GetPresentationBindings() const;
         bool UpsertQuestProfile(const QuestAuthoringProfile& profile, AZStd::string* error = nullptr);
         const QuestAuthoringProfile* FindQuestProfile(const AZStd::string& id) const;
         const AZStd::vector<QuestAuthoringProfile>& GetQuestProfiles() const;
@@ -156,6 +165,8 @@ namespace TaintedGrailModdingSDK
     private:
         friend class CatalogGovernanceService;
         bool UpsertWorldPathProfile(const WorldPathProfile& path, AZStd::string* error);
+        bool LoadAssetLocalisationCollections(const CatalogDocument&, AZStd::string* error);
+        bool ValidateAssetLocalisationIntegrity(const GameProfile&, const SourceEvidenceRegistry&, AZStd::string* error) const;
         bool LoadQuestCollections(const CatalogDocument& document, AZStd::string* error);
         bool ValidateQuestIntegrity(const GameProfile& profile, const SourceEvidenceRegistry& registry, AZStd::string* error) const;
         bool LoadWorldCollections(const CatalogDocument& document, AZStd::string* error);
@@ -244,6 +255,9 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<FactionProfile> m_factionProfiles;
         AZStd::vector<FactionLink> m_factionLinks;
         AZStd::vector<QuestAuthoringProfile> m_questProfiles;
+        AZStd::vector<ProjectAssetProfile> m_projectAssets;
+        AZStd::vector<LocalisationEntry> m_localisationEntries;
+        AZStd::vector<PresentationBinding> m_presentationBindings;
         AZStd::vector<WorldPlaceProfile> m_worldPlaces;
         AZStd::vector<WorldPathProfile> m_worldPaths;
         AZStd::vector<WorldPathNode> m_worldPathNodes;

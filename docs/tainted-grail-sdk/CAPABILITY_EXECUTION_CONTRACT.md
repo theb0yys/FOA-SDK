@@ -614,3 +614,119 @@ request
 ```
 
 The next researched implementation stop is **M0 — Governance And Implementation Authority**. Documentation acceptance does not authorise M1 or any later batch.
+
+## M1 Core value API
+
+The six `CapabilityExecution{Contracts,Canonical,Validation}.{h,cpp}` files implement the
+[M0-authorised M1 slice](CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md). Public names
+are isolated in `TaintedGrailModdingSDK::CapabilityExecution`. The API contains values,
+enum-token conversion, canonical projection, fingerprints and consistency checks. It adds
+no provider selection, policy evaluation, persisted format, executor or Editor command.
+
+Each of the 25 record types has a version-1 header, namespaced ID and caller-supplied own
+fingerprint. `Canonicalize(value)` returns bounded canonical bytes and SHA-256 without
+changing the value. A producer sets that fingerprint on its newly constructed value;
+`Validate(value)` then rejects missing, stale or malformed fingerprints. `Reference(value)`
+returns exact upstream identity, kind, bytes and fingerprint only when those agree.
+
+### Validation levels and authorization scope
+
+Single-value validation checks the record and its embedded records, including upstream byte
+hashes. It does not parse an opaque upstream object or prove that a caller's claimed upstream
+ID/kind represents those bytes. Contextual overloads accept the descriptor, request, selected
+bindings, plan or owner extension values explicitly and compare their exact canonical bytes,
+kind, ID and fingerprint. Consumers must use the contextual overload appropriate to their
+boundary. No lookup service, global registry, filesystem or hidden cache is consulted.
+
+An immutable execution plan includes a PENDING or NOT_REQUIRED authorization **intent**
+scoped to its semantic request. A subsequent authorization observation binds the complete
+plan fingerprint and is included in an execution receipt. This ordering avoids a circular
+plan/authorization hash dependency. GRANTED, EXPIRED, REVOKED and SCOPE_MISMATCH observations
+carry actor identity and a UTC validity interval. Validation checks shape and exact scope;
+it does not consult a clock, authenticate an actor or grant permission.
+
+Support, qualification, environment, policy, authorization, execution outcome, verification,
+assessment, promotion and release decisions remain separate enums. A structurally consistent
+DENIED or UNSUPPORTED plan remains valid data. Its existence is not permission to execute.
+Receipt failure remains visible after successful rollback. A successful VERIFY phase needs
+an explicit PASSED verification observation; success does not imply assessment or promotion.
+
+### Canonical V1 rules
+
+Contract ID: `foa-capability-execution-v1`; canonical profile:
+`foa-capability-execution-canonical-json-v1`. Each object starts with fixed keys
+`contract_id`, `canonical_profile`, `version`, `kind`, `id`, followed by its declared
+fields in header order. JSON uses UTF-8, no whitespace, exact uppercase enum tokens,
+decimal integers, JSON booleans and explicit null for absent optional records/numbers.
+The own fingerprint and capture-only label/time/diagnostic locator are excluded; excluded
+metadata is still validated. Upstream bytes and upstream fingerprints are included.
+Strings preserve valid UTF-8 scalar bytes and escape quotes/backslashes. Controls and
+malformed encodings are rejected. There is no Unicode normalization or locale-dependent
+ordering. Unknown versions, profiles, enum tokens and duplicate collection IDs are rejected.
+
+Sets sort by exact ID or token using byte order: input/output contract declarations, side
+effects, optional phases, evidence IDs, binding fingerprints, preferred bindings, options,
+expected outputs, output records, observations, failures and diagnostics. Sequences retain
+order: required phases, input artifacts, phase plans, mutations, inverse steps, phase attempts
+and rollback receipts. Reordering a sequence changes its fingerprint.
+
+Opaque extension/upstream bytes receive only bounded lexical quote/nesting and conservative
+private-path/secret/shell-fragment screening. Their owner remains responsible for format
+validity and redaction; this API is not a general JSON parser or a secrecy guarantee.
+Phase-specific source manifests use an explicit extension wrapper; legacy V1 objects are
+never automatically reinterpreted as new execution contracts.
+
+### Artifact and rollback bindings
+
+Storage roots are symbolic namespaced IDs. Locators are bounded relative ASCII paths;
+absolute paths, drives, UNC/URI forms, traversal, empty components and Windows device aliases
+are rejected. Symbolic identities remain case-sensitive; path collision checks fold ASCII
+case for Windows compatibility. Provider versions are exact numeric three-part versions,
+and the version constraint must equal the pinned provider version.
+
+Plans consume request inputs or earlier declared outputs. Output locations cannot reuse an immutable input location, and rollback-plan IDs identify exactly one phase. A consumed expected output needs a
+known digest; a terminal output can omit its expected digest until its producer reports it.
+Artifact ownership, custodian, payload contract, location, digest and byte limits are checked
+against the supplied declaration. Immutable backups must be exact supplied request inputs.
+Create binds absence; replace/remove bind an owned preimage and matching BACKUP artifact.
+Every mutation binds one inverse step in reverse order, including the expected postimage
+guard and original owner/content. This describes rollback without executing it.
+
+Phase receipts bind the exact plan, phase, provider, command, configuration and environment.
+Outputs and observations must match the phase declarations; success requires complete coverage.
+Attempts retain order and identity. Rollback observations bind inverse steps and restored
+owner/content; ROLLED_BACK requires coverage for every attempted phase with mutations.
+Unattempted, skipped and blocked observations cannot claim process results or artifacts.
+
+### Bounds and cost
+
+| Limit | V1 bound |
+|---|---:|
+| Display/message text | 4,096 UTF-8 bytes |
+| Namespaced ID | 128 bytes |
+| Relative locator | 240 bytes |
+| Individual collection | 64 entries |
+| Execution phases | 9 |
+| Traversed object nodes | 4,096 |
+| Object/opaque lexical nesting | 12 |
+| Embedded upstream/extension bytes | 1 MiB each |
+| Complete canonical projection | 2 MiB |
+| Artifact declared byte size | 1 TiB |
+
+All bounds are compositional: an individually valid value may be too large to embed in a
+larger record. Checked multiplication/addition rejects aggregate overflow. A dry bounded
+pass precedes canonical output allocation. Canonicalization costs O(B + N log N) for visited
+bytes B and set entries N, with bounded pointer-based sorting. Contextual validation revisits
+nested records and plans for each of at most 64 receipts and 9 phases; its cost is O(R P B +
+N log N) under these fixed bounds, not an unbounded global scan. The API is not wired into a
+UI/event hot path. Compiled tests cover exact byte/cardinality/nesting limits and one-over
+rejections; hardware timing is recorded as local evidence rather than a portable guarantee.
+
+### Compatibility and completion boundary
+
+Existing canonical V1 helpers and consumers remain unchanged. M1 creates no file suffix,
+durable schema, registry or migration. Older workspaces and packs are unaffected. Future
+breaking canonical or semantic changes require a new contract/profile version or separately
+reviewed migration. The dedicated `TaintedGrailModdingSDK.CapabilityExecution.Tests` target
+links Core and AzTest only. M1 does not make the Build and Test Runner operational; M2
+process supervision requires its own authorized scope. Runtime sign-off not performed.

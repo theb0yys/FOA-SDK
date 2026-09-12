@@ -6,6 +6,9 @@
 #
 
 set(FILES
+    Source/AssetLocalisationManagerWidget.h
+    Source/AssetLocalisationManagerWidget.cpp
+    Source/AssetLocalisationManagerWidgetWorkflow.cpp
     Source/WorldRouteEditorWidget.h
     Source/WorldRouteEditorWidget.cpp
     Source/WorldRouteEditorWidgetPreview.cpp

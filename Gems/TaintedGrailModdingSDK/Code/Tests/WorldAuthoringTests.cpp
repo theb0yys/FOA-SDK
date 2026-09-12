@@ -393,7 +393,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_NE(service.GetCatalog().FindCultureProfile(culture), nullptr); EXPECT_NE(service.GetCatalog().FindFactionProfile(faction), nullptr);
         const auto hash = QCryptographicHash::hash(original, QCryptographicHash::Sha256).toHex();
         QFile backup(path + ".schema-4." + QString::fromLatin1(hash) + ".backup.json"); ASSERT_TRUE(backup.open(QIODevice::ReadOnly)); EXPECT_EQ(backup.readAll(), original);
-        EXPECT_EQ(QJsonDocument::fromJson(WorldBytes(service)).object()["SchemaVersion"].toInt(), 6);
+        EXPECT_EQ(QJsonDocument::fromJson(WorldBytes(service)).object()["SchemaVersion"].toInt(), static_cast<int>(CurrentCatalogSchemaVersion));
     }
     TEST_F(WorldAuthoringTests, MalformedOldFutureAndDuplicateWorldCollectionsAreRejectedAtomically)
     {
@@ -407,7 +407,7 @@ namespace TaintedGrailModdingSDK
             EXPECT_EQ(published.GetWorldPlaces().size(), good.m_worldPlaces.size()); EXPECT_EQ(published.GetWorldPathEdges().size(), 2);
         };
         const auto bytes = WorldBytes(service);
-        for (AZ::u32 version : {1, 2, 3, 4, 7})
+        for (AZ::u32 version : {1u, 2u, 3u, 4u, CurrentCatalogSchemaVersion + 1})
         {
             auto bad = good; bad.m_schemaVersion = version; reject(bad);
             auto object = QJsonDocument::fromJson(bytes).object(); object["SchemaVersion"] = static_cast<int>(version);

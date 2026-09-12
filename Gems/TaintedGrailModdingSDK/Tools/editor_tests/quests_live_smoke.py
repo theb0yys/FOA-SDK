@@ -220,7 +220,7 @@ def run():
         general.open_pane("Tainted Grail Quest and State Inspector"); general.idle_wait(0.3)
         quest=create_quest("Find the North Gate")
         migrated=json.loads(catalog_bytes())
-        assert migrated["SchemaVersion"] == 6
+        assert migrated["SchemaVersion"] == 7
         assert any(p.read_bytes()==before for p in (workspace.parent/"Catalog").glob("*.schema-5.*.backup.json"))
         for key,value in initial.items():
             if isinstance(value,list) and key not in ("Records",):

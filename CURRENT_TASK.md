@@ -1,72 +1,41 @@
 # Current Task
 
-## Scope and status
+Status: PASSED for PR #260 conflict resolution and targeted acceptance. Expanded
+coverage is PARTIAL only for the Windows symlink-privilege skips listed below.
 
-PASSED: finish docked Pack Manager close-and-recovery verification on PR #262.
-The verification gap is closed. Routine harness correction inside the accepted recovery
-design; the containing recovery PR remains Significant because it adds persistence.
+Goal: resolve PR #260 against main and validate the combined Pack Manager workspace
+protection, draft recovery and docked close behavior.
+
+Classification: Routine reconciliation inside accepted contracts. The containing PR
+is Significant because it adds workspace admission and a separate recovery format.
 Primary owner: workspace-and-packs; consumer: Editor acceptance.
-Branch: codex/pack-draft-recovery. Follow-up base: 8b60308743e6af7363db8ce360f615c569fdb240.
-The user explicitly requested this follow-up. PR #262 still depends on #260; no merge
-or approval is authorized by this verification task.
 
-## Changes
+In scope: merge main at `66549462b37d4ede7f6e6295717b0cdce73f7807` into
+`codex/pack-workspace-switch-protection`, preserving PR #262 already integrated at
+`39df0a1d021c98bcb09af450d1af97047c3910bd`. The only textual conflict was this
+active-task record. Foundation declarations, source inventories and validators
+combined cleanly. Main's asset/localisation and M1 contracts remain intact.
 
-- Open the registered pane through QtViewPaneManager UseDefaultState for every docked
-  test open, including reopens. This avoids stale floating-layout caches without manually
-  changing dock ownership. The test-only bridge checks Windows x64 / Qt 6.10.2 and uses
-  inspected public exports from already-loaded host modules. Pin/Qt migrations must
-  review this bridge; it does not add a product API.
-- Target the actual embedded dock tab's Close action. If a native popup is dismissed on
-  the inactive private desktop, activate its exact enabled QAction and record the route.
-  Floating closure still uses the actual titlebar button. Forced Python pane closure
-  is not used to prove the guard.
-- Gate the complete New/Open/docked/floating smoke on NotifyEditorInitialized and require
-  actual clean process exit. Add `-Suite docked` to the recovery runner to include this
-  regression alongside all recovered-draft checks.
-- Verify recovered raw fields, baseline/identity retention, Cancel/Escape/prompt-close,
-  failed validation, real locked-manifest write failure, successful Save, Discard,
-  registered dock destruction, recovery retirement and correct saved-state reopening.
+Out of scope: new features, contract redesign, external engine changes, game data,
+installer/deployment/runtime/release operations, PR approval or merge into main.
 
-No production C++, schemas, engine files, dependencies, installer or runtime behavior
-changed. The separate schema and recovery guarantee remain as documented in
-[Pack Manager draft recovery](docs/tainted-grail-sdk/PACK_DRAFT_RECOVERY.md).
+Acceptance: PASSED static validators, fixtures, 10 enabled pinned source-policy
+checks, pinned configure, SDK and test builds, complete Editor consumer build and
+AssetProcessorBatch build. All three compiled CTest registrations passed: 581 cases
+passed and two symlink cases skipped. The 37 focused workspace/persistence/recovery
+cases all passed. Python: 839 passed, nine symlink cases skipped, zero failures.
+Editor: docked recovery 12 processes/50 checks; workspace switching two/44; exit
+nine/27. Final runs had four intentional checkpoint-confirmed terminations, 19 clean
+exits and no unintended crashes or forced cleanup.
 
-## Executed validation
+Evidence: external logs, per-process receipts, screenshots and source/module hashes.
+UI runs used private desktops, synthetic local fixtures, a prepared cache and external
+launch wrappers isolating the Asset Processor connection. An initial pre-initialization
+shader-load crash is retained as FAILED; the complete host rebuild and isolated
+connection preceded the passing rerun. A unique cause was not independently proven.
+No new product behavior or engine source change was needed to resolve the conflict.
 
-- PASSED: `run_pack_draft_recovery_smoke.ps1 -Suite docked` on the private Windows desktop:
-  12 processes, 50 named aggregate checks, four checkpoint-verified intentional stops,
-  eight clean exits, zero unintended crashes or forced cleanup. The docked/floating
-  regression contributes 29 checks. All child receipts match the loaded SDK module hash.
-- PASSED: 83 recorded fixture waits/transitions, maximum 0.781 s. These are bounded
-  synthetic interaction measurements, not general storage throughput or layout-quality
-  acceptance. Recovery action screenshots are included in the external evidence.
-- PASSED: all static validators using `run_local_validation.py --keep-going --static-only
-  --skip-source-policy --skip-unit-tests --skip-fixtures`.
-- PASSED: all 10 enabled pinned source-policy validators; Python AST and PowerShell syntax;
-  focused diff/protected-file review and whitespace check.
-- NOT_RUN: new configure/build/compiled tests for this follow-up; production and compiled
-  test sources are unchanged. The existing 37/37 compiled-test and Editor build evidence
-  remains tied to the identical SDK module SHA-256 below. No new compiled pass is claimed.
+Current branch: `codex/pack-workspace-switch-protection`.
 
-Pinned external engine: `68683f23fb747380d3efa2424bd5f30242e9c5a2`.
-SDK module SHA-256: `4CE64683E1C1A04E0DE779674B306D4093DBBD82AC742CC08CC61E9A107756DC`.
-
-The earlier docking probes failed on remembered layout, outer-titlebar lookup, private
-popup handling and generic Qt docking mutation. The committed runner passed using the
-host's registered default-open route and actual pane actions. Historical failed receipts
-and the earlier Qt/FancyDocking crash remain retained; they are superseded for this
-functional acceptance by the complete 12-process pass, not relabelled as passing runs.
-
-## Evidence and handoff
-
-Machine-readable `docked-verification.json`, per-process receipts, source/module hashes,
-logs and screenshots remain outside source. Private desktops were never activated; Qt
-layout preferences are not independently isolated. No protected game data, saves,
-credentials, user-owned Editor process, installation or external engine source was modified.
-Runtime, installer, deployment and release sign-off: NOT_APPLICABLE; none performed.
-
-This follow-up changes only the four Editor test/helper scripts and their two owning
-guides plus this task record. Deliver through the existing PR #262 with DCO sign-off.
-Maintainer review and merge remain outstanding. Historical unrelated Python symlink
-privilege skips from the initial recovery validation are not converted into passes.
+Next action: maintainer review of the updated PR #260. Approval and merge into main
+remain separate; no further development task is started by this reconciliation.

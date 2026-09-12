@@ -6,8 +6,19 @@
 #
 
 set(FILES
+    Source/CapabilityExecutionContracts.h
+    Source/CapabilityExecutionContracts.cpp
+    Source/CapabilityExecutionCanonical.h
+    Source/CapabilityExecutionCanonical.cpp
+    Source/CapabilityExecutionValidation.h
+    Source/CapabilityExecutionValidation.cpp
     Source/WorldModels.h
     Source/QuestAuthoringModels.h
+    Source/AssetLocalisationModels.cpp
+    Source/AssetLocalisationModels.h
+    Source/AssetLocalisationService.cpp
+    Source/AssetLocalisationService.h
+    Source/CatalogDatabaseAssets.cpp
     Source/QuestAuthoringModels.cpp
     Source/QuestAuthoringService.h
     Source/QuestAuthoringService.cpp

@@ -152,3 +152,10 @@ The actual Windows screenshot pass remains pending. Trusted identity/time provid
 ## Documentation contribution rules
 
 Documentation changes must describe current behavior honestly, distinguish implemented from planned behavior, avoid proprietary content and private paths, use stable links, and include migration notes for breaking format changes.
+
+- [Asset and Localisation Manager](ASSET_LOCALISATION_MANAGER_GUIDE.md) — images, translations, assignments and recovery.
+- [Asset and Localisation Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) — ownership, schema 7 and validation.
+
+- [Capability execution M1 Core API](CAPABILITY_EXECUTION_CONTRACT.md#m1-core-value-api):
+  bounded values, canonical fingerprints and contextual plan/receipt validation. Process
+  supervision and the operational Build and Test Runner remain later authorized work.

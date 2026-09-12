@@ -190,3 +190,23 @@ For every reported check, record enough information to identify what actually ra
 Pending is not passing. Queued, skipped, absent, stale-head, wrong-commit, or zero-test results are not passes. Self-declared metadata are not proof that the repository owner authorized an action.
 
 Use `PASSED`, `FAILED`, `PARTIAL`, `BLOCKED`, `NOT_RUN`, or `NOT_APPLICABLE`.
+
+## Capability execution M1 validation
+
+M1 follows its merged [implementation authority](CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md).
+The automatic read-only `capability-execution-compiled` Windows job checks out the exact PR
+head and pinned O3DE, builds `TaintedGrailModdingSDK.CapabilityExecution.Tests`, and runs its
+CTest registration with `--no-tests=error`. This Core/AzTest target uses NO_UNITY and its own
+three-file manifest. No production source is recompiled inside the test target.
+
+`run_local_validation.py` includes `validate_capability_execution_contracts.py` in static
+mode. Full mode runs an independent M1 CTest command after legacy Catalog/CanonicalInterchange,
+so a missing M1 test cannot be hidden by successful legacy tests. Python adversarial fixtures
+exercise missing files, altered types, dependency/ownership changes and CI permission drift.
+
+Required local evidence includes prerequisites, pinned configure, Core and dedicated tests,
+legacy compiled regression and Editor/AssetProcessorBatch build compatibility. Reused host
+build inputs must be from the same pin and configuration, with product targets rebuilt from
+the reviewed checkout. M1 has no operational consumers; Editor/UI, provider processes,
+deployment/rollback execution and game runtime proof are NOT_APPLICABLE. Compilation and
+synthetic receipt tests must not be reported as those forms of operational evidence.

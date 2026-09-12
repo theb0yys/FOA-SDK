@@ -161,6 +161,7 @@ Documentation changes must describe current behavior honestly, distinguish imple
   supervision is the accepted M2 scope; the operational Build and Test Runner remains later work.
 
 - [Tool Execution Service M2 accepted scope and implementation status](TOOL_EXECUTION_M2_DESIGN.md):
+- [Framework Orchestrator and Repositories M3](FRAMEWORK_EXECUTION_M3_DESIGN.md): accepted implementation scope, session admission, private repositories, recovery and acceptance tests.
   Windows batch supervision, V2 invocation records and required isolation proof.
   The accepted registryRead profile supports native batch supervision with exact
   capability checks; Editor execution remains disabled pending Framework admission.

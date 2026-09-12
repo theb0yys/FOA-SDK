@@ -6,6 +6,8 @@
  */
 
 #include "TaintedGrailModdingSDKSystemComponent.h"
+#include <QApplication>
+#include <AzCore/Interface/Interface.h>
 
 #include "AdapterBuildManifestWidget.h"
 #include "AdapterCapabilityMatrixWidget.h"
@@ -144,15 +146,28 @@ namespace TaintedGrailModdingSDK
     void TaintedGrailModdingSDKSystemComponent::Activate()
     {
         FoundationService::Get().Initialize();
+        AZ::Interface<FoundationService>::Register(&FoundationService::Get());
         AzToolsFramework::EditorEvents::Bus::Handler::BusConnect();
+        NotifyQtApplicationAvailable(qobject_cast<QApplication*>(QCoreApplication::instance()));
 
         AZ_Printf(
             "TaintedGrailModdingSDK",
             "Editor foundation activated. FoA runtime execution remains disabled.\n");
     }
 
+    void TaintedGrailModdingSDKSystemComponent::NotifyQtApplicationAvailable(QApplication* application)
+    {
+        if (!application || m_frameworkShutdownConnection) { return; }
+        m_frameworkShutdownConnection = QObject::connect(application, &QCoreApplication::aboutToQuit, application, []
+        { FoundationService::Get().StopFrameworkExecution(); }, Qt::DirectConnection);
+    }
+
     void TaintedGrailModdingSDKSystemComponent::Deactivate()
     {
+        AZ::Interface<FoundationService>::Unregister(&FoundationService::Get());
+        QObject::disconnect(m_frameworkShutdownConnection);
+        m_frameworkShutdownConnection = {};
+        FoundationService::Get().StopFrameworkExecution();
         if (m_viewRegistered)
         {
             AzToolsFramework::UnregisterViewPane(DevelopmentHubViewPaneName);

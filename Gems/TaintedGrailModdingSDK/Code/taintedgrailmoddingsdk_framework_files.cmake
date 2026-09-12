@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Source/FoundationExecutionService.cpp
     Source/FoundationAssetLocalisationService.cpp
     Source/ProjectImageService.cpp
     Source/ProjectImageService.h

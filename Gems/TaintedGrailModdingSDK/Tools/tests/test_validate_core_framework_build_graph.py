@@ -112,3 +112,14 @@ ly_add_target(
 
 if __name__ == "__main__":
     unittest.main()
+
+class FrameworkExecutionOwnershipTests(unittest.TestCase):
+    def test_nested_execution_family_requires_exactly_one_owner(self):
+        validator.validate_unique_production_ownership(
+            ("Source/ExecutionFramework/Service.cpp",),
+            {"FrameworkExecution": ("Source/ExecutionFramework/Service.cpp",)})
+        with self.assertRaisesRegex(validator.BuildGraphContractError, "duplicate ownership"):
+            validator.validate_unique_production_ownership(
+                ("Source/ExecutionFramework/Service.cpp",),
+                {"FrameworkExecution": ("Source/ExecutionFramework/Service.cpp",),
+                 "Framework": ("Source/ExecutionFramework/Service.cpp",)})

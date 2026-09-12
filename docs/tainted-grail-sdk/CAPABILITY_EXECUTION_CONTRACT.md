@@ -521,6 +521,8 @@ Add separate execution API, invocation V2 contracts, bounded supervisor, cancell
 
 Add provider binding/qualification/policy services, execution planning/orchestration, durable execution repository, artifact repository, target ownership ledger, and evidence projection.
 
+The owner requested this batch on 12 September 2026. Its [exact M3 design and acceptance scope](FRAMEWORK_EXECUTION_M3_DESIGN.md) was accepted by the owner under the M0 gate. The M3 change provides the implementation; acceptance results are recorded against its exact reviewed source.
+
 ### M4 — Existing Planner Adaptation
 
 Wrap existing build, package, deployment, work-order, and assessment services as pure phase previews/assessment. Do not add side effects to them.

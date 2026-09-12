@@ -1,6 +1,6 @@
 # TGE encounter commands
 
-Status: source implementation; exact-install gameplay acceptance NOT_RUN.
+Status: exact-install native single-NPC and saved-composition lifecycles PASSED; human visual signoff NOT_RUN; overall session PARTIAL.
 Owner: Tainted Grail Extender owns native actors and cleanup. FOA-SDK owns the
 request client and the explicit saved-composition export. Classification:
 Critical/Runtime. The current owner requested one NPC, observed appearance,
@@ -133,4 +133,4 @@ Related contracts: [SDK adapter](TGE_SDK_ADAPTER.md),
 Executed source validation: PASSED, 57 SDK Python tests (including 11 encounter
 tests, zero skips), 77 managed controller checks, 68 synthetic production-binding
 checks, and the final native build with zero warnings/errors. Two independent
-runtime reviews are APPROVED. Installed-game appearance/removal remains NOT_RUN.
+runtime reviews are APPROVED. The subsequent authorized Mono build 24270691 test (attempt7 on 2026-09-12) observed one Wyrdspirit, removed its exact tracked actor, then observed and removed both actors from the exported and reloaded saved composition. All three retained their opaque handles and native-ID digests through confirmed model/view destruction. The acceptance runner now waits for fresh native loading completion before dispatch; 60 runner guards PASSED. The installed DLLs were unchanged. Human visual confirmation and save/reload behavior remain NOT_RUN. Configuration restoration, DLL integrity and temporary app-ID removal PASSED; process exit was zero, but the host-stopped marker was absent, so overall session status remains PARTIAL. Runtime-owner evidence: mods/tainted-grail-extender/docs/validation/foa-sdk-encounters-live-2026-09-12-attempt7.json in the TGE repository.

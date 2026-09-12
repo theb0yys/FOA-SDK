@@ -67,6 +67,16 @@ class CapabilityExecutionBoundaryTests(unittest.TestCase):
     def test_unauthorized_consumer(self):
         (self.root / guard.CODE / "Source/Unexpected.cpp").write_text('#include "CapabilityExecutionContracts.h"\n', encoding="utf-8")
         self.rejected()
+    def test_nested_unauthorized_consumer(self):
+        p = self.root / guard.CODE / "Source/Nested/Unexpected.cpp"
+        p.parent.mkdir()
+        p.write_text('#include "../CapabilityExecutionContracts.h"\n', encoding="utf-8")
+        self.rejected()
+    def test_exact_framework_reader_is_allowed(self):
+        p = self.root / guard.CODE / "Source/ExecutionFramework/FrameworkExecutionCodec.h"
+        p.parent.mkdir()
+        p.write_text('#include "../CapabilityExecutionValidation.h"\n', encoding="utf-8")
+        self.assertEqual([], guard.validate(self.root))
     def test_test_manifest_production_recompile(self):
         p = self.root / guard.CODE / guard.MANIFEST
         p.write_text(p.read_text(encoding="utf-8") + "\nSource/CapabilityExecutionContracts.cpp\n", encoding="utf-8")

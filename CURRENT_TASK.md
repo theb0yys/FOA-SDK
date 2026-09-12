@@ -1,14 +1,23 @@
-# M2 - Tool Execution Service
+# M3 - Framework Orchestrator and Repositories
 
-Status: IMPLEMENTED; submit for maintainer review with exact-head validation.
-Goal: ExternalToolchain supervisor, V2 API, cancellation, bounded diagnostics, verified outputs and durable records.
-Classification: Critical/Runtime. Primary owner: external-toolchain.
-Authority: original M2 scope and amendment B accepted by the owner on 12 September 2026; commit and PR explicitly requested.
-In scope: the exact 43 paths in TOOL_EXECUTION_M2_DESIGN.md; Windows LPAC registryRead batch profile and synthetic proof.
-Implemented: V2 contracts, admission and bounded workers, LPAC/Job Object backend, output validation, private journal/recovery, native fixture and Editor lifecycle integration. Editor execution remains default-disabled pending separate Framework integration.
-Compatibility: windows-lpac-registry-read-batch-v1 requires exactly one enabled registryRead SID. Old profile commands and their request fingerprints refuse. Historical records do not grant replay authority.
-Validation: final production-source results belong to the exact-head private receipt and PR. Earlier amendment A experimental results remain separate evidence.
-Current branch: codex/tool-execution-m2-design, isolated from concurrent SDK-client work.
-Next action: maintainer review of the M2 PR. M3 requires a new owner instruction.
-Out of scope: interactive tools, secrets, game/Unity launch, deployment, release and protected data.
+Status: accepted M3 implementation provided; acceptance is recorded in the exact-head validation receipt.
+Goal: connect reviewed plans and live admission to M2, with durable execution,
+artifact custody, target ownership and candidate evidence projection.
+Classification: Significant design; Critical/Runtime implementation.
+Primary owner: capability-execution in Framework.
+Owner request: "Next: M3 — the Framework Orchestrator and Repositories."
+
+In scope now: implementation of the accepted M3 design, exact source paths,
+failure/recovery behavior and acceptance lanes.
+Implementation scope: docs/tainted-grail-sdk/FRAMEWORK_EXECUTION_M3_DESIGN.md.
+First execution profile: M2 Windows staging-only native batch phases.
+Out of scope: M4 planner adaptation, M5 full deployment pipeline, game/Unity launch,
+protected installations/saves, signing/publication and unrelated SDK-client work.
+
+Acceptance: scope accepted before source implementation; then required exact-head
+static/compiled/native/Editor gates actually pass. A design is not working-service
+proof. Existing M1/M2 contracts and isolated engine remain unchanged.
+Current branch: codex/framework-orchestrator-m3, based on validated M2 c41be264c7.
+Handoff: exact-head static, compiled, native and Editor evidence accompanies the focused M3 pull request.
+Maintainer review and merge remain separate actions. M4/M5 are not started.
 Runtime sign-off not performed.

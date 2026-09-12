@@ -38,6 +38,23 @@ ly_add_source_properties(
             CanonicalManifestBytesMatchV1=CanonicalManifestBytesMatchIncludingEmptyDisplayNameV1
 )
 
+# M3 is a host-private Framework consumer; M1 retains its Core-only boundary.
+ly_add_target(
+    NAME ${gem_name}.FrameworkExecution.Static STATIC
+    NAMESPACE Gem
+    NO_UNITY
+    FILES_CMAKE taintedgrailmoddingsdk_framework_execution_files.cmake
+    INCLUDE_DIRECTORIES
+        PUBLIC Source "${CMAKE_CURRENT_LIST_DIR}/../../ExternalToolchain/Code/Source"
+    BUILD_DEPENDENCIES
+        PUBLIC Gem::${gem_name}.Core.Static Gem::ExternalToolchain.Execution.Host.Static
+)
+if(PAL_PLATFORM_NAME STREQUAL "Windows")
+    target_compile_definitions(${gem_name}.FrameworkExecution.Static PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN AZ_TRAIT_TGSDK_FRAMEWORK_WINDOWS_STAGING=1)
+else()
+    target_compile_definitions(${gem_name}.FrameworkExecution.Static PRIVATE AZ_TRAIT_TGSDK_FRAMEWORK_WINDOWS_STAGING=0)
+endif()
+
 ly_add_target(
     NAME ${gem_name}.Framework.Static STATIC
     NAMESPACE Gem
@@ -49,6 +66,7 @@ ly_add_target(
     BUILD_DEPENDENCIES
         PUBLIC
             Gem::${gem_name}.Core.Static
+            Gem::${gem_name}.FrameworkExecution.Static
         PRIVATE
             AZ::AzToolsFramework
 )
@@ -240,6 +258,44 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
     )
 
     ly_add_dependencies(${gem_name}.CanonicalInterchange.Tests AZ::AzTestRunner)
+
+    # M3 contract and native lanes exercise the same production service implementation.
+    foreach(tg_m3_lane IN ITEMS Tests Operational.Tests)
+        if(tg_m3_lane STREQUAL "Operational.Tests" AND NOT PAL_PLATFORM_NAME STREQUAL "Windows")
+            continue()
+        endif()
+        if(tg_m3_lane STREQUAL "Tests")
+            set(tg_m3_files taintedgrailmoddingsdk_framework_execution_tests_files.cmake)
+        else()
+            set(tg_m3_files taintedgrailmoddingsdk_framework_execution_operational_tests_files.cmake)
+        endif()
+        ly_add_target(
+            NAME ${gem_name}.FrameworkExecution.${tg_m3_lane} ${PAL_TRAIT_TEST_TARGET_TYPE}
+            NAMESPACE Gem NO_UNITY FILES_CMAKE ${tg_m3_files}
+            INCLUDE_DIRECTORIES PRIVATE Source Tests
+            BUILD_DEPENDENCIES PRIVATE Gem::${gem_name}.FrameworkExecution.Static AZ::AzTest
+        )
+        if(PAL_PLATFORM_NAME STREQUAL "Windows")
+            target_compile_definitions(${gem_name}.FrameworkExecution.${tg_m3_lane} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+        endif()
+        set(tg_m3_env)
+        if(PAL_PLATFORM_NAME STREQUAL "Windows")
+            set(tg_m3_env "${CMAKE_COMMAND}" -E env "FOA_M2_FIXTURE=$<TARGET_FILE:ExternalToolchain.Execution.Fixture>")
+        endif()
+        ly_add_googletest(
+            NAME Gem::${gem_name}.FrameworkExecution.${tg_m3_lane}
+            LABELS REQUIRES_tiaf
+            TEST_COMMAND ${tg_m3_env} "${Python_EXECUTABLE}" -B -s
+                "${CMAKE_CURRENT_LIST_DIR}/../Tools/run_aztest_without_gtest_xml.py"
+                $<TARGET_FILE_DIR:${gem_name}.FrameworkExecution.${tg_m3_lane}>/$<TARGET_FILE_NAME:AZ::AzTestRunner>
+                $<TARGET_FILE:${gem_name}.FrameworkExecution.${tg_m3_lane}> AzRunUnitTests
+        )
+        ly_add_dependencies(${gem_name}.FrameworkExecution.${tg_m3_lane} AZ::AzTestRunner)
+        if(tg_m3_lane STREQUAL "Operational.Tests")
+            ly_add_dependencies(${gem_name}.FrameworkExecution.${tg_m3_lane} ExternalToolchain.Execution.Fixture)
+            target_link_libraries(${gem_name}.FrameworkExecution.${tg_m3_lane} PRIVATE Gem::${gem_name}.Framework.Static AZ::AzToolsFramework)
+        endif()
+    endforeach()
 
     # M1 execution contracts have no Framework or Editor dependency.
     ly_add_target(

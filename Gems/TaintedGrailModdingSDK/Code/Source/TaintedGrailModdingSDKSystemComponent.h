@@ -8,6 +8,7 @@
 #pragma once
 
 #include <AzCore/Component/Component.h>
+#include <QMetaObject>
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
 
 namespace TaintedGrailModdingSDK
@@ -29,9 +30,11 @@ namespace TaintedGrailModdingSDK
         void Deactivate() override;
 
     private:
+        void NotifyQtApplicationAvailable(QApplication* application) override;
         void NotifyRegisterViews() override;
         void NotifyEditorInitialized() override;
 
+        QMetaObject::Connection m_frameworkShutdownConnection;
         bool m_viewRegistered = false;
     };
 } // namespace TaintedGrailModdingSDK

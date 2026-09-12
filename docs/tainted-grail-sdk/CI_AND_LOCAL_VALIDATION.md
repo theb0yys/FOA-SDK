@@ -238,3 +238,30 @@ it grants no game, deployment or release authority. Preserve exact command,
 source snapshot, build configuration, actual test counts, timing, failures and
 skips in private evidence. An incomplete operational or lifecycle row leaves M2
 PARTIAL even when all contract tests pass.
+
+## M3 Framework execution validation
+
+The accepted [M3 design](FRAMEWORK_EXECUTION_M3_DESIGN.md) requires a receipt for
+static policy/compatibility, exact-pin configure/build, compiled regressions,
+production Windows execution and actual Editor lifecycle acceptance.
+`validate_framework_execution.py` guards the exact consumer family, unique target
+ownership and required lanes. The M1 purity guard retains its exact Core inventory.
+
+Build `TaintedGrailModdingSDK.FrameworkExecution.Tests` and
+`TaintedGrailModdingSDK.FrameworkExecution.Operational.Tests` plus the existing M2
+fixture and affected Editor/Framework libraries. The read-only Windows native CI
+job runs separate M2, M3 pure and M3 operational CTest selections; each uses
+`--no-tests=error`. Full `run_local_validation.py` also runs independent M3 selections.
+Missing fixtures, skipped native tests and stale binaries cannot supply acceptance.
+
+The operational lane exercises production M2 custody/reopen, three-phase chaining,
+failure/retry, cancellation, journal reconciliation, store bounds, hardlink/content
+drift, queue bounds and measured performance. Run the committed
+`Tools/editor_tests/framework_execution_lifecycle_smoke.py` in a disposable pinned
+Editor project with the compiled acceptance-test DLL and private fixture paths.
+Test success, another Editor session reusing the same store, and shutdown while a
+fixture is running. The test uses the actual Foundation instance; its exported
+fixture functions exist only in the acceptance DLL. Record normal exit and joined
+workers separately from successful compilation.
+
+M3 does not establish game-runtime, deployment, signing or release evidence.

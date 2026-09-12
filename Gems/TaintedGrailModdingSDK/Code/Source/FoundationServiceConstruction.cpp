@@ -6,6 +6,7 @@
  */
 
 #include "FoundationService.h"
+#include "ExecutionFramework/FrameworkExecutionService.h"
 
 #include <AzCore/std/utility/move.h>
 

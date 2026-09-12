@@ -249,6 +249,8 @@ def validate_build_graph(repo_root: Path) -> None:
 
     core_entries = parse_manifest(core_manifest)
     framework_entries = parse_manifest(framework_manifest)
+    execution_manifest = code_root / "taintedgrailmoddingsdk_framework_execution_files.cmake"
+    execution_entries = parse_manifest(execution_manifest) if execution_manifest.is_file() else ()
     editor_entries = parse_manifest(editor_manifest)
     catalog_test_entries = parse_manifest(catalog_test_manifest)
     path_test_entries = parse_manifest(path_test_manifest)
@@ -277,10 +279,11 @@ def validate_build_graph(repo_root: Path) -> None:
         {
             "Core": core_entries,
             "Framework": framework_entries,
+            "FrameworkExecution": execution_entries,
             "Editor": editor_entries,
         },
     )
-    validate_core_includes(code_root, core_entries, framework_entries)
+    validate_core_includes(code_root, core_entries, (*framework_entries, *execution_entries))
 
     infrastructure = read_text(gem_root / "Infrastructure/README.md")
     require_fragments(

@@ -274,6 +274,12 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& workspaceRootHint)
     {
         FoundationLocalSetupResult result;
+        if (!CanChangeFrameworkContext())
+        {
+            result.m_error = "Finish or cancel Framework execution before changing the active game profile.";
+            return result;
+        }
+        StopFrameworkExecution();
         if (!explicitInstallPath.empty()
             && !LocalSetupDetectionService::LooksLikeTaintedGrailInstall(explicitInstallPath))
         {

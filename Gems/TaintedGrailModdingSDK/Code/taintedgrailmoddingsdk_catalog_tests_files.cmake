@@ -11,6 +11,7 @@ set(FILES
     Tests/QuestAuthoringTests.cpp
     Tests/SocietyAuthoringTests.cpp
     Tests/EncounterAuthoringTests.cpp
+    Tests/GameConnectionServiceTests.cpp
     Tests/AdapterContractTests.cpp
     Tests/CanonicalFingerprintTests.cpp
     Tests/CatalogDatabaseTests.cpp

@@ -32,6 +32,7 @@ namespace TaintedGrailModdingSDK
     namespace
     {
         constexpr const char* DevelopmentHubPane = "FOA Development Hub";
+        constexpr const char* GameConnectionPane = "Tainted Grail Connect to Game";
         constexpr const char* FoundationStatusPane = "Tainted Grail SDK Status";
         constexpr const char* PackManagerPane = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakePane = "Tainted Grail Source Intake";
@@ -268,6 +269,8 @@ namespace TaintedGrailModdingSDK
         actionLayout->addWidget(m_setupButton);
         actionLayout->addWidget(m_packButton);
         startLayout->addWidget(actionRow);
+        startLayout->addWidget(CreateRouteButton(startGroup, tr("Connect to Game"),
+            tr("Connect to the running extender and inspect its available services."), GameConnectionPane));
 
         m_primaryHint = new QLabel(startGroup);
         m_primaryHint->setWordWrap(true);

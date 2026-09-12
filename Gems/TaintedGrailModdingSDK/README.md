@@ -29,7 +29,7 @@ Windows security exceptions or administrator execution.
 Open **Tools → Tainted Grail SDK → FOA-SDK Home** to reach:
 
 - **FOA Development Hub** (opens as the default entry surface)
-- **Tainted Grail Connect to Game** — authenticated extender status, service discovery, **Get Player Position** and **Get Player Vitals**; see the [connection guide](../../docs/tainted-grail-sdk/TGE_SDK_ADAPTER.md), [player-position guide](../../docs/tainted-grail-sdk/TGE_PLAYER_POSITION.md) and [vitals guide](../../docs/tainted-grail-sdk/TGE_PLAYER_VITALS.md).
+- **Tainted Grail Connect to Game** — authenticated extender status, service discovery, **Get Player Position**, **Get Player Vitals** and **Preview Encounter**; see the [connection guide](../../docs/tainted-grail-sdk/TGE_SDK_ADAPTER.md), [player-position guide](../../docs/tainted-grail-sdk/TGE_PLAYER_POSITION.md), [vitals guide](../../docs/tainted-grail-sdk/TGE_PLAYER_VITALS.md) and [encounter-preview guide](../../docs/tainted-grail-sdk/TGE_ENCOUNTER_PREVIEW.md).
 - **Tainted Grail SDK Status**
 - **Tainted Grail Pack Manager**
 - **Tainted Grail Source Intake**

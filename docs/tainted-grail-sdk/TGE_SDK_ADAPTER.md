@@ -179,6 +179,11 @@ The listener admits at most four connections and four pending requests, limits e
 
 ## Remaining operational work
 
+The connection pane also supports [Preview Encounter](TGE_ENCOUNTER_PREVIEW.md)
+for existing exported compositions. This requests a temporary host placement plan
+and displays its actors, file digest and expiry without dispatching spawn/remove.
+Its Editor acceptance and actual installed-game acceptance are separate lanes.
+
 The owner-authorized installed-game check PASSED on Steam Mono build `24270691`, UnityPlayer `6000.0.64f1`, BepInEx `5.4.23.5`. The SDK authenticated to the extender in the actual game process, and discovery returned `tge.core.identity@0.1` owned by `tge.core`. Replay, stale-session, unknown-service and wrong-key controls passed, followed by another healthy discovery request. Windows verified that the listening port belonged to that game process.
 
 The first direct launch exited before the loader started and Steam created a delayed replacement process. That failed attempt is preserved. The corrected launch used Valve's documented temporary `steam_appid.txt` development hint with app ID `1466060`, so the process carrying the SDK key could continue. The proof DLLs, config and app-ID hint were all removed after the test.

@@ -41,6 +41,7 @@ namespace TaintedGrailModdingSDK
         constexpr const char* ItemRecipeEditorPane = "Tainted Grail Item and Recipe Editor";
         constexpr const char* QuestStateInspectorPane = "Tainted Grail Quest and State Inspector";
         constexpr const char* ActorTroopEditorPane = "Tainted Grail Actor and Troop Editor";
+        constexpr const char* HeightmapImporterPane = "Heightmap Importer";
         constexpr const char* RoadAtlasEditorPane = "Tainted Grail Map Editor (Road Atlas)";
         constexpr const char* AvalonAIEditorPane = "Tainted Grail Avalon AI Editor";
         constexpr const char* EconomyCoveragePane = "Tainted Grail Economy Acquisition Coverage";
@@ -137,7 +138,13 @@ namespace TaintedGrailModdingSDK
             QObject::connect(button, &QPushButton::clicked, parent, [paneName]()
             {
                 AzToolsFramework::OpenViewPane(paneName);
-                if (std::strcmp(paneName, AssetBrowserPreviewPane) == 0)
+                if (std::strcmp(paneName, HeightmapImporterPane) == 0)
+                {
+                    AzToolsFramework::OpenViewPane("Asset Browser");
+                    AzToolsFramework::OpenViewPane("Entity Outliner");
+                    AzToolsFramework::OpenViewPane("Inspector");
+                }
+                if (std::strcmp(paneName, AssetBrowserPreviewPane) == 0 || std::strcmp(paneName, HeightmapImporterPane) == 0)
                 {
                     QTimer::singleShot(0, []()
                     {
@@ -276,7 +283,7 @@ namespace TaintedGrailModdingSDK
             tr("These are the main authoring tools. FOA-SDK supplies the detected game/profile context automatically."),
             {
                 { tr("Game assets"), tr("Browse imported game assets and previews."), AssetBrowserPreviewPane },
-                { tr("Map editor"), tr("Build and edit map and road content."), RoadAtlasEditorPane },
+                { tr("Map editor"), tr("Open terrain in the 3D viewport, sculpt it, and place objects."), HeightmapImporterPane },
                 { tr("Items and recipes"), tr("Create and edit items, recipes, and economy data."), ItemRecipeEditorPane },
                 { tr("Actors and troops"), tr("Create and edit actors and troop composition."), ActorTroopEditorPane },
                 { tr("Quests and state"), tr("Inspect and work with quest/state definitions."), QuestStateInspectorPane },
@@ -306,6 +313,7 @@ namespace TaintedGrailModdingSDK
             QString(),
             {
                 { tr("Source and evidence intake"), tr("Import and inspect local source/evidence material."), SourceIntakePane },
+                { tr("Road Atlas data"), tr("Inspect and edit map and road planning records."), RoadAtlasEditorPane },
                 { tr("Catalog browser"), tr("Inspect canonical records and relationships."), CatalogBrowserPane },
                 { tr("Catalog governance"), tr("Review validation and usage decisions."), CatalogGovernancePane },
                 { tr("Economy coverage"), tr("Review acquisition-path coverage and blockers."), EconomyCoveragePane },

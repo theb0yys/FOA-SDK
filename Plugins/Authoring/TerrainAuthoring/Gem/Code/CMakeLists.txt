@@ -16,6 +16,8 @@ ly_add_target(
     INCLUDE_DIRECTORIES PRIVATE .
     BUILD_DEPENDENCIES PRIVATE
         Gem::TaintedGrailModdingSDK.Framework.Static
+        AZ::AzToolsFramework
+        Gem::ExternalToolchain.API
 )
 
 ly_create_alias(NAME ${gem_name}.Tools NAMESPACE Gem TARGETS Gem::${gem_name}.Editor)

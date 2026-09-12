@@ -31,6 +31,8 @@ MANIFEST_NAME = ".tg-preview-materialization.json"
 PROJECT_MANIFEST = Path("project.json")
 
 MANAGED_PROJECT_FILES = (
+    Path("Assets/Materials/foa_editor_ground.material"),
+    Path("Assets/Textures/foa_editor_ground_basecolor.png"),
     Path("CMakeLists.txt"),
     Path("ShaderLib/scenesrg.srgi"),
     Path("ShaderLib/viewsrg.srgi"),

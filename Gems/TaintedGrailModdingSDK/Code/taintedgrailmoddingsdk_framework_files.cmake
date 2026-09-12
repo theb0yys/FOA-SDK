@@ -6,6 +6,24 @@
 #
 
 set(FILES
+    Source/SourceSceneRenderComponent.cpp
+    Source/SourceSceneRenderComponent.h
+    Source/SourceScenePlacementComponent.cpp
+    Source/SourceScenePlacementComponent.h
+    Source/SourceShaderRenderComponent.cpp
+    Source/SourceShaderRenderComponent.h
+    Source/SourceTextureBuilderComponent.h
+    Source/SourceShaderBuilderComponent.cpp
+    Source/SourceShaderBuilderComponent.h
+    Source/SourceTextureBuilderComponent.cpp
+    Source/SourceMeshPreservationComponent.cpp
+    Source/SourceMeshPreservationComponent.h
+    Source/TerrainNativeHandoff.h
+    Source/TerrainNativeHandoff.cpp
+    Source/TerrainImportHost.h
+    Source/TerrainCampaignExportHost.cpp
+    Source/TerrainCampaignExportHost.h
+    Source/TerrainImportHost.cpp
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h
     Source/AssetBrowserPreviewService.cpp

@@ -9,6 +9,8 @@
 
 #include "ResearchContractValidation.h"
 
+#include <QCryptographicHash>
+#include <QJsonObject>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -133,6 +135,48 @@ namespace TaintedGrailModdingSDK
         AZStd::string* error)
     {
         return m_extensionApi.SubmitCandidateEvidence(extensionId, evidence, error);
+    }
+
+    bool FoundationService::TerrainImportCommand(const AZStd::string& extensionId,
+        const AZStd::string& request, AZStd::string& response, AZStd::string* error)
+    {
+        ExtensionAPI::ProfileView view;
+        if (extensionId != "extension.terrain-authoring" || !m_initialized
+            || !m_extensionApi.GetActiveProfile(extensionId, view, error))
+        {
+            if (error && error->empty()) { *error = "Terrain importer requires its registered extension and active profile."; }
+            return false;
+        }
+        if (m_workspaceRootPath.empty() || request.size() > 8192)
+        {
+            SetError(error, "Save the active SDK workspace before importing terrain.");
+            return false;
+        }
+        QJsonParseError parseError;
+        const auto parsed = QJsonDocument::fromJson(QByteArray(request.data(), static_cast<int>(request.size())), &parseError);
+        if (parseError.error != QJsonParseError::NoError || !parsed.isObject())
+        {
+            SetError(error, "Terrain command is invalid.");
+            return false;
+        }
+        TerrainHeightmap::ProfileBinding binding;
+        binding.m_profileId = view.m_profileId;
+        binding.m_gameVersion = view.m_gameVersion;
+        binding.m_branch = view.m_branch;
+        binding.m_runtimeTarget = view.m_runtimeTarget;
+        QJsonObject fingerprint{{"profile", ToQString(view.m_profileId)}, {"version", ToQString(view.m_gameVersion)},
+            {"branch", ToQString(view.m_branch)}, {"target", ToQString(view.m_runtimeTarget)}};
+        binding.m_profileFingerprint = "sha256:" + ToAzString(QCryptographicHash::hash(
+            QJsonDocument(fingerprint).toJson(QJsonDocument::Compact), QCryptographicHash::Sha256).toHex());
+        if (!m_terrainImportHost) { m_terrainImportHost = std::make_unique<TerrainImportHost>(); }
+        const auto* profile = m_workspace.FindActiveGameProfile();
+        auto snapshot = m_terrainImportHost->Dispatch(parsed.object(), ToQString(m_workspaceRootPath),
+            profile ? ToQString(profile->m_installPath) : QString(), binding, profile ? ToQString(profile->m_unityVersion) : QString());
+        snapshot["workspace_name"] = ToQString(m_workspace.m_displayName);
+        snapshot["profile_name"] = profile ? ToQString(profile->m_displayName) : ToQString(view.m_profileId);
+        response = ToAzString(QJsonDocument(snapshot).toJson(QJsonDocument::Compact));
+        if (error) { error->clear(); }
+        return true;
     }
 
     bool FoundationService::SaveExtensionDocument(

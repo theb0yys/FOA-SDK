@@ -6,12 +6,11 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 
-"""Extract local FoA campaign-map mesh heights into canonical terrain tiles.
+"""Shared mesh rasterization and synthetic publisher helpers.
 
-The game stores campaign maps as Unity Addressables scene bundles. Current FoA
-installs do not expose those maps as Unity TerrainData objects, so this importer
-resolves the scene bundle dependencies, reads enabled MeshCollider geometry, and
-rasterizes the transformed mesh triangles into local workspace-only U16 tiles.
+The Editor campaign provider uses these geometry helpers, verifies source
+selection, and hands a real RAW export to the SDK importer. The legacy direct
+campaign import command is disabled because its provenance was unqualified.
 """
 
 from __future__ import annotations
@@ -19,19 +18,22 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import io
 import json
 import math
 import os
 import re
+import shutil
+import stat
+import struct
 import sys
 from array import array
-from collections import deque
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-TOOL_VERSION = "0.1.0"
+TOOL_VERSION = "0.2.0"
 IMPORTER_ID = "importer.foa-heightmap-unity-mesh"
 UNITY_FALLBACK_VERSION = "6000.0.64f1"
 TILE_SIZE = 1024
@@ -111,6 +113,7 @@ class RasterResult:
     heights: array
     filled_samples: int
     rasterized_triangles: int
+    source_coverage: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -131,6 +134,7 @@ class ImportSettings:
     game_version: str
     branch: str
     runtime_target: str
+    terrain_layer_mask: int | None = None
 
 
 CAMPAIGN_MAPS: dict[str, CampaignMap] = {
@@ -139,7 +143,7 @@ CAMPAIGN_MAPS: dict[str, CampaignMap] = {
         map_id="terrain-map.foa.hos",
         display_name="Horns of the South Terrain",
         public_alias="Horns of the South",
-        scene_bundle_name="scenes_scenes_campaignmap_hos_merged_static.bundle",
+        scene_bundle_name="scenes_scenes_campaignmap_hos_static.bundle",
         addressable_keys=(
             "CampaignMap_HOS",
             "CampaignMap_HOS_merged",
@@ -152,7 +156,7 @@ CAMPAIGN_MAPS: dict[str, CampaignMap] = {
         map_id="terrain-map.foa.cuanacht",
         display_name="Cuanacht Terrain",
         public_alias="Cuanacht / Cuanacht Village",
-        scene_bundle_name="scenes_scenes_campaignmap_cuanacht_merged_static.bundle",
+        scene_bundle_name="scenes_scenes_campaignmap_cuanacht_static.bundle",
         addressable_keys=(
             "CampaignMap_Cuanacht",
             "CampaignMap_Cuanacht_merged",
@@ -165,7 +169,7 @@ CAMPAIGN_MAPS: dict[str, CampaignMap] = {
         map_id="terrain-map.foa.forlorn",
         display_name="Forlorn Swords Terrain",
         public_alias="Forlorn Swords",
-        scene_bundle_name="scenes_scenes_campaignmap_forlorn_merged_static.bundle",
+        scene_bundle_name="scenes_scenes_campaignmap_forlorn_static.bundle",
         addressable_keys=(
             "CampaignMap_Forlorn",
             "CampaignMap_Forlorn_merged",
@@ -178,7 +182,7 @@ CAMPAIGN_MAPS: dict[str, CampaignMap] = {
         map_id="terrain-map.foa.sarras",
         display_name="Sarras Terrain",
         public_alias="Sanctuary of Sarras / Sarras",
-        scene_bundle_name="scenes_scenes_campaignmap_sarras_merged_static.bundle",
+        scene_bundle_name="scenes_scenes_campaignmap_sarras_static.bundle",
         addressable_keys=(
             "CampaignMap_Sarras",
             "CampaignMap_Sarras_merged",
@@ -209,16 +213,22 @@ def sha256_text(value: str) -> str:
     return sha256_bytes(value.encode("utf-8"))
 
 
-def sha256_file(path: Path) -> tuple[str, int]:
+def sha256_file(path: Path, cancelled=None, max_bytes=None) -> tuple[str, int]:
+    expected = path.stat().st_size
+    if max_bytes is not None and expected > max_bytes:
+        raise HeightmapImportError("Source file exceeds its byte budget.")
     digest = hashlib.sha256()
     size = 0
     with path.open("rb") as handle:
-        while True:
-            chunk = handle.read(1024 * 1024)
+        while size < expected:
+            check_cancelled(cancelled)
+            chunk = handle.read(min(1024 * 1024, expected-size))
             if not chunk:
-                break
+                raise HeightmapImportError("Source file changed while fingerprinting.")
             size += len(chunk)
             digest.update(chunk)
+        if handle.read(1):
+            raise HeightmapImportError("Source file changed while fingerprinting.")
     return "sha256:" + digest.hexdigest(), size
 
 
@@ -360,9 +370,12 @@ def import_unitypy(unity_version: str):
         from UnityPy.helpers.MeshHelper import MeshHandler  # type: ignore
     except ImportError as exc:
         raise HeightmapImportError(
-            "UnityPy is required for FoA heightmap extraction. Use the bundled Codex Python runtime or install UnityPy."
+            "UnityPy is required for FoA heightmap extraction. Install the qualified UnityPy dependency in the tool environment."
         ) from exc
     UnityPy.config.FALLBACK_UNITY_VERSION = unity_version
+    # The optional native typetree reader crashed on this scene cohort during qualification.
+    from UnityPy.helpers import TypeTreeHelper
+    TypeTreeHelper.read_typetree_boost = None
     return UnityPy, MeshHandler
 
 
@@ -478,6 +491,118 @@ def apply_pose(pose: Pose, point: tuple[float, float, float]) -> tuple[float, fl
     )
 
 
+IDENTITY_MATRIX = (1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.)
+
+
+def matrix_product(a, b):
+    return tuple(sum(a[row * 4 + k] * b[k * 4 + column] for k in range(4))
+                 for row in range(4) for column in range(4))
+
+
+def apply_matrix(matrix, point):
+    return tuple(sum(matrix[row * 4 + k] * point[k] for k in range(3)) + matrix[row * 4 + 3]
+                 for row in range(3))
+
+
+def game_object_transform(game_object):
+    for entry in getattr(game_object, "m_Component", ()):
+        pointer = getattr(entry, "component", entry)
+        if pointer.deref().type.name == "Transform":
+            return pointer
+    pointer = getattr(game_object, "m_Transform", None)
+    if pointer is None:
+        raise HeightmapImportError("Mesh GameObject has no resolvable Transform component.")
+    return pointer
+
+
+def transform_matrix(pointer, cache, stack=None):
+    if pointer is None or pptr_path_id(pointer) == 0:
+        return IDENTITY_MATRIX, True
+    key = pptr_key(pointer)
+    if key in cache:
+        return cache[key]
+    stack = set() if stack is None else stack
+    if key in stack or len(stack) >= 128:
+        raise HeightmapImportError("Mesh Transform hierarchy is cyclic or too deep.")
+    stack.add(key)
+    try:
+        data = pointer.read()
+        position = vector3(data.m_LocalPosition)
+        scale = vector3(data.m_LocalScale)
+        rotation = quaternion(data.m_LocalRotation)
+        if not all(math.isfinite(v) for v in (*position, *scale, *rotation)):
+            raise HeightmapImportError("Mesh Transform contains a non-finite value.")
+        basis = [quat_rotate(rotation, tuple(float(i == axis) for i in range(3))) for axis in range(3)]
+        local = tuple(basis[col][row] * scale[col] if col < 3 else position[row]
+                      for row in range(3) for col in range(4)) + (0., 0., 0., 1.)
+        parent, parent_active = transform_matrix(data.m_Father, cache, stack)
+        active = parent_active and bool(data.m_GameObject.read().m_IsActive)
+        result = matrix_product(parent, local), active
+        cache[key] = result
+        return result
+    finally:
+        stack.remove(key)
+
+
+def read_bundle_cab_names(path: Path) -> tuple[list[str], int]:
+    """Read only the bounded UnityFS directory metadata, never the asset payload blocks."""
+    def exact(handle, size):
+        data = handle.read(size)
+        if len(data) != size:
+            raise HeightmapImportError("UnityFS directory metadata is truncated.")
+        return data
+    def cstring(handle):
+        data = bytearray()
+        for _ in range(512):
+            char = exact(handle, 1)
+            if char == b"\0":
+                return data.decode("utf-8")
+            data.extend(char)
+        raise HeightmapImportError("UnityFS directory string exceeds its limit.")
+    with path.open("rb") as handle:
+        if cstring(handle) != "UnityFS":
+            return [], 0
+        version = struct.unpack(">I", exact(handle, 4))[0]
+        if version not in (7, 8):
+            raise HeightmapImportError("Unsupported UnityFS directory version.")
+        cstring(handle)
+        cstring(handle)
+        size, compressed, uncompressed, flags = struct.unpack(">QIII", exact(handle, 20))
+        if size != path.stat().st_size or not 0 < compressed <= 2 * 1024 * 1024 or not 0 < uncompressed <= 8 * 1024 * 1024:
+            raise HeightmapImportError("UnityFS directory sizes exceed their bounds.")
+        if flags & 0x400:
+            raise HeightmapImportError("Encrypted UnityFS input is unsupported.")
+        offset = size - compressed if flags & 0x80 else (handle.tell() + 15) // 16 * 16
+        if offset < handle.tell() or offset + compressed > size:
+            raise HeightmapImportError("UnityFS directory offset is invalid.")
+        handle.seek(offset)
+        block = exact(handle, compressed)
+    codec = flags & 0x3f
+    if codec in (2, 3):
+        import lz4.block
+        block = lz4.block.decompress(block, uncompressed_size=uncompressed)
+    elif codec != 0:
+        raise HeightmapImportError("Unsupported UnityFS directory compression.")
+    if len(block) != uncompressed:
+        raise HeightmapImportError("UnityFS directory decompressed size is invalid.")
+    reader = io.BytesIO(block)
+    exact(reader, 16)
+    count = struct.unpack(">I", exact(reader, 4))[0]
+    if count > 500000 or 20 + 10 * count + 4 > len(block):
+        raise HeightmapImportError("UnityFS block table exceeds the directory bounds.")
+    exact(reader, 10 * count)
+    count = struct.unpack(">I", exact(reader, 4))[0]
+    if not 0 < count <= 128:
+        raise HeightmapImportError("UnityFS file count exceeds its limit.")
+    names = []
+    for _ in range(count):
+        exact(reader, 20)
+        name = cstring(reader)
+        if CAB_RE.fullmatch(name):
+            names.append(name.lower())
+    return names, compressed
+
+
 def cab_id_from_value(value: str) -> str | None:
     match = CAB_RE.search(value)
     return match.group(1).lower() if match else None
@@ -525,6 +650,7 @@ class CabDependencyResolver:
         self.loaded: set[str] = set()
         self.scanned_paths: set[Path] = set()
         self.scanned_count = 0
+        self.metadata_bytes = 0
 
     @property
     def loaded_count(self) -> int:
@@ -538,11 +664,16 @@ class CabDependencyResolver:
         for candidate in direct_cab_candidates(self.bundle_root, cab_id):
             if not candidate.is_file():
                 continue
+            if candidate.resolve().parent != self.bundle_root.resolve():
+                raise HeightmapImportError("Terrain dependency escapes its bundle root.")
             try:
-                asset_name = bundle_asset_file_name(self.UnityPy, candidate)
-            except Exception:
+                names, size = read_bundle_cab_names(candidate)
+                self.metadata_bytes += size
+                if self.metadata_bytes > 64 * 1024 * 1024:
+                    raise HeightmapImportError("Terrain dependency index exceeds its metadata byte budget.")
+            except OSError:
                 continue
-            if asset_name.startswith(cab_id):
+            if cab_id in names:
                 self.resolved[cab_id] = candidate
                 return candidate
         if self.progress:
@@ -552,15 +683,21 @@ class CabDependencyResolver:
                 continue
             self.scanned_paths.add(candidate)
             self.scanned_count += 1
+            if self.scanned_count > 32768:
+                raise HeightmapImportError("Terrain dependency index exceeds the 32768-file limit.")
+            if candidate.resolve().parent != self.bundle_root.resolve():
+                raise HeightmapImportError("Terrain dependency escapes its bundle root.")
             try:
-                asset_name = bundle_asset_file_name(self.UnityPy, candidate)
-            except Exception:
+                names, size = read_bundle_cab_names(candidate)
+            except HeightmapImportError:
                 continue
-            candidate_cab = cab_id_from_value(asset_name)
-            if candidate_cab:
+            self.metadata_bytes += size
+            if self.metadata_bytes > 64 * 1024 * 1024:
+                raise HeightmapImportError("Terrain dependency index exceeds its metadata byte budget.")
+            for candidate_cab in names:
                 self.resolved[candidate_cab] = candidate
-                if candidate_cab == cab_id:
-                    return candidate
+            if cab_id in self.resolved:
+                return self.resolved[cab_id]
         raise HeightmapImportError(f"Unable to resolve dependency bundle for {cab_id}.")
 
     def ensure_loaded(self, environment: Any, pointer: Any) -> None:
@@ -683,12 +820,13 @@ def collect_mesh_instances(
     *,
     dependency_resolver: CabDependencyResolver | None = None,
     progress: Callable[[str], None] | None = None,
+    cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[MeshInstance], dict[str, int]]:
     if settings.max_meshes is not None and settings.max_meshes <= 0:
         raise HeightmapImportError("max-meshes must be positive when provided.")
     include_re = compile_name_regex(settings.include_name_regex, "include-name-regex")
     exclude_re = compile_name_regex(settings.exclude_name_regex, "exclude-name-regex")
-    transform_cache: dict[tuple[str, int, int], Pose] = {}
+    transform_cache = {}
     mesh_cache: dict[tuple[str, int, int], MeshPayload] = {}
     instances: list[MeshInstance] = []
     stats = {
@@ -706,7 +844,8 @@ def collect_mesh_instances(
     if settings.mesh_source in {"render", "both"}:
         component_types.add("MeshFilter")
 
-    for obj in env.objects:
+    for obj in tuple(env.objects):
+        check_cancelled(cancelled)
         if obj.type.name not in component_types:
             continue
         if settings.max_meshes is not None and len(instances) >= settings.max_meshes:
@@ -716,6 +855,11 @@ def collect_mesh_instances(
             component = obj.read()
             enabled = bool(getattr(component, "m_Enabled", True))
             game_object = component.m_GameObject.read()
+            if settings.terrain_layer_mask is not None and not (
+                settings.terrain_layer_mask & (1 << int(game_object.m_Layer))
+            ):
+                stats["filtered_components"] += 1
+                continue
             if not enabled or (not settings.include_inactive and not bool(getattr(game_object, "m_IsActive", True))):
                 stats["inactive_components"] += 1
                 continue
@@ -733,8 +877,11 @@ def collect_mesh_instances(
             if not mesh.vertices:
                 stats["empty_meshes"] += 1
                 continue
-            pose = transform_pose(getattr(game_object, "m_Transform", None), transform_cache)
-            vertices = tuple(apply_pose(pose, vertex) for vertex in mesh.vertices)
+            matrix, hierarchy_active = transform_matrix(game_object_transform(game_object), transform_cache)
+            if not hierarchy_active and not settings.include_inactive:
+                stats["inactive_components"] += 1
+                continue
+            vertices = tuple(apply_matrix(matrix, vertex) for vertex in mesh.vertices)
             instances.append(
                 MeshInstance(
                     game_object_name=str(getattr(game_object, "m_Name", "")) or "unnamed-object",
@@ -837,38 +984,14 @@ def rasterize_triangle(
     return True
 
 
-def fill_empty_samples(heights: array, mask: bytearray, width: int, height: int) -> int:
-    queue: deque[int] = deque(index for index, filled in enumerate(mask) if filled)
-    initial = len(queue)
-    if initial == 0:
-        raise HeightmapImportError("Rasterization produced no height samples.")
-    while queue:
-        index = queue.popleft()
-        row, column = divmod(index, width)
-        value = heights[index]
-        neighbors = []
-        if row > 0:
-            neighbors.append(index - width)
-        if row + 1 < height:
-            neighbors.append(index + width)
-        if column > 0:
-            neighbors.append(index - 1)
-        if column + 1 < width:
-            neighbors.append(index + 1)
-        for neighbor in neighbors:
-            if not mask[neighbor]:
-                mask[neighbor] = 1
-                heights[neighbor] = value
-                queue.append(neighbor)
-    return initial
-
-
 def rasterize_instances(
     instances: Sequence[MeshInstance],
     *,
     resolution: int,
     max_triangles: int,
     progress: Callable[[str], None] | None = None,
+    bounds: Bounds | None = None,
+    cancelled: Callable[[], bool] | None = None,
 ) -> RasterResult:
     if resolution <= 1 or resolution > MAX_GRID_DIMENSION:
         raise HeightmapImportError(f"resolution must be in the range 2..{MAX_GRID_DIMENSION}.")
@@ -876,25 +999,37 @@ def rasterize_instances(
         raise HeightmapImportError("resolution exceeds the terrain heightmap total-sample bound.")
     if max_triangles <= 0:
         raise HeightmapImportError("max-triangles must be positive.")
-    bounds = bounds_for_instances(instances)
+    bounds = bounds or bounds_for_instances(instances)
     width = resolution
     height = resolution
     heights = array("f", [-math.inf]) * (width * height)
     mask = bytearray(width * height)
     rasterized_triangles = 0
+    checked_triangles = 0
     for instance_index, instance in enumerate(instances, start=1):
+        check_cancelled(cancelled)
         projected = [sample_coordinate(bounds, width, height, vertex) for vertex in instance.vertices]
         for vertex in projected:
-            rasterize_point(heights, mask, width, height, vertex)
+            if 0 <= vertex[0] <= width - 1 and 0 <= vertex[1] <= height - 1:
+                rasterize_point(heights, mask, width, height, vertex)
         for ia, ib, ic in instance.triangles:
-            if rasterized_triangles >= max_triangles:
+            checked_triangles += 1
+            if checked_triangles % 256 == 0:
+                check_cancelled(cancelled)
+            if checked_triangles > max_triangles:
                 raise HeightmapImportError(f"max-triangles limit reached at {max_triangles}.")
             if rasterize_triangle(heights, mask, width, height, projected[ia], projected[ib], projected[ic]):
                 rasterized_triangles += 1
         if progress and instance_index % 100 == 0:
             progress(f"Rasterized {instance_index}/{len(instances)} mesh instances")
-    initial_filled = fill_empty_samples(heights, mask, width, height)
-    return RasterResult(width, height, bounds, heights, initial_filled, rasterized_triangles)
+    source_coverage = bytes(mask)
+    check_cancelled(cancelled)
+    initial_filled = sum(mask)
+    if initial_filled != width * height:
+        raise HeightmapImportError(
+            f"Ground geometry leaves {width * height - initial_filled} samples uncovered; "
+            "missing heights will not be estimated.")
+    return RasterResult(width, height, bounds, heights, initial_filled, rasterized_triangles, source_coverage)
 
 
 def normalize_u16(heights: array) -> tuple[array, float, float]:
@@ -964,6 +1099,7 @@ def configuration_fingerprint(settings: ImportSettings, campaign: CampaignMap, d
         "scene_bundle": campaign.scene_bundle_name,
         "resolution": settings.resolution,
         "mesh_source": settings.mesh_source,
+        "terrain_layer_mask": settings.terrain_layer_mask,
         "include_inactive": settings.include_inactive,
         "include_name_regex": settings.include_name_regex or "",
         "exclude_name_regex": settings.exclude_name_regex or "",
@@ -995,6 +1131,7 @@ def build_document(
     max_height: float,
     op_id: str,
     published_root: Path,
+    cancelled: Callable[[], bool] | None = None,
 ) -> tuple[dict[str, Any], list[Path]]:
     tiles: list[dict[str, Any]] = []
     tile_paths: list[Path] = []
@@ -1002,6 +1139,7 @@ def build_document(
     for origin_y in range(0, raster.height, TILE_SIZE):
         tile_height = min(TILE_SIZE, raster.height - origin_y)
         for origin_x in range(0, raster.width, TILE_SIZE):
+            check_cancelled(cancelled)
             tile_width = min(TILE_SIZE, raster.width - origin_x)
             relative_path = tile_relative_path(origin_x, origin_y)
             tile_path = published_root / relative_path
@@ -1128,6 +1266,67 @@ def write_json_atomic(path: Path, value: Mapping[str, Any]) -> None:
     temporary.replace(path)
 
 
+def check_cancelled(cancelled: Callable[[], bool] | None) -> None:
+    if cancelled is not None and cancelled():
+        raise HeightmapImportError("Heightmap import cancelled; no revision was published.")
+
+
+def require_direct_path(path: Path) -> Path:
+    """Reject links and Windows reparse points before resolving or creating output."""
+    path = Path(os.path.abspath(path.expanduser()))
+    for component in (*reversed(path.parents), path):
+        try:
+            metadata = component.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(metadata.st_mode) or (
+            getattr(metadata, "st_file_attributes", 0)
+            & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        ):
+            raise HeightmapImportError("Heightmap output paths must not contain links or reparse points.")
+    return path
+
+
+def contained_directory(workspace: Path, relative: Path) -> Path:
+    path = require_direct_path(workspace / relative)
+    if path == workspace or not path.is_relative_to(workspace):
+        raise HeightmapImportError("Heightmap output must remain inside its workspace.")
+    path.mkdir(parents=True, exist_ok=True)
+    require_direct_path(path)
+    return path
+
+
+def remove_owned_staging(workspace: Path, path: Path) -> None:
+    """Only remove this operation's checked staging or source-observation directory."""
+    path = require_direct_path(path)
+    if not any(path.is_relative_to(workspace / root / "Terrain")
+               and path != workspace / root / "Terrain"
+               for root in ("Staging", "SourceObservations")):
+        raise HeightmapImportError("Refusing to clean output outside the terrain staging boundary.")
+    if path.exists():
+        for parent, directories, files in os.walk(path, followlinks=False):
+            for name in (*directories, *files):
+                require_direct_path(Path(parent) / name)
+        shutil.rmtree(path)
+
+
+def validate_output_raster(raster: RasterResult, samples: array, min_height: float, max_height: float) -> None:
+    if (type(raster.width) is not int or type(raster.height) is not int
+            or not 2 <= raster.width <= MAX_GRID_DIMENSION
+            or not 2 <= raster.height <= MAX_GRID_DIMENSION
+            or raster.width * raster.height > MAX_TOTAL_SAMPLES):
+        raise HeightmapImportError("Heightmap output dimensions exceed the bounded sample grid.")
+    if samples.typecode != "H" or samples.itemsize != 2 or len(samples) != raster.width * raster.height:
+        raise HeightmapImportError("Heightmap output sample count and U16 encoding must match the grid.")
+    bounds = raster.bounds
+    if (not all(math.isfinite(value) for value in (
+            bounds.min_x, bounds.max_x, bounds.min_y, bounds.max_y, bounds.min_z, bounds.max_z,
+            min_height, max_height))
+            or bounds.max_x <= bounds.min_x or bounds.max_z <= bounds.min_z
+            or max_height <= min_height):
+        raise HeightmapImportError("Heightmap output requires finite bounds and a positive height range.")
+
+
 def write_import_outputs(
     *,
     settings: ImportSettings,
@@ -1141,148 +1340,142 @@ def write_import_outputs(
     min_height: float,
     max_height: float,
     op_id: str,
+    cancelled: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
-    workspace = settings.workspace_root.expanduser().resolve(strict=False)
-    if workspace == install.root or workspace.is_relative_to(install.root):
+    require_id(op_id, "operation-id")
+    require_id(campaign.map_id, "map-id")
+    require_id(settings.profile_id, "profile-id")
+    require_utc(settings.created_at_utc)
+    validate_output_raster(raster, samples, min_height, max_height)
+    check_cancelled(cancelled)
+    workspace = require_direct_path(settings.workspace_root)
+    install_root = install.root.resolve(strict=True)
+    if workspace == install_root or workspace.is_relative_to(install_root):
         raise HeightmapImportError("workspace-root must not be inside the Tainted Grail FoA install.")
     workspace.mkdir(parents=True, exist_ok=True)
+    require_direct_path(workspace)
     scene_sha, scene_size = sha256_file(scene_bundle)
     require_sha(scene_sha, "scene bundle fingerprint")
     config_sha = configuration_fingerprint(settings, campaign, dependency_count)
-
-    draft_document = {
-        "map": campaign.key,
-        "operation_id": op_id,
-        "scene_sha": scene_sha,
-        "config_sha": config_sha,
-        "width": raster.width,
-        "height": raster.height,
-        "min_height": min_height,
-        "max_height": max_height,
-    }
-    draft_hash = sha256_bytes(canonical_json_bytes(draft_document))[7:23]
-    published_root = workspace / "Derived" / "Terrain" / campaign.map_id / "Revisions" / f"terrain-revision.{op_id}" / draft_hash
-    if published_root.exists():
-        raise HeightmapImportError(f"Published terrain revision already exists: {published_root}")
-    document, tile_paths = build_document(
-        campaign=campaign,
-        settings=settings,
-        install=install,
-        scene_sha=scene_sha,
-        scene_size=scene_size,
-        config_sha=config_sha,
-        samples=samples,
-        raster=raster,
-        min_height=min_height,
-        max_height=max_height,
-        op_id=op_id,
-        published_root=published_root,
-    )
-    document_hash = sha256_text(safe_document_json(document))[7:23]
-    if document_hash != draft_hash:
-        final_root = published_root.parent / document_hash
-        if final_root.exists():
-            raise HeightmapImportError(f"Published terrain revision already exists: {final_root}")
-        old_root = published_root
-        published_root.rename(final_root)
-        published_root = final_root
-        tile_paths = [published_root / path.relative_to(old_root) for path in tile_paths]
-    manifest_path = published_root / "terrain.tgheightmap.json"
-    write_json_atomic(manifest_path, document)
-
-    observation = {
-        "schema": "foa.terrain-source-observation",
-        "schema_version": 1,
-        "source_kind": "user-exported-raw-u16-le",
-        "source_sha256": scene_sha,
-        "configuration_sha256": config_sha,
-        "source_byte_size": scene_size,
-        "source_object_identifier": campaign.scene_bundle_name,
-        "captured_at_utc": settings.created_at_utc,
-        "game_root_token": "source-root.user-selected",
-        "scene_bundle": campaign.scene_bundle_name,
-        "dependency_bundle_count": dependency_count,
-        "mesh_source": settings.mesh_source,
-        "component_stats": dict(component_stats),
-        "grid": {
-            "width": raster.width,
-            "height": raster.height,
-            "initial_filled_samples": raster.filled_samples,
+    revision_parent = contained_directory(workspace, Path("Derived/Terrain") / campaign.map_id / "Revisions")
+    revision_root = revision_parent / f"terrain-revision.{op_id}"
+    observation_parent = contained_directory(workspace, Path("SourceObservations/Terrain"))
+    observation_root = observation_parent / op_id
+    staging_parent = contained_directory(workspace, Path("Staging/Terrain"))
+    staging_root = staging_parent / op_id
+    for path in (revision_root, observation_root, staging_root):
+        require_direct_path(path)
+        if path.exists():
+            raise HeightmapImportError("Terrain operation already exists; use a new operation-id to preserve it.")
+    # Exclusive ownership also prevents two concurrent imports of the same operation.
+    staging_root.mkdir(exist_ok=False)
+    observation_owned = False
+    published = False
+    try:
+        candidate_root = staging_root / "candidate"
+        document, _ = build_document(
+            campaign=campaign, settings=settings, install=install,
+            scene_sha=scene_sha, scene_size=scene_size, config_sha=config_sha,
+            samples=samples, raster=raster, min_height=min_height, max_height=max_height,
+            op_id=op_id, published_root=candidate_root, cancelled=cancelled,
+        )
+        check_cancelled(cancelled)
+        document_hash = sha256_text(safe_document_json(document))[7:23]
+        write_json_atomic(candidate_root / "terrain.tgheightmap.json", document)
+        # Validate the complete payload inventory while it is still unpublished.
+        for tile in document["tiles"]:
+            check_cancelled(cancelled)
+            tile_path = require_direct_path(candidate_root / tile["relative_path"])
+            fingerprint, byte_size = sha256_file(tile_path)
+            if fingerprint != tile["sha256"] or byte_size != tile["byte_size"]:
+                raise HeightmapImportError("Staged terrain tile validation failed; no revision was published.")
+        staged_revision = staging_root / "revision"
+        staged_revision.mkdir()
+        candidate_root.rename(staged_revision / document_hash)
+        published_root = revision_root / document_hash
+        manifest_path = published_root / "terrain.tgheightmap.json"
+        tile_paths = [published_root / tile["relative_path"] for tile in document["tiles"]]
+        observation = {
+            "schema": "foa.terrain-source-observation",
+            "schema_version": 1,
+            "source_kind": "user-exported-raw-u16-le",
+            "source_sha256": scene_sha,
+            "configuration_sha256": config_sha,
+            "source_byte_size": scene_size,
+            "source_object_identifier": campaign.scene_bundle_name,
+            "captured_at_utc": settings.created_at_utc,
+            "game_root_token": "source-root.user-selected",
+            "scene_bundle": campaign.scene_bundle_name,
+            "dependency_bundle_count": dependency_count,
+            "mesh_source": settings.mesh_source,
+            "component_stats": dict(component_stats),
+            "grid": {
+                "width": raster.width,
+                "height": raster.height,
+                "initial_filled_samples": raster.filled_samples,
+                "rasterized_triangles": raster.rasterized_triangles,
+            },
+            "bounds_metres": {
+                "min_x": raster.bounds.min_x,
+                "max_x": raster.bounds.max_x,
+                "min_y": raster.bounds.min_y,
+                "max_y": raster.bounds.max_y,
+                "min_z": raster.bounds.min_z,
+                "max_z": raster.bounds.max_z,
+            },
+            "limitations": "Mesh-derived local height envelope; not a native TerrainData export and not runtime validation.",
+        }
+        check_cancelled(cancelled)
+        require_direct_path(observation_root)
+        observation_root.mkdir(exist_ok=False)
+        observation_owned = True
+        observation_path = observation_root / "source-observation.json"
+        write_json_atomic(observation_path, observation)
+        check_cancelled(cancelled)
+        require_direct_path(revision_root)
+        require_direct_path(staged_revision)
+        if revision_root.exists():
+            raise HeightmapImportError("Published terrain revision already exists; it will not be replaced.")
+        # This rename is the commit point: readers see all tiles and the manifest together.
+        staged_revision.rename(revision_root)
+        published = True
+        return {
+            "schema": "foa.heightmap-import-result",
+            "schema_version": 1,
+            "tool_id": IMPORTER_ID,
+            "tool_version": TOOL_VERSION,
+            "map": campaign.key,
+            "operation_id": op_id,
+            "manifest_path": str(manifest_path),
+            "source_observation_path": str(observation_path),
+            "tile_count": len(tile_paths),
+            "tile_paths": [str(path) for path in tile_paths],
+            "component_stats": dict(component_stats),
+            "dependency_bundle_count": dependency_count,
             "rasterized_triangles": raster.rasterized_triangles,
-        },
-        "bounds_metres": {
-            "min_x": raster.bounds.min_x,
-            "max_x": raster.bounds.max_x,
-            "min_y": raster.bounds.min_y,
-            "max_y": raster.bounds.max_y,
-            "min_z": raster.bounds.min_z,
-            "max_z": raster.bounds.max_z,
-        },
-        "limitations": "Mesh-derived local height envelope; not a native TerrainData export and not runtime validation.",
-    }
-    observation_path = workspace / "SourceObservations" / "Terrain" / op_id / "source-observation.json"
-    write_json_atomic(observation_path, observation)
-
-    return {
-        "schema": "foa.heightmap-import-result",
-        "schema_version": 1,
-        "tool_id": IMPORTER_ID,
-        "tool_version": TOOL_VERSION,
-        "map": campaign.key,
-        "operation_id": op_id,
-        "manifest_path": str(manifest_path),
-        "source_observation_path": str(observation_path),
-        "tile_count": len(tile_paths),
-        "tile_paths": [str(path) for path in tile_paths],
-        "component_stats": dict(component_stats),
-        "dependency_bundle_count": dependency_count,
-        "rasterized_triangles": raster.rasterized_triangles,
-        "initial_filled_samples": raster.filled_samples,
-    }
+            "initial_filled_samples": raster.filled_samples,
+        }
+    finally:
+        if published:
+            try:
+                remove_owned_staging(workspace, staging_root)
+            except (OSError, HeightmapImportError):
+                # Cleanup after the commit point must not report the completed import as failed.
+                eprint("Heightmap revision published; its staging directory needs cleanup.")
+        else:
+            try:
+                remove_owned_staging(workspace, staging_root)
+            finally:
+                if observation_owned:
+                    remove_owned_staging(workspace, observation_root)
 
 
 def import_campaign_map(settings: ImportSettings, *, verbose: bool = False) -> dict[str, Any]:
-    settings = require_import_limits(settings)
-    install = resolve_game_install(settings.game_root)
-    campaign = CAMPAIGN_MAPS[settings.map_key]
-    scene_bundle = install.bundle_root / campaign.scene_bundle_name
-    if not scene_bundle.is_file():
-        raise HeightmapImportError(f"Campaign scene bundle is missing: {scene_bundle}")
-
-    progress = eprint if verbose else None
-    UnityPy, MeshHandler = import_unitypy(UNITY_FALLBACK_VERSION)
-    if progress:
-        progress(f"Loading scene {scene_bundle.name}")
-    env = UnityPy.load(str(scene_bundle))
-    dependency_resolver = CabDependencyResolver(UnityPy, install.bundle_root, progress=progress)
-    instances, component_stats = collect_mesh_instances(
-        env,
-        MeshHandler,
-        settings,
-        dependency_resolver=dependency_resolver,
-        progress=progress,
-    )
-    component_stats["loaded_dependency_bundles"] = dependency_resolver.loaded_count
-    component_stats["scanned_dependency_bundles"] = dependency_resolver.scanned_count
-    if not instances:
-        raise HeightmapImportError(f"No mesh geometry was accepted for heightmap extraction. Stats: {component_stats}")
-    if progress:
-        progress(f"Rasterizing {len(instances)} mesh instances")
-    raster = rasterize_instances(instances, resolution=settings.resolution, max_triangles=settings.max_triangles, progress=progress)
-    samples, min_height, max_height = normalize_u16(raster.heights)
-    op_id = operation_id(settings, campaign)
-    return write_import_outputs(
-        settings=settings,
-        install=install,
-        campaign=campaign,
-        scene_bundle=scene_bundle,
-        dependency_count=dependency_resolver.loaded_count,
-        component_stats=component_stats,
-        raster=raster,
-        samples=samples,
-        min_height=min_height,
-        max_height=max_height,
-        op_id=op_id,
+    # Preserve the legacy command boundary with an actionable failure. Its scene
+    # selection and source labels did not qualify campaign terrain provenance.
+    raise HeightmapImportError(
+        "Legacy campaign import is disabled. Use FOA-SDK Home > Heightmap Importer > "
+        "Edit Vanilla Map with the configured campaign extraction provider."
     )
 
 
@@ -1293,7 +1486,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("list-maps", help="List campaign map scene bundles found in the FoA install.")
 
-    import_parser = subparsers.add_parser("import", help="Extract one campaign map into a local workspace.")
+    import_parser = subparsers.add_parser("import", help="Disabled legacy route; use the Editor campaign importer.")
     import_parser.add_argument("--workspace-root", type=Path, required=True, help="Workspace directory that will receive Derived/Terrain output.")
     import_parser.add_argument("--map", dest="map_key", choices=(*CAMPAIGN_MAPS.keys(), "all"), required=True)
     import_parser.add_argument("--resolution", type=int, default=2048, help="Square output resolution. Default: 2048.")
@@ -1371,7 +1564,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 result = import_campaign_map(settings, verbose=args.verbose)
             print(json.dumps(result, ensure_ascii=True, indent=2))
             return 0
-    except HeightmapImportError as exc:
+    except (HeightmapImportError, OSError) as exc:
         print(f"FoA heightmap import failed: {exc}", file=sys.stderr)
         return 1
     parser.error("unknown command")

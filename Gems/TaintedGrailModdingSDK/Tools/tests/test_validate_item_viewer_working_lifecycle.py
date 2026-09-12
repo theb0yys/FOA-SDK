@@ -168,13 +168,26 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.copy_fixture(root)
-            self.mutate(
-                root,
-                "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
-                "scripts/foa-sdk",
-                "scripts/missing-item-viewer-tool",
-            )
+            path = root / "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
+            text = path.read_text(encoding="utf-8")
+            block = contract.find_call_block(text, "ly_install_files", "../Tools/foa_asset_browser_pane_refresh.py")
+            # Retain another correct destination to detect cross-tool false passes.
+            text = text.replace(block, block.replace("scripts/foa-sdk", "scripts/missing-item-viewer-tool"))
+            text += "\nly_install_files(FILES decoy.py DESTINATION scripts/foa-sdk)\n"
+            path.write_text(text, encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "private installed refresh tooling location"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_file_reference_outside_install_does_not_count(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
+            text = path.read_text(encoding="utf-8")
+            relative = "../Tools/foa_asset_browser_pane_refresh.py"
+            block = contract.find_call_block(text, "ly_install_files", relative)
+            path.write_text(text.replace(block, block.replace(relative, "decoy.py")), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "installed embedded refresh adapter"):
                 contract.validate_item_viewer(root)
 
     def test_internal_model_path_cannot_return_to_settings(self) -> None:

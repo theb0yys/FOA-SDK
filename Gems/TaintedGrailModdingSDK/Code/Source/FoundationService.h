@@ -25,6 +25,7 @@
 #include "SourceImportService.h"
 #include "TaintedFrameworkEditorServices.h"
 #include "TaintedInterfaceUiUtilities.h"
+#include "TerrainImportHost.h"
 
 namespace TaintedGrailModdingSDK
 {
@@ -178,6 +179,8 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& extensionId,
             const EvidenceRecord& evidence,
             AZStd::string* error) override;
+        bool TerrainImportCommand(const AZStd::string& extensionId,
+            const AZStd::string& request, AZStd::string& response, AZStd::string* error) override;
         bool SaveExtensionDocument(
             const AZStd::string& extensionId,
             const AZStd::string& relativePath,
@@ -231,6 +234,7 @@ namespace TaintedGrailModdingSDK
         PopulationAuthoringService m_populationAuthoring;
         FoundationWorkspaceLoadService m_workspaceLoadService;
         FoundationSnapshot m_snapshot;
+        std::unique_ptr<TerrainImportHost> m_terrainImportHost;
         bool m_initialized = false;
     };
 } // namespace TaintedGrailModdingSDK

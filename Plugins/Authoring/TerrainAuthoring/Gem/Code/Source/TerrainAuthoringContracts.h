@@ -30,6 +30,8 @@ namespace TerrainAuthoring
         RevertRevision,
         UndoEdit,
         RedoEdit,
+        ImportCampaignHeightmap,
+        OpenInEditor,
     };
 
     struct TerrainAuthoringCommandDescriptor

@@ -49,6 +49,14 @@ namespace TaintedGrailModdingSDK
             const EvidenceRecord& evidence,
             AZStd::string* error) = 0;
 
+        virtual bool TerrainImportCommand(const AZStd::string& extensionId,
+            const AZStd::string& request, AZStd::string& response, AZStd::string* error)
+        {
+            (void)extensionId; (void)request; (void)response;
+            if (error) { *error = "Terrain importer host is unavailable."; }
+            return false;
+        }
+
         virtual bool SaveExtensionDocument(
             const AZStd::string& extensionId,
             const AZStd::string& relativePath,

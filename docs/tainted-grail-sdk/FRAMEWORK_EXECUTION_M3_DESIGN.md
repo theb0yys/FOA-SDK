@@ -66,7 +66,7 @@ Execution needs current allowed policy and any required live confirmation. A NOT
 
 A joined Framework worker coordinates phases; M2 retains ownership of its bounded process workers. At most one execution is active per Framework context, with a queue bound of 16. Public status/cancel calls return cached bounded snapshots and do not perform filesystem scans, hashing, canonicalization or synchronous waits on Editor event paths.
 
-Before any submission, persist the immutable plan and attempt intent. Bind the M2 request fingerprint and attempt ID to the pending phase. Only after that durable write and admission registration may M2 receive the invocation. Poll bounded status at a documented interval without holding repository or UI locks. Phase failure/cancellation stops later phases; it cannot be converted to success by cleanup.
+Before any M2 submission, persist the immutable plan and attempt intent. The bounded Framework queue is session-local; queued work does not acquire durable execution authority or replay after restart. Bind the M2 request fingerprint and attempt ID to the pending phase. Only after that durable write and admission registration may M2 receive the invocation. Poll bounded status at a documented interval without holding repository or UI locks. Phase failure/cancellation stops later phases; it cannot be converted to success by cleanup.
 
 Success requires the exact M2 record to be terminal, exit-zero, output-verified, cleanup-confirmed and durable, followed by Framework output verification/custody and durable receipt commit. A process exit code alone is insufficient. M2 invocation records become phase-extension observations, not fabricated phase-success receipts. Attempted, blocked, interrupted, timed-out and cancelled cases preserve their distinctions.
 
@@ -237,7 +237,7 @@ policy requires confirmation, send the authenticated host confirmation event to
 `Confirm` for that exact plan and bounded lifetime. `Submit` returns an execution
 identity immediately; use `Status` or pages of at most 64 snapshots for progress,
 and `Cancel` to request cancellation. Terminal `History` retains the M1 receipt
-and the actual M2 observations. `ProjectCandidate` returns candidate records for
+and the actual M2 observations. `ProjectCandidate` requires the exact host profile (checked against the plan fingerprint) and returns fully populated candidate records for
 a separate review flow; it does not register them.
 
 After reopening, configure current host policy and qualification again. Stored
@@ -251,3 +251,7 @@ cancels and joins the worker and supervisor.
 No user-facing job pane is part of M3. The lifecycle smoke loads only its compiled
 test DLL into the actual Editor and exercises the Foundation instance registered
 by the production component. It does not add a fixture launcher to product UI.
+
+Candidate source metadata uses the existing registry warning import status; evidence
+remains in the separate candidate collection. The projection performs no registry write.
+A changed profile/build is refused, and failed observations retain their failed outcome.

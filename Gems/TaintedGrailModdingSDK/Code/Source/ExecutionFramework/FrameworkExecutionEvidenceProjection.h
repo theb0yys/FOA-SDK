@@ -15,5 +15,6 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         SourceRecord m_source;
         AZStd::vector<EvidenceRecord> m_evidence;
     };
-    Result ProjectCandidate(const StoredAttempt&, CandidateProjection&);
+    AZStd::string ProfileFingerprint(const GameProfile&);
+    Result ProjectCandidate(const StoredAttempt&, const GameProfile&, CandidateProjection&);
 } // namespace TaintedGrailModdingSDK::ExecutionFramework

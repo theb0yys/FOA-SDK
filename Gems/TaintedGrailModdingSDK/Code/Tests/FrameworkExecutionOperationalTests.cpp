@@ -7,6 +7,7 @@
 #include "ExecutionFramework/FrameworkToolExecutionAdapter.h"
 #include "FoundationService.h"
 #include "FrameworkExecutionTestFixtures.h"
+#include "SourceEvidenceRegistry.h"
 #include <AzCore/Interface/Interface.h>
 #include <Execution/Platform/Windows/ToolSandbox_Windows.h>
 #include <Psapi.h>
@@ -81,10 +82,16 @@ class FrameworkNative : public ::testing::Test
 {
 protected:
     Fixture m_fixture;
+    TaintedGrailModdingSDK::GameProfile m_profile;
     AZStd::string m_root, m_identity, m_executableDigest;
     std::shared_ptr<ET::ToolResolvedConfiguration> m_current;
     void SetUp() override
     {
+        m_profile.m_profileId = "profile.synthetic";
+        m_profile.m_gameVersion = "1.0.0";
+        m_profile.m_branch = "synthetic";
+        m_profile.m_runtimeTarget = "Mono";
+        m_fixture = Fixture(ProfileFingerprint(m_profile));
         wchar_t executable[32768]{};
         auto length = GetEnvironmentVariableW(L"FOA_M2_FIXTURE", executable, 32768);
         ASSERT_GT(length, 0u) << "Native M2 fixture required; no skips.";
@@ -271,8 +278,20 @@ TEST_F(FrameworkNative, ActualSupervisorSuccessCustodyReceiptAndReopen)
         EXPECT_EQ(history[0].m_tools.size(), 1u);
         ASSERT_EQ(history[0].m_receipt->m_phaseReceipts[0].m_outputs.size(), 1u);
         CandidateProjection candidate;
-        EXPECT_TRUE(ProjectCandidate(history[0], candidate));
-        EXPECT_EQ(candidate.m_source.m_importStatus, "candidate");
+        ASSERT_TRUE(ProjectCandidate(history[0], m_profile, candidate));
+        EXPECT_EQ(candidate.m_source.m_importStatus, "warning");
+        TaintedGrailModdingSDK::SourceEvidenceRegistry registry;
+        AZStd::string registrationError;
+        ASSERT_TRUE(registry.RegisterSource(candidate.m_source, &registrationError)) << registrationError.c_str();
+        for (const auto& evidence : candidate.m_evidence)
+        {
+            ASSERT_TRUE(registry.RegisterCandidateEvidence(evidence, &registrationError)) << registrationError.c_str();
+        }
+        EXPECT_EQ(registry.GetCandidateEvidence().size(), 1u);
+        EXPECT_TRUE(registry.GetEvidence().empty());
+        auto wrongProfile = m_profile;
+        wrongProfile.m_gameVersion = "2.0.0";
+        EXPECT_EQ(ProjectCandidate(history[0], wrongProfile, candidate).m_error, Error::Drifted);
         Snapshot reused;
         ASSERT_TRUE(service.Submit(plan.m_fingerprint, reused));
         EXPECT_EQ(reused.m_executionId, execution);
@@ -436,6 +455,10 @@ TEST_F(FrameworkNative, NativeFailureObservationsNeverBecomeArtifacts)
             }
             EXPECT_TRUE(history[0].m_receipt->m_phaseReceipts[0].m_outputs.empty());
             EXPECT_EQ(history[0].m_receipt->m_outcome, CE::Outcome::FAILED);
+            CandidateProjection candidate;
+            ASSERT_TRUE(ProjectCandidate(history[0], m_profile, candidate));
+            EXPECT_EQ(candidate.m_evidence[0].m_claim, "FAILED");
+            EXPECT_EQ(candidate.m_evidence[0].m_confidence, "candidate");
         }
         FrameworkExecutionRepository reopened;
         ASSERT_TRUE(reopened.Open(store, m_fixture.m_context));

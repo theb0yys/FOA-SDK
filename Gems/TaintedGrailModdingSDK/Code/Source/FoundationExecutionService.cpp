@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
-#include "CanonicalFingerprint.h"
+#include "ExecutionFramework/FrameworkExecutionEvidenceProjection.h"
 #include "ExecutionFramework/FrameworkExecutionService.h"
 #include "FoundationService.h"
 #include <AzCore/std/algorithm.h>
@@ -23,28 +23,7 @@ namespace TaintedGrailModdingSDK
         {
             return {};
         }
-        AZStd::string bytes = "foa-framework-host-profile-v1";
-        auto append = [&](const AZStd::string& value)
-        {
-            bytes += AZStd::string::format("/%llu:", static_cast<unsigned long long>(value.size())) + value;
-        };
-        append(profile->m_profileId);
-        append(profile->m_gameVersion);
-        append(profile->m_branch);
-        append(profile->m_runtimeTarget);
-        append(profile->m_unityVersion);
-        append(profile->m_bepInExVersion);
-        // Machine locators contribute only to a private host snapshot hash, never persisted plaintext.
-        append(profile->m_installPath);
-        append(profile->m_managedAssembliesPath);
-        append(profile->m_pluginPath);
-        auto scopes = profile->m_dlcScopes;
-        AZStd::sort(scopes.begin(), scopes.end());
-        for (const auto& scope : scopes)
-        {
-            append(scope);
-        }
-        return CalculateCanonicalSha256(bytes);
+        return ExecutionFramework::ProfileFingerprint(*profile);
     }
     ExecutionFramework::FrameworkExecutionService* FoundationService::GetFrameworkExecution() const
     {

@@ -44,6 +44,7 @@ def base_pane(name: str, widget: str) -> Pane:
 
 PANES = (
     base_pane("FOA Development Hub", "DevelopmentHubWidget"),
+    base_pane("Tainted Grail Connect to Game", "GameConnectionWidget"),
     base_pane("Tainted Grail SDK Status", "FoundationStatusWidget"),
     base_pane("Tainted Grail Pack Manager", "PackManagerWidget"),
     base_pane("Tainted Grail Source Intake", "SourceEvidenceIntakeWidget"),
@@ -196,8 +197,8 @@ def validate_control_center_contract(repo_root: Path, hub: str) -> None:
 
 
 def validate_editor_lifecycle(repo_root: Path) -> None:
-    if len(PANES) != 33 or len({pane.name for pane in PANES}) != len(PANES):
-        raise EditorLifecycleError("The canonical Editor inventory must contain 33 unique pane names")
+    if len(PANES) != 34 or len({pane.name for pane in PANES}) != len(PANES):
+        raise EditorLifecycleError("The canonical Editor inventory must contain 34 unique pane names")
 
     hub = read(repo_root, HUB_SOURCE)
     source_cache: dict[str, str] = {}
@@ -279,7 +280,7 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
         for match in re.finditer(r'saveKeyName\s*=\s*QStringLiteral\("([^"]+)"\)', registration):
             save_keys.append(match.group(1))
 
-    if len(save_keys) != 33 or len(set(save_keys)) != 33:
+    if len(save_keys) != 34 or len(set(save_keys)) != 34:
         raise EditorLifecycleError(
             f"Every pane needs one unique layout save key; found {len(save_keys)} keys and {len(set(save_keys))} unique values"
         )
@@ -316,7 +317,7 @@ def main() -> int:
         return 1
     print(
         "TG SDK Editor lifecycle validation passed: FOA-SDK Home is the single Tools-menu "
-        "front door, all 33 panes retain build/lifecycle/layout ownership and Hub reachability, "
+        "front door, all 34 panes retain build/lifecycle/layout ownership and Hub reachability, "
         "saved mods require no manifest browsing, and setup readiness remains fail-closed."
     )
     return 0

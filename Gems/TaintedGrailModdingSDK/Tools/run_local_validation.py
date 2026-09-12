@@ -136,6 +136,18 @@ def build_static_commands(
                 ),
             )
         )
+    external_tools = PRODUCT_ROOT / "Gems/ExternalToolchain/Tools"
+    if include_unit_tests:
+        commands.append(
+            ValidationCommand(
+                "ExternalToolchain validator tests",
+                python_command("-m", "unittest", "discover", "-s", str(external_tools / "tests"), "-v"),
+            )
+        )
+    for validator in ("validate_external_toolchain_foundation.py", "validate_tool_execution.py"):
+        commands.append(
+            ValidationCommand(f"ExternalToolchain: {validator}", python_command(str(external_tools / validator)))
+        )
     for validator in VALIDATORS:
         commands.append(
             ValidationCommand(

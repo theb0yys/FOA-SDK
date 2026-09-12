@@ -104,6 +104,12 @@ ly_install_files(
 
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_asset_browser_pane_refresh.py" tg_asset_browser_pane_refresh_tool_source)
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_native_item_preview.py" tg_native_item_preview_source)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/tge_editor_connection.py" tg_game_connection_source)
+ly_add_source_properties(
+    SOURCES Source/GameConnectionWidget.cpp
+    PROPERTY COMPILE_DEFINITIONS
+    VALUES TG_SDK_GAME_CONNECTION_SOURCE="${tg_game_connection_source}"
+)
 set(tg_native_item_vendor "${CMAKE_CURRENT_BINARY_DIR}/item-preview-vendor-icons")
 set(tg_native_item_requirements "${CMAKE_CURRENT_LIST_DIR}/../Tools/item_preview_requirements.txt")
 add_custom_command(
@@ -145,6 +151,12 @@ ly_install_files(
         ../Tools/foa_native_population.py
         ../Tools/foa_addressables_catalog.py
         ../Tools/item_preview_requirements.txt
+        ../Tools/tge_editor_connection.py
+        ../Tools/tge_player_position.py
+        ../Tools/tge_player_vitals.py
+        ../Tools/tge_encounters.py
+        ../Tools/tge_sdk_client.py
+        ../Tools/tge_sdk_transport.py
     DESTINATION
         scripts/foa-sdk
 )
@@ -203,6 +215,13 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
                 Gem::${gem_name}.Framework.Static
                 AZ::AzTest
                 AZ::AzToolsFramework
+    )
+
+    ly_add_source_properties(
+        SOURCES
+            Tests/GameConnectionServiceTests.cpp
+        PROPERTY COMPILE_DEFINITIONS
+            VALUES TG_SDK_TEST_PYTHON="${Python_EXECUTABLE}"
     )
 
     ly_add_source_properties(

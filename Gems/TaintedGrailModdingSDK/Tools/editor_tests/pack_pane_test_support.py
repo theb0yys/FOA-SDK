@@ -21,6 +21,10 @@ def loaded_library(name):
 
 
 def open_default_pack():
+    open_default_pane('Tainted Grail Pack Manager')
+
+
+def open_default_pane(name):
     # QtViewPaneManager::OpenMode::UseDefaultState is not Python-reflected.
     # These public exports and QString's three-word storage match the pinned
     # Windows x64 Qt 6.10.2 host (qstring.h / qarraydatapointer.h).
@@ -43,7 +47,6 @@ def open_default_pack():
     open_pane = getattr(host, '?OpenPane@QtViewPaneManager@@QEAAPEBUQtViewPane@@AEBVQString@@V?$QFlags@W4OpenMode@QtViewPane@@@@@Z')
     open_pane.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
     open_pane.restype = ctypes.c_void_p
-    name = 'Tainted Grail Pack Manager'
     string = QStringStorage()
     ctor(ctypes.byref(string), name, len(name))
     try:

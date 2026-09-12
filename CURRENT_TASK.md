@@ -725,3 +725,15 @@ and removal checks: 2,508 cells and 7,027,236 interior pixel comparisons.
 Final cookies/shadows/atmosphere, controller state, other lighting/instance data,
 remaining materials, complete scenes, four-map UI and export remain unfinished.
 Full maps are not ready for 1:1 testing; game files and saves remain read-only.
+
+Merged-instance edit checkpoint (2026-09-12): the inverse native-matrix adapter
+now prepares separate in-memory source-member candidates. It changes only the
+selected instances' twelve original matrix words, preserves reference indices and
+all unrelated bytes, and rejects stale/malformed bindings. Ten focused tests pass.
+All 87,229 previously captured records pass exact no-op and controlled edit checks
+in 8.011 seconds. Derived products and game acceptance remain unqualified; every
+candidate explicitly blocks game export. Native edit/save/reopen acceptance is
+recorded separately and does not establish complete scene rendering.
+
+Native synthetic movement, undo/redo, rotation/scale and fresh saved-level reopen
+passed; all six candidate files match an independent byte-level comparison.

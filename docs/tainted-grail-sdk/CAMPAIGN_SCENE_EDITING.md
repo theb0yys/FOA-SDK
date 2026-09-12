@@ -1671,3 +1671,59 @@ Live controller state, camera policy, other light shapes, final scene lighting,
 instance state, remaining material passes, complete scenes, four-map UI and game
 export remain unfinished. Neither isolated light preparation nor buffer transfer
 establishes full-map appearance or Fall of Avalon runtime acceptance.
+
+## Exact merged-instance matrix candidates
+
+`foa_scene_merged_candidate.matrix_candidate` prepares a separate complete-member
+candidate in memory from the original `MergedRenderers` bytes, a validated original
+placement packet and explicitly selected native edits. Each edit carries the full
+immutable placement identity and sixteen `host_world_bits` from
+`SourceScenePlacementBus.GetWorldMatrixBits`. Displayed or decomposed native TRS
+values cannot replace that matrix. The caller must independently establish the
+archive/map/loader association; matching hashes do not establish authorization.
+
+The conversion reverses the qualified source/host axis mapping at uint32 precision
+and restores the twelve original column-major matrix words. Only those 48 bytes
+per selected record may change. Both following reference indices, unselected
+instances, section framing and uninterpreted member bytes are preserved. Original
+bytes are reparsed before use so mutable cached offsets are not write authority.
+The result is reparsed and every selected matrix is expanded and compared with the
+native input bits. Invalid/stale identities, unsupported bottom-row bits,
+nonfinite values, duplicate selections and oversized packets fail before return.
+The existing 64 MiB member, 16 MiB packet and 4,096-placement limits still apply.
+Cancellation is checked throughout preparation and verification; source objects,
+packets and original payloads remain unchanged. Existing packet schemas are unchanged.
+
+Ten synthetic tests cover complete-member preservation, exact no-op conversion,
+movement/rotation/scale/shear, signed zero and subnormals, independent column
+expectations, selection ordering, cancellation, stale identities and invalid input.
+The independent private record check covers all 87,229 previously captured
+instances across eight members and all four maps: every no-op restores all 56
+original bytes, and a controlled bit edit per instance changes only its selected
+matrix word. All twelve stored word positions are covered. This took 8.011 seconds.
+That check qualifies record conversion; it does not qualify full campaign-member
+output, rendered appearance or game execution.
+
+The reproducible `Tools/editor_tests/source_merged_candidate_editor.py` exercises
+native selection, movement, undo/redo, rotation/scale, candidate conversion and
+saved reopening using a private synthetic fixture. Set `FOA_MERGED_CANDIDATE_ROOT`
+to an isolated directory containing `member.bin`, `placement.json` and
+`fixture.json` with `project`, `level`, `member_guid`, `member_sha256` and
+`placement_sha256`. Run through the pinned Editor's `--runpython` entry point.
+A fresh second process with `FOA_MERGED_CANDIDATE_REOPEN=1` checks the saved level.
+Outputs must be unused private paths; keep fixtures and diagnostics outside Git.
+
+Every result explicitly reports `game_export=BLOCKED` and
+`dependent_products=NOT_RUN`. Moving an instance can invalidate navigation,
+lighting, LOD bounds, occlusion and other derived products. Byte-preserving matrix
+conversion supplies a candidate for subsequent qualification, not permission or
+proof that a changed member is safe to return to the game. No archive publisher,
+game write, deployment action or user-facing export command is introduced.
+
+Native synthetic acceptance passed movement, undo/redo, rotation/scale and a fresh
+saved-level reopen. An independent framing/column audit matched all six complete
+member candidates byte-for-byte; unchanged and undo candidates equal the original.
+The saved edit reproduces the identical candidate in the fresh Editor process.
+The maximum 4,096-edit batch against 87,229 synthetic member records completed in
+0.474 seconds and preserved the other 83,133 records. These checks do not establish
+full-map rendering, derived-product validity or game return.

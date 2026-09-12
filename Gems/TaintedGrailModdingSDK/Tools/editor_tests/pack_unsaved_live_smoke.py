@@ -7,6 +7,8 @@ Launch with --runpython and without --autotest_mode: unattended mode closes
 modal dialogs before this test can exercise the user's Save/Discard/Cancel choice.
 """
 import ctypes
+import hashlib
+import sys
 import json
 import os
 from pathlib import Path
@@ -17,11 +19,14 @@ import azlmbr.legacy.general as general
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets
 from shiboken6 import isValid
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pack_pane_test_support as pane_test
+
 
 def run():
     output = Path(os.environ['FOA_SDK_PACK_RESULT'])
     workspace = Path(os.environ['FOA_SDK_PACK_WORKSPACE'])
-    result = {'status': 'FAILED', 'checks': [], 'transition_seconds': []}
+    result = {'status': 'PARTIAL', 'checks': [], 'transition_seconds': [], 'editor_initialized': True, 'about_to_quit': False}
     app = QtWidgets.QApplication.instance()
     keep = []
 
@@ -153,6 +158,15 @@ def run():
 
     try:
         stage('validating_fixture')
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel.GetModuleHandleW.argtypes = [ctypes.c_wchar_p]
+        kernel.GetModuleHandleW.restype = ctypes.c_void_p
+        kernel.GetModuleFileNameW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_uint32]
+        buffer = ctypes.create_unicode_buffer(32768)
+        module = kernel.GetModuleHandleW('TaintedGrailModdingSDK.Editor.dll')
+        assert module and kernel.GetModuleFileNameW(module, buffer, len(buffer))
+        result['sdk_module_path'] = buffer.value
+        result['sdk_module_sha256'] = hashlib.sha256(Path(buffer.value).read_bytes()).hexdigest()
         assert not any('autotest_mode' in argument for argument in app.arguments()), (
             'Run without --autotest_mode; O3DE unattended mode dismisses modal dialogs')
         automatic = Path(os.environ['LOCALAPPDATA']) / 'FOA-SDK/Workspace/foa-sdk.tgworkspace.json'
@@ -173,7 +187,13 @@ def run():
                        if isinstance(w, QtWidgets.QPlainTextEdit)
                        and w.toPlainText().startswith('Workspace file:'))
         assert workspace.as_posix() in details.toPlainText().replace('\\', '/')
-        general.open_pane('Tainted Grail Pack Manager')
+        # Setup may close only a clean/unresolved initial form, before test edits.
+        initial = [w for w in app.allWidgets() if isValid(w) and w.objectName() == 'TaintedGrailPackManager']
+        for form in initial:
+            assert form.findChild(QtWidgets.QLabel, 'packDraftStatus').text() != 'Unsaved changes'
+            assert pane_test.pane_dock(form).close()
+        QtTest.QTest.qWait(100)
+        pane_test.open_default_pack()
         QtTest.QTest.qWait(500)
         root = control('TaintedGrailPackManager')
 
@@ -309,95 +329,20 @@ def run():
         dirty()
 
         def pane_dock():
-            parent = root.parentWidget()
-            while parent and not isinstance(parent, QtWidgets.QDockWidget):
-                parent = parent.parentWidget()
-            assert parent is not None, 'Pack Manager is not hosted in an Editor dock'
-            assert parent.widget() == root
-            return parent
+            return pane_test.pane_dock(root)
 
         def floating_container():
-            parent = pane_dock()
-            while parent:
-                if isinstance(parent, QtWidgets.QDockWidget) and parent.isFloating():
-                    return parent
-                parent = parent.parentWidget()
-            return None
-
-        def pane_menu_action(verb):
-            dock = pane_dock()
-            parent = dock.parentWidget()
-            while parent and not isinstance(parent, QtWidgets.QTabWidget):
-                parent = parent.parentWidget()
-            if parent and parent.indexOf(dock) >= 0:
-                index = parent.indexOf(dock)
-                surface = parent.tabBar()
-                point = surface.tabRect(index).center()
-                expected = verb + ' ' + parent.tabText(index)
-            else:
-                surface = dock.titleBarWidget()
-                point = surface.rect().center()
-                expected = verb + ' ' + dock.windowTitle()
-            selected = []
-            errors = []
-            timer = QtCore.QTimer()
-            started = time.monotonic()
-
-            def choose():
-                values = app.allWidgets()
-                keep.extend(values)
-                menus = [w for w in values if isValid(w) and isinstance(w, QtWidgets.QMenu) and w.isVisible()]
-                if not menus:
-                    if time.monotonic() - started > 3:
-                        errors.append('Pane context menu did not open')
-                        timer.stop()
-                    return
-                timer.stop()
-                menu = menus[-1]
-                try:
-                    actions = [a for a in menu.actions() if a.text().startswith(verb + ' ')
-                               and a.text() != verb + ' Tab Group' and a.isEnabled()]
-                    assert len(actions) == 1, (expected, [a.text() for a in menu.actions()])
-                    selected.append(actions[0].text())
-                    QtTest.QTest.mouseClick(menu, QtCore.Qt.LeftButton,
-                                           pos=menu.actionGeometry(actions[0]).center())
-                except Exception:
-                    errors.append(traceback.format_exc())
-                    menu.close()
-
-            timer.timeout.connect(choose)
-            timer.start(25)
-            event = QtGui.QContextMenuEvent(QtGui.QContextMenuEvent.Mouse, point, surface.mapToGlobal(point))
-            app.sendEvent(surface, event)
-            timer.stop()
-            assert not errors and len(selected) == 1, (errors, selected)
+            return pane_test.floating_container(root)
 
         def place_pane(floating):
             if floating and floating_container() is None:
-                pane_menu_action('Undock')
+                pane_test.pane_menu_action(root, 'Undock', result, keep)
                 QtTest.QTest.qWait(150)
             assert (floating_container() is not None) == floating, 'Unexpected pane docking state'
             assert root.isVisible()
 
         def request_titlebar_close():
-            container = floating_container()
-            if container is None:
-                pane_menu_action('Close')
-                return
-            # Floating tab groups use a toolbar QAction; standalone panes use DockBarButton.
-            buttons = container.findChildren(QtWidgets.QToolButton)
-            keep.extend(buttons)
-            visible = [button for button in buttons if isValid(button) and button.isVisible()
-                       and not button.visibleRegion().isEmpty()]
-            close = [button for button in visible if button.defaultAction()
-                     and button.defaultAction().objectName() == 'closeButton']
-            if not close:
-                close = [button for button in visible if button.objectName() == 'closeButton'
-                         and not isinstance(button.parentWidget(), QtWidgets.QTabBar)]
-            assert len(close) == 1, [(b.objectName(), b.text(), b.parentWidget().metaObject().className())
-                                     for b in visible]
-            assert close[0].isEnabled()
-            QtTest.QTest.mouseClick(close[0], QtCore.Qt.LeftButton)
+            pane_test.request_titlebar_close(root, result, keep)
 
         def close_pane(choice=None, accepted=False, capture=False):
             dock = pane_dock()
@@ -416,7 +361,10 @@ def run():
 
         def reopen():
             nonlocal root
-            general.open_pane('Tainted Grail Pack Manager')
+            if floating:
+                general.open_pane('Tainted Grail Pack Manager')
+            else:
+                pane_test.open_default_pack()
             QtTest.QTest.qWait(150)
             reopened = control('TaintedGrailPackManager')
             assert reopened.isVisible()
@@ -519,10 +467,49 @@ def run():
         result['status'] = 'PASSED'
         stage('complete')
     except Exception:
+        result['status'] = 'FAILED'
         result['error'] = traceback.format_exc()
         stage(result.get('stage', 'failed'))
     finally:
         output.write_text(json.dumps(result, indent=2), encoding='utf-8')
 
 
-run()
+import azlmbr.editor as recovery_editor
+
+_adapter_keep = []
+def _exercise_ready():
+    run()
+    output = Path(os.environ['FOA_SDK_PACK_RESULT'])
+    result = json.loads(output.read_text(encoding='utf-8'))
+    result['editor_initialized'] = True
+    if result['status'] != 'PASSED':
+        result['status'] = 'FAILED'
+        output.write_text(json.dumps(result, indent=2), encoding='utf-8')
+        return
+    app = QtWidgets.QApplication.instance()
+    timer = QtCore.QTimer()
+    def answer():
+        values = app.allWidgets()
+        _adapter_keep.extend(values)
+        for value in values:
+            if isValid(value) and isinstance(value, QtWidgets.QMessageBox) and value.isVisible():
+                assert value.objectName() == 'packUnsavedChangesDialog'
+                value.button(QtWidgets.QMessageBox.Discard).click()
+    def quit_seen():
+        timer.stop()
+        result['about_to_quit'] = True
+        output.write_text(json.dumps(result, indent=2), encoding='utf-8')
+    timer.timeout.connect(answer)
+    timer.start(25)
+    _adapter_keep.extend((timer, answer, quit_seen))
+    app.aboutToQuit.connect(quit_seen)
+    output.write_text(json.dumps(result, indent=2), encoding='utf-8')
+    QtCore.QTimer.singleShot(0, general.exit)
+
+def _initialized(_args):
+    _handler.disconnect()
+    QtCore.QTimer.singleShot(0, _exercise_ready)
+
+_handler = recovery_editor.EditorEventBusHandler()
+_handler.connect()
+_handler.add_callback('NotifyEditorInitialized', _initialized)

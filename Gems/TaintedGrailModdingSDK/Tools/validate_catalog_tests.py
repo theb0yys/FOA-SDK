@@ -146,6 +146,7 @@ def main() -> int:
             "Tests/EconomyDuplicateDetectionServiceTests.cpp",
             "Tests/FoAInstallDiscoveryServiceTests.cpp",
             "Tests/FoundationWorkspaceIsolationTests.cpp",
+            "Tests/PackDraftRecoveryTests.cpp",
             "Tests/Main.cpp",
             "Tests/PopulationActionLaneServiceTests.cpp",
             "Tests/PopulationAuthoringTests.cpp",

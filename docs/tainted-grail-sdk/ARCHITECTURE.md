@@ -341,7 +341,7 @@ Persistence services own all durable document reads and writes.
 Rules:
 
 - documents include schema versions;
-- writes stay inside approved workspace roots;
+- canonical document writes stay inside approved workspace roots;
 - multi-document operations are transactional where practical;
 - load errors are preserved and surfaced;
 - breaking schema changes require migration support or explicit rejection;
@@ -349,6 +349,12 @@ Rules:
 - runtime deployment is never performed by document persistence services;
 - artifacts, backups, installed ownership, execution attempts, and receipts use dedicated repositories with exact fingerprints;
 - secrets are referenced through opaque handles and do not enter canonical plans or logs.
+
+Pack Manager's raw draft recovery is a separate app-local store owned by Foundation,
+not a canonical document or active pack. Its workspace-bound schema, process lock,
+atomic checkpoints, explicit restoration and rejection policy are defined in
+[Pack Manager draft recovery](PACK_DRAFT_RECOVERY.md). Only explicit Save promotes
+restored form values through the existing pack persistence boundary.
 
 Current suffixes:
 

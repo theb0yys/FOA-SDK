@@ -9,6 +9,7 @@
 
 #include "FoundationModels.h"
 #include "FoundationNotificationBus.h"
+#include "PackDraftRecoveryService.h"
 
 #include <QHash>
 #include <QWidget>
@@ -20,6 +21,8 @@ class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
+class QThread;
+class QTimer;
 
 namespace TaintedGrailModdingSDK
 {
@@ -36,6 +39,18 @@ namespace TaintedGrailModdingSDK
 
     private:
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
+
+        void InitializeRecovery();
+        void StartRecoveryForWorkspace();
+        void SetRecoveryPending(bool pending);
+        void ScheduleRecovery();
+        void CheckpointRecovery();
+        void RestoreRecovery();
+        bool RetireRecovery();
+        void StopRecovery();
+        PackDraftRecovery CaptureRecovery() const;
 
         PackManifest BuildPackFromForm() const;
         void PopulateFromPack(const PackManifest& pack);
@@ -84,5 +99,24 @@ namespace TaintedGrailModdingSDK
         QHash<QWidget*, QString> m_formValues;
         QHash<QWidget*, QString> m_savedFormValues;
         bool m_isNewPack = true;
+        QMap<QString, QWidget*> m_recoveryFields;
+        std::shared_ptr<PackDraftRecoveryService> m_recoveryStore;
+        PackDraftRecoveryRead m_recoveryRead;
+        QThread* m_recoveryThread = nullptr;
+        QObject* m_recoveryWorker = nullptr;
+        QTimer* m_recoveryTimer = nullptr;
+        QLabel* m_recoveryStatus = nullptr;
+        QWidget* m_recoveryPanel = nullptr;
+        QPushButton* m_restoreRecoveryButton = nullptr;
+        QPushButton* m_discardRecoveryButton = nullptr;
+        QPushButton* m_retryRecoveryButton = nullptr;
+        QPushButton* m_newButton = nullptr;
+        QPushButton* m_saveButton = nullptr;
+        quint64 m_recoveryGeneration = 0;
+        bool m_recoveryPending = false;
+        bool m_recoverySuppressed = false;
+        bool m_recoveryStoreReady = false;
+        bool m_recoveryWriteInFlight = false;
+        bool m_recoveryClosing = false;
     };
 } // namespace TaintedGrailModdingSDK

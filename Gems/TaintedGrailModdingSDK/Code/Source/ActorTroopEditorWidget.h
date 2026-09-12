@@ -79,6 +79,7 @@ namespace TaintedGrailModdingSDK
         void HandleTroopRecordChange();
         void HandleMemberSelectionChange();
         bool HasDirtyDrafts() const;
+        bool SaveDraftsForClose();
 
         PopulationActorProfile BuildActorProfile() const;
         PopulationTroopProfile BuildTroopProfile() const;
@@ -169,6 +170,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_loadedActorRecordId;
         AZStd::string m_loadedTroopRecordId;
         AZStd::string m_selectedMemberLinkId;
+        bool m_closePromptOpen = false;
         bool m_actorDirty = false;
         bool m_troopDirty = false;
         bool m_memberEditorDirty = false;

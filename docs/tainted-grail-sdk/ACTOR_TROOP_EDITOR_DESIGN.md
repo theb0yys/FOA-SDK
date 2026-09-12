@@ -365,8 +365,9 @@ The **Tainted Grail Actor and Troop Editor** should provide:
 - read-only action-lane matrix;
 - save and revert controls;
 - independently tracked actor, troop, and unstaged-member drafts: selection and shared Foundation refreshes
-  cannot discard them, saving one tab preserves the other tab, and closing with unsaved work requires explicit
-  discard confirmation;
+  cannot discard them, saving one tab preserves the other tab, and closing with unsaved work offers
+  Save/Discard/Cancel. Save uses the existing actor and atomic troop commands, including the unstaged member
+  form; Cancel and failed Save keep the pane open. Earlier successful saves remain saved if a later save fails;
 - clear empty, invalid, blocked, and persistence-failure states.
 
 The pane does not create canonical records, grant permission, invoke an adapter, launch FoA, or expose spawn

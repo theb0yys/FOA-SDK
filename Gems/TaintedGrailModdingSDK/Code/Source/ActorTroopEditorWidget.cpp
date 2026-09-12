@@ -38,6 +38,7 @@
 #include <QScrollArea>
 #include <QShortcut>
 #include <QSignalBlocker>
+#include <QScopedValueRollback>
 #include <QSpinBox>
 #include <QStringList>
 #include <QTableWidget>
@@ -1311,21 +1312,33 @@ namespace TaintedGrailModdingSDK
 
     void ActorTroopEditorWidget::closeEvent(QCloseEvent* event)
     {
+        if (m_closePromptOpen)
+        {
+            event->ignore();
+            return;
+        }
         if (!HasDirtyDrafts())
         {
             QWidget::closeEvent(event);
             return;
         }
 
-        const QMessageBox::StandardButton choice = QMessageBox::warning(
-            this,
-            tr("Discard unsaved population drafts?"),
-            tr(
-                "The Actor/Troop Editor contains unsaved actor, troop, or member "
-                "changes. Close the pane and discard those local drafts?"),
-            QMessageBox::Discard | QMessageBox::Cancel,
-            QMessageBox::Cancel);
-        if (choice == QMessageBox::Discard)
+        const QScopedValueRollback<bool> prompting(m_closePromptOpen, true);
+        QMessageBox prompt(
+            QMessageBox::Warning,
+            tr("Unsaved actor and troop drafts"),
+            tr("Save your actor, troop, and member changes before closing the pane?"),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+            this);
+        prompt.setObjectName("populationUnsavedChangesDialog");
+        prompt.setInformativeText(tr(
+            "Save includes unstaged member edits. Actor and troop saves are separate; "
+            "if a later save fails, earlier saves remain saved and the remaining drafts stay open."));
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.setEscapeButton(QMessageBox::Cancel);
+        const int choice = prompt.exec();
+        if (choice == QMessageBox::Discard
+            || (choice == QMessageBox::Save && SaveDraftsForClose()))
         {
             QWidget::closeEvent(event);
         }
@@ -1333,6 +1346,22 @@ namespace TaintedGrailModdingSDK
         {
             event->ignore();
         }
+    }
+
+    bool ActorTroopEditorWidget::SaveDraftsForClose()
+    {
+        // Existing save commands clear their dirty flags only after successful
+        // persistence. Do not save clean forms or continue after an actor failure.
+        if (m_actorDirty)
+        {
+            SaveActorProfile();
+            if (m_actorDirty) { return false; }
+        }
+        if (m_troopDirty || m_memberEditorDirty)
+        {
+            SaveTroopDefinition(); // Includes the current unstaged member form.
+        }
+        return !HasDirtyDrafts();
     }
 
     void ActorTroopEditorWidget::OnFoundationChanged()

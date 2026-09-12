@@ -123,8 +123,40 @@ The pane protects unsaved work:
 
 - record, troop, and member selection changes are refused while the corresponding draft is dirty;
 - Foundation refreshes are deferred until drafts are saved or reverted;
-- closing the pane prompts before discarding unsaved drafts;
-- save failures do not publish partial state.
+- closing the pane offers **Save / Discard / Cancel** for actor, troop and member drafts;
+- each save command publishes only after its validation and persistence succeed.
+
+Save includes the current unstaged member form and staged member additions, edits
+and removals. It saves the actor first, then the complete troop definition through
+the existing atomic troop command. These are separate transactions: if the troop
+save fails after the actor succeeds, the actor remains saved and the troop draft
+stays open for correction or retry.
+
+Cancel, Escape and closing the prompt keep the pane open without saving or
+discarding anything. Failed validation or persistence also keeps it open.
+Discard closes the pane without saving its remaining drafts. Clean panes close
+without a prompt. Both docked and floating pane close controls use this protection.
+
+### Pane-close acceptance
+
+Run the native regression against a built pinned Windows Profile Editor and a
+prepared asset cache. Use a fresh output directory outside the product and engine
+source trees:
+
+```powershell
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $FreshOutputRoot
+```
+
+The runner uses an inactive private desktop and synthetic workspace. Its 33
+checks cover docked/floating native close controls, individual and combined
+drafts, cancellation without writes, failed validation, actual locked-catalog
+write failures and retries, staged membership changes, and clean reopening.
+A pass requires the expected loaded module hash and normal Editor exit. The
+recorded acceptance completed all checks with a maximum close transition of
+0.610 seconds against a five-second synthetic fixture budget; this does not
+establish performance for large user catalogs.
 
 ## Persistence expectations
 

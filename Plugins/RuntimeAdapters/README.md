@@ -1,5 +1,9 @@
 # Runtime-adapter plug-ins
 
+The adapter for the SDK-to-runtime connection is owned by **Tainted Grail Extender** in the runtime repository. FOA-SDK owns request production and response consumption. See the [extender adapter guide](../../docs/tainted-grail-sdk/TGE_SDK_ADAPTER.md) for the implemented protocol, client and validation boundary.
+
+The Mono and IL2CPP packages below retain their existing versioned preview and evidence contracts. This connection does not turn their inert work orders into executable requests.
+
 This category contains optional target-specific adapters that consume reviewed work orders and return runtime observations as new evidence.
 
 ## Implemented packages

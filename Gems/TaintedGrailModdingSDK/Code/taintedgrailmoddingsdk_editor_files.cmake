@@ -16,6 +16,8 @@ set(FILES
     Source/FactionAuthorityEditorWidget.cpp
     Source/SpawnEncounterEditorWidget.cpp
     Source/SpawnEncounterEditorWidget.h
+    Source/GameConnectionWidget.cpp
+    Source/GameConnectionWidget.h
     Source/ActorTroopEditorWidget.cpp
     Source/ActorTroopEditorWidgetWorkflow.cpp
     Source/ActorTroopEditorWidget.h

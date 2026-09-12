@@ -1584,3 +1584,42 @@ Rollback removes this additive reader and its private snapshots. It does not
 change existing scene/heightmap/native shader packets or source game records.
 Actual lighting/instance state, full materials/scenes, four-map UI and game export
 still require implementation and their own native/game acceptance.
+
+## Qualified Point-light migration projection
+
+`foa_scene_lighting.project_light_values` produces a separate value projection
+for the exact source profile. HDRP v13 records read current native Light values.
+For v12 Point lights, the qualified migration transfers the stored reflector,
+light-unit and lux-distance fields, preserving native intensity and all unrelated
+values. Its result records source/projected versions and changed fields. It never
+mutates or rewrites the source record or consumes obsolete additional-light intensity.
+Other v12 shapes and unqualified versions are rejected; Pyramid's area-size behavior
+has not been qualified. Nonfinite, lossy, incomplete or invalid migration inputs fail.
+
+`capture_scene_lights(..., include_projection=True)` explicitly selects private
+snapshot version 2. Each light gains `value_projection` and `projected_values_status`;
+the packet adds aggregate `projected_values_status`. The default is still version 1,
+with the same keys and behavior. A successfully projected v12 record keeps its
+original `stored_values_status=BLOCKED` and `migration_required=12`: these describe
+the immutable source, while the separate projection describes derived values.
+Unqualified migrations retain their original records with a blocked projection.
+Neither snapshot version promotes stored values into GPU or runtime acceptance.
+
+The reproducible `Tools/editor_tests/FoaLightMigrationProbe.cs` runs in an isolated
+Unity 6000.0.64f1 project with no packages. It requires explicit `FOA_LIGHT_MANAGED`,
+`FOA_LIGHT_INPUT` and unused `FOA_LIGHT_OUTPUT` paths. The installed HDRP assembly is
+fingerprinted before loading; observed assembly dependencies and fixture input are
+rechecked afterward. Inputs are bounded Point-light fixtures: `cases` contains
+`name`, `nativeJson` (a `Light` object containing the twelve native value fields),
+`unit`, `reflector`, `distance` and deliberately separate `obsoleteIntensity`.
+Use `-executeMethod FoaLightMigrationProbe.Run` in the qualified Unity host. Keep
+source-derived input, output and loaded-assembly diagnostics outside source control.
+Native properties are assigned explicitly; deserializing a native Light JSON object
+without its serialization version can apply an unintended native migration.
+
+The accepted original-assembly test covers 600 synthetic combinations and both
+captured v12 lights. Every native value matches the independent projection at
+float32 precision; unrelated native and companion fields remain unchanged. The
+four-map v2 capture contains 3,488 projected lights and exactly two migrations.
+This is Unity host migration evidence, not Fall of Avalon player execution, GPU
+lighting acceptance, a completed map importer interface or game-return proof.

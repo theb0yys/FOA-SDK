@@ -690,3 +690,27 @@ Next: qualify those two light migrations and supply the actual light, instance,
 visibility and controller state to the native shaders. GPU lighting, remaining
 materials/passes, complete rendered scenes, four-map UI and game export remain
 unfinished. Full maps are not ready for 1:1 testing.
+
+## Source light value projection (2026-09-12)
+
+The two Horns v12 Point lights now have a separately qualified v13 value
+projection. The original installed HDRP migration ran in the exact Unity host
+against 600 synthetic cases and the two captured lights. All twelve native value
+fields agree at float32 precision; the native before/after comparison changes only
+unit, lux distance or reflector fields, and the companion changes only its version.
+Native intensity is preserved. An initial JSON-based fixture was rejected because
+missing native serialization-version metadata applied an unintended older migration;
+the accepted fixture assigns native properties explicitly and verifies their readback.
+
+The optional source-lighting snapshot v2 carries this projection separately from
+immutable original records. Default v1 capture behavior remains unchanged. Older or
+future unqualified migrations remain blocked, and v12 shapes other than Point are
+unsupported. This projects stored data; controller execution, final GPU light lists,
+shadows and bakes are separate obligations.
+
+All 3,488 lights in all sixteen primary campaign scenes now have projected values;
+two require the qualified migration. Original Light, companion, owner, transform
+and controller records remain unchanged. The fresh private capture took 60.906
+seconds. Full rendered lighting/instance/visibility data, remaining material passes,
+complete scenes, four-map UI and game export remain unfinished. Full maps are not
+ready for 1:1 testing; no game files or saves were written.

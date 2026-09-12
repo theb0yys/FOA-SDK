@@ -82,7 +82,45 @@ def stored_light_values(tree, additional=None):
     return {field: copy.deepcopy(tree[field]) for field in NATIVE_FIELDS}
 
 
-def capture_scene_lights(graph, scripts, profile, cancelled=lambda: False):
+
+def project_light_values(tree, additional, profile):
+    """Return a separate value projection, keeping pre-migration source immutable.
+
+    The exact HDRP v12-to-v13 Point-light migration was executed in the pinned
+    Unity host. Its three native setters preserve intensity. Other v12 shapes
+    remain unqualified (Pyramid also changes areaSize); no obsolete intensity is
+    consumed. This is stored-state projection, not a live controller/GPU state.
+    """
+    require(profile == {'unity_version': UNITY_VERSION, 'hdrp_runtime_sha256': HDRP_RUNTIME_SHA256},
+            'Light projection requires the exact independently fingerprinted game profile.')
+    require(additional is None or type(additional) is dict, 'Malformed HDRP light companion.')
+    version = additional.get('m_Version') if additional is not None else None
+    require(additional is None or type(version) is int, 'Malformed HDRP light migration version.')
+    if additional is None or version == 13:
+        return {'values': stored_light_values(tree, additional), 'source_version': version,
+                'projected_version': version, 'changed_fields': [], 'migration': 'NOT_APPLICABLE'}
+    require(version == 12, 'Unqualified HDRP light migration version.')
+    values = stored_light_values(tree)
+    require(values['m_Type'] == 2, 'Only the qualified HDRP v12 Point-light projection is supported.')
+    # Serialized MonoBehaviour booleans are integers; native Light booleans are bools.
+    reflector = additional.get('m_EnableSpotReflector')
+    unit = additional.get('m_LightUnit')
+    distance = additional.get('m_LuxAtDistance')
+    require(type(reflector) is int and reflector in (0, 1), 'Invalid HDRP migration reflector flag.')
+    require(type(unit) is int and unit in (0, 1, 2, 3, 4)
+            and values['m_LightUnit'] in (0, 1, 2, 3, 4), 'Unqualified HDRP migration light unit.')
+    require(type(distance) is float and math.isfinite(distance) and 0.0 < distance <= 3.4028234663852886e38,
+            'Invalid HDRP migration lux distance.')
+    require(struct.unpack('<f', struct.pack('<f', distance))[0] == distance,
+            'HDRP migration lux distance must retain its stored float32 value.')
+    replacement = {'m_EnableSpotReflector': bool(reflector), 'm_LuxAtDistance': distance, 'm_LightUnit': unit}
+    changed = [key for key, value in replacement.items() if values[key] != value]
+    values.update(replacement)
+    return {'values': values, 'source_version': 12, 'projected_version': 13,
+            'changed_fields': changed, 'migration': 'PASSED'}
+
+
+def capture_scene_lights(graph, scripts, profile, cancelled=lambda: False, *, include_projection=False):
     """Capture explicit primary-scene lights after reciprocal ownership validation.
 
     graph is SceneOwnership; scripts is ComponentScriptAudit with its explicit
@@ -90,6 +128,7 @@ def capture_scene_lights(graph, scripts, profile, cancelled=lambda: False):
     """
     require(profile == {'unity_version': UNITY_VERSION, 'hdrp_runtime_sha256': HDRP_RUNTIME_SHA256},
             'Source lighting requires the exact independently fingerprinted game profile.')
+    require(type(include_projection) is bool, 'Light projection opt-in must be a boolean.')
     rows = []
     used_bytes = 0
     records = {}
@@ -172,7 +211,16 @@ def capture_scene_lights(graph, scripts, profile, cancelled=lambda: False):
                      'migration_required': None if qualified else version,
                      'hdrp_companion': 'PASSED' if additional else 'NOT_RUN',
                      'live_controller_state': 'NOT_RUN', 'gpu_light_data': 'NOT_RUN'})
-    return {'schema': 'foa.private.source-lighting', 'version': 1, 'source_capture': 'PASSED',
+        if include_projection:
+            projectable = qualified or (version == 12 and light['tree'].get('m_Type') == 2)
+            rows[-1]['value_projection'] = project_light_values(
+                light['tree'], additional['tree'] if additional else None, profile) if projectable else None
+            rows[-1]['projected_values_status'] = 'PASSED' if projectable else 'BLOCKED'
+    packet = {'schema': 'foa.private.source-lighting', 'version': 2 if include_projection else 1, 'source_capture': 'PASSED',
             'source_profile': copy.deepcopy(profile), 'light_count': len(rows), 'source_record_bytes': used_bytes, 'lights': rows,
             'stored_values_status': 'PASSED' if all(r['stored_values_status'] == 'PASSED' for r in rows) else 'PARTIAL',
             'rendering': 'NOT_RUN', 'game_export': 'NOT_RUN'}
+
+    if include_projection:
+        packet['projected_values_status'] = 'PASSED' if all(r['projected_values_status'] == 'PASSED' for r in rows) else 'PARTIAL'
+    return packet

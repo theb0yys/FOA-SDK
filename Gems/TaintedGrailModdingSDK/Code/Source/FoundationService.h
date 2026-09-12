@@ -34,6 +34,7 @@ class QImage;
 namespace TaintedGrailModdingSDK::ExecutionFramework
 {
     class FrameworkExecutionService;
+    class FrameworkSyntheticTarget;
     struct Context;
     struct HostBinding;
     struct Qualification;
@@ -76,6 +77,11 @@ namespace TaintedGrailModdingSDK
             const AZStd::vector<ExecutionFramework::HostBinding>&,
             const AZStd::vector<ExecutionFramework::Qualification>&,
             const ExecutionFramework::HostPolicy&, AZStd::string* error = nullptr);
+        bool ConfigureFrameworkExecution(const ExecutionFramework::Context&, const AZStd::string& privateRoot,
+            const AZStd::vector<ExecutionFramework::HostBinding>&,
+            const AZStd::vector<ExecutionFramework::Qualification>&,
+            const ExecutionFramework::HostPolicy&, AZStd::string* error,
+            std::shared_ptr<ExecutionFramework::FrameworkSyntheticTarget> synthetic);
         bool CanChangeFrameworkContext() const;
         void StopFrameworkExecution();
 

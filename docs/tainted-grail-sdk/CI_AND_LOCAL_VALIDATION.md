@@ -8,7 +8,7 @@ Automated validation is read-only with respect to repository state and external 
 
 ## Evidence layers
 
-### L0 — Repository and static validation
+### L0 â€” Repository and static validation
 
 Proves repository structure, policy contracts, reviewed-range whitespace, Python/static validators, and other non-compiled checks.
 
@@ -21,13 +21,13 @@ python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
 
 `--static-only` does not prove compilation, Editor behavior, runtime behavior, or source-policy validation.
 
-### L1 — Focused unit and contract tests
+### L1 â€” Focused unit and contract tests
 
 Proves executable behavior in the focused test layer: Python unit tests, deterministic contract tests, malformed-input tests, migration tests, or other owned unit suites.
 
 L1 should target the changed subsystem rather than requiring every unrelated test surface.
 
-### L2 — Configure, build, and compiled host tests
+### L2 â€” Configure, build, and compiled host tests
 
 Proves integration with the pinned O3DE checkout and compiled targets.
 
@@ -40,13 +40,13 @@ Examples include:
 
 A missing executable or zero matching tests is a failure.
 
-### L3 — Editor/UI/manual host interaction
+### L3 â€” Editor/UI/manual host interaction
 
 Proves behavior that requires an actual Editor or platform interaction: pane lifecycle, visual rendering, keyboard/accessibility behavior, saved UI state, or a manual workflow.
 
 Screenshots and logs must exclude private paths and protected/proprietary content.
 
-### L4 — Operational/runtime evidence
+### L4 â€” Operational/runtime evidence
 
 Proves an operation that leaves the authoring host or can mutate external state: installer lifecycle, deployment, rollback, save behavior, runtime adapter behavior, Fall of Avalon launch/verification, signing, or publication.
 
@@ -288,3 +288,31 @@ planner payloads and source binding are proved by compiled synthetic fixtures.
 
 M4 adds no provider execution, persistence format, installer operation or game
 deployment. Those operational rows are NOT_APPLICABLE to this change, not passes.
+
+
+## M5 isolated execution validation
+
+The [M5 design](FRAMEWORK_SYNTHETIC_M5_DESIGN.md) adds an explicitly selected,
+private synthetic target and a native provider. Run `validate_framework_synthetic.py`
+and the existing M1/M3/M4 and source-policy guards. Build the affected Framework
+and Editor targets plus `TaintedGrailModdingSDK.Synthetic.Provider`. The existing
+Framework operational CTest selection supplies `FOA_M5_PROVIDER` and runs the
+`FrameworkSyntheticNative.*` cases alongside the original staging regressions.
+Keep `--no-tests=error` on each Catalog, CapabilityExecution, FrameworkExecution
+contract and operational selection.
+
+Acceptance requires actual Build -> Package -> Deploy -> Launch -> Verify ->
+Rollback processes; unchanged baseline/canary and original file identities;
+failed, cancelled and timed-out launches; drift, corrupt backup, revoked admission,
+full recovery storage and explicit recovery refusal/success. Run the committed
+`Tools/editor_tests/framework_synthetic_lifecycle_smoke.py` in a disposable exact-pin
+Editor project in success, cancel, crash and recover modes. Only crash/recover share
+a target. The crash lane deliberately terminates that test Editor after deployment;
+recovery requires fresh confirmation and cannot rewrite prior execution history.
+Record host exit, joined workers, exact restoration and timings. This is
+programmatic Editor service-lifecycle evidence. Manual visual acceptance is a
+separate lane; M5 adds no pane or operator control. Screenshot or window-discovery
+failures must not masquerade as native workflow results.
+
+These results establish the isolated synthetic workflow only. Fall of Avalon
+runtime, installer, release and general deployment validation remain separate.

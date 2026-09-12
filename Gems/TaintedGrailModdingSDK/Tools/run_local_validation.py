@@ -46,6 +46,7 @@ VALIDATORS = (
     "validate_capability_execution_contracts.py",
     "validate_framework_execution.py",
     "validate_framework_planners.py",
+    "validate_framework_synthetic.py",
     "validate_canonical_interchange_compiled_tests.py",
     "validate_downstream_compiled_tests.py",
     "validate_research_contract_hardening.py",

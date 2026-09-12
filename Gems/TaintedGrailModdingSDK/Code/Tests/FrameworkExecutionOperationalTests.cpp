@@ -8,6 +8,7 @@
 #include "FoundationService.h"
 #include "FrameworkExecutionTestFixtures.h"
 #include "FrameworkPlannerTestFixtures.h"
+#include "ExecutionSynthetic/FrameworkSyntheticWorkflow.h"
 #include "SourceEvidenceRegistry.h"
 #include <AzCore/Interface/Interface.h>
 #include <Execution/Platform/Windows/ToolSandbox_Windows.h>
@@ -1155,4 +1156,446 @@ TEST_F(FrameworkNative, M4PlannerSourceIsConsumedOnlyByTheExactFrameworkPreview)
     EXPECT_EQ(service.Preview(m_fixture.m_descriptor, changed, {}, plan).m_error, Error::Drifted);
     EXPECT_EQ(accepted, 1);
     EXPECT_TRUE(service.Page(0, 16).empty());
+}
+
+
+class FrameworkSyntheticNative : public FrameworkNative
+{
+protected:
+    Context m_syntheticContext{"workspace.synthetic-m5", "pack.synthetic-m5", FrameworkSyntheticTarget::Profile()};
+    std::shared_ptr<FrameworkSyntheticTarget> m_target;
+    std::unique_ptr<FrameworkExecutionService> m_service;
+    SyntheticWorkflow m_workflow;
+    CE::CapabilityExecutionPlanV1 m_plan;
+    AZStd::string m_provider;
+    void SetUp() override
+    {
+        FrameworkNative::SetUp();
+        wchar_t executable[32768]{};
+        ASSERT_GT(GetEnvironmentVariableW(L"FOA_M5_PROVIDER",executable,32768),0u);
+        m_provider = ET::Windows::Utf8(executable);
+        ASSERT_TRUE(ET::Windows::CreatePrivateDirectory(ET::Windows::Wide(m_root+"/m5-store")));
+        ASSERT_TRUE(FrameworkSyntheticTarget::Create(m_root,m_syntheticContext.m_packId,m_target));
+    }
+    void TearDown() override
+    {
+        m_service.reset(); m_target.reset();
+        FrameworkNative::TearDown();
+    }
+    void Prepare(CE::Phase fault = CE::Phase::INVALID, const AZStd::string& mode = "normal")
+    {
+        auto made = PrepareSyntheticWorkflow(m_syntheticContext,m_root+"/m5-store",m_provider,m_target,m_workflow,fault,mode);
+        ASSERT_TRUE(made) << static_cast<int>(made.m_error);
+        m_service = std::make_unique<FrameworkExecutionService>(m_syntheticContext,m_root+"/m5-store",m_target);
+        HostPolicy policy;
+        policy.m_context = m_syntheticContext; policy.m_evidenceId = "evidence.synthetic-native-policy";
+        policy.m_confirmationRequired = true; policy.m_until = Clock::now()+std::chrono::minutes(10);
+        for (const auto& h : m_workflow.m_bindings)
+        {
+            auto registration = m_service->Providers().Register(h);
+            ASSERT_TRUE(registration) << static_cast<int>(registration.m_error);
+            Qualification q;
+            q.m_bindingFingerprint = h.m_binding.m_fingerprint; q.m_executableDigest = m_workflow.m_executableDigest;
+            q.m_profileFingerprint = m_syntheticContext.m_profileFingerprint;
+            q.m_observationId = "observation.synthetic-native"; q.m_evidenceIds = {"evidence.synthetic-native"};
+            q.m_from = Clock::now(); q.m_until = q.m_from+std::chrono::minutes(10);
+            ASSERT_TRUE(m_service->Providers().ReviewQualification(q));
+            policy.m_bindingFingerprints.push_back(h.m_binding.m_fingerprint);
+        }
+        ASSERT_TRUE(m_service->Policy().SetPolicy(policy));
+        ASSERT_TRUE(m_service->Open());
+        auto preview = m_service->Preview(m_workflow.m_descriptor,m_workflow.m_request,{},m_plan);
+        ASSERT_TRUE(preview) << static_cast<int>(preview.m_error);
+        ASSERT_EQ(m_plan.m_phases.size(),6u);
+    }
+    Snapshot Run()
+    {
+        EXPECT_TRUE(m_service->Confirm(m_plan.m_fingerprint,"actor.synthetic-test",std::chrono::seconds(60)));
+        Snapshot started;
+        EXPECT_TRUE(m_service->Submit(m_plan.m_fingerprint,started));
+        auto finished = Wait(*m_service,started);
+        if (finished.m_state != CE::ExecutionState::SUCCEEDED)
+        {
+            for (const auto& entry : m_service->History(0,64))
+            {
+                if (entry.m_receipt) for (const auto& phase : entry.m_receipt->m_phaseReceipts)
+                    std::printf("M5 phase %s: outcome=%u\n",phase.m_phasePlan.m_id.c_str(),static_cast<unsigned>(phase.m_outcome));
+                for (const auto& tool : entry.m_tools)
+                    std::printf("M5 tool: error=%s outcome=%u exit=%u observed=%d\n",ET::ToolErrorName(tool.m_status.m_error),
+                        static_cast<unsigned>(tool.m_status.m_outcome),tool.m_exitCode,tool.m_exitCodeObserved);
+            }
+        }
+        return finished;
+    }
+    AZStd::string Read(const AZStd::string& path)
+    {
+        AZStd::string bytes;
+        EXPECT_TRUE(ET::Windows::ReadFileBounded(ET::Windows::Wide(path),CE::MaximumCanonicalBytes,bytes));
+        return bytes;
+    }
+};
+TEST_F(FrameworkSyntheticNative, SixActualProcessesVerifyAndRestoreTargetThenReopenWithoutReplay)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    auto start = Clock::now();
+    auto result = Run();
+    ASSERT_EQ(result.m_state,CE::ExecutionState::SUCCEEDED) << static_cast<int>(result.m_error);
+    EXPECT_LT(Clock::now()-start,std::chrono::seconds(60));
+    EXPECT_TRUE(m_target->Check(false)); EXPECT_FALSE(m_target->Pending());
+    EXPECT_EQ(Read(m_target->Root()+"/payload.txt"),FrameworkSyntheticTarget::Baseline);
+    EXPECT_EQ(Read(m_target->Root()+"/canary.txt"),FrameworkSyntheticTarget::Canary);
+    auto history = m_service->History(0,2);
+    ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    ASSERT_EQ(history[0].m_tools.size(),6u);
+    for (const auto& tool : history[0].m_tools) EXPECT_TRUE(ET::ToolSucceeded(tool));
+    const auto& receipt = *history[0].m_receipt;
+    EXPECT_EQ(receipt.m_verification,CE::VerificationState::PASSED);
+    ASSERT_EQ(receipt.m_phaseReceipts[2].m_observations.size(),1u);
+    EXPECT_EQ(receipt.m_phaseReceipts[2].m_observations[0].m_contentFingerprint,ET::ToolDigest(FrameworkSyntheticTarget::Payload));
+    ASSERT_EQ(receipt.m_rollbackReceipts.size(),1u);
+    EXPECT_EQ(receipt.m_rollbackReceipts[0].m_state,CE::RollbackState::SUCCEEDED);
+    EXPECT_EQ(receipt.m_promotion,CE::PromotionState::NOT_PROMOTED);
+    auto fingerprint = receipt.m_fingerprint;
+    m_service.reset(); m_target.reset();
+    ASSERT_TRUE(FrameworkSyntheticTarget::Reopen(m_root,m_syntheticContext.m_packId,m_target));
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    EXPECT_EQ(m_service->History(0,2)[0].m_receipt->m_fingerprint,fingerprint);
+    EXPECT_FALSE(m_service->Busy());
+    Snapshot refused;
+    ASSERT_TRUE(m_service->Submit(m_plan.m_fingerprint,refused));
+    EXPECT_EQ(Wait(*m_service,refused).m_error,Error::AuthorizationRequired);
+    EXPECT_EQ(m_service->History(0,2).size(),1u);
+}
+TEST_F(FrameworkSyntheticNative, NonzeroLaunchRestoresBytesAndPreservesOriginalFailure)
+{
+    Prepare(CE::Phase::LAUNCH,"fail"); ASSERT_FALSE(HasFatalFailure());
+    auto result = Run();
+    EXPECT_EQ(result.m_state,CE::ExecutionState::ROLLED_BACK) << static_cast<int>(result.m_error);
+    auto history = m_service->History(0,2);
+    ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    EXPECT_EQ(history[0].m_receipt->m_outcome,CE::Outcome::FAILED);
+    EXPECT_EQ(history[0].m_tools.size(),4u);
+    EXPECT_EQ(history[0].m_receipt->m_phaseReceipts[3].m_exitCode,37);
+    EXPECT_EQ(history[0].m_receipt->m_verification,CE::VerificationState::NOT_CHECKED);
+    EXPECT_TRUE(m_target->Check(false));
+}
+TEST_F(FrameworkSyntheticNative, CancelledLaunchIsJoinedAndRolledBack)
+{
+    Prepare(CE::Phase::LAUNCH,"hang"); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(m_service->Confirm(m_plan.m_fingerprint,"actor.synthetic-test",std::chrono::seconds(60)));
+    Snapshot started; ASSERT_TRUE(m_service->Submit(m_plan.m_fingerprint,started));
+    const auto deadline = Clock::now()+std::chrono::seconds(30);
+    bool reached = false;
+    while (Clock::now() < deadline)
+    {
+        ASSERT_TRUE(m_service->Status(started.m_executionId,started));
+        if (started.m_phaseId == "phase.launch" && started.m_toolStage == ET::ToolStage::Running) { reached = true; break; }
+        if (!started.m_canCancel) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_TRUE(reached);
+    ASSERT_TRUE(m_service->Cancel(started.m_executionId));
+    auto result = Wait(*m_service,started);
+    EXPECT_EQ(result.m_state,CE::ExecutionState::ROLLED_BACK) << static_cast<int>(result.m_error);
+    auto history = m_service->History(0,2); ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    EXPECT_EQ(history[0].m_receipt->m_outcome,CE::Outcome::CANCELLED);
+    EXPECT_EQ(history[0].m_tools.back().m_status.m_outcome,ET::ToolOutcome::Cancelled);
+    EXPECT_TRUE(m_target->Check(false));
+}
+TEST_F(FrameworkSyntheticNative, DeployFailureDoesNotMutateOrInventRollback)
+{
+    Prepare(CE::Phase::DEPLOY,"fail"); ASSERT_FALSE(HasFatalFailure());
+    auto result = Run(); EXPECT_EQ(result.m_state,CE::ExecutionState::FAILED);
+    auto history = m_service->History(0,2); ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    EXPECT_TRUE(history[0].m_receipt->m_rollbackReceipts.empty());
+    EXPECT_TRUE(m_target->Check(false)); EXPECT_FALSE(m_target->Pending());
+}
+TEST_F(FrameworkSyntheticNative, VerifyFailureCannotClaimVerificationPassed)
+{
+    Prepare(CE::Phase::VERIFY,"fail"); ASSERT_FALSE(HasFatalFailure());
+    auto result = Run(); EXPECT_EQ(result.m_state,CE::ExecutionState::ROLLED_BACK);
+    auto history = m_service->History(0,2); ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    EXPECT_EQ(history[0].m_receipt->m_outcome,CE::Outcome::FAILED);
+    EXPECT_NE(history[0].m_receipt->m_verification,CE::VerificationState::PASSED);
+    EXPECT_TRUE(m_target->Check(false));
+}
+TEST_F(FrameworkSyntheticNative, DriftBeforeSubmissionRefusesEveryProcess)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(m_target->Root()+"/payload.txt"),"foreign content"));
+    auto result = Run(); EXPECT_EQ(result.m_error,Error::Drifted);
+    EXPECT_TRUE(m_service->History(0,2).empty());
+    EXPECT_EQ(Read(m_target->Root()+"/payload.txt"),"foreign content");
+}
+TEST_F(FrameworkSyntheticNative, SecondWriterUnknownProfileAndExistingTargetAreRefused)
+{
+    std::shared_ptr<FrameworkSyntheticTarget> other;
+    EXPECT_EQ(FrameworkSyntheticTarget::Create(m_root,m_syntheticContext.m_packId,other).m_error,Error::Conflict);
+    EXPECT_EQ(FrameworkSyntheticTarget::Reopen(m_root,m_syntheticContext.m_packId,other).m_error,Error::Busy);
+    auto context = m_syntheticContext; context.m_profileFingerprint = ET::ToolDigest("game-profile");
+    SyntheticWorkflow ignored;
+    EXPECT_EQ(PrepareSyntheticWorkflow(context,m_root+"/m5-store",m_provider,m_target,ignored).m_error,Error::Invalid);
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    EXPECT_FALSE(FrameworkProviderService::Supported(m_workflow.m_descriptor));
+    auto phase = m_plan.m_phases[2]; phase.m_mutations[0].m_relativePath = "foreign.txt";
+    EXPECT_FALSE(m_target->Accepts(phase));
+}
+TEST_F(FrameworkSyntheticNative, InterruptedOwnedPostimageNeedsFreshConfirmationForRecovery)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    // Durable target intent and actual write are production operations. Hard-process interruption has a separate lane.
+    ASSERT_TRUE(m_target->Begin(m_plan));
+    const auto source = m_root+"/synthetic-produced.txt";
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(source),FrameworkSyntheticTarget::Payload));
+    AZStd::vector<CE::TargetObservationV1> observations;
+    ASSERT_TRUE(m_target->Apply(m_plan,source,observations));
+    auto planFingerprint = m_plan.m_fingerprint;
+    m_service.reset(); m_target.reset();
+    ASSERT_TRUE(FrameworkSyntheticTarget::Reopen(m_root,m_syntheticContext.m_packId,m_target));
+    EXPECT_TRUE(m_target->Pending()); EXPECT_TRUE(m_target->Check(true));
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_EQ(m_plan.m_fingerprint,planFingerprint);
+    CE::RollbackReceiptV1 receipt;
+    EXPECT_EQ(m_service->RecoverSynthetic(m_plan.m_fingerprint,receipt).m_error,Error::AuthorizationRequired);
+    EXPECT_TRUE(m_target->Check(true));
+    ASSERT_TRUE(m_service->Confirm(m_plan.m_fingerprint,"actor.recovery",std::chrono::seconds(60)));
+    ASSERT_TRUE(m_service->RecoverSynthetic(m_plan.m_fingerprint,receipt));
+    EXPECT_EQ(receipt.m_state,CE::RollbackState::SUCCEEDED);
+    EXPECT_TRUE(m_target->Check(false)); EXPECT_FALSE(m_target->Pending());
+    EXPECT_TRUE(m_service->History(0,2).empty());
+    EXPECT_EQ(Read(m_root+"/synthetic-rollback.json"),CE::Canonicalize(receipt).GetValue().m_json);
+}
+TEST_F(FrameworkSyntheticNative, CorruptBackupOrForeignPostimageIsNeverOverwrittenByRollback)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(m_target->Begin(m_plan));
+    const auto source = m_root+"/synthetic-produced.txt";
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(source),FrameworkSyntheticTarget::Payload));
+    AZStd::vector<CE::TargetObservationV1> observations;
+    ASSERT_TRUE(m_target->Apply(m_plan,source,observations));
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(m_target->Root()+"/backup.txt"),"corrupt"));
+    CE::RollbackReceiptV1 receipt;
+    EXPECT_EQ(m_target->Rollback(m_plan,receipt).m_error,Error::Drifted);
+    EXPECT_EQ(receipt.m_state,CE::RollbackState::FAILED);
+    EXPECT_EQ(Read(m_target->Root()+"/payload.txt"),FrameworkSyntheticTarget::Payload);
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(m_target->Root()+"/backup.txt"),FrameworkSyntheticTarget::Baseline));
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(m_target->Root()+"/payload.txt"),"foreign"));
+    receipt = {};
+    EXPECT_EQ(m_target->Rollback(m_plan,receipt).m_error,Error::Drifted);
+    EXPECT_EQ(Read(m_target->Root()+"/payload.txt"),"foreign");
+    EXPECT_TRUE(m_target->Pending());
+}
+
+// M5 acceptance entry points are test-DLL exports, never public Editor commands.
+namespace { std::shared_ptr<FrameworkSyntheticTarget> s_m5Target; CE::CapabilityExecutionPlanV1 s_m5Plan; }
+extern "C" __declspec(dllexport) int FOAM5EditorStart(const char* root, const char* executable, const char* mode)
+{
+    using namespace TaintedGrailModdingSDK;
+    auto* foundation = AZ::Interface<FoundationService>::Get();
+    if (!foundation || !root || !executable || !mode) return 1;
+    foundation->StopFrameworkExecution(); s_m5Target.reset();
+    WorkspaceModel workspace; workspace.m_workspaceId = "workspace.synthetic-m5";
+    GameProfile profile; profile.m_profileId = "profile.synthetic-m5"; profile.m_gameVersion = "1.0.0";
+    profile.m_branch = "synthetic"; profile.m_runtimeTarget = "Mono";
+    workspace.m_gameProfiles = {profile}; workspace.m_activeGameProfileId = profile.m_profileId;
+    if (!foundation->SetWorkspace(workspace)) return 2;
+    PackManifest pack; pack.m_packId = "pack.synthetic-m5"; pack.m_displayName = "Isolated execution acceptance";
+    pack.m_ownerId = "owner.fixture"; pack.m_version = "1.0.0";
+    AZStd::string error; if (!foundation->SetActivePack(pack,&error)) return 3;
+    Context context{workspace.m_workspaceId,pack.m_packId,FrameworkSyntheticTarget::Profile()};
+    auto rootString = AZStd::string(root);
+    ET::Windows::PinnedPath storePin;
+    if (!storePin.Open(rootString+"/store",true) && !ET::Windows::CreatePrivateDirectory(ET::Windows::Wide(rootString+"/store"))) return 4;
+    const bool reopen = GetFileAttributesW(ET::Windows::Wide(rootString+"/synthetic-target").c_str()) != INVALID_FILE_ATTRIBUTES;
+    auto target = reopen ? FrameworkSyntheticTarget::Reopen(rootString,pack.m_packId,s_m5Target)
+                         : FrameworkSyntheticTarget::Create(rootString,pack.m_packId,s_m5Target);
+    if (!target) return 10+static_cast<int>(target.m_error);
+    AZStd::string selected(mode);
+    if (selected != "success" && selected != "hang" && selected != "recover") return 5;
+    SyntheticWorkflow workflow;
+    auto prepared = PrepareSyntheticWorkflow(context,rootString+"/store",executable,s_m5Target,workflow,
+        selected == "success" ? CE::Phase::INVALID : CE::Phase::LAUNCH,selected == "success" ? "normal" : "hang");
+    if (!prepared) return 50+static_cast<int>(prepared.m_error);
+    HostPolicy policy; policy.m_context = context; policy.m_evidenceId = "evidence.synthetic-editor";
+    policy.m_until = Clock::now()+std::chrono::minutes(5); policy.m_confirmationRequired = true;
+    AZStd::vector<Qualification> qualifications;
+    for (const auto& h : workflow.m_bindings)
+    {
+        Qualification q; q.m_bindingFingerprint = h.m_binding.m_fingerprint; q.m_executableDigest = workflow.m_executableDigest;
+        q.m_profileFingerprint = context.m_profileFingerprint; q.m_observationId = "observation.synthetic-editor";
+        q.m_evidenceIds = {"evidence.synthetic-native"}; q.m_from = Clock::now(); q.m_until = policy.m_until;
+        qualifications.push_back(q); policy.m_bindingFingerprints.push_back(q.m_bindingFingerprint);
+    }
+    if (!foundation->ConfigureFrameworkExecution(context,rootString+"/store",workflow.m_bindings,qualifications,policy,&error,s_m5Target)) return 6;
+    auto* service = foundation->GetFrameworkExecution();
+    auto preview = service->Preview(workflow.m_descriptor,workflow.m_request,{},s_m5Plan);
+    if (!preview) return 100+static_cast<int>(preview.m_error);
+    if (selected == "recover")
+    {
+        CE::RollbackReceiptV1 receipt;
+        if (service->RecoverSynthetic(s_m5Plan.m_fingerprint,receipt).m_error != Error::AuthorizationRequired) return 7;
+        if (!service->Confirm(s_m5Plan.m_fingerprint,"actor.editor-recovery",std::chrono::seconds(60))) return 8;
+        auto recovered = service->RecoverSynthetic(s_m5Plan.m_fingerprint,receipt);
+        return recovered && s_m5Target->Check(false) && !s_m5Target->Pending() ? 0 : 9;
+    }
+    if (!service->Confirm(s_m5Plan.m_fingerprint,"actor.editor-synthetic",std::chrono::seconds(60))) return 8;
+    Snapshot submitted; auto result = service->Submit(s_m5Plan.m_fingerprint,submitted);
+    if (!result) return 200+static_cast<int>(result.m_error);
+    s_editorExecution = submitted.m_executionId;
+    return 0;
+}
+extern "C" __declspec(dllexport) int FOAM5EditorTargetState()
+{
+    if (!s_m5Target) return -1;
+    if (s_m5Target->Check(false) && !s_m5Target->Pending()) return 1;
+    if (s_m5Target->Check(true) && s_m5Target->Pending()) return 2;
+    return -2;
+}
+
+TEST_F(FrameworkSyntheticNative, HardlinksExtraDirectoriesAndOversizePayloadFailClosed)
+{
+    const auto targetPath = ET::Windows::Wide(m_target->Root()+"/payload.txt");
+    const auto link = ET::Windows::Wide(m_root+"/foreign-link.txt");
+    ASSERT_TRUE(CreateHardLinkW(link.c_str(),targetPath.c_str(),nullptr));
+    EXPECT_FALSE(m_target->Check(false));
+    ASSERT_TRUE(DeleteFileW(link.c_str()));
+    ASSERT_TRUE(m_target->Check(false));
+    auto extra = ET::Windows::Wide(m_target->Root()+"/extra");
+    ASSERT_TRUE(CreateDirectoryW(extra.c_str(),nullptr));
+    EXPECT_FALSE(m_target->Check(false));
+    ASSERT_TRUE(RemoveDirectoryW(extra.c_str()));
+    for (size_t size : {65536u,65537u})
+    {
+        ASSERT_TRUE(ET::Windows::WriteFileAtomic(targetPath,AZStd::string(size,'x')));
+        auto start = Clock::now();
+        EXPECT_FALSE(m_target->Check(false));
+        EXPECT_LT(Clock::now()-start,std::chrono::seconds(1));
+    }
+}
+TEST_F(FrameworkSyntheticNative, FixedTargetTransactionHasBoundedCostAndRejectsWrongPlan)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(m_target->Begin(m_plan));
+    const auto source = m_root+"/synthetic-produced.txt";
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(source),FrameworkSyntheticTarget::Payload));
+    auto wrong = m_plan; wrong.m_fingerprint = ET::ToolDigest("wrong-plan");
+    AZStd::vector<CE::TargetObservationV1> observations;
+    EXPECT_EQ(m_target->Apply(wrong,source,observations).m_error,Error::Invalid);
+    auto started = Clock::now();
+    ASSERT_TRUE(m_target->Apply(m_plan,source,observations));
+    CE::RollbackReceiptV1 receipt;
+    ASSERT_TRUE(m_target->Rollback(m_plan,receipt));
+    auto elapsed = std::chrono::duration<double,std::milli>(Clock::now()-started).count();
+    EXPECT_LT(elapsed,1000.0);
+    std::printf("M5 fixed target apply and exact rollback: %.3f ms\n",elapsed);
+}
+TEST_F(FrameworkSyntheticNative, CorruptTargetJournalCannotBeReopened)
+{
+    const auto path = m_target->Root()+"/transaction.state";
+    m_target.reset();
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(path),"foa-synthetic-target-v2\nunknown"));
+    EXPECT_EQ(FrameworkSyntheticTarget::Reopen(m_root,m_syntheticContext.m_packId,m_target).m_error,Error::CorruptStore);
+}
+TEST_F(FrameworkSyntheticNative, RevokedPolicyAndQualificationNeverStartSyntheticWork)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(m_service->Confirm(m_plan.m_fingerprint,"actor.synthetic-test",std::chrono::seconds(60)));
+    m_service->Providers().RevokeQualification(m_workflow.m_bindings[0].m_binding.m_fingerprint);
+    Snapshot started; ASSERT_TRUE(m_service->Submit(m_plan.m_fingerprint,started));
+    EXPECT_EQ(Wait(*m_service,started).m_error,Error::Unqualified);
+    EXPECT_TRUE(m_service->History(0,2).empty()); EXPECT_TRUE(m_target->Check(false));
+    m_service->Policy().Revoke();
+    EXPECT_FALSE(m_service->Confirm(m_plan.m_fingerprint,"actor.synthetic-test",std::chrono::seconds(60)));
+}
+
+TEST_F(FrameworkSyntheticNative, FailedDurableIntentNeverWritesTheTarget)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(m_target->Begin(m_plan));
+    const auto source = m_root+"/synthetic-produced.txt";
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(source),FrameworkSyntheticTarget::Payload));
+    ET::Windows::PinnedPath locked;
+    ASSERT_TRUE(locked.Open(m_target->Root()+"/transaction.state",false,GENERIC_READ,FILE_SHARE_READ));
+    AZStd::vector<CE::TargetObservationV1> observations;
+    EXPECT_EQ(m_target->Apply(m_plan,source,observations).m_error,Error::StorageFailed);
+    EXPECT_EQ(Read(m_target->Root()+"/payload.txt"),FrameworkSyntheticTarget::Baseline);
+    EXPECT_TRUE(observations.empty()); EXPECT_FALSE(m_target->Pending());
+}
+TEST_F(FrameworkSyntheticNative, SyntheticModeRequiresExplicitConfirmationPolicy)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    HostPolicy policy; policy.m_context = m_syntheticContext; policy.m_evidenceId = "evidence.synthetic-policy";
+    policy.m_until = Clock::now()+std::chrono::minutes(5); policy.m_confirmationRequired = false;
+    for (const auto& h : m_workflow.m_bindings) policy.m_bindingFingerprints.push_back(h.m_binding.m_fingerprint);
+    ASSERT_TRUE(m_service->Policy().SetPolicy(policy));
+    CE::CapabilityExecutionPlanV1 refused;
+    EXPECT_EQ(m_service->Preview(m_workflow.m_descriptor,m_workflow.m_request,{},refused).m_error,Error::PolicyDenied);
+    EXPECT_TRUE(m_service->History(0,2).empty());
+}
+TEST_F(FrameworkSyntheticNative, TimedOutLaunchStillRestoresTheOwnedTarget)
+{
+    Prepare(CE::Phase::LAUNCH,"hang"); ASSERT_FALSE(HasFatalFailure());
+    auto result = Run(); EXPECT_EQ(result.m_state,CE::ExecutionState::ROLLED_BACK);
+    auto history = m_service->History(0,2); ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    EXPECT_EQ(history[0].m_receipt->m_outcome,CE::Outcome::FAILED);
+    EXPECT_EQ(history[0].m_tools.size(),4u);
+    EXPECT_TRUE(m_target->Check(false));
+}
+
+TEST_F(FrameworkSyntheticNative, IdenticalForeignReplacementDoesNotAcquireTargetOwnership)
+{
+    const auto oldInventory = m_target->Inventory();
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(m_target->Root()+"/payload.txt"),FrameworkSyntheticTarget::Baseline));
+    EXPECT_FALSE(m_target->Check(false));
+    m_target.reset();
+    EXPECT_EQ(FrameworkSyntheticTarget::Reopen(m_root,m_syntheticContext.m_packId,m_target).m_error,Error::CorruptStore);
+    EXPECT_TRUE(CE::IsDigest(oldInventory));
+}
+
+TEST_F(FrameworkSyntheticNative, FullRecoveryStoreRefusesNewDeploymentAndStillReopens)
+{
+    Prepare(); ASSERT_FALSE(HasFatalFailure());
+    const auto source = m_root+"/synthetic-produced.txt";
+    ASSERT_TRUE(ET::Windows::WriteFileAtomic(ET::Windows::Wide(source),FrameworkSyntheticTarget::Payload));
+    for (size_t attempt=0; attempt<MaximumAttempts; ++attempt)
+    {
+        ASSERT_TRUE(m_target->Begin(m_plan)) << attempt;
+        AZStd::vector<CE::TargetObservationV1> observations;
+        ASSERT_TRUE(m_target->Apply(m_plan,source,observations)) << attempt;
+        CE::RollbackReceiptV1 receipt;
+        ASSERT_TRUE(m_target->Rollback(m_plan,receipt)) << attempt;
+    }
+    EXPECT_EQ(m_target->Begin(m_plan).m_error,Error::StoreFull);
+    EXPECT_TRUE(m_target->Check(false)); EXPECT_FALSE(m_target->Pending());
+    EXPECT_TRUE(m_service->History(0,2).empty());
+    m_service.reset(); m_target.reset();
+    ASSERT_TRUE(FrameworkSyntheticTarget::Reopen(m_root,m_syntheticContext.m_packId,m_target));
+    EXPECT_TRUE(m_target->Check(false));
+    EXPECT_EQ(m_target->Begin(m_plan).m_error,Error::StoreFull);
+}
+
+TEST_F(FrameworkSyntheticNative, PolicyRevokedDuringDeployPreventsTargetWrite)
+{
+    Prepare(CE::Phase::DEPLOY,"delay"); ASSERT_FALSE(HasFatalFailure());
+    ASSERT_TRUE(m_service->Confirm(m_plan.m_fingerprint,"actor.synthetic-test",std::chrono::seconds(60)));
+    Snapshot started; ASSERT_TRUE(m_service->Submit(m_plan.m_fingerprint,started));
+    const auto deadline = Clock::now()+std::chrono::seconds(30);
+    bool reached = false;
+    while (Clock::now() < deadline)
+    {
+        ASSERT_TRUE(m_service->Status(started.m_executionId,started));
+        if (started.m_phaseId == "phase.deploy" && started.m_toolStage == ET::ToolStage::Running) { reached = true; break; }
+        if (!started.m_canCancel) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_TRUE(reached);
+    m_service->Policy().Revoke();
+    auto result = Wait(*m_service,started);
+    EXPECT_EQ(result.m_state,CE::ExecutionState::FAILED);
+    EXPECT_NE(result.m_error,Error::None);
+    auto history = m_service->History(0,2); ASSERT_EQ(history.size(),1u); ASSERT_TRUE(history[0].m_receipt);
+    EXPECT_EQ(history[0].m_tools.size(),3u);
+    EXPECT_TRUE(history[0].m_receipt->m_phaseReceipts[2].m_observations.empty());
+    EXPECT_TRUE(history[0].m_receipt->m_rollbackReceipts.empty());
+    EXPECT_TRUE(m_target->Check(false)); EXPECT_FALSE(m_target->Pending());
 }

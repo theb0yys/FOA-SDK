@@ -533,6 +533,13 @@ The owner requested this batch on 12 September 2026. The [M4 implementation scop
 
 Prove Build -> Package -> Deploy -> Launch -> Verify -> Rollback against a harmless sandbox provider and target before touching the game installation.
 
+The owner requested this batch on 12 September 2026. The [M5 scope and threat
+boundary](FRAMEWORK_SYNTHETIC_M5_DESIGN.md) use a new private target and an exact
+synthetic profile. Default staging restrictions and frozen M1/M2 contracts remain
+unchanged. Acceptance status is recorded in the M5 design; fixture observations
+are not Fall of Avalon runtime evidence.
+
+
 ### M6 — Heightmap Vertical Slice
 
 Connect terrain canonical documents through native materialisation and the shared production spine. Require exact profile, deployment, runtime observation, and rollback proof.

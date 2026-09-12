@@ -68,6 +68,7 @@ set(FILES
     Source/FoundationStatusWidget.cpp
     Source/FoundationStatusWidget.h
     Source/ItemRecipeEditorWidget.cpp
+    Source/ItemRecipeEditorWidgetRecovery.cpp
     Source/ItemRecipeEditorWidget.h
     Source/ItemVisualLifecycleEnhancer.h
     Source/ItemVisualLifecycleWidget.cpp

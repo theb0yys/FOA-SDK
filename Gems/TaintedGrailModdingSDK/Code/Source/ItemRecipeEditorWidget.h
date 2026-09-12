@@ -8,6 +8,7 @@
 #pragma once
 
 #include "EconomyAuthoringService.h"
+#include "ItemRecipeDraftRecoveryService.h"
 #include "FoundationNotificationBus.h"
 
 #include <AzCore/std/algorithm.h>
@@ -19,6 +20,9 @@
 #include <QStringList>
 
 class QCloseEvent;
+class QShowEvent;
+class QThread;
+class QTimer;
 class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
@@ -43,6 +47,7 @@ namespace TaintedGrailModdingSDK
 
     protected:
         void closeEvent(QCloseEvent* event) override;
+        void showEvent(QShowEvent* event) override;
 
     private:
         class EditorCloseGuard;
@@ -70,12 +75,22 @@ namespace TaintedGrailModdingSDK
         void SelectJoin(bool output);
         void NewJoin(bool output, bool resetBaseline = true);
         void RemoveJoin(bool output);
-        using FormValues = QHash<QString, QVariant>;
-        struct Draft
-        {
-            FormValues m_values;
-            FormValues m_baseline;
-        };
+        using FormValues = ItemRecipeFormValues;
+        using Draft = ItemRecipeDraft;
+        void InitializeRecovery();
+        void StartRecoveryForWorkspace();
+        void SetRecoveryPending(bool pending);
+        void ScheduleRecovery();
+        void CheckpointRecovery();
+        bool FlushRecovery();
+        bool ClearRecovery();
+        void ReleaseRecovery(bool holdForEditorExit);
+        bool TryResumeRecoveryAfterExit();
+        void StopRecovery();
+        void RestoreRecovery();
+        bool CanRestoreRecovery(const ItemRecipeDraftRecovery& draft) const;
+        ItemRecipeDraftRecovery CaptureRecovery();
+
         FormValues ReadForm(QWidget* form) const;
         void StoreCurrentDrafts();
         void StoreRecipeDrafts();
@@ -87,6 +102,24 @@ namespace TaintedGrailModdingSDK
         void StoreDraft(const QString& key, QWidget* form);
         void RestoreDraft(const QString& key, QWidget* form);
 
+        std::shared_ptr<ItemRecipeDraftRecoveryService> m_recoveryStore;
+        ItemRecipeDraftRecoveryRead m_recoveryRead;
+        QThread* m_recoveryThread = nullptr;
+        QObject* m_recoveryWorker = nullptr;
+        QTimer* m_recoveryTimer = nullptr;
+        QHash<QWidget*, bool> m_recoveryControls;
+        QLabel* m_recoveryStatus = nullptr;
+        QWidget* m_recoveryPanel = nullptr;
+        QPushButton* m_restoreRecovery = nullptr;
+        QPushButton* m_discardRecovery = nullptr;
+        QPushButton* m_retryRecovery = nullptr;
+        quint64 m_recoveryGeneration = 0;
+        bool m_recoveryPending = false;
+        bool m_recoveryStoreReady = false;
+        bool m_recoveryWriteInFlight = false;
+        bool m_recoveryClosing = false;
+        bool m_recoveryHeldForExit = false;
+        bool m_recoveryResumeAfterExit = false;
         QSharedPointer<EditorCloseGuard> m_editorCloseGuard;
         QTabWidget* m_tabs = nullptr;
 

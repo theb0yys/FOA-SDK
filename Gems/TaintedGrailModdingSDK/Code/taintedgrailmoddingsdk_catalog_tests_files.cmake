@@ -25,6 +25,7 @@ set(FILES
     Tests/FoAInstallDiscoveryServiceTests.cpp
     Tests/FoundationWorkspaceIsolationTests.cpp
     Tests/PackDraftRecoveryTests.cpp
+    Tests/ItemRecipeDraftRecoveryTests.cpp
     Tests/Main.cpp
     Tests/PopulationActionLaneServiceTests.cpp
     Tests/PopulationAuthoringTests.cpp

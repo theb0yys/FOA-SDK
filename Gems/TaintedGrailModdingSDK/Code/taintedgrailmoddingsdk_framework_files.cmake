@@ -61,6 +61,8 @@ set(FILES
     Source/LocalSetupDetectionService.h
     Source/PackDraftRecoveryService.cpp
     Source/PackDraftRecoveryService.h
+    Source/ItemRecipeDraftRecoveryService.h
+    Source/ItemRecipeDraftRecoveryService.cpp
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/PathPolicyService.cpp

@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Include/ExternalToolchain/ToolExecutionTypes.h
+    Include/ExternalToolchain/ToolExecutionBus.h
     Include/ExternalToolchain/ExternalToolchainBus.h
     Include/ExternalToolchain/ExternalToolchainTypeIds.h
     Include/ExternalToolchain/ExternalToolchainTypes.h

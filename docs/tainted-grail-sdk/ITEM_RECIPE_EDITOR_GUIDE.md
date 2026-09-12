@@ -48,8 +48,17 @@ Each link save/removal is a separate catalog transaction. A recipe without an
 output can be saved as incomplete authoring work.
 
 Unsaved form values remain in this pane while switching definitions or receiving
-Foundation updates. Save changes before closing the pane. Saved definitions and
-links reload from catalog schema 2; existing schema 1 catalogs retain their
+Foundation updates. Closing a docked or floating pane with unsaved changes offers
+**Save / Discard / Cancel**. Save includes retained drafts for other definitions:
+item and recipe profiles, ingredient and output forms, and acquisition fields.
+Cancel, Escape, or dismissing the prompt keeps the pane open. A failed save also
+keeps it open with the remaining drafts and an error to correct. Each form saves
+separately: earlier successful saves remain saved if a later form fails. Retry
+Save after correcting the error. Discard closes without saving remaining drafts.
+A clean form or one reverted to its saved values closes without prompting.
+
+This protection applies to pane close; workspace replacement and crash recovery
+for this editor are separate work. Saved definitions and links reload from catalog schema 2; existing schema 1 catalogs retain their
 supported migration path.
 
 Acquisition relationships and evidence/permission details have separate tabs.
@@ -408,3 +417,16 @@ Those actions belong to separately implemented and validated adapter, build, dep
 6. Record maturity, confidence, risk, validation, and staleness in Catalog Governance.
 7. Grant only the narrow usage lane supported by proof.
 8. Keep runtime adapter execution outside the editor.
+
+## Pane-close acceptance
+
+Run `Tools/editor_tests/run_item_recipe_close_smoke.ps1` from the SDK Gem with
+`-EditorExecutable`, `-EngineRoot`, `-CacheRoot` and a fresh external `-OutputRoot`.
+The runner uses the exact pinned built Editor on an inactive private Windows
+desktop, creates synthetic authoring records, and checks actual docked/floating
+close controls, dirty/reverted forms, all retained drafts, partial saves, retry
+after validation failure and a real catalog file-lock failure. It records loaded
+module identity, individual checks and native exit status outside source.
+
+The runner requires prepared Editor assets; compilation and static tests remain
+separate gates. This acceptance establishes Editor authoring behavior only.

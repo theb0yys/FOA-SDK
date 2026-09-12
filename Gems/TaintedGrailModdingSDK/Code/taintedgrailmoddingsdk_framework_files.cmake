@@ -31,6 +31,8 @@ set(FILES
     Source/FoundationWorldService.cpp
     Source/FoundationSocietyService.cpp
     Source/FoundationEncounterService.cpp
+    Source/GameConnectionService.cpp
+    Source/GameConnectionService.h
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h
     Source/NativeItemPreviewService.cpp

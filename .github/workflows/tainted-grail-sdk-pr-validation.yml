@@ -119,6 +119,10 @@ jobs:
       - name: Validate pull-request policy contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py --event "$GITHUB_EVENT_PATH"
 
+      - name: Install pinned native source-reader test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --only-binary=:all: --no-deps -r Gems/TaintedGrailModdingSDK/Tools/item_preview_requirements.txt
+
       - name: Run non-compiled TG SDK validation layer
         shell: bash
         run: |
@@ -249,6 +253,64 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = Join-Path $env:RUNNER_TEMP "foa-capability-execution"
+          ctest --test-dir $buildDir -C "$env:CONFIGURATION" --output-on-failure --no-tests=error -R "$env:TEST_PATTERN"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  tool-execution-operational:
+    name: Exact-head M2 process supervision and isolation
+    needs: static-validation
+    if: needs.static-validation.outputs.host_required == 'true'
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
+      TEST_PATTERN: ExternalToolchain\.Execution\.(Operational\.)?Tests
+      CONFIGURATION: profile
+    steps:
+      - name: Check out exact event commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          lfs: true
+
+      - name: Check out pinned O3DE source
+        uses: actions/checkout@v4
+        with:
+          repository: o3de/o3de
+          ref: ${{ env.O3DE_COMMIT }}
+          path: o3de
+          persist-credentials: false
+          fetch-depth: 1
+          lfs: false
+
+      - name: Configure pinned O3DE project
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-tool-execution-m2"
+          cmake --preset windows-vs-unity `
+            -S "$env:GITHUB_WORKSPACE\o3de" `
+            -B $buildDir `
+            -A x64 `
+            "-DLY_PROJECTS=$env:GITHUB_WORKSPACE\TaintedGrailModdingEditor" `
+            "-DO3DE_FETCHCONTENT_FORCE_GIT=ON"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build M2 production service and native fixture
+        shell: pwsh
+        run: |
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-tool-execution-m2"
+          cmake --build $buildDir --config "$env:CONFIGURATION" --target ExternalToolchain.Execution.Tests ExternalToolchain.Execution.Operational.Tests ExternalToolchain.Execution.Fixture --parallel 2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run required M2 contract and native operational tests
+        shell: pwsh
+        run: |
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-tool-execution-m2"
+          $fixture = Join-Path $buildDir "bin\profile\ExternalToolchain.Execution.Fixture.exe"
+          if (-not (Test-Path -LiteralPath $fixture -PathType Leaf)) { throw "BLOCKED: M2 native fixture is unavailable." }
           ctest --test-dir $buildDir -C "$env:CONFIGURATION" --output-on-failure --no-tests=error -R "$env:TEST_PATTERN"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

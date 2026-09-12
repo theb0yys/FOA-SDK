@@ -16,7 +16,7 @@ param(
     [Parameter(Mandatory)][string]$CacheRoot,
     [Parameter(Mandatory)][string]$OutputRoot,
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 240,
-    [ValidateSet('close','workspace-status','workspace-catalog')][string]$Suite = 'close'
+    [ValidateSet('close','workspace-status','workspace-catalog','exit-save','exit-discard','exit-clean','exit-rollback')][string]$Suite = 'close'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'Windows is required for the native file-lock cases.' }
@@ -41,7 +41,8 @@ if ($LASTEXITCODE -ne 0 -or $engineCommit -ne $lock.commit) { throw 'Engine pin 
 $expectedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path (Split-Path $EditorExecutable) 'TaintedGrailModdingSDK.Editor.dll')).Hash
 $testScript = Join-Path $PSScriptRoot $(if ($Suite -eq 'close') {
     'item_recipe_close_live_smoke.py'
-} else { 'item_recipe_workspace_live_smoke.py' })
+} elseif ($Suite.StartsWith('exit-')) { 'item_recipe_editor_exit_live_smoke.py' }
+else { 'item_recipe_workspace_live_smoke.py' })
 $names = @('LOCALAPPDATA','TEMP','TMP','QT_QPA_PLATFORM','FOA_SDK_ECONOMY_WORKSPACE','FOA_SDK_ECONOMY_RESULT','FOA_SDK_ECONOMY_WORKSPACE_ROUTE')
 $savedEnvironment = @{}
 foreach ($name in $names) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
@@ -184,9 +185,17 @@ try {
     }
     $editor.WaitForExit()
     $test = Get-Content "$OutputRoot/result.json" -Raw | ConvertFrom-Json
+    $minimumChecks = switch ($Suite) {
+        'close' {25}
+        'exit-save' {27}
+        'exit-discard' {2}
+        'exit-clean' {3}
+        'exit-rollback' {6}
+        default {20}
+    }
     if ($forcedStop -or [EconomyCloseTestDesktop]::ExitCode() -ne 0 -or
         $test.status -ne 'PASSED' -or -not $test.about_to_quit -or -not $test.editor_initialized -or
-        $test.sdk_module_sha256 -ne $expectedHash -or $test.checks.Count -lt $(if ($Suite -eq 'close') {25} else {20})) {
+        $test.sdk_module_sha256 -ne $expectedHash -or $test.checks.Count -lt $minimumChecks) {
         throw "Pane close acceptance failed; see $OutputRoot."
     }
     $status = 'PASSED'

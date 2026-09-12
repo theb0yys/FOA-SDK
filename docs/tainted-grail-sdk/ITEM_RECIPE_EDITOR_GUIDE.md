@@ -67,8 +67,20 @@ workspace files leave the current forms intact.
 Reloading the same workspace uses the same protection. A successful Save reloads
 the newly saved profiles, links and evidence. A successful replacement resets the
 forms, so drafts cannot appear in another workspace with matching record IDs.
-Crash recovery for this editor remains separate work. Saved definitions and links
-use the canonical catalog's supported schema and migration path.
+Exiting the entire Editor also offers **Save / Discard / Cancel** for every
+retained draft when using File Exit or the main window's Close button. Cancel,
+Escape, prompt dismissal or a failed Save keeps the Editor open. If another pane cancels after Item and Recipe Editor has
+accepted, its forms are restored with their saved/unsaved state intact. Earlier
+successful saves remain saved, even when a later pane cancels the exit.
+
+Legacy Python `general.exit()` calls Qt's close-all-windows operation, which may
+close floating panes individually before reaching the main window. Those panes
+use their ordinary close guard; use File Exit or main-window Close for coordinated
+shutdown rollback.
+
+The rollback copy exists only in memory during that exit attempt. Crash recovery
+for this editor remains separate work. Saved definitions and links use the
+canonical catalog's supported schema and migration path.
 
 Acquisition relationships and evidence/permission details have separate tabs.
 They still require exact associated evidence and do not grant runtime access.
@@ -450,3 +462,18 @@ catalog writes, partial Save and retry, same-root reload freshness, a later Pack
 Manager veto, failed post-admission reload and matching record IDs across roots.
 Each workspace interaction must complete within the five-second synthetic fixture
 budget. Run the default close suite as a separate regression check.
+
+## Whole-Editor exit acceptance
+
+Run the private Editor runner with `-Suite exit-save`, `-Suite exit-discard`,
+`-Suite exit-clean` and `-Suite exit-rollback`, each with a fresh external output
+root. These cases exercise the actual File Exit action, main-window Close and
+posted Python exit cancellation with docked/floating forms. They check all retained
+profiles, joins and acquisition fields; validation and real file-lock failures;
+partial Save and retry; and a later Pack Manager veto after Discard and Save.
+
+A pass requires the expected catalog bytes, per-check results, a matching loaded
+SDK module, about-to-quit, and native exit code zero with no forced cleanup.
+Cancellation must leave the Editor and drafts usable. The synthetic interaction
+budget is five seconds. Run the separate pane-close and workspace-switch suites
+as regressions. This is Editor authoring evidence, not game runtime sign-off.

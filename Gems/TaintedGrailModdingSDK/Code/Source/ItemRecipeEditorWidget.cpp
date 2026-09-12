@@ -12,6 +12,8 @@
 #include "NativeItemPreviewService.h"
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QAbstractItemView>
 #include <QByteArray>
 #include <QCloseEvent>
@@ -134,8 +136,120 @@ namespace TaintedGrailModdingSDK
         }
     } // namespace
 
+    // The pinned host destroys each accepted pane before asking later panes and
+    // level-independent files. Keep a transaction-local copy outside the pane so
+    // cancellation can restore it after that destruction. Nothing is persisted.
+    class ItemRecipeEditorWidget::EditorCloseGuard final : public QObject
+    {
+    public:
+        static QSharedPointer<EditorCloseGuard> Get()
+        {
+            static QWeakPointer<EditorCloseGuard> weakGuard;
+            auto guard = weakGuard.toStrongRef();
+            if (!guard)
+            {
+                guard.reset(new EditorCloseGuard());
+                weakGuard = guard;
+                guard->m_self = guard;
+            }
+            return guard;
+        }
+
+        void Attach(ItemRecipeEditorWidget* pane)
+        {
+            m_pane = pane;
+            QWidget* mainWindow = nullptr;
+            AzToolsFramework::EditorRequests::Bus::BroadcastResult(
+                mainWindow, &AzToolsFramework::EditorRequests::GetMainWindow);
+            if (m_mainWindow != mainWindow)
+            {
+                if (m_mainWindow) { m_mainWindow->removeEventFilter(this); }
+                m_mainWindow = mainWindow;
+                if (m_mainWindow) { m_mainWindow->installEventFilter(this); }
+            }
+        }
+
+        bool IsClosingEditor() const { return m_forwardedEvent != nullptr; }
+        void ForgetDrafts() { m_drafts.clear(); }
+
+        void RememberDrafts(ItemRecipeEditorWidget* pane)
+        {
+            if (!IsClosingEditor()) { return; }
+            pane->StoreCurrentDrafts();
+            m_drafts = pane->m_drafts;
+            m_workspaceFile = ToQString(FoundationService::Get().GetWorkspaceFilePath());
+            m_workspaceRoot = ToQString(FoundationService::Get().GetWorkspaceRootPath());
+            m_item = pane->m_itemRecord->currentData().toString();
+            m_recipe = pane->m_recipeRecord->currentData().toString();
+            m_tab = pane->m_tabs->currentIndex();
+            m_recipeExpanded = qobject_cast<QGroupBox*>(pane->m_recipeForm)->isChecked();
+        }
+
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (watched != m_mainWindow || event->type() != QEvent::Close)
+            {
+                return false;
+            }
+            // Survive destruction of the old pane only for this dispatch. A
+            // reconstructed pane takes ownership; a committed exit releases us.
+            const auto keepAlive = m_self.toStrongRef();
+            if (m_forwardedEvent)
+            {
+                if (event == m_forwardedEvent) { return false; }
+                // A second exit request from a nested prompt must not begin a
+                // second teardown or overwrite the outer attempt's retained forms.
+                event->ignore();
+                return true;
+            }
+            if (!m_pane) { return false; }
+            const QScopedValueRollback<QEvent*> forwarding(m_forwardedEvent, event);
+            ForgetDrafts();
+            QCoreApplication::sendEvent(watched, event);
+            if (!event->isAccepted() && m_mainWindow && !m_drafts.isEmpty()
+                && m_workspaceFile == ToQString(FoundationService::Get().GetWorkspaceFilePath())
+                && m_workspaceRoot == ToQString(FoundationService::Get().GetWorkspaceRootPath()))
+            {
+                // Open immediately: the host may have queued a replacement, or a
+                // later file veto may have skipped pane rollback altogether.
+                AzToolsFramework::OpenViewPane("Tainted Grail Item and Recipe Editor");
+                if (m_pane)
+                {
+                    const QSignalBlocker itemBlocker(m_pane->m_itemRecord);
+                    const QSignalBlocker recipeBlocker(m_pane->m_recipeRecord);
+                    m_pane->m_itemRecord->setCurrentIndex(qMax(0, m_pane->m_itemRecord->findData(m_item)));
+                    m_pane->m_recipeRecord->setCurrentIndex(qMax(0, m_pane->m_recipeRecord->findData(m_recipe)));
+                    m_pane->m_loadedItem.clear();
+                    m_pane->m_loadedRecipe.clear();
+                    m_pane->m_baselines.clear();
+                    m_pane->m_drafts = m_drafts;
+                    m_pane->RefreshAll();
+                    qobject_cast<QGroupBox*>(m_pane->m_recipeForm)->setChecked(m_recipeExpanded);
+                    m_pane->m_tabs->setCurrentIndex(m_tab);
+                    m_pane->SetStatus(tr("Editor exit cancelled. Your draft forms have been restored."));
+                }
+            }
+            ForgetDrafts();
+            return true; // The original close event was delivered synchronously above.
+        }
+
+    private:
+        QWeakPointer<EditorCloseGuard> m_self;
+        QPointer<QWidget> m_mainWindow;
+        QPointer<ItemRecipeEditorWidget> m_pane;
+        QEvent* m_forwardedEvent = nullptr;
+        QHash<QString, Draft> m_drafts;
+        QString m_workspaceFile;
+        QString m_workspaceRoot;
+        QString m_item;
+        QString m_recipe;
+        int m_tab = 0;
+        bool m_recipeExpanded = false;
+    };
+
     ItemRecipeEditorWidget::ItemRecipeEditorWidget(QWidget* parent)
         : QWidget(parent)
+        , m_editorCloseGuard(EditorCloseGuard::Get())
     {
         auto* rootLayout = new QVBoxLayout(this);
         auto* heading = new QLabel(tr("Tainted Grail Item and Recipe Editor"), this);
@@ -566,6 +680,7 @@ namespace TaintedGrailModdingSDK
         if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
+        m_editorCloseGuard->Attach(this);
     }
 
     ItemRecipeEditorWidget::~ItemRecipeEditorWidget()
@@ -590,6 +705,7 @@ namespace TaintedGrailModdingSDK
     void ItemRecipeEditorWidget::OnWorkspaceChanged(const FoundationService& service)
     {
         if (&service != &FoundationService::Get()) { return; }
+        m_editorCloseGuard->ForgetDrafts();
         // Admission only records a choice. Retire old form state after every
         // handler admitted and Foundation actually committed the replacement.
         m_nativeReader->Cancel();
@@ -1503,8 +1619,11 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::closeEvent(QCloseEvent* event)
     {
-        if (ConfirmDraftReplacement(tr("closing Item and Recipe Editor")))
+        auto& guard = *m_editorCloseGuard;
+        if (ConfirmDraftReplacement(guard.IsClosingEditor()
+            ? tr("exiting the Editor") : tr("closing Item and Recipe Editor")))
         {
+            guard.RememberDrafts(this);
             QWidget::closeEvent(event);
         }
         else

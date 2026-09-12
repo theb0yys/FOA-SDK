@@ -14,6 +14,7 @@
 
 #include <QWidget>
 #include <QHash>
+#include <QSharedPointer>
 #include <QVariant>
 #include <QStringList>
 
@@ -44,6 +45,7 @@ namespace TaintedGrailModdingSDK
         void closeEvent(QCloseEvent* event) override;
 
     private:
+        class EditorCloseGuard;
         void OnFoundationChanged() override;
         bool CanChangeWorkspace(const FoundationService& service) override;
         void OnWorkspaceChanged(const FoundationService& service) override;
@@ -85,6 +87,7 @@ namespace TaintedGrailModdingSDK
         void StoreDraft(const QString& key, QWidget* form);
         void RestoreDraft(const QString& key, QWidget* form);
 
+        QSharedPointer<EditorCloseGuard> m_editorCloseGuard;
         QTabWidget* m_tabs = nullptr;
 
         QComboBox* m_itemRecord = nullptr;

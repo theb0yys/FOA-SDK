@@ -11,6 +11,8 @@
 
 namespace TaintedGrailModdingSDK
 {
+    class FoundationService;
+
     class FoundationNotifications
         : public AZ::EBusTraits
     {
@@ -20,6 +22,13 @@ namespace TaintedGrailModdingSDK
 
         virtual ~FoundationNotifications() = default;
         virtual void OnFoundationChanged() {}
+
+        //! Synchronous, trusted-host admission on the Editor thread. Any false vetoes replacement.
+        //! The old workspace is still current, so handlers may save drafts here. No replacement
+        //! notification follows a veto. Ignore service instances the handler does not own.
+        virtual bool CanChangeWorkspace(const FoundationService&) { return true; }
+        //! Published only after a successful replacement, including same-workspace reloads.
+        virtual void OnWorkspaceChanged(const FoundationService&) {}
     };
 
     using FoundationNotificationBus = AZ::EBus<FoundationNotifications>;

@@ -4,12 +4,12 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-Runs Pack Manager shutdown acceptance in separate compiled Windows Editor processes.
+Runs Pack Manager workspace-switch acceptance in separate compiled Windows Editor processes.
 .DESCRIPTION
 Requires the pinned engine, a built SDK Editor and an already prepared engine-asset
 cache. Creates only synthetic authoring data under a fresh external OutputRoot.
 Qt uses the normal desktop layout preferences; project user/log data is isolated.
-Never treats an in-process JSON result alone as proof that the Editor exited.
+Exercises both workspace opening panes and requires a clean exit after assertions.
 #>
 param(
     [Parameter(Mandatory)][string]$EditorExecutable,
@@ -39,46 +39,37 @@ if (Test-Path -LiteralPath $OutputRoot) { throw 'OutputRoot must be a fresh dire
 $lock = Get-Content (Join-Path $productRoot 'o3de.lock.json') -Raw | ConvertFrom-Json
 $engineCommit = (git -C $EngineRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $engineCommit -ne $lock.commit) { throw 'Engine does not match o3de.lock.json.' }
-$testScript = Join-Path $PSScriptRoot 'pack_editor_exit_live_smoke.py'
+$testScript = Join-Path $PSScriptRoot 'pack_workspace_switch_live_smoke.py'
 New-Item -ItemType Directory -Path $OutputRoot | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $OutputRoot 'tmp') | Out-Null
 $environmentNames = @('LOCALAPPDATA', 'TEMP', 'TMP', 'QT_QPA_PLATFORM', 'FOA_SDK_PACK_RESULT',
-    'FOA_SDK_PACK_WORKSPACE', 'FOA_SDK_PACK_EXIT_CASE', 'FOA_SDK_PACK_EXPECTED_PATH', 'FOA_SDK_PACK_EXPECTED_NAME')
+    'FOA_SDK_PACK_WORKSPACE', 'FOA_SDK_PACK_WORKSPACE_ROUTE')
 $savedEnvironment = @{}
 foreach ($name in $environmentNames) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 
-function Invoke-ExitCase([string]$Name, [string]$Case, [string]$Reuse = '',
-                         [string]$ExpectedPath = '', [string]$ExpectedName = '') {
-    $caseRoot = Join-Path $OutputRoot $Name
+function Invoke-WorkspaceCase([string]$Route) {
+    $caseRoot = Join-Path $OutputRoot $Route
     New-Item -ItemType Directory -Path $caseRoot | Out-Null
     $workspaceRoot = (Join-Path $caseRoot 'local/FOA-SDK/Workspace').Replace('\', '/')
-    if ($Case -eq 'reopen') {
-        $workspaceRoot = $Reuse
-        $fixture = Get-Content "$workspaceRoot/foa-sdk.tgworkspace.json" -Raw | ConvertFrom-Json
-        if ($fixture.WorkspaceId -ne 'sdkqa.pack-editor-exit' -or $fixture.RootPath -ne $workspaceRoot) {
-            throw 'Invalid reused synthetic workspace.'
-        }
-    } else {
-        foreach ($leaf in @('Output','Staging','Deployment','Diagnostics','Extracted','Game/Managed','Game/BepInEx/plugins')) {
-            New-Item -ItemType Directory -Force -Path "$workspaceRoot/$leaf" | Out-Null
-        }
-        $fixture = [ordered]@{
-            SchemaVersion=1; WorkspaceId='sdkqa.pack-editor-exit'; DisplayName='Synthetic Editor exit acceptance'
-            RootPath=$workspaceRoot; OutputPath="$workspaceRoot/Output"; StagingPath="$workspaceRoot/Staging"
-            DeploymentPath="$workspaceRoot/Deployment"; ActiveGameProfileId='sdkqa.synthetic'
-            GameProfiles=@(@{
-                ProfileId='sdkqa.synthetic'; DisplayName='Synthetic fixture, no runtime authority'
-                GameVersion='1.0.0'; Branch='mono'; RuntimeTarget='Mono'
-                UnityVersion='2022.3.22f1'; BepInExVersion='5.4.23.3'; DlcScopes=@('base-game')
-                InstallPath="$workspaceRoot/Game"; ManagedAssembliesPath="$workspaceRoot/Game/Managed"
-                PluginPath="$workspaceRoot/Game/BepInEx/plugins"; DiagnosticsPath="$workspaceRoot/Diagnostics"
-                ExtractedDataPath="$workspaceRoot/Extracted"
-            })
-        }
-        $fixture | ConvertTo-Json -Depth 6 | Set-Content "$workspaceRoot/foa-sdk.tgworkspace.json" -Encoding utf8
-        foreach ($marker in @('Game/Managed/Assembly-CSharp.dll', 'Game/UnityPlayer.dll')) {
-            Set-Content "$workspaceRoot/$marker" 'Synthetic authoring marker only; not executable content.'
-        }
+    foreach ($leaf in @('Output','Staging','Deployment','Diagnostics','Extracted','Game/Managed','Game/BepInEx/plugins')) {
+        New-Item -ItemType Directory -Force -Path "$workspaceRoot/$leaf" | Out-Null
+    }
+    $fixture = [ordered]@{
+        SchemaVersion=1; WorkspaceId='sdkqa.pack-workspace-switch'; DisplayName='Synthetic workspace-switch acceptance'
+        RootPath=$workspaceRoot; OutputPath="$workspaceRoot/Output"; StagingPath="$workspaceRoot/Staging"
+        DeploymentPath="$workspaceRoot/Deployment"; ActiveGameProfileId='sdkqa.synthetic'
+        GameProfiles=@(@{
+            ProfileId='sdkqa.synthetic'; DisplayName='Synthetic fixture, no runtime authority'
+            GameVersion='1.0.0'; Branch='mono'; RuntimeTarget='Mono'
+            UnityVersion='2022.3.22f1'; BepInExVersion='5.4.23.3'; DlcScopes=@('base-game')
+            InstallPath="$workspaceRoot/Game"; ManagedAssembliesPath="$workspaceRoot/Game/Managed"
+            PluginPath="$workspaceRoot/Game/BepInEx/plugins"; DiagnosticsPath="$workspaceRoot/Diagnostics"
+            ExtractedDataPath="$workspaceRoot/Extracted"
+        })
+    }
+    $fixture | ConvertTo-Json -Depth 6 | Set-Content "$workspaceRoot/foa-sdk.tgworkspace.json" -Encoding utf8
+    foreach ($marker in @('Game/Managed/Assembly-CSharp.dll', 'Game/UnityPlayer.dll')) {
+        Set-Content "$workspaceRoot/$marker" 'Synthetic authoring marker only; not executable content.'
     }
     foreach ($leaf in @('user', 'log')) { New-Item -ItemType Directory -Path "$caseRoot/$leaf" | Out-Null }
     $env:LOCALAPPDATA = (Get-Item -LiteralPath $workspaceRoot).Parent.Parent.FullName
@@ -86,9 +77,7 @@ function Invoke-ExitCase([string]$Name, [string]$Case, [string]$Reuse = '',
     $env:TMP = $env:TEMP
     $env:FOA_SDK_PACK_RESULT = "$caseRoot/result.json"
     $env:FOA_SDK_PACK_WORKSPACE = "$workspaceRoot/foa-sdk.tgworkspace.json"
-    $env:FOA_SDK_PACK_EXIT_CASE = $Case
-    $env:FOA_SDK_PACK_EXPECTED_PATH = $ExpectedPath
-    $env:FOA_SDK_PACK_EXPECTED_NAME = $ExpectedName
+    $env:FOA_SDK_PACK_WORKSPACE_ROUTE = $Route
     Remove-Item Env:QT_QPA_PLATFORM -ErrorAction SilentlyContinue
     $arguments = @(
         '--project-path', (Join-Path $productRoot 'TaintedGrailModdingEditor'),
@@ -108,11 +97,26 @@ function Invoke-ExitCase([string]$Name, [string]$Case, [string]$Reuse = '',
     $editor = Start-Process -FilePath $EditorExecutable -WorkingDirectory (Split-Path $EditorExecutable) -ArgumentList $quoted -WindowStyle Hidden -RedirectStandardOutput "$caseRoot/stdout.log" -RedirectStandardError "$caseRoot/stderr.log" -PassThru
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $forcedStop = $false
-    [ordered]@{pid=$editor.Id;executable=$EditorExecutable;arguments=$arguments;case=$Case;workspace=$workspaceRoot} |
+    $loadedSdk = $null
+    $expectedSdk = Join-Path (Split-Path $EditorExecutable) 'TaintedGrailModdingSDK.Editor.dll'
+    [ordered]@{pid=$editor.Id;executable=$EditorExecutable;arguments=$arguments;route=$Route;workspace=$workspaceRoot} |
         ConvertTo-Json -Depth 5 | Set-Content "$caseRoot/launch.json"
-    Write-Host "Testing $Name in owned Editor process $($editor.Id)"
+    Write-Host "Testing $Route in owned Editor process $($editor.Id)"
     try {
         while (-not $editor.WaitForExit(1000)) {
+            if (-not $loadedSdk) {
+                $editor.Refresh()
+                $module = $editor.Modules | Where-Object ModuleName -eq 'TaintedGrailModdingSDK.Editor.dll'
+                if ($module) {
+                    $loadedSdk = [ordered]@{
+                        path=$module.FileName
+                        sha256=(Get-FileHash -LiteralPath $module.FileName -Algorithm SHA256).Hash
+                    }
+                    if (-not $module.FileName.Equals($expectedSdk, [StringComparison]::OrdinalIgnoreCase)) {
+                        throw 'Editor loaded an unexpected SDK module.'
+                    }
+                }
+            }
             $interim = $null
             if (Test-Path -LiteralPath "$caseRoot/result.json") {
                 try { $interim = Get-Content "$caseRoot/result.json" -Raw | ConvertFrom-Json } catch {}
@@ -134,34 +138,24 @@ function Invoke-ExitCase([string]$Name, [string]$Case, [string]$Reuse = '',
     }
     $test = $null
     if (Test-Path -LiteralPath "$caseRoot/result.json") { $test = Get-Content "$caseRoot/result.json" -Raw | ConvertFrom-Json }
-    $passed = -not $forcedStop -and $editor.ExitCode -eq 0 -and $test.status -eq 'PASSED' -and $test.about_to_quit -and $test.editor_initialized
-    if ($Case -eq 'new-discard' -and (Test-Path -LiteralPath "$workspaceRoot/Packs/sdkqa.new-exit-draft")) { $passed = $false }
+    $passed = -not $forcedStop -and $editor.ExitCode -eq 0 -and $test.status -eq 'PASSED' -and $test.about_to_quit -and $loadedSdk
     $row = [ordered]@{
-        status=$(if ($passed) {'PASSED'} else {'FAILED'}); case=$Case; pid=$editor.Id
-        exit_code=$editor.ExitCode; forced_stop=$forcedStop; about_to_quit=$test.about_to_quit
-        editor_initialized=$test.editor_initialized
+        status=$(if ($passed) {'PASSED'} else {'FAILED'}); route=$Route; pid=$editor.Id
+        exit_code=$editor.ExitCode; forced_stop=$forcedStop; about_to_quit=$test.about_to_quit; sdk_module=$loadedSdk
         elapsed_seconds=[Math]::Round($clock.Elapsed.TotalSeconds, 3)
         workspace=$workspaceRoot; checks=$test.checks; result="$caseRoot/result.json"
     }
     $row | ConvertTo-Json -Depth 6 | Set-Content "$caseRoot/process-result.json"
-    if (-not $passed) { throw "Editor exit case $Name failed; see $caseRoot." }
+    if (-not $passed) { throw "Workspace route $Route failed; see $caseRoot." }
     return $row
 }
 $rows = @()
 $status = 'FAILED'
 try {
-    foreach ($case in @('save', 'discard', 'clean', 'pristine', 'new-save', 'new-discard')) {
-        $rows += Invoke-ExitCase -Name $case -Case $case
+    foreach ($route in @('status', 'catalog')) {
+        $rows += Invoke-WorkspaceCase -Route $route
     }
-    foreach ($reopen in @(
-        @{source='save'; name='Saved exit draft'; id='sdkqa.original'},
-        @{source='discard'; name='Original'; id='sdkqa.original'},
-        @{source='new-save'; name='New exit draft'; id='sdkqa.new-exit-draft'}
-    )) {
-        $saved = $rows | Where-Object { $_.case -eq $reopen.source }
-        $rows += Invoke-ExitCase -Name ("reopen-" + $reopen.source) -Case reopen -Reuse $saved.workspace -ExpectedPath ($saved.workspace + '/Packs/' + $reopen.id + '/pack.tgpack.json') -ExpectedName $reopen.name
-    }
-    if ($rows.Count -ne 9) { throw 'Expected nine complete Editor process runs.' }
+    if ($rows.Count -ne 2) { throw 'Expected two complete Editor route runs.' }
     $status = 'PASSED'
 } finally {
     foreach ($name in $environmentNames) {
@@ -170,4 +164,4 @@ try {
     [ordered]@{status=$status;engine_commit=$engineCommit;cases=$rows} |
         ConvertTo-Json -Depth 8 | Set-Content (Join-Path $OutputRoot 'suite-result.json')
 }
-Write-Host "PASSED: nine clean Editor exits, negative shutdown checks, and three fresh-process reopens."
+Write-Host "PASSED: both workspace routes preserve drafts and saved data, with clean Editor exits."

@@ -135,6 +135,16 @@ Keep domain logic in services, use stable pane identities, provide accessible/ac
 
 UI behavior needs L3 evidence only when the change can affect actual interaction/rendering.
 
+### Pack Manager crash recovery (Windows)
+
+[Draft recovery](PACK_DRAFT_RECOVERY.md) defines the separate raw-form schema, per-user
+store, workspace binding, background checkpointing and lifecycle cleanup. Its compiled
+persistence tests and private-desktop recovery runner must both pass when these paths
+change. Recovery does not make the normal shutdown or workspace admission guards optional.
+Use the recovery runner with `-Suite docked` for the 12-process docked close/recovery
+lane, including the complete New/Open/docked/floating regression. See the recovery
+design for pinned default-state setup, actual action routing and pass requirements.
+
 ### Pack Manager shutdown acceptance (Windows)
 
 The pinned Editor's main-window close handler calls `ClosePanesWithRollback`,
@@ -155,9 +165,11 @@ File > Exit, the main-window Close button, and the ordinary Python exit command;
 Cancel/Escape/prompt dismissal, invalid input and a real locked-file save failure;
 save retry, new/saved drafts, discard, clean exit, and three fresh-process reopens.
 
-A passing result requires both the in-process assertions and an actual process
-exit code of zero with an about-to-quit notification. A timeout or forced test
-cleanup is a failure. Inspect `suite-result.json`, each `process-result.json`,
+The script waits for `EditorEventBus.NotifyEditorInitialized` before testing;
+`--runpython` itself runs inside host initialization, so a fixed startup delay is
+insufficient. A passing result requires that initialization event, the in-process
+assertions, and an actual process exit code of zero with an about-to-quit notification.
+A timeout or forced test cleanup is a failure. Inspect `suite-result.json`, each `process-result.json`,
 and the saved prompt/draft images under the output directory. The temporary
 workspace, project user/log data, and environment are isolated; Qt uses normal
 desktop layout preferences. Startup may read installed-game discovery metadata;
@@ -166,6 +178,43 @@ game files and saves are not modified.
 The existing `pack_unsaved_live_smoke.py` separately covers New/Open and pane-close
 regressions. These are Editor authoring checks; they do not prove game runtime,
 forced-termination recovery, or another pane's unsaved-state handling.
+
+### Pack Manager workspace-switch acceptance (Windows)
+
+Foundation owns workspace replacement. `LoadWorkspace` builds and validates its
+candidate before calling `FoundationNotifications::CanChangeWorkspace` on trusted
+host handlers. Each handler sees the original service/workspace and may save a draft.
+The first veto stops the switch; nested LoadWorkspace/SetWorkspace requests fail
+closed during admission and publication. With no draft owner, loading works normally.
+`OnWorkspaceChanged` runs only after publication, including same-workspace reloads,
+and Pack Manager resets its form/baseline from the new profile.
+
+These are synchronous Editor-thread host APIs, not ExtensionAPI. Handlers must
+ignore service instances they do not own. Admission must not clear an unsaved draft:
+another handler may still veto. Discard authorizes replacement; it does not reset the
+form until the commit notification. A completed Save remains saved if a later owner
+vetoes. `SetWorkspace` now returns success; existing call statements remain valid.
+`LoadWorkspace` retains bool/error reporting and adds an optional `bool* cancelled`
+output, initialized on each call. The two opening panes use it to avoid showing a
+load-error dialog for Cancel or failed draft Save; Pack Manager retains its save
+error. No serialized schema, extension contract, stable ID or migration changes.
+
+Run with a built SDK Editor and a prepared engine-asset cache:
+
+```powershell
+./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_pack_workspace_switch_smoke.ps1 -EditorExecutable <build>/bin/profile/Editor.exe -EngineRoot <pinned-engine> -CacheRoot <prepared-cache> -OutputRoot <fresh-external-output>
+```
+
+The runner opens two compiled Editor processes, one per workspace-opening pane.
+Each uses two synthetic roots and the actual Qt file picker and Save/Discard/Cancel
+dialog. It checks Cancel/Escape/dismissal, cancelling the picker, invalid destination,
+invalid input, actual locked-file save failure, retry, old-root writes, new/saved
+drafts, new-profile baselines, saved-mod reopening and same-workspace reloads.
+It requires passing assertions, an about-to-quit signal and exit code zero; a timeout
+or forced cleanup fails. Inspect suite/process/result JSON and prompt/draft screenshots.
+The picker uses Qt's non-native dialog in the test process; production dialog
+settings are unchanged. Catalog Browser's remembered workspace setting is restored.
+Other panes' drafts and local setup's game-profile detection are separate scopes.
 
 ## Runtime and external operations
 

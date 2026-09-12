@@ -1,27 +1,50 @@
-# M1 - Shared execution core contracts
+# Current Task
 
-Status: implemented; final exact-head validation and PR handoff in progress.
-Request: implement the first Build and Test Runner slice, M1.
-Primary owner: capability-execution. Supporting owners: artifact-ownership, execution-receipts and runtime-verification (observation shapes only).
-Classification: Significant, introducing an additive public contract family; medium performance risk.
+Goal: finish PR #260 CI verification and repair failures in the selected gates.
+Classification: Routine validation-harness repair; the containing Pack Manager PR
+remains Significant because of workspace admission and persistent draft recovery.
+Primary owner for this repair: Editor acceptance; product owner: workspace-and-packs.
 
-Authority: merged CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md and the owner's current instruction. Base: cbd8409ae3cc1dde61772a20c3f40928b7d46cf8. Working branch: codex/capability-execution-m1-core-contracts, using the current agent branch prefix.
+Scope: Item Viewer synthetic-fixture setup, test launch arguments, registered-pane
+lookup and close/reopen polling, focused regression tests, and the cold-build CI
+time budget. No C++, engine, workspace/pack/recovery format, dependency or public
+API change is included.
+Branch: `codex/pack-workspace-switch-protection`; prior validated head:
+`1f91bf7bcc3448fa6f738c4f60c05c627f2f2b77`.
 
-Scope: the exact M0 six-file Core family, dedicated three-file compiled test target, strict source validator and its tests, read-only validation integration and the authorised documentation paths.
-No production consumers, persistence, executors, provider resolution, policy evaluation, UI or external processes are introduced.
+Confirmed repairs: enumerate literal fixture entries before copying; supply the
+pinned Editor's required test-case name; distinguish registered docks from floating
+containers with the same title; await both dock and floating-container deletion;
+retain the reopened dock wrapper while querying its children.
+Regression coverage executes the actual PowerShell setup and argument blocks and
+checks dock selection with duplicate titles, hidden panes and deleted wrappers,
+plus deferred container deletion and docked close conditions.
 
-Design: independent typed decisions and observations; bounded versioned value records; explicit upstream canonical bytes and digests; immutable phase and complete plans; ordered artifact dependencies and inverse rollback declarations; exact contextual receipt validation. Canonical output uses fixed keys, copy-free sorting through indices/pointers for sets, preserved sequences and checked byte/cardinality budgets. It excludes capture metadata and each object's own fingerprint. Existing V1 contracts are unchanged.
+Validation is layered. Hosted static, CanonicalInterchange, CapabilityExecution and
+agent-skill checks PASSED on `027f373be3d0e2bdb42e263b6dc37603114eef65`.
+The final local source passes all 22 focused harness tests, 854 discovered Python
+tests (845 passed, nine Windows symlink-privilege skips, zero failures), static
+validators/fixtures and all 10 enabled pinned source-policy validators.
 
-Proof: M0 preflight helpers, source/compatibility guards, compiled enum/canonical/negative/boundary and complete-chain tests, pinned configure/build, dedicated CTest, legacy catalog/interchange regression, full validation and read-only CI. Editor/UI and operational/runtime evidence are NOT_APPLICABLE to M1.
+The actual final-source Item Viewer smoke PASSED all 17 checks on a private
+Windows desktop, including Refresh Assets, product loading and selection after
+close/reopen. It reused the unchanged pinned build below; no new local build is
+claimed. Earlier failed attempts and native event traces remain external. The
+trace established separate floating-container teardown and Python wrapper lifetime
+issues in the smoke; no engine or product workaround was introduced.
 
-Pre-edit review: owners and producer/consumer boundaries mapped; source allowlist fixed by M0; semantic and event identity separated; no protected inputs required. The existing test-plan helper has a PowerShell line-continuation parser defect; its identical selection logic was reproduced in memory with that syntax corrected, without editing the helper.
+Cold hosted runs 34662682095 and 34664083242 reached their 180-minute job limit
+while still compiling the pinned Editor. The job now allows 300 minutes, retaining
+parallelism 2 and the 600-second Editor smoke timeout. Fresh-head hosted CI must
+still finish; terminal run results and exact changed-input hashes belong in the
+external CI receipt, not a claim based on pending or superseded jobs.
 
-M1 completion does not start M2. Runtime sign-off not performed.
+Unchanged product baseline: prior pinned configure/build and all three compiled
+registrations PASSED (581 cases passed, two symlink skips). Pack Manager docked
+recovery, workspace switching and Editor exit passed 121 checks across 23 processes.
+Those results remain bound to the prior head and unchanged compiled inputs.
 
-Implemented: 25 versioned value types, 23 typed enums, checked scalar/collection/canonical budgets, exact contextual plan/provider/artifact/rollback/receipt bindings, separate authorization intent and exact-plan observations, a Core-only compiled test target and read-only local/CI guards.
-
-Executed before commit: 48 initial compiled tests passed; two additional regression tests exposed and now guard rollback-plan identity and immutable-input path aliasing; Core, Framework, Catalog.Tests, CanonicalInterchange.Tests, SDK Editor, consumer Tool Gems, Editor and AssetProcessorBatch built against the exact O3DE pin. Legacy CTest passed after precreating its output XML file; no source or generated test command was changed. Final full validation is pending.
-
-Evidence limitation: M0 declares Editor/UI execution NOT_APPLICABLE, while the existing validation-receipt tool requires a passed windows-ui row or explicit maintainer risk acceptance for merge-ready finalization. M1 does not edit that tool or invent UI proof. This mismatch will remain explicit in the exact-head receipt and PR until the maintainer resolves it.
-
-Post-edit review: no existing production consumers, canonical helpers or persisted formats changed; the six-file family has unique Core ownership. All changed paths are in the M0 allowlist. Runtime, game files, saves, installer state and release artifacts were not accessed.
+Completion requires all applicable checks on the final PR head to finish and their
+results to be reported accurately. PR approval and merge, workflow reruns/cancellation,
+protected game data, runtime/deployment/release operations and further features remain
+outside this task. No manual workflow transition is authorized or performed.

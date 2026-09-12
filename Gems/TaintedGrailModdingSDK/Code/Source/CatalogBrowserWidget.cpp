@@ -486,8 +486,13 @@ namespace TaintedGrailModdingSDK
         bool showFailureDialog)
     {
         AZStd::string error;
-        if (!FoundationService::Get().LoadWorkspace(ToAzString(filePath), &error))
+        bool cancelled = false;
+        if (!FoundationService::Get().LoadWorkspace(ToAzString(filePath), &error, &cancelled))
         {
+            if (cancelled)
+            {
+                return false;
+            }
             if (showFailureDialog)
             {
                 QMessageBox::critical(this, tr("Unable to open workspace"), ToQString(error));

@@ -59,6 +59,8 @@ set(FILES
     Source/FoundationWorkspaceLoadService.h
     Source/LocalSetupDetectionService.cpp
     Source/LocalSetupDetectionService.h
+    Source/PackDraftRecoveryService.cpp
+    Source/PackDraftRecoveryService.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/PathPolicyService.cpp

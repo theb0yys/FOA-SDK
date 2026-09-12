@@ -284,9 +284,13 @@ namespace TaintedGrailModdingSDK
         }
 
         AZStd::string error;
-        if (!FoundationService::Get().LoadWorkspace(ToAzString(filePath), &error))
+        bool cancelled = false;
+        if (!FoundationService::Get().LoadWorkspace(ToAzString(filePath), &error, &cancelled))
         {
-            QMessageBox::critical(this, tr("Unable to open workspace"), ToQString(error));
+            if (!cancelled)
+            {
+                QMessageBox::critical(this, tr("Unable to open workspace"), ToQString(error));
+            }
             return;
         }
 

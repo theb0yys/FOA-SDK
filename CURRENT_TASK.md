@@ -659,3 +659,34 @@ cumulative scope. Original shader bundles and cached inputs retain their hashes.
 Full source lighting/instance/visibility/LOD buffer values, remaining materials
 and render passes, complete scenes, four-map UI and game export remain unfinished.
 Full maps are not ready for 1:1 testing; the estimated heightmap route stays disabled.
+
+## Source lighting ownership checkpoint (2026-09-12)
+
+The owner requested committing all accumulated changes and opening a PR, then
+continuing actual game lighting/instance data and the remaining campaign workflow.
+PR #266 contains the source checkpoint and a merge of current main. The merged
+native Editor and all three compiled test registrations pass: 595 cases passed,
+two Windows symlink tests skipped. The merged static suite discovered 1,204 tests:
+1,195 passed and nine Windows symlink tests skipped. These counts precede the
+additional lighting-reader tests below; they are not full-scene rendering proof.
+
+The new source-light reader captures all 3,488 native Light records in the 16
+primary scenes across all four maps, their 3,488 exact HDRP companions and 1,935
+same-entity controller records. Original bytes, source identities, owners and
+transforms are retained. The exact installed HDRP assembly establishes that the
+legacy additional-light intensity/unit fields are obsolete; migrated values come
+from the native Light record. All 3,488 captured native intensities differ from
+that obsolete field, so using the old field would produce incorrect inputs.
+
+3,486 lights use the qualified v13 field selection. Two Horns dynamic-scene lights
+still store HDRP v12 and remain explicitly blocked for migration. Nonfinite values
+in unmapped controller data have explicit inspection tags; their original bytes
+remain authoritative. The complete private capture took 38.750 seconds and source
+fingerprints were unchanged. Eighteen synthetic tests cover ownership, incorrect
+script identity, missing fields, migration versions, preservation, bounds and
+cancellation. No original game asset or diagnostic is included in the PR.
+
+Next: qualify those two light migrations and supply the actual light, instance,
+visibility and controller state to the native shaders. GPU lighting, remaining
+materials/passes, complete rendered scenes, four-map UI and game export remain
+unfinished. Full maps are not ready for 1:1 testing.

@@ -1537,3 +1537,50 @@ resource binding and persistence under explicit fixture values. Original DOTS,
 light-list and visibility data, complete material/pass selection and HDRP render
 policy still need mapping and execution proof. Full campaign rendering, navigation,
 lighting authoring, four-map UI and game export remain unfinished.
+
+## Exact source Light ownership and migrated properties
+
+`foa_scene_lighting.py` is a private, in-memory source adapter. It consumes the
+validated `SceneOwnership` graph and a `ComponentScriptAudit` with its explicit
+dependency loader. It captures native Light, GameObject, Transform and same-owner
+MonoBehaviour records, their raw bytes and hashes, and the exact resolved script
+identities. Display names do not establish a Light/HDRP/controller association.
+One native Light and at most one exact HDRP companion may bind to an entity.
+
+The qualified source profile is Unity 6000.0.64f1 with the fingerprinted HDRP
+runtime assembly recorded in the adapter. Shipped scene files store the observed
+`0.0.0` version marker. Accepting that marker requires the separate exact profile
+and embedded record schemas; it does not authorize an ambient class-database
+fallback. The profile fingerprint identifies input bytes, not execution authority.
+
+Inspection of the exact HDRP assembly establishes that its v13 intensity, type,
+unit, lux-distance and reflector APIs delegate to native `Light`. Older serialized
+additional-light fields remain migration storage. `stored_light_values` therefore
+reads native fields without substituting those obsolete values. Unknown migration
+versions retain the complete original records but expose no qualified value
+projection. No enum name, photometric conversion, color-space conversion, active
+controller state, GPU light list or shadow/bake result is inferred.
+
+The snapshot schema `foa.private.source-lighting`, version 1, is private evidence,
+not public canonical interchange or a game-export format. `raw_hex` is the byte
+preservation authority. `tree` is an inspection view: nonfinite decoded floats
+use an explicit `$foa_float64_bits` tag and byte arrays use `$foa_bytes_hex`.
+The view must not be used to reserialize original source records. `stored_values`
+is null with a `BLOCKED` state when an HDRP migration remains unqualified.
+Bounds are 32,768 lights, 4 MiB per record, 64 MiB of captured source records and
+256 levels of view depth; cancellation is checked through entity/record traversal.
+
+The all-map source check captured 3,488 Lights and exact HDRP companions plus
+1,935 controller records in 16 primary scenes, preserving all source fingerprints.
+3,486 v13 Lights have qualified stored-value selection; two Horns dynamic-scene
+v12 records remain blocked for migration. All 3,488 native intensity fields differ
+from the obsolete HDRP intensity storage. The capture took 38.750 seconds.
+Eighteen synthetic tests cover exact ownership, script identities, the obsolete
+field trap, explicit migration blockers, nonfinite views, malformed values,
+preservation, resource bounds and cancellation. This proves source binding and
+stored-field selection only. Native GPU lighting and game runtime are NOT_RUN.
+
+Rollback removes this additive reader and its private snapshots. It does not
+change existing scene/heightmap/native shader packets or source game records.
+Actual lighting/instance state, full materials/scenes, four-map UI and game export
+still require implementation and their own native/game acceptance.

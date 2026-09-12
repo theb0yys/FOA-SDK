@@ -440,6 +440,13 @@ def validate_ci_runner_policy(repo_root: Path) -> None:
     validate_read_only_mode(repo_root, automatic)
     if (repo_root / "Gems/ExternalToolchain/Code/Include/ExternalToolchain/ToolExecutionTypes.h").is_file():
         validate_tool_execution_workflow(automatic)
+    if (repo_root / "Gems/TaintedGrailModdingSDK/Code/Source/ExecutionFramework/FrameworkExecutionService.cpp").is_file():
+        require_fragments(automatic, (
+            "TaintedGrailModdingSDK.FrameworkExecution.Tests",
+            "TaintedGrailModdingSDK.FrameworkExecution.Operational.Tests",
+            "$env:TEMP = $env:RUNNER_TEMP",
+            "$env:TMP = $env:RUNNER_TEMP",
+        ), "M3 required native lane and canonical temporary root")
     validate_manual_workflows(repo_root, require_explicit_read_only=True)
     validate_local_runner(repo_root, progressive=progressive)
 

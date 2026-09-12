@@ -1727,3 +1727,64 @@ The saved edit reproduces the identical candidate in the fresh Editor process.
 The maximum 4,096-edit batch against 87,229 synthetic member records completed in
 0.474 seconds and preserved the other 83,133 records. These checks do not establish
 full-map rendering, derived-product validity or game return.
+
+## Explicit DOTS instance streams
+
+The qualified Unity 6000.0.64f1 renderer stores per-instance properties in separate
+GPU streams. `foa_scene_dots_buffers.py` accepts exact ordered property bytes,
+strides and instance counts for the fingerprinted Entities Graphics/Awaken ECS
+profile. The 64-byte shared zero allocation, 16-byte stream alignment and metadata
+upper-bit/address split follow the inspected original allocator and metadata writer.
+Property order is supplied explicitly; runtime property IDs and batch order are
+not generated from names. Existing native shader/draw packet schemas are unchanged.
+
+`pack_matrix_columns` converts explicit source-space row-major matrix words into
+four float3 columns with integer permutation. It preserves signed zero/subnormals
+and rejects nonfinite or unrepresentable affine matrices. It does not calculate
+world-to-object matrices: the original GPU uploader computes inverses separately,
+and that execution has not been qualified. Host placement matrices must pass
+through their owning source-coordinate conversion first.
+
+`visibility_buffers` encodes explicitly supplied visible-index words for the
+inspected shader's direct or indirect branch. The direct constant array uses
+16-byte entries; the indirect branch reads a raw uint stream. Optional upper-byte
+stripping is explicit and preserves the original words. This adapter does not
+choose visible objects, interpret LOD ownership or execute culling. Unsupported
+counts, absent indices, incorrect profiles, duplicate/incomplete streams and
+non-boolean modes fail. Bounds are 4,096 instances, 256 property streams and
+16 MiB of instance data; direct visibility is bounded to 256 entries.
+
+Nine focused tests check independent bytes, offsets, alignment, ordering,
+visibility modes, rejection and size bounds. All 87,229 previously captured
+instance transforms across the four maps reproduce their original 48 matrix bytes
+in the packed streams, using independently captured source-world matrices as
+input. This complete transform check took 4.054 seconds.
+
+`Tools/editor_tests/source_dots_shader_cases.py` supplies a strictly synthetic
+render configuration to the exact inspected original DOTS Unlit vertex/fragment
+programs, requiring their fingerprints. It explicitly sets camera/exposure values,
+white textures, object transforms, visible indices and per-instance color/emission.
+The original programs remain unchanged. `source_dots_shader_editor.py` runs the
+nine-case fixture through the existing native viewport, with a cleared-frame
+control. Inputs and captured frames stay private. Pixel and placement comparison
+is a separate required check; shader asset creation or READY status is insufficient.
+
+This is a single-instance draw fixture. Multi-instance draw dispatch, live culling,
+GPU inverse generation, light-probe values, previous-frame state, actual controller
+values and all other material variants remain separate obligations. Final lighting,
+complete rendered scenes, four-map UI and game export are not qualified by this
+adapter. The inspected DLLs and existing private source captures remain read-only.
+
+The slot count is explicit GPU capacity. The original renderer reserves each ECS
+chunk's Capacity while uploading only its active Count; those gaps and the visible
+slot mapping must be supplied by the caller. Source ordinals are not GPU indices.
+An additional negative test checks sparse active slots and rejects a compacted count.
+
+Native DX12 pixel/placement acceptance passed all nine original-program cases:
+1,352,325 interior pixels match their exact expected colors, and 7,974 outside
+samples agree with the cleared frame. Direct/indirect visibility, upper-byte
+stripping, shared-transform addressing, per-instance color/emission and material
+fallback are exercised. Both original programs remain byte-identical in the
+processed native shader asset. This validates their explicit synthetic inputs,
+not actual scene visibility or full-map appearance. The inspected DLL hashes
+remain unchanged; no game files or saves were modified.

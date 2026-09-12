@@ -737,3 +737,17 @@ recorded separately and does not establish complete scene rendering.
 
 Native synthetic movement, undo/redo, rotation/scale and fresh saved-level reopen
 passed; all six candidate files match an independent byte-level comparison.
+
+DOTS instance-input checkpoint (2026-09-12): the owner approved read-only inspection
+of the exact Awaken ECS and Entities Graphics DLLs. The original stream allocator,
+metadata writer, transform uploader and original Unlit shader branches establish
+explicit per-instance byte streams and visibility addressing. The new bounded
+adapter supplies only caller-provided bytes/indices; no inverse, probe, controller
+or culling values are inferred. Nine focused tests pass, and all 87,229 captured
+transforms pack to their original 48 matrix bytes in 4.054 seconds. Native original
+shader pixel/placement acceptance is recorded separately. Full maps, remaining
+lighting/materials, four-map UI and game return remain unfinished.
+
+The original DOTS Unlit programs pass native DX12 rendering for all nine synthetic
+instance/material cases: 1,352,325 interior pixels and 7,974 outside samples match.
+The exact DLL inspection permission is fulfilled; game files and saves are unchanged.

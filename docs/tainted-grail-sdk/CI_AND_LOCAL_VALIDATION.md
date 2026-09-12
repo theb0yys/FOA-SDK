@@ -8,7 +8,7 @@ Automated validation is read-only with respect to repository state and external 
 
 ## Evidence layers
 
-### L0 â€” Repository and static validation
+### L0 — Repository and static validation
 
 Proves repository structure, policy contracts, reviewed-range whitespace, Python/static validators, and other non-compiled checks.
 
@@ -21,13 +21,13 @@ python Gems/TaintedGrailModdingSDK/Tools/run_local_validation.py \
 
 `--static-only` does not prove compilation, Editor behavior, runtime behavior, or source-policy validation.
 
-### L1 â€” Focused unit and contract tests
+### L1 — Focused unit and contract tests
 
 Proves executable behavior in the focused test layer: Python unit tests, deterministic contract tests, malformed-input tests, migration tests, or other owned unit suites.
 
 L1 should target the changed subsystem rather than requiring every unrelated test surface.
 
-### L2 â€” Configure, build, and compiled host tests
+### L2 — Configure, build, and compiled host tests
 
 Proves integration with the pinned O3DE checkout and compiled targets.
 
@@ -40,13 +40,13 @@ Examples include:
 
 A missing executable or zero matching tests is a failure.
 
-### L3 â€” Editor/UI/manual host interaction
+### L3 — Editor/UI/manual host interaction
 
 Proves behavior that requires an actual Editor or platform interaction: pane lifecycle, visual rendering, keyboard/accessibility behavior, saved UI state, or a manual workflow.
 
 Screenshots and logs must exclude private paths and protected/proprietary content.
 
-### L4 â€” Operational/runtime evidence
+### L4 — Operational/runtime evidence
 
 Proves an operation that leaves the authoring host or can mutate external state: installer lifecycle, deployment, rollback, save behavior, runtime adapter behavior, Fall of Avalon launch/verification, signing, or publication.
 

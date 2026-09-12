@@ -1,5 +1,14 @@
 # Changelog
 
+## Framework execution M3
+
+- Add Foundation-owned immutable planning, reviewed provider/policy admission and
+  asynchronous staging execution through the production M2 supervisor.
+- Add private execution/artifact repositories, target ownership transactions,
+  interrupted-attempt quarantine/reconciliation and candidate evidence projection.
+- Add compiled/native acceptance lanes and a disposable Editor lifecycle fixture.
+
+
 All notable changes to the Tainted Grail Modding Editor and SDK are documented here.
 
 The project follows Keep a Changelog principles. Version numbers will follow Semantic Versioning once public releases begin. During pre-alpha development, entries may describe reviewed capability slices before a tag exists.

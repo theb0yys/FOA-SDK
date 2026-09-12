@@ -44,6 +44,7 @@ VALIDATORS = (
     "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",
     "validate_capability_execution_contracts.py",
+    "validate_framework_execution.py",
     "validate_canonical_interchange_compiled_tests.py",
     "validate_downstream_compiled_tests.py",
     "validate_research_contract_hardening.py",
@@ -306,6 +307,14 @@ def build_capability_ctest_command(build_directory: Path) -> ValidationCommand:
 
 
 
+def build_framework_ctest_commands(build_directory: Path) -> list[ValidationCommand]:
+    # Independent invocations make a missing operational registration fail.
+    return [build_ctest_command(build_directory, test_pattern=pattern) for pattern in (
+        r"TaintedGrailModdingSDK\.FrameworkExecution\.Tests",
+        r"TaintedGrailModdingSDK\.FrameworkExecution\.Operational\.Tests",
+    )]
+
+
 def display_command(command: ValidationCommand) -> str:
     return " ".join(command.argv)
 
@@ -395,7 +404,8 @@ def run_validation_pipeline(
         failures.extend(
             run_commands(
                 [build_ctest_command(arguments.ctest_build_dir),
-                 build_capability_ctest_command(arguments.ctest_build_dir)],
+                 build_capability_ctest_command(arguments.ctest_build_dir),
+                 *build_framework_ctest_commands(arguments.ctest_build_dir)],
                 keep_going=arguments.keep_going,
             )
         )
@@ -406,7 +416,7 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Run FOA-SDK Python tests, validators, fixtures, pinned O3DE source "
-            "policy, and configured compiled Catalog, CanonicalInterchange and CapabilityExecution "
+            "policy, and configured compiled Catalog, CanonicalInterchange, CapabilityExecution and FrameworkExecution "
             "CTest coverage when full mode is selected."
         )
     )
@@ -432,7 +442,7 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--ctest-build-dir",
         type=Path,
         help=(
-            "Run compiled TaintedGrailModdingSDK Catalog, CanonicalInterchange and CapabilityExecution "
+            "Run compiled TaintedGrailModdingSDK Catalog, CanonicalInterchange, CapabilityExecution and FrameworkExecution "
             "tests from this configured O3DE build root."
         ),
     )
@@ -498,7 +508,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             print(
                 "FOA-SDK full validation: static checks, fixtures, pinned O3DE "
-                "source policy, and configured compiled Catalog/CanonicalInterchange "
+                "source policy, and configured compiled authoring and execution "
                 "CTest coverage.",
                 flush=True,
             )
@@ -521,7 +531,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         print(
             "\nFOA-SDK full validation passed, including configured compiled "
-            "Catalog, CanonicalInterchange and CapabilityExecution CTest coverage."
+            "Catalog, CanonicalInterchange, CapabilityExecution and FrameworkExecution CTest coverage."
         )
     return 0
 

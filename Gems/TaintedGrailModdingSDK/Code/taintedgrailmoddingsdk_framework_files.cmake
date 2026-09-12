@@ -24,6 +24,7 @@ set(FILES
     Source/TerrainCampaignExportHost.cpp
     Source/TerrainCampaignExportHost.h
     Source/TerrainImportHost.cpp
+    Source/FoundationExecutionService.cpp
     Source/FoundationAssetLocalisationService.cpp
     Source/ProjectImageService.cpp
     Source/ProjectImageService.h

@@ -564,7 +564,6 @@ namespace TaintedGrailModdingSDK
             }
         }
         if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
-        m_workspaceIdentity = ToQString(FoundationService::Get().GetWorkspaceFilePath());
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
     }
@@ -579,17 +578,39 @@ namespace TaintedGrailModdingSDK
         // Our synchronous save commands publish before returning. Keep the submitted
         // fields intact until the result has advanced that form's baseline.
         if (m_saving) { return; }
-        const QString workspace = ToQString(FoundationService::Get().GetWorkspaceFilePath());
-        if (workspace != m_workspaceIdentity)
-        {
-            m_drafts.clear();
-            m_baselines.clear();
-            m_loadedItem.clear();
-            m_loadedRecipe.clear();
-            m_workspaceIdentity = workspace;
-            m_nativeReader->Cancel();
-        }
         RefreshAll();
+    }
+
+    bool ItemRecipeEditorWidget::CanChangeWorkspace(const FoundationService& service)
+    {
+        return &service != &FoundationService::Get()
+            || ConfirmDraftReplacement(tr("switching workspaces"));
+    }
+
+    void ItemRecipeEditorWidget::OnWorkspaceChanged(const FoundationService& service)
+    {
+        if (&service != &FoundationService::Get()) { return; }
+        // Admission only records a choice. Retire old form state after every
+        // handler admitted and Foundation actually committed the replacement.
+        m_nativeReader->Cancel();
+        m_drafts.clear();
+        m_baselines.clear();
+        m_loadedItem.clear();
+        m_loadedRecipe.clear();
+        const QSignalBlocker itemBlocker(m_itemRecord);
+        const QSignalBlocker recipeBlocker(m_recipeRecord);
+        const QSignalBlocker sourceBlocker(m_relationshipSource);
+        m_itemRecord->setCurrentIndex(0);
+        m_recipeRecord->setCurrentIndex(0);
+        m_relationshipSource->setCurrentIndex(0);
+        m_relationshipId->clear();
+        m_relationshipKind->setCurrentIndex(0);
+        m_relationshipTargetRecord->setCurrentIndex(0);
+        m_relationshipTargetSubject->clear();
+        m_relationshipEvidence->clear();
+        m_relationshipAttributes->clear();
+        RefreshAll();
+        SetStatus(tr("Workspace changed. Select an item or recipe to edit."));
     }
 
     void ItemRecipeEditorWidget::RefreshAll()
@@ -1461,14 +1482,14 @@ namespace TaintedGrailModdingSDK
         return UnsavedDraftKeys().isEmpty();
     }
 
-    void ItemRecipeEditorWidget::closeEvent(QCloseEvent* event)
+    bool ItemRecipeEditorWidget::ConfirmDraftReplacement(const QString& action)
     {
-        if (m_confirmingClose) { event->ignore(); return; }
-        const QScopedValueRollback<bool> confirming(m_confirmingClose, true);
+        if (m_confirmingReplacement) { return false; }
+        const QScopedValueRollback<bool> confirming(m_confirmingReplacement, true);
         StoreCurrentDrafts();
-        if (UnsavedDraftKeys().isEmpty()) { QWidget::closeEvent(event); return; }
+        if (UnsavedDraftKeys().isEmpty()) { return true; }
         QMessageBox prompt(QMessageBox::Warning, tr("Unsaved item and recipe changes"),
-            tr("Save all drafts before closing Item and Recipe Editor?"),
+            tr("Save all drafts before %1?").arg(action),
             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
         prompt.setObjectName(QStringLiteral("economyUnsavedChangesDialog"));
         prompt.setTextFormat(Qt::PlainText);
@@ -1477,7 +1498,12 @@ namespace TaintedGrailModdingSDK
         prompt.setDefaultButton(QMessageBox::Cancel);
         prompt.setEscapeButton(QMessageBox::Cancel);
         const int choice = prompt.exec();
-        if (choice == QMessageBox::Discard || (choice == QMessageBox::Save && SaveAllDrafts()))
+        return choice == QMessageBox::Discard || (choice == QMessageBox::Save && SaveAllDrafts());
+    }
+
+    void ItemRecipeEditorWidget::closeEvent(QCloseEvent* event)
+    {
+        if (ConfirmDraftReplacement(tr("closing Item and Recipe Editor")))
         {
             QWidget::closeEvent(event);
         }

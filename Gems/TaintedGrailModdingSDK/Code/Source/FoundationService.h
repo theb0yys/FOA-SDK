@@ -27,7 +27,18 @@
 #include "TaintedInterfaceUiUtilities.h"
 #include "TerrainImportHost.h"
 
+#include <memory>
+
 class QImage;
+
+namespace TaintedGrailModdingSDK::ExecutionFramework
+{
+    class FrameworkExecutionService;
+    struct Context;
+    struct HostBinding;
+    struct Qualification;
+    struct HostPolicy;
+}
 
 namespace TaintedGrailModdingSDK
 {
@@ -53,8 +64,19 @@ namespace TaintedGrailModdingSDK
         : private ExtensionRequestBus::Handler
     {
     public:
+        AZ_TYPE_INFO(FoundationService, "{39A0D2B0-ECF2-49FC-8A1F-F47ACDC8E8A5}");
         static FoundationService& Get();
         explicit FoundationService(FoundationWorkspaceLoadDependencies workspaceLoadDependencies);
+
+        ~FoundationService();
+        AZStd::string GetFrameworkProfileFingerprint() const;
+        ExecutionFramework::FrameworkExecutionService* GetFrameworkExecution() const;
+        bool ConfigureFrameworkExecution(const ExecutionFramework::Context&, const AZStd::string& privateRoot,
+            const AZStd::vector<ExecutionFramework::HostBinding>&,
+            const AZStd::vector<ExecutionFramework::Qualification>&,
+            const ExecutionFramework::HostPolicy&, AZStd::string* error = nullptr);
+        bool CanChangeFrameworkContext() const;
+        void StopFrameworkExecution();
 
         void Initialize();
         void Shutdown();
@@ -267,6 +289,7 @@ namespace TaintedGrailModdingSDK
             AZStd::string message,
             AZStd::string locator);
 
+        std::unique_ptr<ExecutionFramework::FrameworkExecutionService> m_frameworkExecution;
         WorkspaceModel m_workspace;
         AZStd::string m_workspaceFilePath;
         AZStd::string m_workspaceRootPath;

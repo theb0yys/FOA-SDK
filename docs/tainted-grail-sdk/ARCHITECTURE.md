@@ -430,3 +430,23 @@ A change to an invariant, layer boundary, durable identity, schema, provider exe
 - maintainer approval before implementation and before merge.
 
 The process route is defined by `.codex/workflows/foa_capability_execution_contract.md`.
+
+## Framework execution service (M3)
+
+Foundation owns one `ExecutionFramework::FrameworkExecutionService` for the exact
+workspace, pack and profile. Trusted host registration supplies reviewed bindings,
+read-only current configuration, qualification observations and explicit policy.
+The service produces immutable M1 plans; confirmation binds the exact plan and
+current session decisions. Its bounded worker executes supported staging phases
+through a private M2 supervisor. It never connects another public M2 bus handler.
+
+Execution and artifact repositories retain durable observations and verified
+custody. The target ledger publishes ownership with the final transaction.
+Candidate evidence projection returns values for the existing review owner;
+it cannot register or promote evidence. Foundation refuses context changes while
+work or unresolved quarantine exists, and joins the service on Qt `aboutToQuit`
+and component deactivation. Cached status and cancellation contain no disk scans.
+
+The initial route supports MATERIALIZE, BUILD and PACKAGE with read-only, process
+and staging effects. Domain planner adapters, installation mutation and game or
+Unity launch are separate milestones. See [accepted M3 design](FRAMEWORK_EXECUTION_M3_DESIGN.md).

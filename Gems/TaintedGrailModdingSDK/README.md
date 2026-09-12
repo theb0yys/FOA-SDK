@@ -132,3 +132,13 @@ The checks validate public governance, Gem registration, exact source/test manif
 ## Current boundary
 
 All 28 editor panes have registered lifecycle and navigation contracts. The Quest and State Inspector reads local QuestDefinition documents for validation and review only. The Asset Browser Preview pane consumes only staged preview evidence; the Item and Recipe Editor can copy the latest prepared preview route into pending item icon, asset, and evidence fields, while typed selector binding, scene mutation, catalog promotion, deployment, and runtime authority remain disabled. Road Atlas and Avalon AI are optional Tool Gems with validated, durable editor-owned JSON workflows. Provider retrieval and executable Mono/IL2CPP packages remain separately gated. No displayed, imported, typed, validated, or reviewed state grants runtime execution by itself.
+
+### Framework Orchestrator and Repositories (M3)
+
+The Foundation-owned execution service supports immutable preview, exact-plan
+confirmation, bounded submission/cancellation, durable history and verified output
+custody through the M2 process supervisor. Its initial host-private route supports
+MATERIALIZE, BUILD and PACKAGE staging jobs. Registration, qualification and allowed
+policy are distinct host decisions. Restart restores history without restoring
+permission to execute. There is no new domain pane or deployment route in M3.
+See [the design and acceptance matrix](../../docs/tainted-grail-sdk/FRAMEWORK_EXECUTION_M3_DESIGN.md).

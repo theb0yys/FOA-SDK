@@ -64,9 +64,9 @@ def validate(root: Path = ROOT) -> list[str]:
                     owners.append(manifest.name)
                     require(entries.count(f"Source/{name}") == 1, f"Duplicate inventory: {name}")
             require(owners == ["taintedgrailmoddingsdk_core_files.cmake"], f"Unique Core ownership required: {name}")
-        for path in source.glob("*"):
-            if path.is_file() and path.name not in FAMILY and path.suffix in (".h", ".cpp"):
-                require(not re.search(r'#include\s+"CapabilityExecution', code_only(path.read_text(encoding="utf-8"))),
+        for path in source.rglob("*"):
+            if path.is_file() and path.name not in FAMILY and path.suffix in (".h", ".cpp") and path.relative_to(source).as_posix() != "ExecutionFramework/FrameworkExecutionCodec.h":
+                require(not re.search(r'#include\s+[<"][^>"]*CapabilityExecution', code_only(path.read_text(encoding="utf-8"))),
                         f"Unauthorised production consumer: {path.name}")
         manifest = read(root, CODE / MANIFEST)
         require(tuple(re.findall(r"(?m)^\s*(Tests/\S+)\s*$", manifest)) == TESTS, "Exact three-file test manifest required.")
@@ -76,7 +76,7 @@ def validate(root: Path = ROOT) -> list[str]:
             require("TEST(" in body and "CapabilityExecution" in body, f"Compiled tests absent: {test}")
             require("QCoreApplication" not in body and "AzToolsFramework" not in body, f"Test must remain Core-only: {test}")
         cmake = read(root, CODE / "CMakeLists.txt")
-        blocks = re.findall(r"ly_add_target\((.*?)\n    \)", cmake, re.S)
+        blocks = re.findall(r"^    ly_add_target\((.*?)^    \)", cmake, re.S | re.M)
         target = [b for b in blocks if "NAME ${gem_name}." + TARGET + " " in b]
         require(len(target) == 1, "Exactly one dedicated compiled target required.")
         if target:

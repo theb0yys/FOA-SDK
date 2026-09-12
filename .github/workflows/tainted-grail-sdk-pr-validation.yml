@@ -257,7 +257,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   tool-execution-operational:
-    name: Exact-head M2 process supervision and isolation
+    name: Exact-head M2 and M3 process execution
     needs: static-validation
     if: needs.static-validation.outputs.host_required == 'true'
     runs-on: windows-2022
@@ -302,16 +302,33 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = Join-Path $env:RUNNER_TEMP "foa-tool-execution-m2"
-          cmake --build $buildDir --config "$env:CONFIGURATION" --target ExternalToolchain.Execution.Tests ExternalToolchain.Execution.Operational.Tests ExternalToolchain.Execution.Fixture --parallel 2
+          cmake --build $buildDir --config "$env:CONFIGURATION" --target ExternalToolchain.Execution.Tests ExternalToolchain.Execution.Operational.Tests ExternalToolchain.Execution.Fixture TaintedGrailModdingSDK.FrameworkExecution.Tests TaintedGrailModdingSDK.FrameworkExecution.Operational.Tests --parallel 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run required M2 contract and native operational tests
         shell: pwsh
         run: |
+          # Use the runner's absolute temporary root; user TEMP may be a short-name alias.
+          # The production pinned-path/reparse/hardlink checks remain enabled.
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
           $buildDir = Join-Path $env:RUNNER_TEMP "foa-tool-execution-m2"
           $fixture = Join-Path $buildDir "bin\profile\ExternalToolchain.Execution.Fixture.exe"
           if (-not (Test-Path -LiteralPath $fixture -PathType Leaf)) { throw "BLOCKED: M2 native fixture is unavailable." }
           ctest --test-dir $buildDir -C "$env:CONFIGURATION" --output-on-failure --no-tests=error -R "$env:TEST_PATTERN"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run required M3 contract and native orchestration tests
+        shell: pwsh
+        run: |
+          # Use the runner's absolute temporary root; user TEMP may be a short-name alias.
+          # The production pinned-path/reparse/hardlink checks remain enabled.
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $buildDir = Join-Path $env:RUNNER_TEMP "foa-tool-execution-m2"
+          ctest --test-dir $buildDir -C "$env:CONFIGURATION" --output-on-failure --no-tests=error -R 'TaintedGrailModdingSDK\.FrameworkExecution\.Tests'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ctest --test-dir $buildDir -C "$env:CONFIGURATION" --output-on-failure --no-tests=error -R 'TaintedGrailModdingSDK\.FrameworkExecution\.Operational\.Tests'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   windows-prerequisites:

@@ -1084,3 +1084,32 @@ requests bound to its fingerprint are rejected, with no silent capability upgrad
 Execution API version 2.0.0 and discovery API 1.1.0 are unchanged. Historical
 invocation records retain their observed profile fingerprint and remain readable;
 they never authorize replay, migration to a new profile, or artifact promotion.
+
+## Framework execution M3 private store
+
+Owner: SDK Framework (`capability-execution`, `execution-receipts`, `artifact-ownership`).
+`foa-framework-execution-store-v1`, integer version 1, is a separate host-private
+store. It adds strict Framework readers of the unchanged M1 canonical values;
+M1 Core still has no filesystem reader, writer or repository dependency.
+
+A context header binds workspace, pack and exact profile. An exclusive writer lock
+protects append-only transaction directories. Each directory contains an immutable
+plan intent, exact phase/M2 request intents, and an optional finished transaction.
+The finished transaction retains the M1 receipt, actual M2 observations and cleanup
+quarantine flag. Its SHA-256 committed marker is published last. Output payloads
+use symbolic root IDs and safe relative paths with create-new custody.
+
+Interrupted transactions remain quarantined. The worker reconciles exact referenced
+M2 terminal records after M2 cleanup and appends `recovery-observation` envelopes;
+these observations do not create a successful M1 receipt or transfer artifact
+ownership. Unknown cleanup remains unknown. No tool is replayed and no stored
+confirmation becomes a live session grant. Older builds ignore this separate store;
+unknown versions, malformed context and contradictory transactions fail closed.
+There is no automatic migration, eviction or deletion.
+
+Limits are 1,024 lineages, 64 attempts per lineage, 64 entries per collection,
+2 MiB per M1 canonical value, 256 MiB total metadata, 1 GiB per artifact and a
+4 GiB aggregate store admission budget. M1's stricter embedded-reference and
+compositional receipt limits still apply. Oversized executable plans are refused
+before admission. Metadata readers use at most eight joined workers off Editor
+event paths. See [M3 design and acceptance](FRAMEWORK_EXECUTION_M3_DESIGN.md).

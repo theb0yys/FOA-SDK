@@ -90,6 +90,7 @@ namespace TaintedGrailModdingSDK
 
     void FoundationService::ClearWorkspaceScopedState(bool clearWorkspaceLocation)
     {
+        StopFrameworkExecution();
         m_terrainImportHost.reset();
         if (clearWorkspaceLocation)
         {
@@ -107,6 +108,7 @@ namespace TaintedGrailModdingSDK
 
     void FoundationService::Shutdown()
     {
+        StopFrameworkExecution();
         if (ExtensionRequestBus::Handler::BusIsConnected())
         {
             ExtensionRequestBus::Handler::BusDisconnect();
@@ -125,6 +127,7 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationService::BeginWorkspaceChange()
     {
+        if (!CanChangeFrameworkContext()) { return false; }
         if (m_workspaceChangeInProgress)
         {
             return false;
@@ -254,6 +257,24 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        // Admission handlers can persist drafts in the still-current workspace.
+        // A reload (including an alias document for that root) must publish those
+        // saved catalog/source values, not the pre-admission candidate.
+        const bool sameRoot = PathPolicyService::IsCanonicalPathContained(
+            m_workspaceRootPath, candidate.m_workspaceRootPath, AZ_TRAIT_USE_WINDOWS_FILE_API)
+            && PathPolicyService::IsCanonicalPathContained(
+                candidate.m_workspaceRootPath, m_workspaceRootPath, AZ_TRAIT_USE_WINDOWS_FILE_API);
+        if (sameRoot)
+        {
+            auto refreshed = m_workspaceLoadService.BuildCandidate(filePath);
+            if (!refreshed.IsSuccess())
+            {
+                m_workspaceChangeInProgress = false;
+                if (error) { *error = AZStd::string(refreshed.GetError()); }
+                return false;
+            }
+            candidate = refreshed.TakeValue();
+        }
         ClearWorkspaceScopedState(true);
         m_workspace = AZStd::move(candidate.m_workspace);
         m_workspaceFilePath = AZStd::move(candidate.m_workspaceFilePath);
@@ -270,6 +291,9 @@ namespace TaintedGrailModdingSDK
         const PackManifest& pack,
         AZStd::string* error)
     {
+        if (pack.m_packId == m_activePackId && !CanChangeFrameworkContext())
+        { if (error) { *error = "Finish or cancel Framework execution before changing the active pack."; } return false; }
+        if (pack.m_packId == m_activePackId) { StopFrameworkExecution(); }
         if (!pack.HasStableIdentity())
         {
             if (error)
@@ -312,6 +336,9 @@ namespace TaintedGrailModdingSDK
         const PackManifest& pack,
         AZStd::string* error)
     {
+        if (!CanChangeFrameworkContext())
+        { if (error) { *error = "Finish or cancel the active Framework execution before changing packs."; } return false; }
+        StopFrameworkExecution();
         const AZStd::string previousActiveId = m_activePackId;
         if (!UpsertPack(pack, error))
         {
@@ -332,6 +359,9 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& filePath,
         AZStd::string* error)
     {
+        if (!CanChangeFrameworkContext())
+        { if (error) { *error = "Finish or cancel the active Framework execution before changing packs."; } return false; }
+        StopFrameworkExecution();
         // The persistence boundary validates the draft and destination before any
         // published state changes. Do not call UpsertPack: it notifies observers.
         const auto result = m_packPersistence.Save(pack, filePath);
@@ -405,6 +435,9 @@ namespace TaintedGrailModdingSDK
         const AZStd::string& filePath,
         AZStd::string* error)
     {
+        if (!CanChangeFrameworkContext())
+        { if (error) { *error = "Finish or cancel the active Framework execution before changing packs."; } return false; }
+        StopFrameworkExecution();
         AZ::Outcome<PackManifest, AZStd::string> result =
             m_packPersistence.Load(filePath);
         if (!result.IsSuccess())
@@ -430,6 +463,8 @@ namespace TaintedGrailModdingSDK
 
     void FoundationService::ClearActivePack()
     {
+        if (!CanChangeFrameworkContext()) { return; }
+        StopFrameworkExecution();
         m_activePackId.clear();
         m_activePackFilePath.clear();
         RefreshSnapshot();

@@ -57,9 +57,18 @@ separately: earlier successful saves remain saved if a later form fails. Retry
 Save after correcting the error. Discard closes without saving remaining drafts.
 A clean form or one reverted to its saved values closes without prompting.
 
-This protection applies to pane close; workspace replacement and crash recovery
-for this editor are separate work. Saved definitions and links reload from catalog schema 2; existing schema 1 catalogs retain their
-supported migration path.
+Opening a workspace from SDK Status or Catalog Browser offers the same
+**Save / Discard / Cancel** choices for all retained drafts. Save writes to the
+current workspace before switching. Cancel or a failed Save keeps the current
+workspace and remaining drafts. Discard clears drafts only after the replacement
+succeeds; a later cancellation in Pack Manager also preserves them. Invalid
+workspace files leave the current forms intact.
+
+Reloading the same workspace uses the same protection. A successful Save reloads
+the newly saved profiles, links and evidence. A successful replacement resets the
+forms, so drafts cannot appear in another workspace with matching record IDs.
+Crash recovery for this editor remains separate work. Saved definitions and links
+use the canonical catalog's supported schema and migration path.
 
 Acquisition relationships and evidence/permission details have separate tabs.
 They still require exact associated evidence and do not grant runtime access.
@@ -430,3 +439,14 @@ module identity, individual checks and native exit status outside source.
 
 The runner requires prepared Editor assets; compilation and static tests remain
 separate gates. This acceptance establishes Editor authoring behavior only.
+
+## Workspace-switch acceptance
+
+Run the same private Editor runner with `-Suite workspace-status` and then
+`-Suite workspace-catalog`, using a fresh external output root for each run.
+These suites use the real workspace pickers and verify all retained forms,
+Save/Discard/Cancel, picker cancellation, invalid targets, failed validation and
+catalog writes, partial Save and retry, same-root reload freshness, a later Pack
+Manager veto, failed post-admission reload and matching record IDs across roots.
+Each workspace interaction must complete within the five-second synthetic fixture
+budget. Run the default close suite as a separate regression check.

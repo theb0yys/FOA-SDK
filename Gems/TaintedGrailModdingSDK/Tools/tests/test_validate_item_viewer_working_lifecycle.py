@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
+import ast
+import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -231,6 +234,115 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(RuntimeError, "stale UX state"):
                 contract.validate_item_viewer(root)
+
+
+class ItemViewerPaneLookupTests(unittest.TestCase):
+    def test_lookup_uses_live_registered_dock_when_floating_title_matches(self) -> None:
+        class Dock:
+            def __init__(self, object_name: str, *, visible: bool = True, valid: bool = True):
+                self.name, self.visible, self.valid = object_name, visible, valid
+
+            def objectName(self):
+                if not self.valid:
+                    raise RuntimeError("Deleted native dock")
+                return self.name
+
+            def windowTitle(self):
+                return "Tainted Grail Item and Recipe Editor"
+
+            def isVisible(self):
+                return self.visible
+
+        expected = Dock("TaintedGrailModdingSDK.ItemRecipeEditor")
+        widgets = [Dock("floating-container"),
+                   Dock(expected.name, valid=False), Dock(expected.name, visible=False), expected]
+        smoke = ast.parse((TOOLS_ROOT / "editor_tests/alpha_item_viewer_live_smoke.py").read_text(encoding="utf-8"))
+        constants = [node for node in smoke.body if isinstance(node, ast.Assign)
+                     and any(isinstance(target, ast.Name) and target.id in
+                             {"PANE_NAME", "STATUS_PANE_NAME", "PANE_OBJECT_NAMES"} for target in node.targets)]
+        test_function = next(node for node in smoke.body if isinstance(node, ast.FunctionDef)
+                             and node.name == "ItemViewerLifecycleSmoke")
+        lookup = next(node for node in test_function.body if isinstance(node, ast.FunctionDef)
+                      and node.name == "find_pane")
+        namespace = {"application": type("Application", (), {"allWidgets": lambda self: widgets})(),
+                     "QtWidgets": type("Widgets", (), {"QDockWidget": Dock}),
+                     "isValid": lambda widget: widget.valid}
+        exec(compile(ast.Module(body=constants + [lookup], type_ignores=[]), "pane-lookup", "exec"), namespace)
+        self.assertIs(expected, namespace["find_pane"]("Tainted Grail Item and Recipe Editor"))
+
+
+@unittest.skipUnless(shutil.which("pwsh"), "PowerShell 7 is required for the runner fixture copy")
+class ItemViewerRunnerSetupTests(unittest.TestCase):
+    def run_copy(self, root: Path, seed: Path, destination: Path) -> subprocess.CompletedProcess[str]:
+        runner = (TOOLS_ROOT / "run_alpha_item_viewer_windows_validation.ps1").read_text(encoding="utf-8")
+        # Execute the actual runner setup block without invoking configure/build or Editor.
+        start = runner.index('        $seedO3deRoot = Join-Path $seedRoot ')
+        end = runner.index('        $assetBrowserRoot = ', start)
+        script = root / "copy-fixture.ps1"
+        script.write_text(
+            'param([string]$seedRoot, [string]$o3deRoot)\n$ErrorActionPreference = "Stop"\n'
+            + runner[start:end], encoding="utf-8",
+        )
+        return subprocess.run(
+            [shutil.which("pwsh"), "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(script),
+             "-seedRoot", str(seed), "-o3deRoot", str(destination)],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+
+    def test_runner_copies_nested_fixture_with_literal_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            seed = root / "seed [literal] with spaces"
+            source = seed / "workspace/Extracted/PreviewArtifacts/O3DE"
+            destination = root / "destination [literal]"
+            destination.mkdir()
+            files = {"[proof].json": b'{"ImportProofId":"fixture.proof"}',
+                     "nested assets/model.bin": bytes(range(256)), ".fixture-marker": b"owned fixture"}
+            for relative, data in files.items():
+                path = source / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+            result = self.run_copy(root, seed, destination)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            copied = {p.relative_to(destination).as_posix(): p.read_bytes()
+                      for p in destination.rglob("*") if p.is_file()}
+            self.assertEqual(files, copied)
+
+    def test_runner_supplies_one_test_case_name_for_the_smoke_script(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            runner = (TOOLS_ROOT / "run_alpha_item_viewer_windows_validation.ps1").read_text(encoding="utf-8")
+            start = runner.index('        $editorArguments = @(')
+            end = runner.index('        $argumentLine = ', start)
+            script = root / "launch-arguments.ps1"
+            script.write_text(
+                'param([string]$projectRoot, [string]$smokeScript)\n'
+                + runner[start:end] + '\nConvertTo-Json -Compress -InputObject $editorArguments\n',
+                encoding="utf-8",
+            )
+            smoke = root / "smoke with spaces.py"
+            result = subprocess.run(
+                [shutil.which("pwsh"), "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(script),
+                 "-projectRoot", str(root), "-smokeScript", str(smoke)],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            arguments = json.loads(result.stdout)
+            self.assertEqual(str(smoke), arguments[arguments.index("--runpythontest") + 1])
+            cases = [arg.split("=", 1)[1] for arg in arguments if arg.startswith("--pythontestcase=")]
+            self.assertEqual(["ItemViewerLifecycleSmoke"], cases)
+
+    def test_runner_missing_fixture_fails_without_changing_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            destination = root / "destination"
+            destination.mkdir()
+            sentinel = destination / "existing.json"
+            sentinel.write_bytes(b"existing fixture")
+            result = self.run_copy(root, root / "missing-seed", destination)
+            self.assertNotEqual(0, result.returncode)
+            self.assertEqual([sentinel], list(destination.iterdir()))
+            self.assertEqual(b"existing fixture", sentinel.read_bytes())
 
 
 if __name__ == "__main__":

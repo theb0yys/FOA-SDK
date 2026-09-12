@@ -24,9 +24,14 @@ import sys
 import azlmbr.paths
 import azlmbr.legacy.general as general
 from PySide6 import QtWidgets
+from shiboken6 import isValid
 
 PANE_NAME = "Tainted Grail Item and Recipe Editor"
 STATUS_PANE_NAME = "Tainted Grail SDK Status"
+PANE_OBJECT_NAMES = {
+    PANE_NAME: "TaintedGrailModdingSDK.ItemRecipeEditor",
+    STATUS_PANE_NAME: "TaintedGrailModdingSDK.FoundationStatus",
+}
 SELECTOR_OBJECT_NAME = "TaintedGrailItemVisualSelector"
 GRID_OBJECT_NAME = "FOAItemViewerThumbnailGrid"
 VISUAL_TAB_NAME = "Visual Preview"
@@ -68,6 +73,7 @@ class Tests:
         "Selected visual restored after Item Viewer close/reopen",
         "Selected visual was not restored after Item Viewer close/reopen",
     )
+    pane_closed = ("Closed Item Viewer pane was destroyed", "Closed Item Viewer pane was not destroyed")
     reopened = ("Pane closed and reopened with one viewer lifecycle", "Pane did not reconstruct cleanly after reopen")
 
 
@@ -103,8 +109,11 @@ def ItemViewerLifecycleSmoke() -> None:
 
     def find_pane(name: str):
         for widget in application.allWidgets():
-            if isinstance(widget, QtWidgets.QDockWidget) and (
-                widget.objectName() == name or widget.windowTitle() == name
+            # Floating containers inherit the pane title; only the registered
+            # dock's save-key object name identifies the pane itself.
+            if (
+                isValid(widget) and isinstance(widget, QtWidgets.QDockWidget)
+                and widget.isVisible() and widget.objectName() == PANE_OBJECT_NAMES[name]
             ):
                 return widget
         return None
@@ -114,13 +123,14 @@ def ItemViewerLifecycleSmoke() -> None:
 
     def find_selector():
         pane = find_item_pane()
-        return pane.findChild(QtWidgets.QWidget, SELECTOR_OBJECT_NAME) if pane else None
+        selector = pane.findChild(QtWidgets.QWidget, SELECTOR_OBJECT_NAME) if pane else None
+        return selector if selector is not None and isValid(selector) else None
 
     def find_product_table(selector):
-        if not selector:
+        if selector is None or not isValid(selector):
             return None
         for table in selector.findChildren(QtWidgets.QTableWidget):
-            if table.accessibleName() in {"Evidence-backed preview products", "Selected asset details"}:
+            if isValid(table) and table.accessibleName() in {"Evidence-backed preview products", "Selected asset details"}:
                 return table
         return None
 
@@ -134,18 +144,17 @@ def ItemViewerLifecycleSmoke() -> None:
     # Opening the status pane exercises the normal automatic-workspace startup
     # path. The PowerShell harness points LOCALAPPDATA at an isolated fixture, so
     # this cannot consume or overwrite a developer's real FOA-SDK workspace.
+    def workspace_ready() -> bool:
+        pane = find_pane(STATUS_PANE_NAME)
+        return general.is_pane_visible(STATUS_PANE_NAME) and pane is not None and any(
+            isValid(label) and label.text() == "Ready to author"
+            for label in pane.findChildren(QtWidgets.QLabel)
+        )
+
     general.open_pane(STATUS_PANE_NAME)
     Report.critical_result(
         Tests.refresh_fixture_ready,
-        helper.wait_for_condition(
-            lambda: general.is_pane_visible(STATUS_PANE_NAME)
-            and find_pane(STATUS_PANE_NAME) is not None
-            and any(
-                label.text() == "Ready to author"
-                for label in find_pane(STATUS_PANE_NAME).findChildren(QtWidgets.QLabel)
-            ),
-            20.0,
-        ),
+        helper.wait_for_condition(workspace_ready, 20.0),
     )
     status_pane = find_pane(STATUS_PANE_NAME)
     if status_pane:
@@ -268,16 +277,27 @@ def ItemViewerLifecycleSmoke() -> None:
     )
 
     pane.close()
-    helper.wait_for_condition(lambda: not general.is_pane_visible(PANE_NAME), 10.0)
-    general.open_pane(PANE_NAME)
-    reopened = helper.wait_for_condition(
-        lambda: general.is_pane_visible(PANE_NAME)
-        and find_selector() is not None
-        and find_selector().findChild(QtWidgets.QListWidget, GRID_OBJECT_NAME) is not None
-        and find_product_table(find_selector()) is not None
-        and find_product_table(find_selector()).rowCount() > 0,
-        20.0,
+    # Visibility changes before Qt processes the dock's deferred deletion. Opening
+    # immediately can reuse that closing dock, which is then deleted underneath us.
+    Report.critical_result(
+        Tests.pane_closed,
+        helper.wait_for_condition(
+            lambda: not general.is_pane_visible(PANE_NAME) and not isValid(pane), 10.0
+        ),
     )
+    general.open_pane(PANE_NAME)
+
+    def viewer_reopened() -> bool:
+        selector = find_selector()
+        table = find_product_table(selector)
+        grid = selector.findChild(QtWidgets.QListWidget, GRID_OBJECT_NAME) if selector else None
+        return (
+            general.is_pane_visible(PANE_NAME)
+            and grid is not None and isValid(grid)
+            and table is not None and table.rowCount() > 0
+        )
+
+    reopened = helper.wait_for_condition(viewer_reopened, 20.0)
     Report.critical_result(Tests.reopened, reopened)
 
     reopened_grid = (

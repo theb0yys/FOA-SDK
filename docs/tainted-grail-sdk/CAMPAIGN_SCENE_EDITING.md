@@ -1788,3 +1788,53 @@ fallback are exercised. Both original programs remain byte-identical in the
 processed native shader asset. This validates their explicit synthetic inputs,
 not actual scene visibility or full-map appearance. The inspected DLL hashes
 remain unchanged; no game files or saves were modified.
+
+
+## Native multi-instance draw submission
+
+The private native draw packet v3 retains every v2 field and requires an explicit
+`instance_count` integer from 1 through 4,096. The native instance offset is zero.
+The caller owns the matching visibility and property streams; the renderer does
+not infer their source ordering or treat source ordinals as GPU slots. The pinned
+RHI draw packet receives this exact count through `SetDrawInstanceArguments`.
+
+Existing draw v1/v2 packets retain one instance and reject the new field. Entity
+binding wrappers v1/v2 and grouped wrapper v3 are unchanged; their nested draw
+may use v3. Persisted binding JSON retains the count. Earlier native binaries
+reject v3 draws; retain the earlier level and binary when rolling back. There is
+no implicit upgrade or lossy downgrade.
+
+Each draw is bounded to 2,097,152 index-instance invocations, preserving the prior
+8 MiB index-stream ceiling as a work bound when instancing multiplies geometry.
+Invalid counts, unsupported versions and excessive work fail before resource
+admission. Existing per-draw, total resident-memory and scheduling bounds remain.
+Direct/indirect visibility, sparse GPU slots, saved bindings and original-shader
+pixels require native acceptance. Submission does not qualify game culling,
+controller/probe state, complete scene appearance or game return.
+
+
+`Tools/editor_tests/source_instance_dispatch_cases.py` and
+`source_instance_dispatch_editor.py` qualify the new draw field using the exact
+original DOTS Unlit programs and synthetic inputs. The native run covers nineteen
+descriptors: nine prior single-instance cases, eight multi-instance cases including
+capacity gaps, direct 256 and indirect 4,096 instances, and conventional v1/v3
+count-one equivalence. Sixteen malformed/version/count/workload inputs reject
+without changing the admitted draw. At 4,096 instances, 510 indices are admitted
+and 513 indices exceed the work bound and reject.
+
+The test clears entity selection before capture so editor transform gizmos do not
+contaminate scene comparisons. The original attempt exposed that fixture error;
+corrected fresh captures pass. Every expected instance interior and all pixels
+outside the bounded rasterization margins are checked. A reopened editor may use
+a different viewport resolution: its expected clip geometry/colors and cleared
+frame are tested at that native resolution without resampling. Initial and fresh
+runs pass 4,676,922 interior pixels and 37,073,875 outside pixels; eleven
+same-resolution full-frame pairs pass 25,915,032 pixels. The saved binding hash
+is identical, and hide/show, deletion undo/redo, restoration and full release pass.
+
+The synthetic persistent entity uses an unused global-constant matrix destination
+to satisfy the existing binding envelope. Its per-instance transforms remain
+caller-owned buffer data. This persistence test does not claim that moving the
+entity updates those instance matrices; individual instance editing and actual
+runtime visibility remain separate obligations. Full maps, final lighting and
+materials, the four-map interface and game export are still unfinished.

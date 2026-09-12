@@ -751,3 +751,18 @@ lighting/materials, four-map UI and game return remain unfinished.
 The original DOTS Unlit programs pass native DX12 rendering for all nine synthetic
 instance/material cases: 1,352,325 interior pixels and 7,974 outside samples match.
 The exact DLL inspection permission is fulfilled; game files and saves are unchanged.
+
+
+Native instance-dispatch checkpoint (2026-09-12): private draw v3 now submits
+explicit counts up to 4,096 through the pinned RHI. A per-draw index-instance
+work bound rejects excessive geometry before admission; v1/v2 remain single
+instance. Nineteen native descriptors, sixteen rejection controls, direct 256 and
+indirect 4,096 instances pass. Sparse slots and visibility subsets/permutations
+use the unchanged original DOTS Unlit programs with explicit synthetic values.
+Across initial and fresh-reopen frames, 4,676,922 interior pixels and 37,073,875
+outside pixels pass exact comparison; eleven same-resolution full-frame pairs
+also pass. Saved bindings, hide/show and deletion undo/redo are preserved.
+The rebuild and all three compiled registrations pass (595 cases; two symlink
+skips). The static suite passes 1,249 cases with nine Windows symlink skips.
+Actual game visibility/lighting, remaining materials, complete scenes, four-map
+UI and export still need work. Full maps are not ready for 1:1 testing.

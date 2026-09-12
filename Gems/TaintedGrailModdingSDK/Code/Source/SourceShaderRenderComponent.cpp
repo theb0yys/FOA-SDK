@@ -28,6 +28,7 @@
 #include <Atom/RPI.Public/Buffer/Buffer.h>
 #include <Atom/RPI.Public/Image/StreamingImage.h>
 #include <Atom/RHI/DrawPacketBuilder.h>
+#include <Atom/RHI/DeviceDrawArguments.h>
 #include <Atom/RHI/PipelineState.h>
 #include <Atom/RHI.Reflect/InputStreamLayoutBuilder.h>
 #include <cmath>
@@ -41,6 +42,8 @@ namespace TaintedGrailModdingSDK
         using Json = rapidjson::Value;
         using Clock = AZStd::chrono::steady_clock;
         constexpr size_t MaxDescriptor = 16 * 1024 * 1024;
+        constexpr AZ::u32 MaxInstancesPerDraw = 4096;
+        constexpr size_t MaxInstanceIndexWork = 2 * 1024 * 1024;
         constexpr size_t MaxEntityDraws = 1024;
         constexpr size_t MaxDrawsPerEntity = 128;
         constexpr size_t MaxGeometryBuffers = 32768;
@@ -150,7 +153,7 @@ namespace TaintedGrailModdingSDK
         size_t scheduleIndex = 0, ownedSamplers = 0;
         AZStd::shared_ptr<SharedStage> sharedStages[2];
         Stage stages[2];
-        AZ::u32 vertexCount{},sortKey{};
+        AZ::u32 vertexCount{},sortKey{},instanceCount{1};
         AZ::EntityId entity;
         AZStd::string status = "LOADING";
         AZStd::vector<Matrix> matrices;
@@ -171,9 +174,17 @@ namespace TaintedGrailModdingSDK
         }
         bool ParseFields(const Json& doc)
         {
-            if (!Keys(doc,{"version","shader","vertex_count","streams","indices","stages","sort_key"}) ||
-                !Uint(doc["version"],2,1) || !AssetPath(doc["shader"],".foashader.azshader") ||
+            if (!doc.IsObject() || !doc.HasMember("version") || !Uint(doc["version"],3,1)) { return false; }
+            const auto version=doc["version"].GetUint();
+            if (!(version==3 ? Keys(doc,{"version","shader","vertex_count","streams","indices","stages","sort_key","instance_count"}) :
+                Keys(doc,{"version","shader","vertex_count","streams","indices","stages","sort_key"})) ||
+                !AssetPath(doc["shader"],".foashader.azshader") ||
                 !Uint(doc["vertex_count"],1000000,3) || !Uint(doc["sort_key"],0xffffffffu)) { return false; }
+            if (version==3)
+            {
+                if (!Uint(doc["instance_count"],MaxInstancesPerDraw,1)) { return false; }
+                instanceCount=doc["instance_count"].GetUint();
+            }
             shaderPath=doc["shader"].GetString(); vertexCount=doc["vertex_count"].GetUint(); sortKey=doc["sort_key"].GetUint();
             const auto& channels=doc["streams"];
             if (!channels.IsArray() || channels.Empty() || channels.Size()>16) { return false; }
@@ -192,7 +203,8 @@ namespace TaintedGrailModdingSDK
                 streams.push_back(AZStd::move(stream));
             }
             indices=Hex(doc["indices"],8*1024*1024);
-            if (indices.empty() || indices.size()%12) { return false; }
+            if (indices.empty() || indices.size()%12 ||
+                indices.size()/4 > MaxInstanceIndexWork/instanceCount) { return false; }
             for (size_t i=0;i<indices.size();i+=4)
             {
                 const AZ::u32 index=indices[i]|(AZ::u32(indices[i+1])<<8)|(AZ::u32(indices[i+2])<<16)|(AZ::u32(indices[i+3])<<24);
@@ -219,7 +231,7 @@ namespace TaintedGrailModdingSDK
                     if (!Keys(row,{"slot","asset"}) || !Uint(row["slot"],127) || !registers.insert(row["slot"].GetUint()).second || !AssetPath(row["asset"],".streamingimage")) { return false; }
                     Image image; image.slot=row["slot"].GetUint(); image.path=row["asset"].GetString(); target.images.push_back(AZStd::move(image));
                 }
-                if (doc["version"].GetUint() == 2)
+                if (version >= 2)
                 {
                     if (!stage["buffers"].IsArray() || stage["buffers"].Size()>128) { return false; }
                     for (const auto& row : stage["buffers"].GetArray())
@@ -735,6 +747,7 @@ namespace TaintedGrailModdingSDK
         if (!state || !state->IsInitialized() || state->GetType()!=AZ::RHI::PipelineStateType::Draw) { return false; }
         AZ::RHI::DrawPacketBuilder builder(indexBuffer->GetRHIBuffer()->GetDeviceMask()); builder.Begin(nullptr);
         builder.SetGeometryView(draw.geometry.get());
+        builder.SetDrawInstanceArguments(AZ::RHI::DrawInstanceArguments(draw.instanceCount,0));
         for (const auto& srg : draw.srgs) { builder.AddShaderResourceGroup(srg->GetRHIShaderResourceGroup()); }
         AZ::RHI::DrawPacketBuilder::DrawRequest request; request.m_pipelineState=state; request.m_listTag=draw.shader->GetDrawListTag();
         request.m_streamIndices=streamIndices; request.m_sortKey=draw.sortKey; builder.AddDrawItem(request); draw.packet=builder.End();

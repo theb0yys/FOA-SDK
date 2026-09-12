@@ -123,7 +123,7 @@ The pane protects unsaved work:
 
 - record, troop, and member selection changes are refused while the corresponding draft is dirty;
 - Foundation refreshes are deferred until drafts are saved or reverted;
-- closing the pane offers **Save / Discard / Cancel** for actor, troop and member drafts;
+- closing the pane or switching workspaces offers **Save / Discard / Cancel** for actor, troop and member drafts;
 - each save command publishes only after its validation and persistence succeed.
 
 Save includes the current unstaged member form and staged member additions, edits
@@ -155,8 +155,57 @@ drafts, cancellation without writes, failed validation, actual locked-catalog
 write failures and retries, staged membership changes, and clean reopening.
 A pass requires the expected loaded module hash and normal Editor exit. The
 recorded acceptance completed all checks with a maximum close transition of
-0.610 seconds against a five-second synthetic fixture budget; this does not
+0.453 seconds against a five-second synthetic fixture budget; this does not
 establish performance for large user catalogs.
+
+### Switching workspaces
+
+Both **SDK Status → Open existing workspace...** and **Catalog Browser → Open
+Workspace...** use the same protection for docked and floating Actor/Troop panes.
+Foundation validates the destination before prompting. Cancel, Escape, dismissing
+the prompt, cancelling the picker or an invalid destination preserves the current
+workspace and drafts.
+
+After opening a workspace, reopen the saved mod in Pack Manager before authoring.
+Population saves require an active mod; a missing active mod is a failed Save and
+keeps the current workspace open.
+
+**Save** writes dirty actor and troop/member forms to the current workspace before
+switching. A failed Save keeps that workspace open for correction or retry. If an
+earlier actor save succeeds, it stays saved even when the troop save fails or
+another pane later cancels the switch. **Discard** grants permission to replace the
+workspace, but the drafts remain in memory until Foundation commits the change.
+Another pane's veto or a failed destination reload therefore preserves them.
+
+After a successful switch, selections, member staging and all draft forms reset,
+including on same-workspace reloads. Saving before reloading the same workspace
+reads the newly saved catalog and evidence. Matching record IDs in another
+workspace never inherit the previous workspace's drafts. Clean panes do not prompt.
+
+### Workspace-switch acceptance
+
+Run both picker routes with separate fresh external output directories:
+
+```powershell
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $StatusOutputRoot `
+  -Suite workspace-status
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $CatalogOutputRoot `
+  -Suite workspace-catalog
+```
+
+Each route requires 45 checks spanning docked and floating layouts, retained draft
+fields and saved catalog bytes, partial saves, actual locked-file failures, retries,
+staged member changes, later-pane vetoes, failed post-admission reloads and shared
+IDs in separate roots. The runner also verifies the loaded module and normal
+Editor exit. Its five-second per-interaction budget applies to this synthetic
+fixture, not arbitrary catalog sizes.
+
+The pinned Windows Profile acceptance passed all 90 workspace checks with normal
+Editor exits. Maximum measured workspace interaction was 1.204 seconds.
 
 ## Persistence expectations
 

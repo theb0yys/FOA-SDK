@@ -368,6 +368,10 @@ The **Tainted Grail Actor and Troop Editor** should provide:
   cannot discard them, saving one tab preserves the other tab, and closing with unsaved work offers
   Save/Discard/Cancel. Save uses the existing actor and atomic troop commands, including the unstaged member
   form; Cancel and failed Save keep the pane open. Earlier successful saves remain saved if a later save fails;
+- workspace admission uses the same Save/Discard/Cancel decisions and saves to the still-current workspace.
+  Discard retires drafts only on Foundation's successful replacement notification, so another handler's veto
+  or failed reload preserves them. Successful replacement resets selections and member staging even for
+  same-workspace reloads or matching record IDs in another root;
 - clear empty, invalid, blocked, and persistence-failure states.
 
 The pane does not create canonical records, grant permission, invoke an adapter, launch FoA, or expose spawn

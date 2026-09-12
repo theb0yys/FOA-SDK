@@ -43,6 +43,8 @@ namespace TaintedGrailModdingSDK
     private:
         void closeEvent(QCloseEvent* event) override;
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
 
         void RefreshAll();
         void ApplyPendingFoundationRefresh();
@@ -79,7 +81,8 @@ namespace TaintedGrailModdingSDK
         void HandleTroopRecordChange();
         void HandleMemberSelectionChange();
         bool HasDirtyDrafts() const;
-        bool SaveDraftsForClose();
+        bool ConfirmDraftReplacement(const QString& action);
+        bool SaveDirtyDrafts();
 
         PopulationActorProfile BuildActorProfile() const;
         PopulationTroopProfile BuildTroopProfile() const;
@@ -170,7 +173,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_loadedActorRecordId;
         AZStd::string m_loadedTroopRecordId;
         AZStd::string m_selectedMemberLinkId;
-        bool m_closePromptOpen = false;
+        bool m_unsavedPromptOpen = false;
         bool m_actorDirty = false;
         bool m_troopDirty = false;
         bool m_memberEditorDirty = false;

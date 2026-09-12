@@ -1312,33 +1312,7 @@ namespace TaintedGrailModdingSDK
 
     void ActorTroopEditorWidget::closeEvent(QCloseEvent* event)
     {
-        if (m_closePromptOpen)
-        {
-            event->ignore();
-            return;
-        }
-        if (!HasDirtyDrafts())
-        {
-            QWidget::closeEvent(event);
-            return;
-        }
-
-        const QScopedValueRollback<bool> prompting(m_closePromptOpen, true);
-        QMessageBox prompt(
-            QMessageBox::Warning,
-            tr("Unsaved actor and troop drafts"),
-            tr("Save your actor, troop, and member changes before closing the pane?"),
-            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
-            this);
-        prompt.setObjectName("populationUnsavedChangesDialog");
-        prompt.setInformativeText(tr(
-            "Save includes unstaged member edits. Actor and troop saves are separate; "
-            "if a later save fails, earlier saves remain saved and the remaining drafts stay open."));
-        prompt.setDefaultButton(QMessageBox::Cancel);
-        prompt.setEscapeButton(QMessageBox::Cancel);
-        const int choice = prompt.exec();
-        if (choice == QMessageBox::Discard
-            || (choice == QMessageBox::Save && SaveDraftsForClose()))
+        if (ConfirmDraftReplacement(tr("closing the pane")))
         {
             QWidget::closeEvent(event);
         }
@@ -1348,7 +1322,59 @@ namespace TaintedGrailModdingSDK
         }
     }
 
-    bool ActorTroopEditorWidget::SaveDraftsForClose()
+    bool ActorTroopEditorWidget::ConfirmDraftReplacement(const QString& action)
+    {
+        if (m_unsavedPromptOpen) { return false; }
+        if (!HasDirtyDrafts()) { return true; }
+
+        const QScopedValueRollback<bool> prompting(m_unsavedPromptOpen, true);
+        QMessageBox prompt(
+            QMessageBox::Warning,
+            tr("Unsaved actor and troop drafts"),
+            tr("Save your actor, troop, and member changes before %1?").arg(action),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+            this);
+        prompt.setObjectName("populationUnsavedChangesDialog");
+        prompt.setInformativeText(tr(
+            "Save includes unstaged member edits. Actor and troop saves are separate; "
+            "if a later save fails, earlier saves remain saved and the remaining drafts stay open."));
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.setEscapeButton(QMessageBox::Cancel);
+        const int choice = prompt.exec();
+        // Discard grants admission only. Another handler or candidate reload
+        // can still fail, so retain the drafts until the replacement commits.
+        return choice == QMessageBox::Discard
+            || (choice == QMessageBox::Save && SaveDirtyDrafts());
+    }
+
+    bool ActorTroopEditorWidget::CanChangeWorkspace(const FoundationService& service)
+    {
+        return &service != &FoundationService::Get()
+            || ConfirmDraftReplacement(tr("switching workspaces"));
+    }
+
+    void ActorTroopEditorWidget::OnWorkspaceChanged(const FoundationService& service)
+    {
+        if (&service != &FoundationService::Get()) { return; }
+        m_nativeReader->Cancel();
+        m_actorDirty = false;
+        m_troopDirty = false;
+        m_memberEditorDirty = false;
+        m_foundationRefreshPending = false;
+        m_loadedActorRecordId.clear();
+        m_loadedTroopRecordId.clear();
+        m_selectedMemberLinkId.clear();
+        m_draftMembers.clear();
+        m_removedMemberIds.clear();
+        const QSignalBlocker actorBlocker(m_actorRecord);
+        const QSignalBlocker troopBlocker(m_troopRecord);
+        m_actorRecord->setCurrentIndex(0);
+        m_troopRecord->setCurrentIndex(0);
+        RefreshAll();
+        SetStatus(tr("Workspace changed. Select an actor or troop to edit."));
+    }
+
+    bool ActorTroopEditorWidget::SaveDirtyDrafts()
     {
         // Existing save commands clear their dirty flags only after successful
         // persistence. Do not save clean forms or continue after an actor failure.

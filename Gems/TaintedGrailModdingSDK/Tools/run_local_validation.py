@@ -43,6 +43,7 @@ VALIDATORS = (
     "validate_ci_runner_policy.py",
     "validate_installer_workflow.py",
     "validate_core_framework_build_graph.py",
+    "validate_capability_execution_contracts.py",
     "validate_canonical_interchange_compiled_tests.py",
     "validate_downstream_compiled_tests.py",
     "validate_research_contract_hardening.py",
@@ -264,7 +265,9 @@ def validate_ctest_build_directory(build_directory: Path) -> Path:
     return build_directory
 
 
-def build_ctest_command(build_directory: Path) -> ValidationCommand:
+def build_ctest_command(
+    build_directory: Path, *, test_pattern: str = r"TaintedGrailModdingSDK\.(Catalog|CanonicalInterchange)\.Tests",
+) -> ValidationCommand:
     build_directory = validate_ctest_build_directory(build_directory)
     return ValidationCommand(
         "Compiled TG SDK catalog and canonical interchange tests",
@@ -275,11 +278,20 @@ def build_ctest_command(build_directory: Path) -> ValidationCommand:
             "-C",
             "profile",
             "-R",
-            r"TaintedGrailModdingSDK\.(Catalog|CanonicalInterchange)\.Tests",
+            test_pattern,
             "--output-on-failure",
             "--no-tests=error",
         ),
     )
+
+
+def build_capability_ctest_command(build_directory: Path) -> ValidationCommand:
+    # Separate invocation makes zero M1 matches fail even if legacy tests exist.
+    command = build_ctest_command(
+        build_directory, test_pattern=r"TaintedGrailModdingSDK\.CapabilityExecution\.Tests",
+    )
+    return ValidationCommand("Compiled TG SDK capability execution tests", command.argv)
+
 
 
 def display_command(command: ValidationCommand) -> str:
@@ -370,7 +382,8 @@ def run_validation_pipeline(
     ):
         failures.extend(
             run_commands(
-                [build_ctest_command(arguments.ctest_build_dir)],
+                [build_ctest_command(arguments.ctest_build_dir),
+                 build_capability_ctest_command(arguments.ctest_build_dir)],
                 keep_going=arguments.keep_going,
             )
         )
@@ -381,7 +394,7 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Run FOA-SDK Python tests, validators, fixtures, pinned O3DE source "
-            "policy, and configured compiled Catalog plus CanonicalInterchange "
+            "policy, and configured compiled Catalog, CanonicalInterchange and CapabilityExecution "
             "CTest coverage when full mode is selected."
         )
     )
@@ -407,7 +420,7 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--ctest-build-dir",
         type=Path,
         help=(
-            "Run compiled TaintedGrailModdingSDK Catalog and CanonicalInterchange "
+            "Run compiled TaintedGrailModdingSDK Catalog, CanonicalInterchange and CapabilityExecution "
             "tests from this configured O3DE build root."
         ),
     )
@@ -442,6 +455,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             except (OSError, RuntimeError, ValidationConfigurationError) as exc:
                 print(f"Compiled CTest: unavailable ({exc})")
             else:
+                print(f"{command.label}: {display_command(command)}")
+                command = build_capability_ctest_command(arguments.ctest_build_dir)
                 print(f"{command.label}: {display_command(command)}")
         else:
             print(
@@ -494,7 +509,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         print(
             "\nFOA-SDK full validation passed, including configured compiled "
-            "Catalog and CanonicalInterchange CTest coverage."
+            "Catalog, CanonicalInterchange and CapabilityExecution CTest coverage."
         )
     return 0
 

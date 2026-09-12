@@ -1005,3 +1005,12 @@ PresentationBindings store BindingId, OwnerPackId, TargetRecordId, Slot, ValueRe
 Collections are bounded to 4096 images, 8192 text entries / 16 MiB total text, and 32768 assignments. Schemas 1–6 cannot carry these nonempty collections. Their load results retain their old version until validated projection. Saves emit schema 7 and preserve a verified exact older-catalog backup. Older Editors require that backup to downgrade; later changes are not backported. Missing image bytes do not prevent catalog metadata loading; selected previews and image assignments verify content so the user can repair the source.
 
 See [Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) for ownership, immutable file storage and failure behavior.
+
+## Capability execution M1 canonical values
+
+`foa-capability-execution-v1` and `foa-capability-execution-canonical-json-v1` identify an
+additive Core C++ value family and its deterministic UTF-8 fingerprint projection.
+This is not a durable interchange document: no suffix, reader, writer, registry,
+reflection serializer or workspace/pack migration is introduced. Unknown versions are rejected.
+See [canonical rules, contextual validation and bounds](CAPABILITY_EXECUTION_CONTRACT.md#m1-core-value-api).
+Existing persisted and canonical V1 formats remain unchanged.

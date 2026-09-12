@@ -8,6 +8,8 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- M1 Core execution contracts with independent decision axes, exact plan/provider/artifact and inverse rollback bindings, bounded deterministic fingerprints, contextual receipt validation and dedicated compiled/static gates. No execution service, persisted format or Editor workflow is introduced.
+
 - Asset and Localisation Manager with bounded PNG/JPEG intake, image and translated-text previews, language variants and fallback, assignments to items/actors/quests, custom item icons and actor portraits, and save/reopen/draft/recovery checks.
 - Catalog schema 7 project assets, localisation entries and pack-scoped presentation bindings, with revision-bound author intent, portable managed image paths and verified schema-1–6 migration backups. Native deployment, runtime localisation and mesh/audio conversion remain separate capabilities.
 

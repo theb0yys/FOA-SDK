@@ -113,12 +113,15 @@ namespace TaintedGrailModdingSDK
             document.m_schemaVersion == LegacyCatalogSchemaVersion;
         const bool isPopulationSchema =
             document.m_schemaVersion == PopulationCatalogSchemaVersion;
-        if (!isLegacySchema && !isPopulationSchema)
+        if (!isLegacySchema && !isPopulationSchema && document.m_schemaVersion != EncounterCatalogSchemaVersion
+            && document.m_schemaVersion != SocietyCatalogSchemaVersion
+            && document.m_schemaVersion != WorldCatalogSchemaVersion && document.m_schemaVersion != QuestCatalogSchemaVersion
+            && document.m_schemaVersion != AssetLocalisationCatalogSchemaVersion)
         {
             if (error)
             {
                 *error = AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1 migration and schema 2.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4/5/6 migration and schema 7.",
                     document.m_schemaVersion);
             }
             return false;
@@ -134,6 +137,27 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        AZStd::string duplicateEncounter;
+        if ((document.m_schemaVersion < EncounterCatalogSchemaVersion && !document.m_encounterDefinitions.empty())
+            || document.m_encounterDefinitions.size() > 10000
+            || HasDuplicatePopulationIdentity(document.m_encounterDefinitions,
+                [](const EncounterDefinition& definition) { return definition.m_recordId; }, duplicateEncounter))
+        {
+            if (error) { *error = "Encounter collections require schema 3 and at most 10,000 unique definition identities."; }
+            return false;
+        }
+        if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
+            || !document.m_worldPaths.empty() || !document.m_worldPathNodes.empty() || !document.m_worldPathEdges.empty()))
+        {
+            if (error) { *error = "Catalog schemas 1/2/3/4 cannot contain world collections."; }
+            return false;
+        }
+        if (document.m_schemaVersion < SocietyCatalogSchemaVersion && (!document.m_cultureProfiles.empty()
+            || !document.m_factionProfiles.empty() || !document.m_factionLinks.empty()))
+        {
+            if (error) { *error = "Catalog schemas 1/2/3 cannot contain society collections."; }
+            return false;
+        }
         if (!ValidatePopulationDocumentIdentities(document, error))
         {
             return false;
@@ -144,6 +168,18 @@ namespace TaintedGrailModdingSDK
         legacyDocument.m_actorProfiles.clear();
         legacyDocument.m_troopProfiles.clear();
         legacyDocument.m_troopMembers.clear();
+        legacyDocument.m_encounterDefinitions.clear();
+        legacyDocument.m_cultureProfiles.clear();
+        legacyDocument.m_factionProfiles.clear();
+        legacyDocument.m_factionLinks.clear();
+        legacyDocument.m_questProfiles.clear();
+        legacyDocument.m_projectAssets.clear();
+        legacyDocument.m_localisationEntries.clear();
+        legacyDocument.m_presentationBindings.clear();
+        legacyDocument.m_worldPlaces.clear();
+        legacyDocument.m_worldPaths.clear();
+        legacyDocument.m_worldPathNodes.clear();
+        legacyDocument.m_worldPathEdges.clear();
 
         CatalogDatabase candidate;
         if (!candidate.ReplaceFromDocumentWithoutPopulation(
@@ -174,6 +210,14 @@ namespace TaintedGrailModdingSDK
             }
         }
 
+        for (const auto& definition : document.m_encounterDefinitions)
+        {
+            if (!candidate.UpsertEncounterDefinition(definition, error)) { return false; }
+        }
+        if (!candidate.LoadWorldCollections(document, error)) { return false; }
+        if (!candidate.LoadSocietyCollections(document, error)) { return false; }
+        if (!candidate.LoadQuestCollections(document, error)) { return false; }
+        if (!candidate.LoadAssetLocalisationCollections(document, error)) { return false; }
         *this = AZStd::move(candidate);
         if (error)
         {
@@ -188,6 +232,18 @@ namespace TaintedGrailModdingSDK
         m_populationActorProfiles.clear();
         m_populationTroopProfiles.clear();
         m_populationTroopMembers.clear();
+        m_encounterDefinitions.clear();
+        m_cultureProfiles.clear();
+        m_factionProfiles.clear();
+        m_factionLinks.clear();
+        m_questProfiles.clear();
+        m_projectAssets.clear();
+        m_localisationEntries.clear();
+        m_presentationBindings.clear();
+        m_worldPlaces.clear();
+        m_worldPaths.clear();
+        m_worldPathNodes.clear();
+        m_worldPathEdges.clear();
     }
 
     CatalogDocument CatalogDatabase::BuildDocument(
@@ -200,6 +256,18 @@ namespace TaintedGrailModdingSDK
         document.m_actorProfiles = m_populationActorProfiles;
         document.m_troopProfiles = m_populationTroopProfiles;
         document.m_troopMembers = m_populationTroopMembers;
+        document.m_encounterDefinitions = m_encounterDefinitions;
+        document.m_cultureProfiles = m_cultureProfiles;
+        document.m_factionProfiles = m_factionProfiles;
+        document.m_factionLinks = m_factionLinks;
+        document.m_questProfiles = m_questProfiles;
+        document.m_projectAssets = m_projectAssets;
+        document.m_localisationEntries = m_localisationEntries;
+        document.m_presentationBindings = m_presentationBindings;
+        document.m_worldPlaces = m_worldPlaces;
+        document.m_worldPaths = m_worldPaths;
+        document.m_worldPathNodes = m_worldPathNodes;
+        document.m_worldPathEdges = m_worldPathEdges;
 
         SortPopulationDocumentValues(
             document.m_actorProfiles,

@@ -16,12 +16,14 @@
 #include <AzCore/Serialization/SerializeContext.h>
 
 #include <QApplication>
+#include <QComboBox>
 #include <QEvent>
 #include <QLabel>
 #include <QList>
 #include <QObject>
 #include <QPointer>
 #include <QTabWidget>
+#include <QTimer>
 #include <QWidget>
 
 namespace TaintedGrailModdingSDK
@@ -89,6 +91,36 @@ namespace TaintedGrailModdingSDK
 
                 new ItemVisualLifecycleEnhancer(selector);
                 new ItemVisualSelectionRestoreBridge(selector);
+
+                // Follow the authoring selection by canonical ID. Opening the preview
+                // must not restore an unrelated item from the old asset-browser state.
+                QPointer<QComboBox> items = candidate->findChild<QComboBox*>(QStringLiteral("economyItemChoice"));
+                QPointer<QComboBox> recipes = candidate->findChild<QComboBox*>(QStringLiteral("economyRecipeChoice"));
+                selector->setProperty("authoringTab", tabs->currentIndex() == 1 ? 1 : 0);
+                const auto syncTarget = [selector, items, recipes]()
+                {
+                    const auto choice = selector->property("authoringTab").toInt() == 1 ? recipes : items;
+                    selector->SetTargetRecord(choice ? choice->currentData().toString() : QString());
+                };
+                connect(tabs, &QTabWidget::currentChanged, selector, [selector, tabs, syncTarget](int index)
+                {
+                    if (index == 0 || index == 1)
+                    {
+                        selector->setProperty("authoringTab", index);
+                    }
+                    if (tabs->currentWidget() == selector)
+                    {
+                        syncTarget();
+                    }
+                });
+                for (const auto& choice : {items, recipes})
+                {
+                    if (choice)
+                    {
+                        connect(choice, qOverload<int>(&QComboBox::currentIndexChanged), selector, syncTarget);
+                    }
+                }
+                QTimer::singleShot(0, selector, syncTarget);
 
                 InstalledVisualSelectorTab installed;
                 installed.m_host = candidate;

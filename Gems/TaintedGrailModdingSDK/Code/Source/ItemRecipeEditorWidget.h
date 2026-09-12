@@ -13,6 +13,8 @@
 #include <AzCore/std/algorithm.h>
 
 #include <QWidget>
+#include <QHash>
+#include <QVariant>
 
 class QCheckBox;
 class QComboBox;
@@ -23,9 +25,11 @@ class QSpinBox;
 class QString;
 class QTableWidget;
 class QTabWidget;
+class QPushButton;
 
 namespace TaintedGrailModdingSDK
 {
+    class NativeItemPreviewService;
     class ItemRecipeEditorWidget final
         : public QWidget
         , private FoundationNotificationBus::Handler
@@ -52,11 +56,19 @@ namespace TaintedGrailModdingSDK
         void RefreshRecipeJoins();
         void RefreshAcquisitionRelationships();
         void SetStatus(const QString& message, bool error = false);
+        void ReadGameDefinitions();
+        void CreateRecord(bool recipe);
+        void SelectJoin(bool output);
+        void NewJoin(bool output);
+        void RemoveJoin(bool output);
+        void StoreDraft(const QString& key, QWidget* form);
+        void RestoreDraft(const QString& key, QWidget* form);
 
         QTabWidget* m_tabs = nullptr;
 
         QComboBox* m_itemRecord = nullptr;
         QLabel* m_itemIdentity = nullptr;
+        QLabel* m_assignedIcon = nullptr;
         QLineEdit* m_itemCategory = nullptr;
         QLineEdit* m_itemSubtype = nullptr;
         QSpinBox* m_itemStackLimit = nullptr;
@@ -122,5 +134,14 @@ namespace TaintedGrailModdingSDK
         QLabel* m_status = nullptr;
         EconomyAuthoringService m_economyAuthoring;
         bool m_refreshing = false;
+        NativeItemPreviewService* m_nativeReader = nullptr;
+        QPushButton* m_readGame = nullptr;
+        QLabel* m_catalogSummary = nullptr;
+        QString m_loadedItem;
+        QString m_loadedRecipe;
+        QString m_workspaceIdentity;
+        QWidget* m_itemForm = nullptr;
+        QWidget* m_recipeForm = nullptr;
+        QHash<QString, QHash<QString, QVariant>> m_drafts;
     };
 } // namespace TaintedGrailModdingSDK

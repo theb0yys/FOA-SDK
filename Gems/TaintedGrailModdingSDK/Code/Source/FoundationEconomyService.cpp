@@ -50,27 +50,6 @@ namespace TaintedGrailModdingSDK
             return true;
         }
 
-        AZStd::vector<AZStd::string> BuildJoinSubjectRefs(
-            const CatalogDatabase& catalog,
-            const AZStd::string& recipeRecordId,
-            const AZStd::string& itemRecordId,
-            const AZStd::string& unresolvedItemSubjectRef)
-        {
-            AZStd::vector<AZStd::string> subjectRefs;
-            if (const CatalogRecord* recipe = catalog.FindByRecordId(recipeRecordId))
-            {
-                subjectRefs.push_back(recipe->m_subjectRef);
-            }
-            if (const CatalogRecord* item = catalog.FindByRecordId(itemRecordId))
-            {
-                subjectRefs.push_back(item->m_subjectRef);
-            }
-            if (!unresolvedItemSubjectRef.empty())
-            {
-                subjectRefs.push_back(unresolvedItemSubjectRef);
-            }
-            return subjectRefs;
-        }
     } // namespace
 
     bool FoundationService::UpsertEconomyItemProfile(
@@ -144,11 +123,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string evidenceError;
         if (!ValidateEvidenceForSubjects(
                 ingredient.m_evidenceIds,
-                BuildJoinSubjectRefs(
-                    m_catalog,
-                    ingredient.m_recipeRecordId,
-                    ingredient.m_itemRecordId,
-                    ingredient.m_itemSubjectRef),
+                { "economy-recipe-ingredient:" + ingredient.m_linkId },
                 m_sourceRegistry,
                 evidenceError))
         {
@@ -179,11 +154,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string evidenceError;
         if (!ValidateEvidenceForSubjects(
                 output.m_evidenceIds,
-                BuildJoinSubjectRefs(
-                    m_catalog,
-                    output.m_recipeRecordId,
-                    output.m_itemRecordId,
-                    output.m_itemSubjectRef),
+                { "economy-recipe-output:" + output.m_linkId },
                 m_sourceRegistry,
                 evidenceError))
         {

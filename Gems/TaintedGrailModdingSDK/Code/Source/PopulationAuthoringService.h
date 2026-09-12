@@ -17,6 +17,8 @@ namespace TaintedGrailModdingSDK
     {
         PopulationTroopProfile m_profile;
         AZStd::vector<PopulationTroopMember> m_members;
+        //! Explicit removals only; omission from m_members retains additive upsert semantics.
+        AZStd::vector<AZStd::string> m_removedMemberIds;
     };
 
     //! Builds fully validated population catalog candidates without publishing them.

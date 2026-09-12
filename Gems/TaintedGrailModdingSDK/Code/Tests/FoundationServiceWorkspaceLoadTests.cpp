@@ -6,6 +6,9 @@
  */
 
 #include "FoundationService.h"
+#include "FoundationNotificationBus.h"
+
+#include <AzCore/std/function/function_template.h>
 
 #include <AzTest/AzTest.h>
 
@@ -254,6 +257,49 @@ namespace TaintedGrailModdingSDK
             return signature;
         }
 
+        class WorkspaceObserver : public FoundationNotificationBus::Handler
+        {
+        public:
+            explicit WorkspaceObserver(const FoundationService& service)
+                : m_service(service)
+            {
+                BusConnect();
+            }
+            ~WorkspaceObserver() override { BusDisconnect(); }
+
+            bool CanChangeWorkspace(const FoundationService& service) override
+            {
+                if (&service != &m_service)
+                {
+                    return true;
+                }
+                ++m_requests;
+                m_before = StateSignature(service);
+                return m_admit ? m_admit() : m_allow;
+            }
+            void OnWorkspaceChanged(const FoundationService& service) override
+            {
+                if (&service == &m_service)
+                {
+                    ++m_changes;
+                    m_after = StateSignature(service);
+                    if (m_committed)
+                    {
+                        m_committed();
+                    }
+                }
+            }
+
+            const FoundationService& m_service;
+            AZStd::function<bool()> m_admit;
+            AZStd::function<void()> m_committed;
+            AZStd::string m_before;
+            AZStd::string m_after;
+            int m_requests = 0;
+            int m_changes = 0;
+            bool m_allow = true;
+        };
+
         void ExpectFailurePreservesState(FailureStage stage)
         {
             Scenario scenario;
@@ -268,8 +314,13 @@ namespace TaintedGrailModdingSDK
             ASSERT_TRUE(service.SetActivePack(pack, &error)) << error.c_str();
             const AZStd::string before = StateSignature(service);
 
+            WorkspaceObserver observer(service);
             scenario.m_failure = stage;
-            EXPECT_FALSE(service.LoadWorkspace("new", &error));
+            bool cancelled = true;
+            EXPECT_FALSE(service.LoadWorkspace("new", &error, &cancelled));
+            EXPECT_FALSE(cancelled);
+            EXPECT_EQ(observer.m_requests, 0);
+            EXPECT_EQ(observer.m_changes, 0);
             EXPECT_FALSE(error.empty());
             EXPECT_EQ(StateSignature(service), before);
         }
@@ -338,5 +389,151 @@ namespace TaintedGrailModdingSDK
     TEST(FoundationServiceWorkspaceLoadTests, CatalogValidationFailurePreservesAllLiveState)
     {
         ExpectFailurePreservesState(FailureStage::CatalogValidation);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, VetoPreservesStateAndRetryPublishesOnce)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        PackManifest pack;
+        pack.m_packId = "owner.pack";
+        pack.m_ownerId = "owner";
+        pack.m_version = "1.0.0";
+        ASSERT_TRUE(service.SetActivePack(pack));
+        const AZStd::string before = StateSignature(service);
+        WorkspaceObserver observer(service);
+        observer.m_allow = false;
+        AZStd::string error;
+        bool cancelled = false;
+        EXPECT_FALSE(service.LoadWorkspace("new", &error, &cancelled));
+        EXPECT_TRUE(cancelled);
+        EXPECT_FALSE(error.empty());
+        EXPECT_EQ(StateSignature(service), before);
+        EXPECT_EQ(observer.m_before, before);
+        EXPECT_EQ(observer.m_requests, 1);
+        EXPECT_EQ(observer.m_changes, 0);
+
+        observer.m_allow = true;
+        EXPECT_TRUE(service.LoadWorkspace("new", &error, &cancelled));
+        EXPECT_FALSE(cancelled);
+        EXPECT_EQ(observer.m_requests, 2);
+        EXPECT_EQ(observer.m_changes, 1);
+        EXPECT_EQ(observer.m_after, StateSignature(service));
+        EXPECT_EQ(service.GetWorkspace().m_workspaceId, "new.workspace");
+        EXPECT_TRUE(service.GetPacks().empty());
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, AnyVetoWinsWithMultipleHandlers)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver allowFirst(service);
+        WorkspaceObserver veto(service);
+        WorkspaceObserver allowLast(service);
+        veto.m_allow = false;
+        const AZStd::string before = StateSignature(service);
+        EXPECT_FALSE(service.LoadWorkspace("new"));
+        EXPECT_EQ(StateSignature(service), before);
+        EXPECT_EQ(veto.m_requests, 1);
+        EXPECT_EQ(allowFirst.m_changes + veto.m_changes + allowLast.m_changes, 0);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, SameWorkspaceReloadStillRequestsAdmission)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_allow = false;
+        EXPECT_FALSE(service.LoadWorkspace("old"));
+        EXPECT_EQ(observer.m_requests, 1);
+        EXPECT_EQ(observer.m_changes, 0);
+        observer.m_allow = true;
+        EXPECT_TRUE(service.LoadWorkspace("old"));
+        EXPECT_EQ(observer.m_changes, 1);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, AdmissionSeesOldWorkspaceAndAllowsPackSaveNotifications)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_admit = [&service]()
+        {
+            EXPECT_EQ(service.GetWorkspaceRootPath(), "/canonical/old.workspace");
+            // A successful draft save publishes an active pack and a Foundation notification.
+            PackManifest pack;
+            pack.m_packId = "owner.saved";
+            pack.m_ownerId = "owner";
+            pack.m_version = "1.0.0";
+            EXPECT_TRUE(service.SetActivePack(pack));
+            return true;
+        };
+        ASSERT_TRUE(service.LoadWorkspace("new"));
+        EXPECT_EQ(observer.m_requests, 1);
+        EXPECT_EQ(observer.m_changes, 1);
+        EXPECT_EQ(service.GetActivePack(), nullptr);
+        EXPECT_EQ(service.GetWorkspaceRootPath(), "/canonical/new.workspace");
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, NestedReplacementIsRejectedDuringAdmissionAndPublication)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        auto nested = [&service]()
+        {
+            bool cancelled = false;
+            const AZStd::string before = StateSignature(service);
+            EXPECT_FALSE(service.LoadWorkspace("old", nullptr, &cancelled));
+            EXPECT_TRUE(cancelled);
+            EXPECT_FALSE(service.SetWorkspace(MakeWorkspace("nested")));
+            EXPECT_EQ(StateSignature(service), before);
+        };
+        observer.m_admit = [&nested]() { nested(); return true; };
+        observer.m_committed = nested;
+        EXPECT_TRUE(service.LoadWorkspace("new"));
+        EXPECT_EQ(observer.m_requests, 1);
+        EXPECT_EQ(observer.m_changes, 1);
+        observer.m_admit = {};
+        observer.m_committed = {};
+        EXPECT_TRUE(service.LoadWorkspace("old"));
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, SetWorkspaceHonorsVetoAndNotifiesAfterSuccess)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_allow = false;
+        const AZStd::string before = StateSignature(service);
+        EXPECT_FALSE(service.SetWorkspace(MakeWorkspace("new")));
+        EXPECT_EQ(StateSignature(service), before);
+        EXPECT_EQ(observer.m_changes, 0);
+        observer.m_allow = true;
+        EXPECT_TRUE(service.SetWorkspace(MakeWorkspace("new")));
+        EXPECT_EQ(observer.m_before, before);
+        EXPECT_EQ(observer.m_changes, 1);
+        EXPECT_EQ(observer.m_after, StateSignature(service));
+        EXPECT_EQ(service.GetWorkspace().m_workspaceId, "new.workspace");
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, AdmissionAndPublicationIdentifyTheOwningService)
+    {
+        Scenario scenario;
+        FoundationService observed(MakeDependencies(scenario));
+        FoundationService other(MakeDependencies(scenario));
+        WorkspaceObserver observer(observed);
+        observer.m_allow = false;
+        EXPECT_TRUE(other.LoadWorkspace("new"));
+        EXPECT_EQ(observer.m_requests, 0);
+        EXPECT_EQ(observer.m_changes, 0);
+        EXPECT_FALSE(observed.LoadWorkspace("old"));
+        EXPECT_EQ(observer.m_requests, 1);
     }
 } // namespace TaintedGrailModdingSDK

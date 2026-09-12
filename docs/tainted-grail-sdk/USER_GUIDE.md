@@ -85,7 +85,19 @@ After launching the Editor, open **Tools → Tainted Grail SDK**. Current panes 
 
 1. Start from **FOA Development Hub** and review the live workspace, game-profile, active-pack, validation, blocker, and persistence context. The Hub only orchestrates existing panes and never grants execution or release permission.
 2. Use **Setup and readiness** to configure and save a workspace, exact game profile, active pack, and adapter capability context.
-3. Create or load pack manifests.
+3. In **Pack Manager**, choose **New mod**, enter a name and author, and select **Save mod**. Saving validates and writes the manifest before activating it. A failed save keeps your draft and the previous active mod; correct the reported problem and retry. Saved mods can be selected and reopened from the list. Starting a new draft leaves the previous mod active until the new one is saved. The pane shows **Unsaved changes** when you edit normal or advanced fields. Before **New mod**, **Open selected**, or closing Pack Manager removes those edits, choose **Save**, **Discard**, or **Cancel**. Save continues only after a successful write. Cancel (also Escape or closing the prompt) or a failed Save keeps the pane open with the full draft. Discard closes the pane without writing, or replaces the draft once the new form or selected mod is ready. Reopening the pane shows the active saved mod. Reverting edits to saved or initial values clears the unsaved warning, and a clean pane closes without prompting. The same protection applies when exiting the Editor: Save writes the mod before exit, Discard exits without writing it, and Cancel or a failed Save stops exit with the draft intact.
+
+Opening another workspace from **SDK Status** or **Catalog Browser** also offers **Save**, **Discard**, or **Cancel** for an unsaved Pack Manager draft. Save writes the draft into the current workspace before switching. Cancel or a failed Save preserves the current workspace and full draft. A successful switch starts a clean form using the new workspace's profile; choose a saved mod from that workspace to reopen it. Reloading the same workspace has the same protection. An invalid workspace file leaves the draft untouched.
+
+Pack Manager also keeps a separate recovery copy while you edit. After a crash or forced
+shutdown, reopen the same workspace and Pack Manager, then choose **Restore draft** or
+**Discard recovery copy**. Restore includes unfinished normal and advanced fields; use
+**Save mod** to write the recovered changes. Recovery never automatically overwrites your
+saved mod. Cancel and failed Save preserve the copy. Recovery errors appear in the pane;
+**Retry recovery** is available when a copy cannot be opened. Another Editor using the
+same workspace must release its recovery lock first. Edits since the latest completed
+checkpoint may be lost; copies have a 256 KiB limit. See [draft recovery](PACK_DRAFT_RECOVERY.md).
+
 4. Import sources and evidence.
 5. Promote reviewed claims into canonical records.
 6. Inspect records, relationships, and blockers.
@@ -155,7 +167,7 @@ The Item and Recipe Editor authors typed profiles, stations, ingredients, output
 
 **Tainted Grail Asset Browser Preview** inspects staged, profile-bound asset-browser pane models, thumbnail evidence, and 3D viewport render evidence. A prepared route can be copied into pending item visual-reference fields, but typed selector binding, scene mutation, catalog promotion, deployment, and runtime authority remain disabled.
 
-**Tainted Grail Quest and State Inspector** opens local `*.tgquest.json` QuestDefinition V1 documents for read-only review. It shows contract issues, deterministic fingerprints, binding requirements, summary counts, and authority flags without writing files, mutating editor state, touching saves, deploying content, extracting assets, or executing quests.
+**Tainted Grail Quest and State Inspector** browses saved quests and opens local `*.tgquest.json` QuestDefinition V1 documents for inspection. It provides typed element forms, state-key declarations, catalog links, a progression graph and validation details. Create a quest for the active mod or explicitly save an editable copy of an imported document; original files remain read-only. Saving uses the workspace catalog transaction. See the [quest authoring guide](QUEST_AUTHORING_GUIDE.md). Game state, saves, deployment and quest execution remain separate.
 
 ## Economy analysis panes
 

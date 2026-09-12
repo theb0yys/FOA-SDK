@@ -38,6 +38,59 @@ def manifest_entries(path: Path) -> set[str]:
     return set(re.findall(r"^\s+((?:Source|Tests)/[^\s\)]+)\s*$", require_file(path), re.MULTILINE))
 
 
+def validate_workspace_transition(service_text: str) -> None:
+    load_match = re.search(
+        r"bool FoundationService::LoadWorkspace\([^\{]+\{(?P<body>.*?)\n    \}",
+        service_text,
+        re.DOTALL,
+    )
+    if not load_match:
+        raise WorkspaceContractError("Unable to locate FoundationService::LoadWorkspace.")
+    body = load_match.group("body")
+    steps = (
+        "BuildCandidate(filePath)",
+        "if (!BeginWorkspaceChange())",
+        "ClearWorkspaceScopedState(true)",
+        "m_workspace = AZStd::move(candidate.m_workspace)",
+        "m_workspaceFilePath = AZStd::move(candidate.m_workspaceFilePath)",
+        "m_workspaceRootPath = AZStd::move(candidate.m_workspaceRootPath)",
+        "m_sourceRegistry = AZStd::move(candidate.m_sourceRegistry)",
+        "m_importIssues = AZStd::move(candidate.m_importIssues)",
+        "m_catalog = AZStd::move(candidate.m_catalog)",
+        "m_catalogFilePath = AZStd::move(candidate.m_catalogFilePath)",
+        "FinishWorkspaceChange()",
+    )
+    positions = [body.find(step) for step in steps]
+    if min(positions) < 0 or positions != sorted(positions):
+        raise WorkspaceContractError(
+            "Workspace load must complete candidate and admission before publication, then finish the transition."
+        )
+    for forbidden in ("ReloadSourceEvidence", "ReloadCatalog", "m_workspace = result.TakeValue", "RefreshSnapshot()"):
+        if forbidden in body:
+            raise WorkspaceContractError(
+                f"Workspace load contains a mutation outside the candidate/publication boundary: {forbidden!r}."
+            )
+
+    finish_match = re.search(
+        r"void FoundationService::FinishWorkspaceChange\(\)\s*\{(?P<body>.*?)\n    \}",
+        service_text,
+        re.DOTALL,
+    )
+    if not finish_match:
+        raise WorkspaceContractError("Unable to locate FoundationService::FinishWorkspaceChange.")
+    finish = finish_match.group("body")
+    steps = (
+        "RefreshSnapshot()",
+        "FoundationNotificationBus::Broadcast(&FoundationNotifications::OnWorkspaceChanged, *this)",
+        "m_workspaceChangeInProgress = false",
+    )
+    positions = [finish.find(step) for step in steps]
+    if min(positions) < 0 or positions != sorted(positions):
+        raise WorkspaceContractError(
+            "Workspace completion must refresh the snapshot before notifying observers and releasing admission."
+        )
+
+
 def validate_workspace_contract(repo_root: Path) -> None:
     gem_root = repo_root / "Gems/TaintedGrailModdingSDK"
     code_root = gem_root / "Code"
@@ -153,26 +206,7 @@ def validate_workspace_contract(repo_root: Path) -> None:
         ("FoundationWorkspaceLoadService m_workspaceLoadService", "AZStd::string m_workspaceRootPath", "GetWorkspaceRootPath"),
     )
 
-    load_match = re.search(
-        r"bool FoundationService::LoadWorkspace\([^\{]+\{(?P<body>.*?)\n    \}",
-        require_file(service_source),
-        re.DOTALL,
-    )
-    if not load_match:
-        raise WorkspaceContractError("Unable to locate FoundationService::LoadWorkspace.")
-    body = load_match.group("body")
-    candidate_position = body.find("BuildCandidate(filePath)")
-    publish_position = body.find("m_workspace = AZStd::move(candidate.m_workspace)")
-    snapshot_position = body.find("RefreshSnapshot()")
-    if min(candidate_position, publish_position, snapshot_position) < 0:
-        raise WorkspaceContractError("Workspace load is missing candidate, publication, or snapshot steps.")
-    if not candidate_position < publish_position < snapshot_position:
-        raise WorkspaceContractError("Workspace candidate must complete before any live publication.")
-    for forbidden in ("ReloadSourceEvidence", "ReloadCatalog", "m_workspace = result.TakeValue"):
-        if forbidden in body:
-            raise WorkspaceContractError(
-                f"Workspace load still contains pre-candidate live mutation path {forbidden!r}."
-            )
+    validate_workspace_transition(require_file(service_source))
 
     require_fragments(
         integration_tests,

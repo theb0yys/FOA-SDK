@@ -1,18 +1,18 @@
 # Actor and Troop Editor Guide
 
-Status: implemented authoring surface; exact-head Windows host verification remains pending.
+Status: authoring completion implemented and validated in the running Windows Editor.
 
 ## Purpose
 
 The **Tainted Grail Actor and Troop Editor** is the governed population-authoring surface for project-owned catalog data. It edits durable actor profiles, troop profiles, and troop-member rows through the shared workspace, pack, source/evidence, catalog, validation, governance, blocker, and persistence systems.
 
-It is not a runtime actor spawner, encounter executor, game-data extractor, deployment tool, or save editor.
+It reads supported serialized NPC templates from the configured installation and creates local authoring definitions. Spawning, encounters, deployment and save editing are separate features.
 
 ## Open the pane
 
 1. Build and launch the dedicated TG SDK Editor project.
 2. Open or create a workspace with one active profile and pack.
-3. Import project-owned source/evidence before authoring population records.
+3. Use **Choose or create mod** to save your authoring mod. Game loading works without a mod; local creation and edits require one.
 4. Open **Tools → Tainted Grail SDK → Tainted Grail Actor and Troop Editor**.
 
 The pane is also reachable from the **FOA Development Hub**.
@@ -32,15 +32,25 @@ The actor side of the pane provides:
 
 ### Author an actor profile
 
-1. Select a canonical population record whose `RecordKind` is `actor`.
-2. Confirm that the record belongs to the active pack and exact workspace/profile context.
+1. Press **Load game actors**, or **New actor** and enter a name. Search for an existing actor using the actor filter.
+2. Choose a saved compatible mod. Native actor edits are local catalog changes; custom actors belong to the mod that created them.
 3. Choose an actor kind and enter the typed profile fields.
 4. Select either a resolved actor-template record or an exact unresolved template subject. Do not invent a display-name-based binding.
-5. Bind evidence proving every required exact subject.
+5. Imported and newly created actors already have source evidence. Expand **Exact-subject Actor Evidence** when reviewing or changing template bindings.
 6. Review validation, staleness, governance, blockers, and the seven action lanes.
 7. Save only when the candidate remains complete and the persistence transaction succeeds.
 
 A failed evidence, integrity, path, or persistence check leaves the published catalog unchanged.
+
+### Portrait preview
+
+Place an authoring PNG or JPEG inside the workspace (for example, `Assets/Portraits/guard.png`). Press **Choose workspace portrait**, select it, then save the actor. The catalog stores a portable `$workspace/` reference. The preview accepts images up to 8 MiB and 4096 by 4096 pixels. Missing, corrupt, unsupported and escaping paths clear the previous image and show a reason.
+
+The supported NPC template component contains no portrait, model or localisation binding. Its `npcData` reference contains perception/alert data. Imported actors therefore show an explicit missing-portrait state until a local image is assigned. This slice does not reconstruct a game character's equipped appearance or render Unity prefabs.
+
+### Supported game fields
+
+The isolated reader recognizes NPC components by their serialized field shape in `templates.npc_assets_all.bundle`. It imports exact identities, levels from 1 to 1000, and tags; abstract templates remain tagged. Native enum meanings are not guessed: actor kind starts as `other` and archetype as `native-npc-template`. Shop entries, unsupported levels and malformed fields are listed in the private reader report. Refresh preserves existing canonical IDs and authored values. **Cancel loading** leaves the saved catalog unchanged.
 
 ## Troop workflow
 
@@ -56,19 +66,19 @@ The troop side provides:
 
 ### Compose a troop
 
-1. Select a canonical `troop` record.
+1. Press **New troop**, choose its first leader from saved actors, and enter a name; or select an existing troop. Creation saves a valid one-member troop.
 2. Choose a typed leader actor and confirm its exact subject.
-3. Stage each member row with a stable link ID, typed role, required state, minimum/maximum count, finite non-negative weight, sorted conditions, exact actor record/subject, and evidence.
+3. Press **New member / clear form**, choose an actor, role, required state, count range, finite non-negative weight and conditions, then **Stage Member in Definition**. Link IDs and exact authoring-intent evidence are generated automatically. Select an existing row to change it.
 4. Confirm that an actor subject appears no more than once in the troop.
 5. Confirm that exactly one typed leader row matches the troop profile leader.
 6. Confirm that member count ranges overlap the troop size range.
-7. Save the complete definition as one transaction.
+7. Use **Remove selected member** to stage a removal. Adjust the leader and size range as needed, then save the complete definition as one transaction. Revert restores the saved composition.
 
-Omitted existing member rows are not silently deleted by the bootstrap authoring service. Removal requires a separately reviewed contract.
+The existing upsert API remains additive. Only IDs explicitly listed in the command's removal collection are removed; missing, duplicate, conflicting and cross-troop removals are rejected. A troop must still have a valid leader and composition after removal.
 
 ## Action lanes
 
-Every selected actor or troop displays the same deterministic lane order:
+Expand the actor or troop action-lane group to inspect the current saved definition. Collapsed review tables are populated when opened, so catalog intake does not rebuild invisible tables. Every selected actor or troop uses the same deterministic lane order:
 
 1. `display`;
 2. `author_profile`;
@@ -122,11 +132,17 @@ Durable data belongs in the canonical workspace catalog. Actor profiles, troop p
 
 Transient UI state, filters, selection, and draft values are not durable catalog authority.
 
+## Verified completion
+
+The pinned Windows Profile Editor loaded 885 supported NPC templates alongside 3,914 items and 356 recipes. Eight live checks covered initial intake, expanded review tables, local creation, portrait pixels, troop member changes and removals, invalid-save rollback, dirty drafts, cancellation, reopening and pane width. First intake took 3.046 seconds with a maximum UI timer gap of 1.938 seconds, below the three-second acceptance limit. Static validation and both mandatory compiled suites also passed; explicit platform/privilege skips remain reported separately in the task evidence.
+
+The supported NPC bundle also contained nine level-zero templates that cannot map to the positive authoring level range and 64 non-NPC entries. These remain explicitly unsupported. The measured result concerns this inspected profile and authoring workflow.
+
 ## Current limits
 
 The current editor does not:
 
-- inspect or copy proprietary FoA content;
+- copy game assets into the source repository or modify the installation;
 - resolve actor/template identity from display names;
 - create encounters, routes, pools, lifecycle rules, or density systems;
 - spawn or despawn runtime actors;
@@ -134,4 +150,4 @@ The current editor does not:
 - deploy files or mutate saves;
 - grant validation or governance permission automatically.
 
-The later Spawn and Encounter Editor and separately reviewed runtime adapters must consume these records without weakening this boundary.
+The [Spawn and Encounter Editor](SPAWN_ENCOUNTER_EDITOR_GUIDE.md) consumes these saved records for local composition plans. Separately reviewed runtime adapters must preserve the same boundary.

@@ -6,7 +6,18 @@
 #
 
 set(FILES
+    Source/AssetLocalisationManagerWidget.h
+    Source/AssetLocalisationManagerWidget.cpp
+    Source/AssetLocalisationManagerWidgetWorkflow.cpp
+    Source/WorldRouteEditorWidget.h
+    Source/WorldRouteEditorWidget.cpp
+    Source/WorldRouteEditorWidgetPreview.cpp
+    Source/FactionAuthorityEditorWidget.h
+    Source/FactionAuthorityEditorWidget.cpp
+    Source/SpawnEncounterEditorWidget.cpp
+    Source/SpawnEncounterEditorWidget.h
     Source/ActorTroopEditorWidget.cpp
+    Source/ActorTroopEditorWidgetWorkflow.cpp
     Source/ActorTroopEditorWidget.h
     Source/AdapterBuildManifestWidget.cpp
     Source/AdapterBuildManifestWidget.h
@@ -66,9 +77,12 @@ set(FILES
     Source/ItemVisualSelectorInstallerSystemComponent.h
     Source/ItemVisualSelectorWidget.cpp
     Source/ItemVisualSelectorWidget.h
+    Source/PackManagerWidgetRecovery.cpp
     Source/PackManagerWidget.cpp
     Source/PackManagerWidget.h
     Source/QuestStateInspectorWidget.cpp
+    Source/QuestStateInspectorWidgetElements.cpp
+    Source/QuestStateInspectorWidgetGraph.cpp
     Source/QuestStateInspectorWidget.h
     Source/SourceEvidenceIntakeWidget.cpp
     Source/SourceEvidenceIntakeWidget.h

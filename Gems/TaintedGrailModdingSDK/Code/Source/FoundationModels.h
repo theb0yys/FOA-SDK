@@ -9,6 +9,11 @@
 
 #include "EconomyModels.h"
 #include "PopulationModels.h"
+#include "EncounterModels.h"
+#include "SocietyModels.h"
+#include "WorldModels.h"
+#include "QuestAuthoringModels.h"
+#include "AssetLocalisationModels.h"
 
 #include <AzCore/RTTI/RTTI.h>
 #include <AzCore/std/containers/vector.h>
@@ -345,6 +350,18 @@ namespace TaintedGrailModdingSDK
         AZStd::vector<PopulationActorProfile> m_actorProfiles;
         AZStd::vector<PopulationTroopProfile> m_troopProfiles;
         AZStd::vector<PopulationTroopMember> m_troopMembers;
+        AZStd::vector<EncounterDefinition> m_encounterDefinitions;
+        AZStd::vector<CultureProfile> m_cultureProfiles;
+        AZStd::vector<FactionProfile> m_factionProfiles;
+        AZStd::vector<FactionLink> m_factionLinks;
+        AZStd::vector<WorldPlaceProfile> m_worldPlaces;
+        AZStd::vector<WorldPathProfile> m_worldPaths;
+        AZStd::vector<WorldPathNode> m_worldPathNodes;
+        AZStd::vector<WorldPathEdge> m_worldPathEdges;
+        AZStd::vector<QuestAuthoringProfile> m_questProfiles;
+        AZStd::vector<ProjectAssetProfile> m_projectAssets;
+        AZStd::vector<LocalisationEntry> m_localisationEntries;
+        AZStd::vector<PresentationBinding> m_presentationBindings;
     };
 
     struct CatalogPromotionRequest

@@ -12,6 +12,7 @@
 #include <AzCore/std/algorithm.h>
 
 #include <QByteArray>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDir>
 #include <QFile>
@@ -25,9 +26,11 @@
 #include <QJsonParseError>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScopedValueRollback>
 #include <QStringList>
 #include <QVBoxLayout>
 
@@ -143,7 +146,11 @@ namespace TaintedGrailModdingSDK
                 return QObject::tr("%1 \u00b7 needs repair").arg(fallback);
             }
 
-            const QJsonObject root = document.object();
+            const QJsonObject documentRoot = document.object();
+            const QJsonObject root = documentRoot.value(QStringLiteral("Type")).toString()
+                    == QStringLiteral("JsonSerialization")
+                ? documentRoot.value(QStringLiteral("ClassData")).toObject()
+                : documentRoot;
             const QString packId = root.value(QStringLiteral("PackId")).toString().trimmed();
             const QString displayName = root.value(QStringLiteral("DisplayName")).toString().trimmed();
             const QString version = root.value(QStringLiteral("Version")).toString().trimmed();
@@ -163,6 +170,7 @@ namespace TaintedGrailModdingSDK
         : QWidget(parent)
     {
         auto* rootLayout = new QVBoxLayout(this);
+        setObjectName(QStringLiteral("TaintedGrailPackManager"));
 
         auto* heading = new QLabel(tr("FOA-SDK Mods"), this);
         QFont headingFont = heading->font();
@@ -180,6 +188,7 @@ namespace TaintedGrailModdingSDK
         auto* summaryGroup = new QGroupBox(tr("Current mod"), this);
         auto* summaryLayout = new QFormLayout(summaryGroup);
         m_activePackValue = new QLabel(summaryGroup);
+        m_activePackValue->setObjectName(QStringLiteral("packActiveSummary"));
         summaryLayout->addRow(tr("Mod"), m_activePackValue);
         rootLayout->addWidget(summaryGroup);
 
@@ -189,6 +198,7 @@ namespace TaintedGrailModdingSDK
         auto* workspaceModsRowLayout = new QHBoxLayout(workspaceModsRow);
         workspaceModsRowLayout->setContentsMargins(0, 0, 0, 0);
         m_workspaceModsCombo = new QComboBox(workspaceModsRow);
+        m_workspaceModsCombo->setObjectName(QStringLiteral("packSavedMods"));
         m_workspaceModsCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
         m_workspaceModsCombo->setMinimumContentsLength(28);
         m_openSelectedButton = new QPushButton(tr("Open selected"), workspaceModsRow);
@@ -203,12 +213,17 @@ namespace TaintedGrailModdingSDK
         auto* detailsGroup = new QGroupBox(tr("Mod details"), this);
         auto* detailsLayout = new QFormLayout(detailsGroup);
         m_displayNameEdit = new QLineEdit(detailsGroup);
+        m_displayNameEdit->setObjectName(QStringLiteral("packDisplayName"));
         m_displayNameEdit->setPlaceholderText(tr("My Fall of Avalon mod"));
         m_ownerIdEdit = new QLineEdit(detailsGroup);
+        m_ownerIdEdit->setObjectName(QStringLiteral("packOwner"));
         m_ownerIdEdit->setPlaceholderText(tr("author or namespace"));
         detailsLayout->addRow(tr("Mod name"), m_displayNameEdit);
         detailsLayout->addRow(tr("Author / namespace"), m_ownerIdEdit);
         rootLayout->addWidget(detailsGroup);
+        m_draftStatusLabel = new QLabel(this);
+        m_draftStatusLabel->setObjectName(QStringLiteral("packDraftStatus"));
+        rootLayout->addWidget(m_draftStatusLabel);
 
         m_advancedToggleButton = new QPushButton(tr("Show advanced manifest"), this);
         rootLayout->addWidget(m_advancedToggleButton, 0, Qt::AlignRight);
@@ -231,6 +246,7 @@ namespace TaintedGrailModdingSDK
         m_packIdEdit = new QLineEdit(identityGroup);
         m_packIdEdit->setReadOnly(true);
         m_versionEdit = new QLineEdit(identityGroup);
+        m_versionEdit->setObjectName(QStringLiteral("packVersion"));
         m_versionEdit->setPlaceholderText(tr("0.1.0"));
         identityLayout->addRow(tr("Mod ID"), m_packIdEdit);
         identityLayout->addRow(tr("Version"), m_versionEdit);
@@ -300,14 +316,47 @@ namespace TaintedGrailModdingSDK
         auto* buttonLayout = new QHBoxLayout();
         auto* newButton = new QPushButton(tr("New mod"), this);
         auto* saveButton = new QPushButton(tr("Save mod"), this);
+        m_newButton = newButton;
+        m_saveButton = saveButton;
         buttonLayout->addWidget(newButton);
         buttonLayout->addStretch(1);
         buttonLayout->addWidget(saveButton);
         rootLayout->addLayout(buttonLayout);
 
         m_statusLabel = new QLabel(this);
+        m_statusLabel->setObjectName(QStringLiteral("packStatus"));
         m_statusLabel->setWordWrap(true);
         rootLayout->addWidget(m_statusLabel);
+
+        // Track only the changed field. Typing never parses a manifest or scans the workspace.
+        for (QLineEdit* edit : { m_displayNameEdit, m_ownerIdEdit, m_versionEdit,
+                 m_targetGameVersionEdit, m_targetBranchEdit, m_coreVersionEdit,
+                 m_adapterVersionEdit, m_buildConfigurationEdit })
+        {
+            m_formValues.insert(edit, edit->text());
+            connect(edit, &QLineEdit::textChanged, this, [this, edit](const QString& value)
+            {
+                UpdateDraftField(edit, value);
+            });
+        }
+        for (QPlainTextEdit* edit : { m_compatibleGameVersionsEdit, m_dlcScopesEdit,
+                 m_dependenciesEdit, m_requiredModsEdit, m_incompatibilitiesEdit,
+                 m_contentDefinitionsEdit, m_assetPathsEdit, m_localisationPathsEdit })
+        {
+            m_formValues.insert(edit, edit->toPlainText());
+            connect(edit, &QPlainTextEdit::textChanged, this, [this, edit]()
+            {
+                UpdateDraftField(edit, edit->toPlainText());
+            });
+        }
+        for (QComboBox* combo : { m_saveImpactCombo, m_releaseChannelCombo })
+        {
+            m_formValues.insert(combo, combo->currentText());
+            connect(combo, &QComboBox::currentTextChanged, this, [this, combo](const QString& value)
+            {
+                UpdateDraftField(combo, value);
+            });
+        }
 
         connect(m_displayNameEdit, &QLineEdit::textChanged, this, [this]()
         {
@@ -330,7 +379,14 @@ namespace TaintedGrailModdingSDK
         });
         connect(newButton, &QPushButton::clicked, this, [this]()
         {
-            FoundationService::Get().ClearActivePack();
+            if (!ConfirmDraftReplacement(tr("creating a new mod")))
+            {
+                return;
+            }
+            if (!RetireRecovery())
+            {
+                return;
+            }
             ClearFormForNewPack();
             SetStatus(tr("New mod ready. Enter a name and author, then Save mod."));
         });
@@ -347,17 +403,52 @@ namespace TaintedGrailModdingSDK
         }
         UpdateSummary();
         RefreshWorkspaceMods(ToQString(FoundationService::Get().GetActivePackFilePath()));
+        InitializeRecovery();
     }
 
     PackManagerWidget::~PackManagerWidget()
     {
         FoundationNotificationBus::Handler::BusDisconnect();
+        StopRecovery();
+    }
+
+    void PackManagerWidget::closeEvent(QCloseEvent* event)
+    {
+        if (ConfirmDraftReplacement(tr("closing Pack Manager"))
+            && (m_recoveryPending || RetireRecovery()))
+        {
+            m_recoveryClosing = true;
+            QWidget::closeEvent(event);
+        }
+        else
+        {
+            event->ignore();
+        }
     }
 
     void PackManagerWidget::OnFoundationChanged()
     {
         UpdateSummary();
         RefreshWorkspaceMods(ToQString(FoundationService::Get().GetActivePackFilePath()));
+    }
+
+    bool PackManagerWidget::CanChangeWorkspace(const FoundationService& service)
+    {
+        return &service != &FoundationService::Get()
+            || ConfirmDraftReplacement(tr("switching workspaces"));
+    }
+
+    void PackManagerWidget::OnWorkspaceChanged(const FoundationService& service)
+    {
+        if (&service == &FoundationService::Get())
+        {
+            // Discard is retired only after all admission handlers allowed the switch.
+            const bool cleared = m_recoveryPending || RetireRecovery();
+            ClearFormForNewPack();
+            SetStatus(cleared ? tr("Workspace changed. Create a new mod or open a saved mod.")
+                : tr("Workspace changed, but the previous workspace's recovery copy could not be cleared."), !cleared);
+            StartRecoveryForWorkspace();
+        }
     }
 
     PackManifest PackManagerWidget::BuildPackFromForm() const
@@ -388,6 +479,7 @@ namespace TaintedGrailModdingSDK
 
     void PackManagerWidget::PopulateFromPack(const PackManifest& pack)
     {
+        const QScopedValueRollback<bool> suppress(m_recoverySuppressed, true);
         m_isNewPack = false;
         m_packIdEdit->setText(ToQString(pack.m_packId));
         m_displayNameEdit->setText(ToQString(pack.m_displayName));
@@ -408,11 +500,13 @@ namespace TaintedGrailModdingSDK
         m_localisationPathsEdit->setPlainText(JoinLines(pack.m_localisationPaths));
         m_buildConfigurationEdit->setText(ToQString(pack.m_buildConfiguration));
         m_releaseChannelCombo->setCurrentText(ToQString(pack.m_releaseChannel));
+        ResetDraftBaseline();
         UpdateSummary();
     }
 
     void PackManagerWidget::ClearFormForNewPack()
     {
+        const QScopedValueRollback<bool> suppress(m_recoverySuppressed, true);
         m_isNewPack = true;
         m_packIdEdit->clear();
         m_displayNameEdit->clear();
@@ -444,7 +538,55 @@ namespace TaintedGrailModdingSDK
             m_targetBranchEdit->clear();
         }
         UpdateGeneratedIdentity();
+        ResetDraftBaseline();
         UpdateSummary();
+    }
+
+    void PackManagerWidget::UpdateDraftField(QWidget* field, const QString& value)
+    {
+        m_formValues.insert(field, value);
+        UpdateDraftStatus();
+        ScheduleRecovery();
+    }
+
+    void PackManagerWidget::ResetDraftBaseline()
+    {
+        m_savedFormValues = m_formValues;
+        UpdateDraftStatus();
+    }
+
+    void PackManagerWidget::UpdateDraftStatus()
+    {
+        m_draftStatusLabel->setText(m_formValues != m_savedFormValues
+                ? tr("Unsaved changes")
+                : (m_isNewPack ? tr("New mod draft") : tr("All changes saved")));
+    }
+
+    bool PackManagerWidget::ConfirmDraftReplacement(const QString& action)
+    {
+        if (m_recoveryPending)
+        {
+            return true; // Closing/switching leaves an unresolved copy for the next visit.
+        }
+        if (m_formValues == m_savedFormValues)
+        {
+            return true;
+        }
+
+        QMessageBox prompt(QMessageBox::Warning, tr("Unsaved mod changes"),
+            tr("Save changes before %1?").arg(action),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+        prompt.setObjectName(QStringLiteral("packUnsavedChangesDialog"));
+        prompt.setTextFormat(Qt::PlainText);
+        prompt.setInformativeText(tr("Discard will lose the changes in this draft."));
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.setEscapeButton(QMessageBox::Cancel);
+        const int choice = prompt.exec();
+        if (choice == QMessageBox::Save)
+        {
+            return SavePack();
+        }
+        return choice == QMessageBox::Discard;
     }
 
     void PackManagerWidget::UpdateGeneratedIdentity()
@@ -565,10 +707,19 @@ namespace TaintedGrailModdingSDK
                 .arg(MaximumWorkspaceModDirectories);
         }
         m_workspaceModsHint->setText(hint);
+        if (m_recoveryPending)
+        {
+            m_workspaceModsCombo->setEnabled(false);
+            m_openSelectedButton->setEnabled(false);
+        }
     }
 
     void PackManagerWidget::OpenSelectedPack()
     {
+        if (m_recoveryPending)
+        {
+            return;
+        }
         const QString filePath = m_workspaceModsCombo->currentData().toString();
         if (filePath.isEmpty())
         {
@@ -581,11 +732,21 @@ namespace TaintedGrailModdingSDK
             return;
         }
 
+        // Saving can refresh the combo selection; retain the requested path above.
+        if (!ConfirmDraftReplacement(tr("opening the selected mod")))
+        {
+            return;
+        }
+
         AZStd::string error;
         if (!FoundationService::Get().LoadPack(ToAzString(filePath), &error))
         {
             SetStatus(ToQString(error), true);
             return;
+        }
+        if (!RetireRecovery())
+        {
+            return; // Preserve the old form and recovery copy if cleanup fails.
         }
         if (const PackManifest* pack = FoundationService::Get().GetActivePack())
         {
@@ -601,8 +762,12 @@ namespace TaintedGrailModdingSDK
         m_statusLabel->setStyleSheet(error ? QStringLiteral("color: #d9534f;") : QString());
     }
 
-    bool PackManagerWidget::ApplyPack()
+    bool PackManagerWidget::SavePack()
     {
+        if (m_recoveryPending)
+        {
+            return false;
+        }
         UpdateGeneratedIdentity();
         if (m_displayNameEdit->text().trimmed().isEmpty())
         {
@@ -615,44 +780,12 @@ namespace TaintedGrailModdingSDK
             return false;
         }
 
-        AZStd::string error;
-        if (!FoundationService::Get().SetActivePack(BuildPackFromForm(), &error))
-        {
-            SetStatus(ToQString(error), true);
-            return false;
-        }
-        m_isNewPack = false;
-        return true;
-    }
-
-    QString PackManagerWidget::CanonicalPackFilePath(const PackManifest& pack) const
-    {
-        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
-        if (workspace.m_rootPath.empty() || pack.m_packId.empty())
-        {
-            return {};
-        }
-        return QDir(ToQString(workspace.m_rootPath)).filePath(
-            QStringLiteral("Packs/%1/pack.tgpack.json").arg(ToQString(pack.m_packId)));
-    }
-
-    bool PackManagerWidget::SavePack()
-    {
-        if (!ApplyPack())
-        {
-            return false;
-        }
-
         FoundationService& service = FoundationService::Get();
-        const PackManifest* pack = service.GetActivePack();
-        if (!pack)
-        {
-            SetStatus(tr("No mod is available to save."), true);
-            return false;
-        }
-
-        QString filePath = service.GetActivePackFilePath().empty()
-            ? CanonicalPackFilePath(*pack)
+        const PackManifest pack = BuildPackFromForm();
+        const PackManifest* activePack = service.GetActivePack();
+        const QString filePath = m_isNewPack || !activePack
+                || activePack->m_packId != pack.m_packId || service.GetActivePackFilePath().empty()
+            ? CanonicalPackFilePath(pack)
             : ToQString(service.GetActivePackFilePath());
         if (filePath.isEmpty())
         {
@@ -666,15 +799,33 @@ namespace TaintedGrailModdingSDK
         }
 
         AZStd::string error;
-        if (!service.SaveActivePack(ToAzString(filePath), &error))
+        if (!service.SavePackAndActivate(pack, ToAzString(filePath), &error))
         {
             SetStatus(ToQString(error), true);
+            return false;
+        }
+        m_isNewPack = false;
+        ResetDraftBaseline();
+        if (!RetireRecovery())
+        {
+            SetStatus(tr("Mod saved, but its recovery copy could not be cleared. Retry Save mod."), true);
             return false;
         }
         SetStatus(tr("Mod saved. You can start authoring."));
         UpdateSummary();
         RefreshWorkspaceMods(filePath);
         return true;
+    }
+
+    QString PackManagerWidget::CanonicalPackFilePath(const PackManifest& pack) const
+    {
+        const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
+        if (workspace.m_rootPath.empty() || pack.m_packId.empty())
+        {
+            return {};
+        }
+        return QDir(ToQString(workspace.m_rootPath)).filePath(
+            QStringLiteral("Packs/%1/pack.tgpack.json").arg(ToQString(pack.m_packId)));
     }
 
     bool PackManagerWidget::IsInsideWorkspace(const QString& filePath) const
@@ -693,6 +844,6 @@ namespace TaintedGrailModdingSDK
         const Qt::CaseSensitivity sensitivity = Qt::CaseSensitive;
 #endif
         return absoluteFilePath.compare(workspaceRoot, sensitivity) == 0
-            || absoluteFilePath.startsWith(workspaceRoot + QDir::separator(), sensitivity);
+            || absoluteFilePath.startsWith(workspaceRoot + '/', sensitivity);
     }
 } // namespace TaintedGrailModdingSDK

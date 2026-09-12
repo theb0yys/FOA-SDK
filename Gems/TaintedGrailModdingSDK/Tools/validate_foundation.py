@@ -326,17 +326,19 @@ def validate_economy_authoring(gem_root: Path) -> None:
         quest_widget_header,
         (
             "class QuestStateInspectorWidget",
-            "PopulateBindingRequirements",
+            "RefreshRows",
+            "DrawGraph",
+            "FoundationNotificationBus::Handler",
         ),
     )
     require_fragments(
         quest_widget,
         (
-            "ParseQuestDefinitionJsonV1",
-            "CalculateQuestDefinitionFingerprintV1",
-            "MaximumQuestDocumentBytes",
-            "QIODevice::ReadOnly",
-            "does not write files, mutate editor state, execute quests, deploy content, or touch FoA saves",
+            "FoundationService::Get().ReadQuestDocument",
+            "FoundationService::Get().SaveQuestDefinition",
+            "FoundationService::Get().AdoptQuestDefinition",
+            "QuestAuthoringService::Inspect",
+            "this editor does not advance quests or write game state",
         ),
     )
 
@@ -428,7 +430,21 @@ def validate_population_authoring(gem_root: Path) -> None:
         fail("Atomic troop-definition candidate must bind, evidence-check, and merge every member")
     if definition.count("ValidateMemberLinkOwnership(") != 1:
         fail("Atomic troop-definition candidate must preserve membership link ownership")
-    if ".erase(" in definition or "candidate.UpsertPopulationTroopMember(" in definition:
+    removal_start = definition.find("for (const auto& id : definition.m_removedMemberIds)")
+    removal_end = definition.find("bool replacedProfile = false;", removal_start)
+    removal = definition[removal_start:removal_end]
+    required_removal = (
+        "AZStd::find(removedIds.begin(), removedIds.end(), id)",
+        "AZStd::find(memberIds.begin(), memberIds.end(), id)",
+        "found == document.m_troopMembers.end()",
+        "found->m_troopRecordId != definition.m_profile.m_recordId",
+        "document.m_troopMembers.erase(found);",
+        "removedIds.push_back(id);",
+    )
+    if removal_start < 0 or removal_end < 0 or any(fragment not in removal for fragment in required_removal):
+        fail("Explicit troop member removal must validate duplicates, conflicts and exact ownership")
+    if (definition.count(".erase(") != 1 or removal.count(".erase(") != 1
+            or "candidate.UpsertPopulationTroopMember(" in definition):
         fail("Atomic troop-definition upsert must not remove omitted population members")
 
     member_start = authoring.find(

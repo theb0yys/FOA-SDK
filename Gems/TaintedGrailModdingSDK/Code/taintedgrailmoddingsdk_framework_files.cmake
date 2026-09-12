@@ -24,8 +24,17 @@ set(FILES
     Source/TerrainCampaignExportHost.cpp
     Source/TerrainCampaignExportHost.h
     Source/TerrainImportHost.cpp
+    Source/FoundationAssetLocalisationService.cpp
+    Source/ProjectImageService.cpp
+    Source/ProjectImageService.h
+    Source/FoundationQuestService.cpp
+    Source/FoundationWorldService.cpp
+    Source/FoundationSocietyService.cpp
+    Source/FoundationEncounterService.cpp
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h
+    Source/NativeItemPreviewService.cpp
+    Source/NativeItemPreviewService.h
     Source/AssetBrowserPreviewService.cpp
     Source/AssetBrowserPreviewService.h
     Source/CatalogGovernanceService.cpp
@@ -44,6 +53,10 @@ set(FILES
     Source/FoAInstallDiscoveryService.h
     Source/FoundationCatalogService.cpp
     Source/FoundationEconomyService.cpp
+    Source/FoundationEconomyIntakeService.cpp
+    Source/FoundationPopulationIntakeService.cpp
+    Source/PopulationPortraitService.cpp
+    Source/PopulationPortraitService.h
     Source/FoundationEvidenceReviewService.cpp
     Source/FoundationExtensionAPI.cpp
     Source/FoundationExtensionRequestBus.cpp
@@ -64,6 +77,8 @@ set(FILES
     Source/FoundationWorkspaceLoadService.h
     Source/LocalSetupDetectionService.cpp
     Source/LocalSetupDetectionService.h
+    Source/PackDraftRecoveryService.cpp
+    Source/PackDraftRecoveryService.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/PathPolicyService.cpp

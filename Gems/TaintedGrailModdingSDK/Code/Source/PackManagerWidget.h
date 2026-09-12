@@ -9,15 +9,20 @@
 
 #include "FoundationModels.h"
 #include "FoundationNotificationBus.h"
+#include "PackDraftRecoveryService.h"
 
+#include <QHash>
 #include <QWidget>
 
+class QCloseEvent;
 class QComboBox;
 class QGroupBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
+class QThread;
+class QTimer;
 
 namespace TaintedGrailModdingSDK
 {
@@ -29,18 +34,36 @@ namespace TaintedGrailModdingSDK
         explicit PackManagerWidget(QWidget* parent = nullptr);
         ~PackManagerWidget() override;
 
+    protected:
+        void closeEvent(QCloseEvent* event) override;
+
     private:
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
+
+        void InitializeRecovery();
+        void StartRecoveryForWorkspace();
+        void SetRecoveryPending(bool pending);
+        void ScheduleRecovery();
+        void CheckpointRecovery();
+        void RestoreRecovery();
+        bool RetireRecovery();
+        void StopRecovery();
+        PackDraftRecovery CaptureRecovery() const;
 
         PackManifest BuildPackFromForm() const;
         void PopulateFromPack(const PackManifest& pack);
         void ClearFormForNewPack();
         void UpdateGeneratedIdentity();
         void UpdateSummary();
+        void UpdateDraftField(QWidget* field, const QString& value);
+        void ResetDraftBaseline();
+        void UpdateDraftStatus();
+        bool ConfirmDraftReplacement(const QString& action);
         void RefreshWorkspaceMods(const QString& selectedPath = {});
         void OpenSelectedPack();
         void SetStatus(const QString& message, bool error = false);
-        bool ApplyPack();
         bool SavePack();
         QString CanonicalPackFilePath(const PackManifest& pack) const;
         bool IsInsideWorkspace(const QString& filePath) const;
@@ -69,9 +92,31 @@ namespace TaintedGrailModdingSDK
         QLabel* m_manifestPathValue = nullptr;
         QLabel* m_workspaceModsHint = nullptr;
         QLabel* m_statusLabel = nullptr;
+        QLabel* m_draftStatusLabel = nullptr;
         QGroupBox* m_advancedGroup = nullptr;
         QPushButton* m_advancedToggleButton = nullptr;
         QPushButton* m_openSelectedButton = nullptr;
+        QHash<QWidget*, QString> m_formValues;
+        QHash<QWidget*, QString> m_savedFormValues;
         bool m_isNewPack = true;
+        QMap<QString, QWidget*> m_recoveryFields;
+        std::shared_ptr<PackDraftRecoveryService> m_recoveryStore;
+        PackDraftRecoveryRead m_recoveryRead;
+        QThread* m_recoveryThread = nullptr;
+        QObject* m_recoveryWorker = nullptr;
+        QTimer* m_recoveryTimer = nullptr;
+        QLabel* m_recoveryStatus = nullptr;
+        QWidget* m_recoveryPanel = nullptr;
+        QPushButton* m_restoreRecoveryButton = nullptr;
+        QPushButton* m_discardRecoveryButton = nullptr;
+        QPushButton* m_retryRecoveryButton = nullptr;
+        QPushButton* m_newButton = nullptr;
+        QPushButton* m_saveButton = nullptr;
+        quint64 m_recoveryGeneration = 0;
+        bool m_recoveryPending = false;
+        bool m_recoverySuppressed = false;
+        bool m_recoveryStoreReady = false;
+        bool m_recoveryWriteInFlight = false;
+        bool m_recoveryClosing = false;
     };
 } // namespace TaintedGrailModdingSDK

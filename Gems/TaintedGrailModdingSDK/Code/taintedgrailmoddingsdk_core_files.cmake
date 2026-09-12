@@ -6,6 +6,37 @@
 #
 
 set(FILES
+    Source/CapabilityExecutionContracts.h
+    Source/CapabilityExecutionContracts.cpp
+    Source/CapabilityExecutionCanonical.h
+    Source/CapabilityExecutionCanonical.cpp
+    Source/CapabilityExecutionValidation.h
+    Source/CapabilityExecutionValidation.cpp
+    Source/WorldModels.h
+    Source/QuestAuthoringModels.h
+    Source/AssetLocalisationModels.cpp
+    Source/AssetLocalisationModels.h
+    Source/AssetLocalisationService.cpp
+    Source/AssetLocalisationService.h
+    Source/CatalogDatabaseAssets.cpp
+    Source/QuestAuthoringModels.cpp
+    Source/QuestAuthoringService.h
+    Source/QuestAuthoringService.cpp
+    Source/CatalogDatabaseQuest.cpp
+    Source/WorldModels.cpp
+    Source/WorldPlanningService.h
+    Source/WorldPlanningService.cpp
+    Source/CatalogDatabaseWorld.cpp
+    Source/SocietyModels.h
+    Source/SocietyModels.cpp
+    Source/SocietyPlanningService.h
+    Source/SocietyPlanningService.cpp
+    Source/CatalogDatabaseSociety.cpp
+    Source/EncounterModels.h
+    Source/EncounterModels.cpp
+    Source/EncounterPlanningService.h
+    Source/EncounterPlanningService.cpp
+    Source/CatalogDatabaseEncounters.cpp
     Source/AvalonAiExtension.cpp
     Source/AvalonAiExtension.h
     Source/AdapterBuildManifestService.cpp

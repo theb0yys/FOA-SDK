@@ -9,8 +9,11 @@
 
 #include "FoundationModels.h"
 #include "FoundationService.h"
+#include "NativeItemPreviewService.h"
 
 #include <AzCore/std/algorithm.h>
+#include <AzCore/std/sort.h>
+#include <AzCore/Utils/Utils.h>
 
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -18,6 +21,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
 #include <QFont>
@@ -35,6 +39,7 @@
 #include <QJsonValue>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMap>
 #include <QPixmap>
 #include <QPushButton>
 #include <QScrollArea>
@@ -42,10 +47,12 @@
 #include <QSplitter>
 #include <QStringList>
 #include <QStyle>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVariant>
 #include <QVBoxLayout>
+#include <chrono>
 
 namespace TaintedGrailModdingSDK
 {
@@ -53,7 +60,7 @@ namespace TaintedGrailModdingSDK
     {
         constexpr int EntryIndexRole = Qt::UserRole + 1;
         constexpr int MaximumEvidenceScanFiles = 2000;
-        constexpr qint64 MaximumEvidenceDocumentBytes = 4 * 1024 * 1024;
+        constexpr qint64 MaximumEvidenceDocumentBytes = 16 * 1024 * 1024;
 
         AZStd::string ToAzString(const QString& value)
         {
@@ -110,14 +117,22 @@ namespace TaintedGrailModdingSDK
         }
     } // namespace
 
-    AssetBrowserPreviewWidget::AssetBrowserPreviewWidget(QWidget* parent)
+    AssetBrowserPreviewWidget::AssetBrowserPreviewWidget(QWidget* parent, bool itemPreviewOnly)
         : QWidget(parent)
+        , m_itemPreviewOnly(itemPreviewOnly)
     {
+        // This pane can be the first SDK window opened after an Editor restart.
+        // Load the saved workspace before subscribing; setup publishes notifications.
+        if (FoundationService::Get().GetWorkspaceFilePath().empty())
+        {
+            FoundationService::Get().RefreshLocalSetup();
+        }
         FoundationNotificationBus::Handler::BusConnect();
 
-        setMinimumSize(640, 720);
-        setMaximumWidth(1080);
+        setMinimumSize(itemPreviewOnly ? QSize(320, 300) : QSize(640, 480));
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        m_nativePreviewService = new NativeItemPreviewService(this);
+        m_previewLoadPool.setMaxThreadCount(1);
 
         auto* rootLayout = new QVBoxLayout(this);
         auto* heading = new QLabel(tr("Tainted Grail Asset Browser Preview"), this);
@@ -154,24 +169,44 @@ namespace TaintedGrailModdingSDK
         auto* actionRow = new QWidget(this);
         auto* actionLayout = new QHBoxLayout(actionRow);
         actionLayout->setContentsMargins(0, 0, 0, 0);
-        auto* autoFindButton = new QPushButton(tr("Refresh assets"), actionRow);
-        auto* loadButton = new QPushButton(tr("Load assets"), actionRow);
-        actionLayout->addWidget(autoFindButton);
-        actionLayout->addWidget(loadButton);
+        m_refreshButton = new QPushButton(tr("Refresh assets"), actionRow);
+        m_refreshButton->setObjectName(QStringLiteral("NativeItemRefreshButton"));
+        m_loadButton = new QPushButton(tr("Load assets"), actionRow);
+        actionLayout->addWidget(m_refreshButton);
+        actionLayout->addWidget(m_loadButton);
         actionLayout->addStretch(1);
         rootLayout->addWidget(actionRow);
 
         m_statusLabel = new QLabel(this);
+        m_statusLabel->setObjectName(QStringLiteral("AssetPreviewStatus"));
         m_statusLabel->setWordWrap(true);
         ConfigureValueLabel(m_statusLabel);
         rootLayout->addWidget(m_statusLabel);
 
+        auto* filterRow = new QHBoxLayout();
         m_categoryFilter = new QComboBox(this);
-        m_categoryFilter->addItem(tr("All categories"));
-        rootLayout->addWidget(m_categoryFilter);
+        m_categoryFilter->setObjectName(QStringLiteral("AssetPreviewCategory"));
+        m_categoryFilter->setAccessibleName(tr("Item category"));
+        m_categoryFilter->addItem(tr("All categories"), QString());
+        m_subcategoryFilter = new QComboBox(this);
+        m_subcategoryFilter->setObjectName(QStringLiteral("AssetPreviewSubcategory"));
+        m_subcategoryFilter->setAccessibleName(tr("Item subcategory"));
+        m_subcategoryFilter->addItem(tr("All subcategories"), QString());
+        m_subcategoryFilter->setEnabled(false);
+        filterRow->addWidget(new QLabel(tr("Category"), this));
+        filterRow->addWidget(m_categoryFilter, 1);
+        filterRow->addWidget(new QLabel(tr("Subcategory"), this));
+        filterRow->addWidget(m_subcategoryFilter, 1);
+        rootLayout->addLayout(filterRow);
+        m_searchEdit = new QLineEdit(this);
+        m_searchEdit->setObjectName(QStringLiteral("AssetPreviewSearch"));
+        m_searchEdit->setPlaceholderText(tr("Search items and assets"));
+        m_searchEdit->setClearButtonEnabled(true);
+        rootLayout->addWidget(m_searchEdit);
 
         auto* splitter = new QSplitter(Qt::Horizontal, this);
         m_assetTree = new QTreeWidget(splitter);
+        m_assetTree->setObjectName(QStringLiteral("AssetPreviewTree"));
         m_assetTree->setColumnCount(5);
         m_assetTree->setHeaderLabels({
             tr("Asset"),
@@ -193,13 +228,19 @@ namespace TaintedGrailModdingSDK
         inspectorScroll->setWidget(inspector);
 
         m_thumbnailLabel = new QLabel(inspector);
+        m_thumbnailLabel->setObjectName(QStringLiteral("AssetPreviewImage"));
         m_thumbnailLabel->setMinimumSize(220, 220);
         m_thumbnailLabel->setAlignment(Qt::AlignCenter);
         m_thumbnailLabel->setFrameShape(QFrame::StyledPanel);
         m_thumbnailLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         inspectorLayout->addWidget(m_thumbnailLabel);
+        m_itemCaption = new QLabel(inspector);
+        m_itemCaption->setAlignment(Qt::AlignCenter);
+        m_itemCaption->setWordWrap(true);
+        m_itemCaption->setVisible(m_itemPreviewOnly);
+        inspectorLayout->addWidget(m_itemCaption);
 
-        auto* detailsGroup = new QGroupBox(tr("Selected preview product"), inspector);
+        auto* detailsGroup = new QGroupBox(tr("Selected item or asset"), inspector);
         auto* detailsLayout = new QFormLayout(detailsGroup);
         m_identityValue = new QLabel(detailsGroup);
         m_categoryValue = new QLabel(detailsGroup);
@@ -241,9 +282,42 @@ namespace TaintedGrailModdingSDK
         splitter->setStretchFactor(1, 2);
         rootLayout->addWidget(splitter, 1);
 
-        connect(autoFindButton, &QPushButton::clicked, this, [this]() { AutoFindEvidence(); });
-        connect(loadButton, &QPushButton::clicked, this, [this]() { LoadPreviewEvidence(); });
-        connect(m_categoryFilter, &QComboBox::currentTextChanged, this, [this]() { PopulateTree(); });
+        if (m_itemPreviewOnly)
+        {
+            setObjectName(QStringLiteral("economyNativePreview"));
+            m_thumbnailLabel->setObjectName(QStringLiteral("economyNativePreviewImage"));
+            m_thumbnailLabel->setAccessibleName(tr("Selected item's game icon"));
+            m_thumbnailLabel->setMinimumSize(320, 320);
+            m_thumbnailLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+            inspectorLayout->setStretch(0, 1);
+            inspectorLayout->setStretch(inspectorLayout->count() - 1, 0);
+            m_itemCaption->setObjectName(QStringLiteral("economyNativePreviewCaption"));
+            m_statusLabel->setObjectName(QStringLiteral("economyNativePreviewStatus"));
+            m_refreshButton->setObjectName(QStringLiteral("economyNativePreviewRefresh"));
+            for (QWidget* widget : QList<QWidget*>{heading, profileGroup, sourceGroup,
+                     m_loadButton, m_searchEdit, m_assetTree, detailsGroup, m_routeButton, m_routeStatus})
+            {
+                widget->hide();
+            }
+            for (int index = 0; index < filterRow->count(); ++index)
+            {
+                filterRow->itemAt(index)->widget()->hide();
+            }
+        }
+
+        connect(m_refreshButton, &QPushButton::clicked, this, [this]() { RefreshAssets(); });
+        connect(m_loadButton, &QPushButton::clicked, this, [this]() { AutoFindEvidence(); LoadPreviewEvidence(); });
+        connect(m_categoryFilter, qOverload<int>(&QComboBox::currentIndexChanged), this, [this]()
+        {
+            RefreshSubcategoryFilter();
+            PopulateTree();
+        });
+        connect(m_subcategoryFilter, qOverload<int>(&QComboBox::currentIndexChanged), this, [this]() { PopulateTree(); });
+        auto* searchTimer = new QTimer(this);
+        searchTimer->setSingleShot(true);
+        searchTimer->setInterval(150);
+        connect(m_searchEdit, &QLineEdit::textChanged, searchTimer, qOverload<>(&QTimer::start));
+        connect(searchTimer, &QTimer::timeout, this, [this]() { PopulateTree(); });
         connect(m_assetTree, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* current)
         {
             ShowSelectedEntry(current);
@@ -256,6 +330,13 @@ namespace TaintedGrailModdingSDK
     AssetBrowserPreviewWidget::~AssetBrowserPreviewWidget()
     {
         FoundationNotificationBus::Handler::BusDisconnect();
+        if (m_loadCancelled)
+        {
+            *m_loadCancelled = true;
+        }
+        m_previewLoadPool.clear();
+        m_previewLoadPool.waitForDone();
+        delete m_nativePreviewService;
     }
 
     void AssetBrowserPreviewWidget::OnFoundationChanged()
@@ -263,10 +344,145 @@ namespace TaintedGrailModdingSDK
         RefreshProfileContext();
     }
 
+    void AssetBrowserPreviewWidget::SetItemTarget(const QString& recordId, const QString& nativeRefExact)
+    {
+        if (!m_itemPreviewOnly || (m_itemRecordId == recordId && m_itemNativeRef == nativeRefExact))
+        {
+            return;
+        }
+        m_itemRecordId = recordId;
+        m_itemNativeRef = nativeRefExact;
+        ShowItemThumbnail();
+    }
+
+    void AssetBrowserPreviewWidget::ShowItemThumbnail()
+    {
+        m_itemPixmap = {};
+        m_thumbnailLabel->clear();
+        m_thumbnailLabel->setProperty("nativeRefExact", QString());
+        m_thumbnailLabel->setProperty("previewPath", QString());
+        m_thumbnailLabel->setProperty("itemRecordId", m_itemRecordId);
+        m_itemCaption->clear();
+        const auto* entry = AssetBrowserPreviewService::FindItemThumbnail(m_snapshot, ToAzString(m_itemNativeRef));
+        if (entry)
+        {
+            m_itemPixmap.load(ToQString(entry->m_thumbnailPath));
+            if (!m_itemPixmap.isNull())
+            {
+                m_thumbnailLabel->setProperty("nativeRefExact", ToQString(entry->m_nativeAssetRef));
+                m_thumbnailLabel->setProperty("previewPath", ToQString(entry->m_thumbnailPath));
+                m_itemCaption->setText(ToQString(entry->m_displayName));
+                ScaleItemThumbnail();
+                return;
+            }
+        }
+        m_thumbnailLabel->setText(m_itemRecordId.isEmpty() ? tr("Select an item or a recipe output to see its game icon.")
+            : m_loading ? tr("Loading game icons...")
+            : m_itemNativeRef.isEmpty() ? tr("This local item has no game icon. Use Custom visuals to choose an asset.")
+            : tr("No supported game icon is available for this item. Refresh assets to check again."));
+        m_thumbnailLabel->setWordWrap(true);
+    }
+
+    void AssetBrowserPreviewWidget::ScaleItemThumbnail()
+    {
+        if (!m_itemPixmap.isNull())
+        {
+            m_thumbnailLabel->setPixmap(m_itemPixmap.scaled(
+                m_thumbnailLabel->contentsRect().size().boundedTo(QSize(512, 512)),
+                Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        }
+    }
+
+    void AssetBrowserPreviewWidget::resizeEvent(QResizeEvent* event)
+    {
+        QWidget::resizeEvent(event);
+        if (m_itemPreviewOnly)
+        {
+            ScaleItemThumbnail();
+        }
+    }
+
+    void AssetBrowserPreviewWidget::RefreshAssets()
+    {
+        m_autoRefreshIfEmpty = false;
+        if (m_loading)
+        {
+            *m_loadCancelled = true;
+            ++m_loadGeneration;
+            m_previewLoadPool.clear();
+            m_loading = false;
+            m_refreshButton->setText(tr("Refresh assets"));
+            m_loadButton->setEnabled(true);
+            SetStatus(tr("Item preview refresh cancelled. Previous previews are preserved."));
+            return;
+        }
+        if (m_nativePreviewService->IsRunning())
+        {
+            m_nativePreviewService->Cancel();
+            return;
+        }
+        const QString workspacePath = ToQString(FoundationService::Get().GetWorkspaceFilePath());
+        m_refreshButton->setText(tr("Cancel refresh"));
+        m_loadButton->setEnabled(false);
+        SetStatus(tr("Reading installed items and generating icon previews..."));
+        const QStringList context = m_profileContext;
+        m_nativePreviewService->Start(workspacePath,
+            [this, context](const QString& progress)
+            {
+                if (context == m_profileContext)
+                {
+                    SetStatus(progress);
+                }
+            },
+            [this, context](const QString& manifest, const QString& error)
+        {
+            if (context != m_profileContext)
+            {
+                return;
+            }
+            m_refreshButton->setText(tr("Refresh assets"));
+            m_loadButton->setEnabled(true);
+            if (!error.isEmpty())
+            {
+                SetStatus(error, true);
+                return;
+            }
+            m_thumbnailEvidencePath = manifest;
+            LoadPreviewEvidence();
+        });
+    }
+
     void AssetBrowserPreviewWidget::RefreshProfileContext()
     {
         const WorkspaceModel& workspace = FoundationService::Get().GetWorkspace();
         const GameProfile* profile = workspace.FindActiveGameProfile();
+        QStringList context{ToQString(FoundationService::Get().GetWorkspaceFilePath())};
+        if (profile)
+        {
+            context << ToQString(profile->m_profileId) << ToQString(profile->m_gameVersion)
+                << ToQString(profile->m_branch) << ToQString(profile->m_runtimeTarget)
+                << ToQString(profile->m_installPath) << ToQString(profile->m_extractedDataPath);
+        }
+        // Item saves publish Foundation notifications too. Keep the validated snapshot
+        // until its source context changes, rather than scanning on every field edit.
+        if (m_itemPreviewOnly && context == m_profileContext)
+        {
+            return;
+        }
+        m_profileContext = context;
+        m_nativePreviewService->Cancel();
+        if (m_loadCancelled)
+        {
+            *m_loadCancelled = true;
+        }
+        ++m_loadGeneration;
+        m_previewLoadPool.clear();
+        m_loading = false;
+        m_refreshButton->setText(tr("Refresh assets"));
+        m_loadButton->setEnabled(true);
+        m_autoRefreshIfEmpty = true;
+        m_snapshot = {};
+        PopulateTree();
         if (!profile)
         {
             m_gameInstallEdit->clear();
@@ -290,6 +506,14 @@ namespace TaintedGrailModdingSDK
         }
 
         m_customAssetsEdit->setText(ResolveCustomAssetsRoot());
+        if (m_itemPreviewOnly)
+        {
+            m_paneModelPath.clear();
+            m_thumbnailEvidencePath.clear();
+            m_viewportEvidencePath.clear();
+            LoadPreviewEvidence();
+            return;
+        }
         AutoFindEvidence();
         if (!m_paneModelPath.isEmpty()
             || !m_thumbnailEvidencePath.isEmpty()
@@ -316,9 +540,11 @@ namespace TaintedGrailModdingSDK
             return;
         }
 
-        const QString paneModel = FindEvidenceDocument(QStringLiteral("foa-asset-browser-pane-model"));
+        const QString paneModel = m_itemPreviewOnly ? QString()
+            : FindEvidenceDocument(QStringLiteral("foa-asset-browser-pane-model"));
         const QString thumbnailEvidence = FindEvidenceDocument(QStringLiteral("foa-thumbnail-artifact-evidence"));
-        const QString viewportEvidence = FindEvidenceDocument(QStringLiteral("foa-3d-preview-viewport-render"));
+        const QString viewportEvidence = m_itemPreviewOnly ? QString()
+            : FindEvidenceDocument(QStringLiteral("foa-3d-preview-viewport-render"));
         m_paneModelPath = paneModel;
         m_thumbnailEvidencePath = thumbnailEvidence;
         m_viewportEvidencePath = viewportEvidence;
@@ -336,24 +562,75 @@ namespace TaintedGrailModdingSDK
 
     void AssetBrowserPreviewWidget::LoadPreviewEvidence()
     {
-        auto result = m_service.LoadPreview(BuildRequest());
+        if (m_loadCancelled)
+        {
+            *m_loadCancelled = true;
+        }
+        m_previewLoadPool.clear();
+        m_loadCancelled = std::make_shared<std::atomic_bool>(false);
+        const auto cancellation = m_loadCancelled;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        auto request = BuildRequest();
+        request.m_isCancelled = [cancellation, deadline]()
+        {
+            return cancellation->load() || std::chrono::steady_clock::now() >= deadline;
+        };
+        const auto generation = ++m_loadGeneration;
+        m_loading = true;
+        if (m_itemPreviewOnly && m_itemPixmap.isNull())
+        {
+            ShowItemThumbnail();
+        }
+        m_refreshButton->setText(tr("Cancel refresh"));
+        m_loadButton->setEnabled(false);
+        SetStatus(tr("Checking and loading item previews..."));
+        m_previewLoadPool.start([this, request, generation, itemPreviewOnly = m_itemPreviewOnly]() mutable
+        {
+            if (itemPreviewOnly && request.m_thumbnailEvidencePath.empty())
+            {
+                // Cache discovery can inspect large observation documents. It belongs
+                // on the same bounded worker as validation, never in pane construction.
+                request.m_thumbnailEvidencePath = ToAzString(
+                    FindEvidenceDocument(request, QStringLiteral("foa-thumbnail-artifact-evidence")));
+            }
+            const QString thumbnailEvidencePath = ToQString(request.m_thumbnailEvidencePath);
+            auto result = AssetBrowserPreviewService().LoadPreview(request);
+            QMetaObject::invokeMethod(this, [this, generation, thumbnailEvidencePath, result = AZStd::move(result)]() mutable
+            {
+                if (generation != m_loadGeneration)
+                {
+                    return;
+                }
+                m_thumbnailEvidencePath = thumbnailEvidencePath;
+                ApplyPreviewResult(AZStd::move(result));
+            }, Qt::QueuedConnection);
+        });
+    }
+
+    void AssetBrowserPreviewWidget::ApplyPreviewResult(AZ::Outcome<AssetBrowserPreviewSnapshot, AZStd::string> result)
+    {
+        m_loading = false;
+        m_refreshButton->setText(tr("Refresh assets"));
+        m_loadButton->setEnabled(true);
+        const bool autoRefresh = m_autoRefreshIfEmpty;
+        m_autoRefreshIfEmpty = false;
         if (!result.IsSuccess())
         {
             m_snapshot = {};
             PopulateTree();
             SetStatus(ToQString(result.GetError()), true);
+            if (autoRefresh && !m_gameInstallEdit->text().isEmpty())
+            {
+                QTimer::singleShot(0, this, [this]() { RefreshAssets(); });
+            }
             return;
         }
 
         m_snapshot = result.TakeValue();
-        m_categoryFilter->blockSignals(true);
-        m_categoryFilter->clear();
-        m_categoryFilter->addItem(tr("All categories"));
-        for (const AZStd::string& category : m_snapshot.m_categories)
+        if (!m_itemPreviewOnly)
         {
-            m_categoryFilter->addItem(ToQString(category));
+            RebuildCategoryFilters();
         }
-        m_categoryFilter->blockSignals(false);
         PopulateTree();
         QString status = tr("Loaded %1 asset entries.").arg(static_cast<qulonglong>(m_snapshot.m_entries.size()));
         if (!m_snapshot.m_issues.empty())
@@ -362,22 +639,96 @@ namespace TaintedGrailModdingSDK
             status += ToQString(m_snapshot.m_issues.front());
         }
         SetStatus(status);
+        const bool missingIcons = m_itemPreviewOnly ? m_thumbnailEvidencePath.isEmpty() : m_snapshot.m_entries.empty();
+        if (autoRefresh && missingIcons && !m_gameInstallEdit->text().isEmpty())
+        {
+            QTimer::singleShot(0, this, [this]() { RefreshAssets(); });
+        }
+    }
+
+    void AssetBrowserPreviewWidget::RebuildCategoryFilters()
+    {
+        const QString previous = m_categoryFilter->currentData().toString();
+        QMap<QString, int> counts;
+        for (const auto& entry : m_snapshot.m_entries)
+        {
+            ++counts[ToQString(entry.m_category).section(QStringLiteral(" / "), 0, 0)];
+        }
+        m_categoryFilter->blockSignals(true);
+        m_categoryFilter->clear();
+        m_categoryFilter->addItem(tr("All categories (%1)").arg(m_snapshot.m_entries.size()), QString());
+        for (auto it = counts.constBegin(); it != counts.constEnd(); ++it)
+        {
+            m_categoryFilter->addItem(tr("%1 (%2)").arg(it.key()).arg(it.value()), it.key());
+        }
+        m_categoryFilter->setCurrentIndex(qMax(0, m_categoryFilter->findData(previous)));
+        m_categoryFilter->blockSignals(false);
+        RefreshSubcategoryFilter(true);
+    }
+
+    void AssetBrowserPreviewWidget::RefreshSubcategoryFilter(bool preserveSelection)
+    {
+        const QString previous = preserveSelection ? m_subcategoryFilter->currentData().toString() : QString();
+        const QString group = m_categoryFilter->currentData().toString();
+        QMap<QString, int> counts;
+        int total = 0;
+        if (!group.isEmpty())
+        {
+            for (const auto& entry : m_snapshot.m_entries)
+            {
+                const QString category = ToQString(entry.m_category);
+                if (category.section(QStringLiteral(" / "), 0, 0) == group)
+                {
+                    ++counts[category];
+                    ++total;
+                }
+            }
+        }
+        m_subcategoryFilter->blockSignals(true);
+        m_subcategoryFilter->clear();
+        m_subcategoryFilter->addItem(group.isEmpty() ? tr("All subcategories")
+            : tr("All subcategories (%1)").arg(total), QString());
+        for (auto it = counts.constBegin(); it != counts.constEnd(); ++it)
+        {
+            const QString detail = it.key().section(QStringLiteral(" / "), 1);
+            m_subcategoryFilter->addItem(tr("%1 (%2)").arg(detail.isEmpty() ? tr("General") : detail).arg(it.value()), it.key());
+        }
+        m_subcategoryFilter->setCurrentIndex(qMax(0, m_subcategoryFilter->findData(previous)));
+        m_subcategoryFilter->setEnabled(!counts.isEmpty());
+        m_subcategoryFilter->blockSignals(false);
     }
 
     void AssetBrowserPreviewWidget::PopulateTree()
     {
+        if (m_itemPreviewOnly)
+        {
+            ShowItemThumbnail();
+            return;
+        }
         m_assetTree->clear();
         m_selectedEntryId.clear();
         m_routeButton->setEnabled(false);
         m_thumbnailLabel->clear();
 
-        const QString selectedCategory = m_categoryFilter->currentText();
+        const QString selectedCategory = m_categoryFilter->currentData().toString();
+        const QString selectedSubcategory = m_subcategoryFilter->currentData().toString();
+        const QString search = m_searchEdit->text().trimmed();
+        const bool hasModels = AZStd::any_of(m_snapshot.m_entries.begin(), m_snapshot.m_entries.end(),
+            [](const AssetBrowserPreviewEntry& entry) { return entry.m_canRouteToViewport; });
+        m_assetTree->setColumnHidden(3, !hasModels);
+        m_assetTree->setColumnHidden(4, !hasModels);
         QHash<QString, QTreeWidgetItem*> categories;
         for (int index = 0; index < static_cast<int>(m_snapshot.m_entries.size()); ++index)
         {
             const AssetBrowserPreviewEntry& entry = m_snapshot.m_entries[static_cast<size_t>(index)];
             const QString category = ToQString(entry.m_category);
-            if (selectedCategory != tr("All categories") && selectedCategory != category)
+            if (!search.isEmpty() && !ToQString(entry.m_displayName).contains(search, Qt::CaseInsensitive)
+                && !ToQString(entry.m_nativeAssetRef).contains(search, Qt::CaseInsensitive))
+            {
+                continue;
+            }
+            if ((!selectedCategory.isEmpty() && selectedCategory != category.section(QStringLiteral(" / "), 0, 0))
+                || (!selectedSubcategory.isEmpty() && selectedSubcategory != category))
             {
                 continue;
             }
@@ -385,6 +736,8 @@ namespace TaintedGrailModdingSDK
             QTreeWidgetItem* categoryItem = EnsureCategoryItem(m_assetTree, categories, category);
             auto* item = new QTreeWidgetItem(categoryItem);
             item->setText(0, ToQString(entry.m_displayName));
+            item->setToolTip(0, ToQString(entry.m_displayName));
+            item->setSizeHint(0, QSize(400, 80));
             item->setText(1, ToQString(entry.m_fidelityState));
             item->setText(2, ToQString(entry.m_thumbnailStatus));
             item->setText(3, ToQString(entry.m_viewportRouteState));
@@ -392,14 +745,8 @@ namespace TaintedGrailModdingSDK
             item->setData(0, EntryIndexRole, index);
             if (!entry.m_thumbnailPath.empty())
             {
-                QPixmap thumbnail(ToQString(entry.m_thumbnailPath));
-                if (!thumbnail.isNull())
-                {
-                    item->setIcon(0, QIcon(thumbnail.scaled(
-                        QSize(72, 72),
-                        Qt::KeepAspectRatio,
-                        Qt::SmoothTransformation)));
-                }
+                // QIcon loads visible rows lazily; filtering must not decode thousands of PNGs.
+                item->setIcon(0, QIcon(ToQString(entry.m_thumbnailPath)));
             }
             if (item->icon(0).isNull())
             {
@@ -411,6 +758,10 @@ namespace TaintedGrailModdingSDK
         for (int column = 0; column < m_assetTree->columnCount(); ++column)
         {
             m_assetTree->resizeColumnToContents(column);
+        }
+        if (m_assetTree->topLevelItemCount() > 0 && m_assetTree->topLevelItem(0)->childCount() > 0)
+        {
+            m_assetTree->setCurrentItem(m_assetTree->topLevelItem(0)->child(0));
         }
     }
 
@@ -508,6 +859,11 @@ namespace TaintedGrailModdingSDK
 
     QString AssetBrowserPreviewWidget::ResolveCustomAssetsRoot() const
     {
+        const auto activeProject = AZ::Utils::GetProjectPath();
+        if (!activeProject.empty())
+        {
+            return QDir(QString::fromUtf8(activeProject.c_str())).filePath(QStringLiteral("Assets"));
+        }
         const FoundationService& service = FoundationService::Get();
         const WorkspaceModel& workspace = service.GetWorkspace();
 
@@ -569,12 +925,17 @@ namespace TaintedGrailModdingSDK
 
     QString AssetBrowserPreviewWidget::FindEvidenceDocument(const QString& documentKind) const
     {
-        const QDir root(m_extractedRootPath.trimmed());
+        return FindEvidenceDocument(BuildRequest(), documentKind);
+    }
+
+    QString AssetBrowserPreviewWidget::FindEvidenceDocument(
+        const AssetBrowserPreviewLoadRequest& request, const QString& documentKind)
+    {
+        const QDir root(ToQString(request.m_extractedDataPath));
         if (!root.exists())
         {
             return {};
         }
-        const AssetBrowserPreviewLoadRequest request = BuildRequest();
         if (request.m_profileId.empty()
             || request.m_gameVersion.empty()
             || request.m_branch.empty()
@@ -592,6 +953,10 @@ namespace TaintedGrailModdingSDK
         int scanned = 0;
         while (iterator.hasNext() && scanned < MaximumEvidenceScanFiles)
         {
+            if (request.m_isCancelled && request.m_isCancelled())
+            {
+                return {};
+            }
             const QString path = iterator.next();
             ++scanned;
             const QFileInfo info(path);
@@ -600,10 +965,19 @@ namespace TaintedGrailModdingSDK
                 candidates.push_back(path);
             }
         }
-        candidates.sort(Qt::CaseInsensitive);
+        AZStd::sort(candidates.begin(), candidates.end(), [](const QString& left, const QString& right)
+        {
+            const auto leftTime = QFileInfo(left).lastModified();
+            const auto rightTime = QFileInfo(right).lastModified();
+            return leftTime != rightTime ? leftTime > rightTime : left > right;
+        });
 
         for (const QString& path : candidates)
         {
+            if (request.m_isCancelled && request.m_isCancelled())
+            {
+                return {};
+            }
             QFile file(path);
             if (!file.open(QIODevice::ReadOnly))
             {
@@ -611,7 +985,12 @@ namespace TaintedGrailModdingSDK
             }
 
             QJsonParseError error;
-            const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
+            const QByteArray payload = file.read(MaximumEvidenceDocumentBytes + 1);
+            if (payload.size() > MaximumEvidenceDocumentBytes)
+            {
+                continue;
+            }
+            const QJsonDocument document = QJsonDocument::fromJson(payload, &error);
             if (error.error != QJsonParseError::NoError || !document.isObject())
             {
                 continue;
@@ -656,7 +1035,7 @@ namespace TaintedGrailModdingSDK
         {
             request.m_extractedDataPath = ToAzString(m_extractedRootPath);
         }
-        request.m_customAssetsPath = ToAzString(m_customAssetsEdit->text());
+        request.m_customAssetsPath = m_itemPreviewOnly ? AZStd::string() : ToAzString(m_customAssetsEdit->text());
         request.m_paneModelPath = ToAzString(m_paneModelPath);
         request.m_thumbnailEvidencePath = ToAzString(m_thumbnailEvidencePath);
         request.m_viewportEvidencePath = ToAzString(m_viewportEvidencePath);

@@ -103,6 +103,28 @@ ly_install_files(
 )
 
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_asset_browser_pane_refresh.py" tg_asset_browser_pane_refresh_tool_source)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_native_item_preview.py" tg_native_item_preview_source)
+set(tg_native_item_vendor "${CMAKE_CURRENT_BINARY_DIR}/item-preview-vendor-icons")
+set(tg_native_item_requirements "${CMAKE_CURRENT_LIST_DIR}/../Tools/item_preview_requirements.txt")
+add_custom_command(
+    OUTPUT "${tg_native_item_vendor}/.ready"
+    COMMAND "${Python_EXECUTABLE}" -s -m pip --isolated install
+        --disable-pip-version-check --only-binary=:all: --no-compile --no-deps --upgrade
+        --target "${tg_native_item_vendor}" -r "${tg_native_item_requirements}"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${tg_native_item_vendor}/.ready"
+    DEPENDS "${tg_native_item_requirements}"
+    COMMENT "Preparing the isolated native item preview reader"
+    VERBATIM
+)
+add_custom_target(TaintedGrailNativeItemPreviewReader DEPENDS "${tg_native_item_vendor}/.ready")
+add_dependencies(${gem_name}.Editor TaintedGrailNativeItemPreviewReader)
+ly_add_source_properties(
+    SOURCES Source/NativeItemPreviewService.cpp
+    PROPERTY COMPILE_DEFINITIONS
+    VALUES
+        TG_SDK_NATIVE_ITEM_PREVIEW_SOURCE="${tg_native_item_preview_source}"
+        TG_SDK_NATIVE_ITEM_PREVIEW_VENDOR="${tg_native_item_vendor}"
+)
 ly_add_source_properties(
     SOURCES
         Source/AssetBrowserPreviewRefreshService.cpp
@@ -118,9 +140,16 @@ ly_install_files(
     FILES
         ../Tools/foa_asset_browser_pane_refresh.py
         ../Tools/foa_asset_browser_pane_model.py
+        ../Tools/foa_native_item_preview.py
+        ../Tools/foa_native_economy.py
+        ../Tools/foa_native_population.py
+        ../Tools/foa_addressables_catalog.py
+        ../Tools/item_preview_requirements.txt
     DESTINATION
         scripts/foa-sdk
 )
+install(DIRECTORY "${tg_native_item_vendor}/" DESTINATION scripts/foa-sdk/item-preview-vendor
+    PATTERN ".ready" EXCLUDE PATTERN "__pycache__" EXCLUDE)
 
 ly_add_source_properties(
     SOURCES
@@ -227,6 +256,41 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
     )
 
     ly_add_dependencies(${gem_name}.CanonicalInterchange.Tests AZ::AzTestRunner)
+
+    # M1 execution contracts have no Framework or Editor dependency.
+    ly_add_target(
+        NAME ${gem_name}.CapabilityExecution.Tests ${PAL_TRAIT_TEST_TARGET_TYPE}
+        NAMESPACE Gem
+        NO_UNITY
+        FILES_CMAKE
+            taintedgrailmoddingsdk_capability_execution_tests_files.cmake
+        INCLUDE_DIRECTORIES
+            PRIVATE
+                Source
+                Tests
+        BUILD_DEPENDENCIES
+            PRIVATE
+                Gem::${gem_name}.Core.Static
+                AZ::AzTest
+    )
+
+    set(tg_capability_execution_ctest_command
+        "${Python_EXECUTABLE}"
+        -B
+        -s
+        "${CMAKE_CURRENT_LIST_DIR}/../Tools/run_aztest_without_gtest_xml.py"
+        $<TARGET_FILE_DIR:${gem_name}.CapabilityExecution.Tests>/$<TARGET_FILE_NAME:AZ::AzTestRunner>
+        $<TARGET_FILE:${gem_name}.CapabilityExecution.Tests>
+        AzRunUnitTests
+    )
+
+    ly_add_googletest(
+        NAME Gem::${gem_name}.CapabilityExecution.Tests
+        LABELS REQUIRES_tiaf
+        TEST_COMMAND ${tg_capability_execution_ctest_command}
+    )
+
+    ly_add_dependencies(${gem_name}.CapabilityExecution.Tests AZ::AzTestRunner)
 endif()
 
 # Tool Gems are resolved for both Editor/Project Manager tools and builder hosts.

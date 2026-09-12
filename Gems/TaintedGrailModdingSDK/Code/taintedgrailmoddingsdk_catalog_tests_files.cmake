@@ -6,6 +6,11 @@
 #
 
 set(FILES
+    Tests/AssetLocalisationAuthoringTests.cpp
+    Tests/WorldAuthoringTests.cpp
+    Tests/QuestAuthoringTests.cpp
+    Tests/SocietyAuthoringTests.cpp
+    Tests/EncounterAuthoringTests.cpp
     Tests/AdapterContractTests.cpp
     Tests/CanonicalFingerprintTests.cpp
     Tests/CatalogDatabaseTests.cpp
@@ -19,6 +24,7 @@ set(FILES
     Tests/EconomyDuplicateDetectionServiceTests.cpp
     Tests/FoAInstallDiscoveryServiceTests.cpp
     Tests/FoundationWorkspaceIsolationTests.cpp
+    Tests/PackDraftRecoveryTests.cpp
     Tests/Main.cpp
     Tests/PopulationActionLaneServiceTests.cpp
     Tests/PopulationAuthoringTests.cpp

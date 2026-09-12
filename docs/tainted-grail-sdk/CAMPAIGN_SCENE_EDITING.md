@@ -1929,3 +1929,71 @@ the four-update bound, and final resource counts returned to zero.
 This is original-shader editing proof using synthetic geometry and explicit
 instance input. It does not qualify actual campaign slot ownership, shared-batch
 editing, complete scenes, remaining materials, lighting, four-map UI or export.
+
+
+### Exact saved material uploads
+
+`foa_scene_material_upload.py` joins measured material-property bytes to the
+original constant-buffer layouts. Saved Color values, the public `Color.linear`
+result and actual GPU uploads differed by several float bits in the pinned host.
+The importer therefore consumes direct upload bytes instead of applying an
+approximate gamma formula. Numeric shader defaults remain a separate unsupported
+origin; they are not silently treated as saved material values.
+
+The private request/receipt formats are version 1, profile
+`unity-6000.0.64f1-d3d11`, with explicit `Linear` or `Gamma` color space. Requests
+contain source material keys, shader/property fingerprints, declared types/flags
+and exact little-endian float inputs. The receipt must match the canonical request
+bytes and preserve every material/property identity and count. Color-space or
+source edits invalidate reuse. These hashes bind local measurement inputs; they
+are not authenticity certificates or proof of game rendering.
+
+The workflow is an offline private conversion helper:
+
+1. Call `upload_request([(source_key, binding), ...], color_space="Linear")` on
+   qualified source-material bindings, then write `canonical(request)` as bytes
+   to a private JSON file outside Git.
+2. Build `editor_tests/source_material_binding_probe.cpp` as the isolated Unity
+   D3D11 plugin `FoaMaterialBindingProbe`; copy it and
+   `editor_tests/FoaMaterialUploadProbe.cs` into a private Unity fixture. Configure
+   the exact pinned host and requested color space. Run with `-force-d3d11`,
+   `-force-gfx-direct`, and `-executeMethod FoaMaterialUploadProbe.Run`.
+   `FOA_MATERIAL_UPLOAD_INPUT` names the request and `FOA_MATERIAL_UPLOAD_OUTPUT`
+   names an existing private output directory without `uploads.json`.
+3. Validate `uploads.json` with `read_uploads(request, receipt)`. Pass the selected
+   immutable upload to `pack_material_constants(layout, source_key, binding,
+   upload, color_space="Linear", explicit_values=...)`.
+
+The fixture copies declared property types/flags into generated measurement
+shaders and sets the exact saved values. It compares shader-visible constant bytes
+with float render-target output for every property. It does not load original
+material objects or execute original game shader passes. The downstream packer
+uses the original uniform names, offsets and widths, zeroing only padding. Source
+texture ST uses explicit scale/offset. Unresolved texture uniforms, renderer
+properties and global values must be supplied by their owning producer; explicit
+values cannot silently replace measured material properties.
+
+Each request is bounded to 1,024 materials, 4,096 properties per material,
+262,144 aggregate properties and 64 MiB serialized input. Each native buffer read
+is at most 64 KiB. The reader honors D3D11.1 shader-visible ranges, including
+nonzero offsets, and leaves bindings and rejected output buffers unchanged. Native
+standalone tests compile with `FOA_MATERIAL_BINDING_SELF_TEST`; the WARP device
+checks both stages, nonzero subranges, exact copied bytes, unchanged tails and
+rejections. The conversion helper is offline and adds no work to Editor ticks.
+
+Both Linear and Gamma runs passed for all 875 captured materials and their 91,842
+saved numeric properties using 34 generated declaration layouts. A total of
+973,176 property bytes matched shader output. Linear mode changed 479 saved Color
+properties; Gamma mode retained every input byte. Separate controls compare
+shader defaults, setters, cross-setters and saved reload, including Gamma/HDR
+flags, with 90 invalid-read rejections. A mismatched host color space rejects
+before drawing and produces no upload receipt.
+
+Source layout validation packed 24,620 material/layout combinations and checked
+361,626 uniform fields (13,944,144 bytes) against measured values and original
+byte offsets. The packing run took 19.25 seconds in the recorded local profile.
+Another 970 combinations still require explicitly qualified `_HeightMap_TexelSize`
+values; no substitute is supplied. Original shader-pass rendering, full campaign
+lighting/visibility, complete scene integration, four-map UI and game export
+remain unfinished. These material-upload measurements do not qualify full maps
+for 1:1 testing. Game files and saves remain unchanged.

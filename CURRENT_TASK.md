@@ -714,3 +714,14 @@ and controller records remain unchanged. The fresh private capture took 60.906
 seconds. Full rendered lighting/instance/visibility data, remaining material passes,
 complete scenes, four-map UI and game export remain unfinished. Full maps are not
 ready for 1:1 testing; no game files or saves were written.
+
+Directional-light checkpoint (2026-09-12): the original HDRP builder now runs in an
+isolated Unity graphics fixture for all 19 captured campaign directional lights.
+All source hierarchy matrices match their independent reference; actual culling
+results are retained separately because six lights differ at float-bit precision.
+The explicit native codec matches all 26 original field offsets and all 3,344
+record bytes. Native DX12 transfer passes all 836 words, two corruption patterns
+and removal checks: 2,508 cells and 7,027,236 interior pixel comparisons.
+Final cookies/shadows/atmosphere, controller state, other lighting/instance data,
+remaining materials, complete scenes, four-map UI and export remain unfinished.
+Full maps are not ready for 1:1 testing; game files and saves remain read-only.

@@ -1623,3 +1623,51 @@ float32 precision; unrelated native and companion fields remain unchanged. The
 four-map v2 capture contains 3,488 projected lights and exactly two migrations.
 This is Unity host migration evidence, not Fall of Avalon player execution, GPU
 lighting acceptance, a completed map importer interface or game-return proof.
+
+## Original directional-light GPU records
+
+`foa_scene_directional_lights.py` encodes complete, explicitly supplied directional
+records for the independently fingerprinted source profile. All 26 fields and
+176 bytes are required. Integer signedness, vector components, float32 range,
+record ordering and the structured-buffer declaration are checked; missing or
+unknown fields fail. The codec does not calculate light properties, choose visible
+lights or fill defaults. Its 1,024-record bound is an adapter bound, not a claim
+about the game's renderer capacity. Existing draw packet version 2 is unchanged.
+
+The isolated `Tools/editor_tests/FoaDirectionalGpuProbe.cs` executes the original
+HDRP light builder with actual Unity culling results. Use the qualified Unity host
+with `-batchmode -executeMethod FoaDirectionalGpuProbe.Run`; graphics are required.
+Copy it and `FoaLightMigrationProbe.cs` into an isolated project's Editor folder.
+Set `FOA_LIGHT_MANAGED`, `FOA_DIRECTIONAL_INPUT` and an unused
+`FOA_DIRECTIONAL_OUTPUT` outside source control and the game installation. The
+input contains at most 256 named cases, each with native Light JSON, the exact
+thirty HD fields, up to 256 ancestor TRS nodes and sixteen independently qualified
+source-world float bits. The input is bounded to 16 MiB. Original assemblies and
+input fingerprints are rechecked; outputs stay private.
+
+The fixture tests each light independently at an explicitly synthetic camera and
+render configuration. Source hierarchy geometry and stored properties remain
+separate from controller/scene activation. A culled-light matrix must not be
+substituted with its Transform matrix: the captured Unity run produced different
+float bits for six lights while all nineteen Transform matrices matched their
+independently qualified hierarchies. The actual `VisibleLight` values go directly
+to the original HDRP builder. The private comparison additionally verifies every
+assigned local TRS value and native Light property against the source fixture.
+
+All nineteen captured directional lights across the four campaign roots pass
+original-assembly preparation and independent byte comparison: 3,344 bytes and
+all 26 field offsets. `source_directional_light_gpu.py` builds a native acceptance
+fixture against these independent original bytes, with one cell per word and
+light, plus deliberate all-word and single-word corruptions.
+`source_directional_light_editor.py` captures those cases in the existing O3DE
+viewport; pixel comparison is a separate required acceptance step. The recorded
+DX12 run passes all 2,508 cells and 7,027,236 interior pixel comparisons across
+the original and two corrupted cases, plus draw-removal checks. This proves the
+initial record bytes reach the native GPU buffer unchanged.
+
+These are the builder's initial directional records. Later cookie, atmosphere,
+contact-shadow and shadow-index processing is not qualified by this fixture.
+Live controller state, camera policy, other light shapes, final scene lighting,
+instance state, remaining material passes, complete scenes, four-map UI and game
+export remain unfinished. Neither isolated light preparation nor buffer transfer
+establishes full-map appearance or Fall of Avalon runtime acceptance.

@@ -30,6 +30,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScopedValueRollback>
 #include <QStringList>
 #include <QVBoxLayout>
 
@@ -315,6 +316,8 @@ namespace TaintedGrailModdingSDK
         auto* buttonLayout = new QHBoxLayout();
         auto* newButton = new QPushButton(tr("New mod"), this);
         auto* saveButton = new QPushButton(tr("Save mod"), this);
+        m_newButton = newButton;
+        m_saveButton = saveButton;
         buttonLayout->addWidget(newButton);
         buttonLayout->addStretch(1);
         buttonLayout->addWidget(saveButton);
@@ -380,6 +383,10 @@ namespace TaintedGrailModdingSDK
             {
                 return;
             }
+            if (!RetireRecovery())
+            {
+                return;
+            }
             ClearFormForNewPack();
             SetStatus(tr("New mod ready. Enter a name and author, then Save mod."));
         });
@@ -396,17 +403,21 @@ namespace TaintedGrailModdingSDK
         }
         UpdateSummary();
         RefreshWorkspaceMods(ToQString(FoundationService::Get().GetActivePackFilePath()));
+        InitializeRecovery();
     }
 
     PackManagerWidget::~PackManagerWidget()
     {
         FoundationNotificationBus::Handler::BusDisconnect();
+        StopRecovery();
     }
 
     void PackManagerWidget::closeEvent(QCloseEvent* event)
     {
-        if (ConfirmDraftReplacement(tr("closing Pack Manager")))
+        if (ConfirmDraftReplacement(tr("closing Pack Manager"))
+            && (m_recoveryPending || RetireRecovery()))
         {
+            m_recoveryClosing = true;
             QWidget::closeEvent(event);
         }
         else
@@ -431,8 +442,12 @@ namespace TaintedGrailModdingSDK
     {
         if (&service == &FoundationService::Get())
         {
+            // Discard is retired only after all admission handlers allowed the switch.
+            const bool cleared = m_recoveryPending || RetireRecovery();
             ClearFormForNewPack();
-            SetStatus(tr("Workspace changed. Create a new mod or open a saved mod."));
+            SetStatus(cleared ? tr("Workspace changed. Create a new mod or open a saved mod.")
+                : tr("Workspace changed, but the previous workspace's recovery copy could not be cleared."), !cleared);
+            StartRecoveryForWorkspace();
         }
     }
 
@@ -464,6 +479,7 @@ namespace TaintedGrailModdingSDK
 
     void PackManagerWidget::PopulateFromPack(const PackManifest& pack)
     {
+        const QScopedValueRollback<bool> suppress(m_recoverySuppressed, true);
         m_isNewPack = false;
         m_packIdEdit->setText(ToQString(pack.m_packId));
         m_displayNameEdit->setText(ToQString(pack.m_displayName));
@@ -490,6 +506,7 @@ namespace TaintedGrailModdingSDK
 
     void PackManagerWidget::ClearFormForNewPack()
     {
+        const QScopedValueRollback<bool> suppress(m_recoverySuppressed, true);
         m_isNewPack = true;
         m_packIdEdit->clear();
         m_displayNameEdit->clear();
@@ -529,6 +546,7 @@ namespace TaintedGrailModdingSDK
     {
         m_formValues.insert(field, value);
         UpdateDraftStatus();
+        ScheduleRecovery();
     }
 
     void PackManagerWidget::ResetDraftBaseline()
@@ -546,6 +564,10 @@ namespace TaintedGrailModdingSDK
 
     bool PackManagerWidget::ConfirmDraftReplacement(const QString& action)
     {
+        if (m_recoveryPending)
+        {
+            return true; // Closing/switching leaves an unresolved copy for the next visit.
+        }
         if (m_formValues == m_savedFormValues)
         {
             return true;
@@ -685,10 +707,19 @@ namespace TaintedGrailModdingSDK
                 .arg(MaximumWorkspaceModDirectories);
         }
         m_workspaceModsHint->setText(hint);
+        if (m_recoveryPending)
+        {
+            m_workspaceModsCombo->setEnabled(false);
+            m_openSelectedButton->setEnabled(false);
+        }
     }
 
     void PackManagerWidget::OpenSelectedPack()
     {
+        if (m_recoveryPending)
+        {
+            return;
+        }
         const QString filePath = m_workspaceModsCombo->currentData().toString();
         if (filePath.isEmpty())
         {
@@ -713,6 +744,10 @@ namespace TaintedGrailModdingSDK
             SetStatus(ToQString(error), true);
             return;
         }
+        if (!RetireRecovery())
+        {
+            return; // Preserve the old form and recovery copy if cleanup fails.
+        }
         if (const PackManifest* pack = FoundationService::Get().GetActivePack())
         {
             PopulateFromPack(*pack);
@@ -729,6 +764,10 @@ namespace TaintedGrailModdingSDK
 
     bool PackManagerWidget::SavePack()
     {
+        if (m_recoveryPending)
+        {
+            return false;
+        }
         UpdateGeneratedIdentity();
         if (m_displayNameEdit->text().trimmed().isEmpty())
         {
@@ -767,6 +806,11 @@ namespace TaintedGrailModdingSDK
         }
         m_isNewPack = false;
         ResetDraftBaseline();
+        if (!RetireRecovery())
+        {
+            SetStatus(tr("Mod saved, but its recovery copy could not be cleared. Retry Save mod."), true);
+            return false;
+        }
         SetStatus(tr("Mod saved. You can start authoring."));
         UpdateSummary();
         RefreshWorkspaceMods(filePath);

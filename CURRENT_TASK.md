@@ -6,29 +6,38 @@ remains Significant because of workspace admission and persistent draft recovery
 Primary owner for this repair: Editor acceptance; product owner: workspace-and-packs.
 
 Scope: Item Viewer synthetic-fixture setup, test launch arguments, registered-pane
-lookup and close/reopen polling, plus focused regression tests. No C++, engine,
-workspace/pack/recovery format, dependency or public API change is included.
+lookup and close/reopen polling, focused regression tests, and the cold-build CI
+time budget. No C++, engine, workspace/pack/recovery format, dependency or public
+API change is included.
 Branch: `codex/pack-workspace-switch-protection`; prior validated head:
 `1f91bf7bcc3448fa6f738c4f60c05c627f2f2b77`.
 
 Confirmed repairs: enumerate literal fixture entries before copying; supply the
 pinned Editor's required test-case name; distinguish registered docks from floating
-containers with the same title; reject deleted Qt wrappers and await dock deletion.
+containers with the same title; await both dock and floating-container deletion;
+retain the reopened dock wrapper while querying its children.
 Regression coverage executes the actual PowerShell setup and argument blocks and
-checks dock selection with duplicate titles, hidden panes and deleted wrappers.
+checks dock selection with duplicate titles, hidden panes and deleted wrappers,
+plus deferred container deletion and docked close conditions.
 
-Validation is layered. The prior head's hosted static, CanonicalInterchange,
-CapabilityExecution and agent-skill checks PASSED. Local harness regression tests
-PASSED. Final static/source-policy logs and the exact changed-input hashes are
-retained outside source. Fresh-head hosted results are authoritative only once the
-corresponding jobs finish; the final run IDs/results belong in the external CI receipt.
+Validation is layered. Hosted static, CanonicalInterchange, CapabilityExecution and
+agent-skill checks PASSED on `027f373be3d0e2bdb42e263b6dc37603114eef65`.
+The final local source passes all 22 focused harness tests, 854 discovered Python
+tests (845 passed, nine Windows symlink-privilege skips, zero failures), static
+validators/fixtures and all 10 enabled pinned source-policy validators.
 
-Local Item Viewer Editor evidence remains FAILED at close/reopen on a private
-Windows desktop: refresh and product loading succeed, but the reopened pane is
-removed during floating-container teardown. This is not a passing UI result.
-The actual loaded SDK hash matches the previously validated build. Diagnostic
-variants and native destruction stacks remain external; no engine workaround or
-product behavior change is claimed by this harness repair.
+The actual final-source Item Viewer smoke PASSED all 17 checks on a private
+Windows desktop, including Refresh Assets, product loading and selection after
+close/reopen. It reused the unchanged pinned build below; no new local build is
+claimed. Earlier failed attempts and native event traces remain external. The
+trace established separate floating-container teardown and Python wrapper lifetime
+issues in the smoke; no engine or product workaround was introduced.
+
+Cold hosted runs 34662682095 and 34664083242 reached their 180-minute job limit
+while still compiling the pinned Editor. The job now allows 300 minutes, retaining
+parallelism 2 and the 600-second Editor smoke timeout. Fresh-head hosted CI must
+still finish; terminal run results and exact changed-input hashes belong in the
+external CI receipt, not a claim based on pending or superseded jobs.
 
 Unchanged product baseline: prior pinned configure/build and all three compiled
 registrations PASSED (581 cases passed, two symlink skips). Pack Manager docked

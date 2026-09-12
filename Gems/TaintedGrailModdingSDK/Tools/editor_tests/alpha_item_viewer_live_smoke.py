@@ -276,18 +276,36 @@ def ItemViewerLifecycleSmoke() -> None:
         str(grid.currentItem().data(ASSET_ID_ROLE)) if grid.currentItem() is not None else ""
     )
 
+    # This fixture opens the viewer in its own floating window. The registered
+    # dock and its empty floating container have separate deferred deletions.
+    closing_container = None
+    parent = pane.parentWidget()
+    while parent is not None:
+        if isinstance(parent, QtWidgets.QDockWidget) and parent.isFloating():
+            closing_container = parent
+            break
+        parent = parent.parentWidget()
     pane.close()
-    # Visibility changes before Qt processes the dock's deferred deletion. Opening
-    # immediately can reuse that closing dock, which is then deleted underneath us.
+    # Wait for both: restoring into a container still queued for deletion removes
+    # the newly opened pane on the next event-loop iteration.
     Report.critical_result(
         Tests.pane_closed,
         helper.wait_for_condition(
-            lambda: not general.is_pane_visible(PANE_NAME) and not isValid(pane), 10.0
+            lambda: (
+                not general.is_pane_visible(PANE_NAME) and not isValid(pane)
+                and (closing_container is None or not isValid(closing_container))
+            ),
+            10.0
         ),
     )
     general.open_pane(PANE_NAME)
+    # Retain the owning PySide wrapper while querying the reopened dock's children.
+    # Releasing a temporary parent wrapper can invalidate those child wrappers.
+    pane = find_item_pane()
 
     def viewer_reopened() -> bool:
+        if pane is None or not isValid(pane):
+            return False
         selector = find_selector()
         table = find_product_table(selector)
         grid = selector.findChild(QtWidgets.QListWidget, GRID_OBJECT_NAME) if selector else None

@@ -271,6 +271,27 @@ class ItemViewerPaneLookupTests(unittest.TestCase):
         self.assertIs(expected, namespace["find_pane"]("Tainted Grail Item and Recipe Editor"))
 
 
+class ItemViewerCloseWaitTests(unittest.TestCase):
+    def closed_condition(self, *, pane_valid: bool, container_valid: bool | None, visible: bool = False):
+        smoke = ast.parse((TOOLS_ROOT / "editor_tests/alpha_item_viewer_live_smoke.py").read_text(encoding="utf-8"))
+        condition = next(node for node in ast.walk(smoke) if isinstance(node, ast.Lambda)
+                         and "not isValid(pane)" in ast.unparse(node))
+        namespace = {"pane": {"valid": pane_valid},
+                     "closing_container": None if container_valid is None else {"valid": container_valid},
+                     "general": type("General", (), {"is_pane_visible": staticmethod(lambda name: visible)}),
+                     "PANE_NAME": "fixture pane", "isValid": lambda widget: widget["valid"]}
+        return eval(compile(ast.Expression(body=condition), "pane-close-condition", "eval"), namespace)()
+
+    def test_waits_for_pending_floating_container_deletion(self) -> None:
+        self.assertFalse(self.closed_condition(pane_valid=False, container_valid=True))
+        self.assertTrue(self.closed_condition(pane_valid=False, container_valid=False))
+
+    def test_docked_close_still_requires_pane_destruction_and_invisibility(self) -> None:
+        self.assertFalse(self.closed_condition(pane_valid=True, container_valid=None))
+        self.assertFalse(self.closed_condition(pane_valid=False, container_valid=None, visible=True))
+        self.assertTrue(self.closed_condition(pane_valid=False, container_valid=None))
+
+
 @unittest.skipUnless(shutil.which("pwsh"), "PowerShell 7 is required for the runner fixture copy")
 class ItemViewerRunnerSetupTests(unittest.TestCase):
     def run_copy(self, root: Path, seed: Path, destination: Path) -> subprocess.CompletedProcess[str]:

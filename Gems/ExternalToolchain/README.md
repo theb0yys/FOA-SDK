@@ -13,7 +13,20 @@ The current implementation includes:
 - typed discovery statuses and read-only diagnostics;
 - focused C++ contract tests and repository validation.
 
-It intentionally does **not** launch external processes, execute shell commands, inspect remote/network paths, install applications, perform IPC, generate files, write the Asset Processor cache, hand off assets, hot-load providers, or add runtime/game behavior.
+Discovery remains read-only. M2 adds a separate V2 batch-execution service with a
+Windows LPAC backend, Job Object supervision, bounded logs, verified staging
+outputs and a private invocation journal. The accepted
+windows-lpac-registry-read-batch-v1 profile requires exactly the registryRead
+capability and rejects commands for the earlier zero-capability profile. See the
+[accepted scope and evidence](../../docs/tainted-grail-sdk/TOOL_EXECUTION_M2_DESIGN.md).
+
+The Editor connects this service with execution disabled and a deny-all admission
+gate. Provider registration, discovery success and Settings Registry flags cannot
+grant execution. A trusted host supplies exact resolved discovery and a short-lived,
+single-use admission lease. Production Framework admission belongs to M3.
+
+M2 provides no shell, installation, asset promotion, deployment or game launch.
+Native tests run only the repository-owned fixture in newly created private roots.
 
 ## Provider registration
 
@@ -88,3 +101,18 @@ See [Discovery and Configuration](docs/DISCOVERY_AND_CONFIGURATION.md) for statu
 The Gem is host-tools-only. It creates `Tools` and `Builders` aliases but no Client, Server, or Unified runtime aliases.
 
 See [Architecture](docs/ARCHITECTURE.md) for the researched delivery sequence and boundary rules.
+
+## Execution V2 boundary
+
+`ToolExecutionBus.h` exposes command registration, asynchronous `Submit`, status,
+cancellation, bounded log pages and record pages. `ToolExecutionTypes.h` owns the
+new V2 contracts; the existing discovery API remains version 1.1.0.
+
+`Execution.Core.Static` validates and canonicalises bounded data using AzCore.
+`Execution.Host.Static` owns workers, the journal and platform operations. Tests
+link these production objects; the synthetic admission gate is test-only.
+
+A successful process exit is insufficient: output verification, cleanup and the
+flushed terminal record must also succeed. Failed cleanup quarantines the host
+session; a failed journal write prevents further submissions. Restart never
+replays an invocation.

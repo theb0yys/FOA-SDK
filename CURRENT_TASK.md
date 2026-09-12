@@ -35,7 +35,8 @@ Validation before main integration:
   dialogs and clean native exit on the matching built SDK module.
 - PASSED: L0 static validation (845 Python tests passed, nine symlink-privilege
   skips) and all ten source-policy validators enabled by the pinned engine.
-- Pane-close regression and final integration validation are in progress.
+- PASSED: pane-close regression, 25 checks and clean native exit.
+- Final integration validation is in progress.
 
 Main advanced to 9288678c3b52913916a6d740ba8654de55978838 during verification.
 Integrate that accepted baseline without changing its ExternalToolchain work,

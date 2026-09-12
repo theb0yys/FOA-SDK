@@ -217,6 +217,9 @@ int wmain(int argc, wchar_t** argv)
                 else { context->PSSetSamplers(value.slot, 1, &raw); }
             }
             D3D11_RASTERIZER_DESC rsDesc{}; rsDesc.FillMode = D3D11_FILL_SOLID; rsDesc.CullMode = D3D11_CULL_NONE; rsDesc.DepthClipEnable = TRUE;
+            // Qualified by FoaTriangleFacingProbe for direct clip-space draws with GL.invertCulling=false.
+            // Camera/pass inversion is an explicit provider input, not inferred by this fixture.
+            rsDesc.FrontCounterClockwise = TRUE;
             ComPtr<ID3D11RasterizerState> rasterizer; Check(device->CreateRasterizerState(&rsDesc, &rasterizer), "Rasterizer"); context->RSSetState(rasterizer.Get());
             D3D11_DEPTH_STENCIL_DESC depthDesc{}; depthDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
             ComPtr<ID3D11DepthStencilState> depth; Check(device->CreateDepthStencilState(&depthDesc, &depth), "Depth state"); context->OMSetDepthStencilState(depth.Get(), 0);

@@ -1993,11 +1993,72 @@ Six isolated Unity rejection cases passed for the two probes: Git-parent output,
 existing receipt and existing diagnostic. Rejected outputs remained unchanged;
 diagnostic-write failure still exited with an error.
 
-Source layout validation packed 24,620 material/layout combinations and checked
-361,626 uniform fields (13,944,144 bytes) against measured values and original
-byte offsets. The packing run took 19.25 seconds in the recorded local profile.
-Another 970 combinations still require explicitly qualified `_HeightMap_TexelSize`
-values; no substitute is supplied. Original shader-pass rendering, full campaign
-lighting/visibility, complete scene integration, four-map UI and game export
-remain unfinished. These material-upload measurements do not qualify full maps
-for 1:1 testing. Game files and saves remain unchanged.
+Source layout validation now packs all 25,590 captured material/layout
+combinations: 378,601 fields and 14,533,904 bytes. The remaining 970
+`_HeightMap_TexelSize` fields use direct pinned-host measurement. In the qualified
+null-black case, the GPU resource is 4x4 but the uniform is `(1,1,1,1)`; deriving
+that uniform from resource dimensions would be incorrect. Three assigned source
+Texture2D assets were loaded from hash-verified private bundle copies. Both
+Linear and Gamma measurements and their exact replays passed, including a 7x3
+control, global/null bindings and changed scale/offset. Seven isolated rejection
+cases covered wrong color space, streaming, mip limit, source dimensions, Git
+output, an existing receipt and an existing diagnostic. Rejected output folders
+and existing files stayed unchanged.
+
+`foa_scene_texture_uniform.py` adds an offline texture uniform contract alongside
+the unchanged numeric upload v1 contract. The source reader constructs
+`source_resource(...)` descriptors from exact container/record bindings and
+current Texture2D metadata. `black_default()` represents the separately measured
+null-black case. `uniform_request(resources, color_space=..., mip_limit=0,
+streaming=False)` creates a bounded request; write `canonical(request)` outside
+Git. Place private bundle copies under their lowercase SHA-256 filenames with a
+`.bundle` suffix. Run `FoaTextureUniformProbe.Run` in the pinned isolated Unity
+project with the existing `FoaMaterialBindingProbe` plugin, `-force-d3d11` and
+`-force-gfx-direct`. Set `FOA_TEXTURE_UNIFORM_INPUT`,
+`FOA_TEXTURE_UNIFORM_OUTPUT` and `FOA_TEXTURE_UNIFORM_BUNDLES` to the private
+request, fresh output folder and bundle directory respectively. The probe uses a
+generated declaration-matching shader; it does not execute the original pass.
+
+`read_uniforms(request, receipt)` validates the resulting `uniforms.json`.
+`pack_textured_material_constants(...)` consumes the numeric upload, current
+source texture descriptors and texture uploads. It rejects changed identities,
+records, dimensions, unsupported declarations, missing data and explicit
+uniform overrides. The current qualified path is the unmodified `_HeightMap`
+2D black-default declaration with flag zero and linear RGB24/BC4 source textures.
+The resource provider must select the same full-resolution texture represented
+by the descriptor; streaming views, render textures and live property overrides
+require separate evidence. The contract is bounded to 64 resources and a 4 MiB
+request. The private probe bounds each bundle to 128 MiB and loads it sequentially.
+The 25,590-layout local guard completed in 27.75 seconds against a 120-second
+budget. No work was added to Editor ticks and no scene or game-export format
+changed.
+
+The captured HDRP/Lit DepthOnly normal-buffer fragment was also executed
+unchanged with synthetic vertex normals, explicitly supplied rendering-layer
+bits and three measured material constant groups covering 485 materials. Both
+windings passed D3D11 source/reference tests. Six source/reference pairs in the
+pinned native DX12 Editor matched every RGB pixel; two normal-flip controls
+changed 1,511,064 pixels each. This qualifies the fragment and its consumed
+constants, not the complete pass, original vertex stage or campaign rendering.
+
+`FoaTriangleFacingProbe.Run` measures direct clip-space procedural draws into a
+RenderTexture in isolated Unity. Set `FOA_TRIANGLE_FACING_OUTPUT` to a fresh
+private directory and use the same pinned direct D3D11 launch options. Four
+controls cover reversed triangles and `GL.invertCulling`. In this exact context,
+Unity agrees with O3DE's counterclockwise front-face convention. The standalone
+`source_shader_gpu_probe.cpp` previously used D3D11's opposite zero-initialized
+value; its explicit setting and two GPU regression cases now match the measured
+context. No importer triangle order or external engine code was changed.
+Camera projection, render-target flips and game pass inversion still require
+source-owned input; this fixture must not silently determine them.
+
+`source_material_uniform_editor.py` runs a bounded private `fixture.json` via
+`FOA_MATERIAL_UNIFORM_NATIVE_ROOT`, with at most 32 explicit draw descriptors and
+64 MiB per screenshot. It records submission/capture/cleanup separately from
+pixel acceptance. A completed capture is PARTIAL until a separate reader
+compares original and independent reference pixels and checks negative controls.
+
+Full original shader-pass rendering, campaign lighting/visibility, complete
+scene integration, four-map UI and game export remain unfinished. These
+measurements do not qualify full maps for 1:1 testing. Game files and saves
+remain unchanged.

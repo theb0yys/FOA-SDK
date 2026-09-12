@@ -205,6 +205,17 @@ def synthetic_acceptance(executable, root):
         ('wrong-draw-stage', packet([(2,fragment),(1,vertex)], vertices=vertices)),
         ('invalid-dxbc', packet([(1,b'DXBC'+bytes(28))]))):
         rows.append(execute(executable, data, root, label, rejected=True))
+    # Exact Unity direct-RenderTexture facing is measured by FoaTriangleFacingProbe.
+    # Keep two winding controls: Cull None still affects SV_IsFrontFace consumers.
+    facing_fragment = compiler.compile(
+        b'float4 main(float4 p:SV_Position,float2 uv:TEXCOORD3,bool front:SV_IsFrontFace):SV_Target'
+        b'{return float4(front?1:0,.25,.5,1);}', b'main', b'ps_5_0')
+    triangle = [(-.75,-.5,.5,0,0),(.75,-.5,.5,0,0),(.75,.5,.5,0,0)]
+    for reverse in (False, True):
+        winding = [triangle[i] for i in ((0,2,1) if reverse else (0,1,2))]
+        rows.append(execute(executable, packet([(1,vertex),(2,facing_fragment)], vertices=winding), root,
+                            'facing-reversed' if reverse else 'facing-direct',
+                            expected=[(96,40,(0 if reverse else 1,.25,.5,1))]))
     report = {'status':'PASSED', 'cases':rows, 'source':'synthetic',
               'compiler_sha256':sha(compiler.path.read_bytes())}
     with (root/'acceptance.json').open('x', encoding='utf-8') as stream: json.dump(report, stream, indent=2)

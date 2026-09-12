@@ -531,11 +531,23 @@ namespace TaintedGrailModdingSDK
         PopulationActorProfile::Reflect(context);
         PopulationTroopProfile::Reflect(context);
         PopulationTroopMember::Reflect(context);
+        EncounterDefinition::Reflect(context);
+        CultureProfile::Reflect(context);
+        FactionProfile::Reflect(context);
+        FactionLink::Reflect(context);
+        QuestAuthoringProfile::Reflect(context);
+        ProjectAssetProfile::Reflect(context);
+        LocalisationEntry::Reflect(context);
+        PresentationBinding::Reflect(context);
+        WorldPlaceProfile::Reflect(context);
+        WorldPathProfile::Reflect(context);
+        WorldPathNode::Reflect(context);
+        WorldPathEdge::Reflect(context);
 
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<CatalogDocument>()
-                ->Version(4)
+                ->Version(9)
                 ->Field("SchemaVersion", &CatalogDocument::m_schemaVersion)
                 ->Field("WorkspaceId", &CatalogDocument::m_workspaceId)
                 ->Field("ProfileId", &CatalogDocument::m_profileId)
@@ -551,13 +563,30 @@ namespace TaintedGrailModdingSDK
                 ->Field("RecipeOutputs", &CatalogDocument::m_recipeOutputs)
                 ->Field("ActorProfiles", &CatalogDocument::m_actorProfiles)
                 ->Field("TroopProfiles", &CatalogDocument::m_troopProfiles)
-                ->Field("TroopMembers", &CatalogDocument::m_troopMembers);
+                ->Field("TroopMembers", &CatalogDocument::m_troopMembers)
+                ->Field("EncounterDefinitions", &CatalogDocument::m_encounterDefinitions)
+                ->Field("CultureProfiles", &CatalogDocument::m_cultureProfiles)
+                ->Field("FactionProfiles", &CatalogDocument::m_factionProfiles)
+                ->Field("FactionLinks", &CatalogDocument::m_factionLinks)
+                ->Field("WorldPlaces", &CatalogDocument::m_worldPlaces)
+                ->Field("WorldPaths", &CatalogDocument::m_worldPaths)
+                ->Field("WorldPathNodes", &CatalogDocument::m_worldPathNodes)
+                ->Field("WorldPathEdges", &CatalogDocument::m_worldPathEdges)
+                ->Field("QuestProfiles", &CatalogDocument::m_questProfiles)
+                ->Field("ProjectAssets", &CatalogDocument::m_projectAssets)
+                ->Field("LocalisationEntries", &CatalogDocument::m_localisationEntries)
+                ->Field("PresentationBindings", &CatalogDocument::m_presentationBindings);
         }
     }
 
     bool CatalogDocument::UsesSupportedSchema() const
     {
         return m_schemaVersion == LegacyCatalogSchemaVersion
+            || m_schemaVersion == PopulationCatalogSchemaVersion
+            || m_schemaVersion == EncounterCatalogSchemaVersion
+            || m_schemaVersion == SocietyCatalogSchemaVersion
+            || m_schemaVersion == WorldCatalogSchemaVersion
+            || m_schemaVersion == QuestCatalogSchemaVersion
             || m_schemaVersion == CurrentCatalogSchemaVersion;
     }
 

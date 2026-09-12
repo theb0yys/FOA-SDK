@@ -18,6 +18,14 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Governance Engine Guide](GOVERNANCE_ENGINE_GUIDE.md) — independent maturity, confidence, risk, validation, staleness, permission, prohibition, and supersession decisions.
 - [Item and Recipe Editor Guide](ITEM_RECIPE_EDITOR_GUIDE.md) — typed item and recipe profiles, ingredients, outputs, stations, acquisition relationships, and governed action lanes.
 - [Actor and Troop Editor Guide](ACTOR_TROOP_EDITOR_GUIDE.md) — typed actor and troop authoring, exact template/leader/member bindings, atomic persistence, action lanes, deterministic fixture, dirty-draft protection, and current runtime boundary.
+- [Faction and Authority Editor Guide](FACTION_AUTHORITY_EDITOR_GUIDE.md) — cultures, faction membership, leadership, directed relationships and jurisdiction plans.
+- [World and Route Editor Guide](WORLD_ROUTE_EDITOR_GUIDE.md) — saved places, roads, route graph editing and previews.
+- [Quest inspection and authoring](QUEST_AUTHORING_GUIDE.md) — inspect, edit and preview local quests and state keys.
+- [Quest authoring design](QUEST_AUTHORING_DESIGN.md) — ownership, schema-6 compatibility and acceptance.
+- [World and Route Editor Design](WORLD_ROUTE_EDITOR_DESIGN.md) — ownership, schema-5 migration, graph rules and acceptance.
+- [Faction and Authority Editor Design](FACTION_AUTHORITY_EDITOR_DESIGN.md) — ownership, schema-4 migration, transactional links and acceptance scope.
+- [Spawn and Encounter Editor Guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md) — compose local encounters, preview quantities, set placement and conditions, save/reopen and recover migrated catalogs.
+- [Spawn and Encounter Editor Design](SPAWN_ENCOUNTER_EDITOR_DESIGN.md) — schema-3 encounter ownership, complete-definition saves, limits and validation scope.
 - [Actor and Troop Windows UI Evidence](ACTOR_TROOP_WINDOWS_UI_EVIDENCE.md) — focused exact-head checks for resolved/unresolved templates, troop composition, governance lanes, dirty drafts, persistence, errors, and runtime separation within the current twenty-six-pane surface.
 - [Optional Tool Gem System](PLUGIN_SYSTEM.md) — governed package manifests, O3DE selection, cross-module ExtensionAPI lifecycle, host-owned atomic documents, Road Atlas and Avalon AI editors, and runtime separation.
 - [Tainted Framework Canonical Knowledge](TAINTED_FRAMEWORK_KNOWLEDGE.md) — pinned upstream identity, component classification, compatibility observations, golden fixtures, first ExtensionAPI consumer, provenance gates, and runtime-host prohibition.
@@ -58,7 +66,7 @@ This directory contains the public documentation for the FOA-SDK product reposit
 - [Installing the Prebuilt Windows SDK](INSTALLING_PREBUILT_SDK.md) — checksum verification, MSI and portable ZIP use, installed `FOA-SDK.exe` startup, repair, upgrade, uninstall, and troubleshooting.
 - [Actor and Troop Editor Design](ACTOR_TROOP_EDITOR_DESIGN.md) — approved population design and implementation history. The completed Core, schema-2 persistence, Framework candidate-publication, population-authoring test-source, immutable action-lane, and registered Actor/Troop pane units are recorded here with deterministic fixture, validation, and deferred runtime scope.
 - [Actor and Troop Architecture and Data Formats](ACTOR_TROOP_ARCHITECTURE_AND_DATA_FORMATS.md) — Core/Framework/Editor ownership, schema-2 actor/troop/member shapes, identity, evidence, governance, ordering, fixture format, and deferred contracts.
-- [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE build, compiled-test and Windows evidence requirements, release claims, rollback, and next population work.
+- [Actor and Troop Release Readiness](ACTOR_TROOP_RELEASE_READINESS.md) — development gate, exact-head O3DE configure, build, compiled tests and Windows evidence requirements, release claims, rollback, and next population work.
 - [Tainted Framework Canonical Knowledge](TAINTED_FRAMEWORK_KNOWLEDGE.md) — authoritative intake, inventory, schema, fixtures, ExtensionAPI boundary, validation and deferred runtime/editor work.
 - [Tainted Framework Editor Services](TAINTED_FRAMEWORK_EDITOR_SERVICES.md) — reviewed engine-neutral service ownership, exact evidence projection, deterministic plans, tests, validation, and deferred UI/runtime work.
 - [Tainted Interface UI Utilities](TAINTED_INTERFACE_UI_UTILITIES.md) — engine-neutral token/catalog/layout contracts, exact upstream metadata, licence blocking, project-owned fallback assets and runtime separation.
@@ -144,3 +152,15 @@ The actual Windows screenshot pass remains pending. Trusted identity/time provid
 ## Documentation contribution rules
 
 Documentation changes must describe current behavior honestly, distinguish implemented from planned behavior, avoid proprietary content and private paths, use stable links, and include migration notes for breaking format changes.
+
+- [Asset and Localisation Manager](ASSET_LOCALISATION_MANAGER_GUIDE.md) — images, translations, assignments and recovery.
+- [Asset and Localisation Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) — ownership, schema 7 and validation.
+
+- [Capability execution M1 Core API](CAPABILITY_EXECUTION_CONTRACT.md#m1-core-value-api):
+  bounded values, canonical fingerprints and contextual plan/receipt validation. Process
+  supervision is the accepted M2 scope; the operational Build and Test Runner remains later work.
+
+- [Tool Execution Service M2 accepted scope and implementation status](TOOL_EXECUTION_M2_DESIGN.md):
+  Windows batch supervision, V2 invocation records and required isolation proof.
+  The accepted registryRead profile supports native batch supervision with exact
+  capability checks; Editor execution remains disabled pending Framework admission.

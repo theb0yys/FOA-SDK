@@ -15,6 +15,7 @@
 #include <AzCore/std/utility/move.h>
 #include <AzToolsFramework/API/ViewPaneOptions.h>
 #include <QtCore/QRect>
+#include <QtWidgets/QApplication>
 #include <QtCore/QString>
 #include <QtCore/qnamespace.h>
 
@@ -64,6 +65,9 @@ namespace ExternalToolchain
     {
         ExternalToolchainRequestBus::Handler::BusConnect();
         ExternalToolchainInterface::Register(this);
+        m_execution = std::make_unique<ToolExecutionService>();
+        m_execution->Connect();
+        AZ_Printf("ExternalToolchain", "M2 execution service connected; default admission disabled.\n");
         AzToolsFramework::EditorEvents::Bus::Handler::BusConnect();
         AzToolsFramework::ActionManagerRegistrationNotificationBus::Handler::BusConnect();
 
@@ -73,8 +77,33 @@ namespace ExternalToolchain
             ToString(HostApiVersion).c_str());
     }
 
+    void ExternalToolchainEditorSystemComponent::NotifyQtApplicationAvailable(QApplication* application)
+    {
+        QObject::disconnect(m_quitConnection);
+        if (application)
+        {
+            // This pinned Windows Editor exits before Component::Deactivate.
+            // Join while Qt and host services are still alive on the main thread.
+            m_quitConnection = QObject::connect(
+                application, &QCoreApplication::aboutToQuit, application,
+                [this]() { StopExecution(); }, Qt::DirectConnection);
+        }
+    }
+
+    void ExternalToolchainEditorSystemComponent::StopExecution()
+    {
+        if (m_execution)
+        {
+            m_execution->Shutdown();
+            m_execution.reset();
+            AZ_Printf("ExternalToolchain", "M2 execution service stopped; all workers joined.\n");
+        }
+    }
+
     void ExternalToolchainEditorSystemComponent::Deactivate()
     {
+        QObject::disconnect(m_quitConnection);
+        StopExecution();
         if (m_viewRegistered)
         {
             AzToolsFramework::UnregisterViewPane(DiagnosticsViewPaneName);
@@ -98,6 +127,7 @@ namespace ExternalToolchain
         {
             const ExternalToolProviderDescriptor* registered =
                 m_registry.FindProvider(descriptor.m_providerId);
+            if (m_execution) { m_execution->ObserveProvider(registered ? *registered : descriptor); }
             ExternalToolchainNotificationBus::Broadcast(
                 &ExternalToolchainNotifications::OnExternalToolProviderRegistered,
                 registered ? *registered : descriptor);
@@ -112,6 +142,7 @@ namespace ExternalToolchain
         ProviderOperationResult result = m_registry.FinalizeRegistration();
         if (result.m_success && !wasFinalized)
         {
+            if (m_execution) { m_execution->FinalizeRegistration(); }
             ExternalToolchainNotificationBus::Broadcast(
                 &ExternalToolchainNotifications::OnExternalToolProviderRegistrationFinalized,
                 static_cast<AZ::u64>(m_registry.GetProviders().size()));

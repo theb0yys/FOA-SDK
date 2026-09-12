@@ -6,6 +6,13 @@
 #
 
 set(FILES
+    Source/FoundationAssetLocalisationService.cpp
+    Source/ProjectImageService.cpp
+    Source/ProjectImageService.h
+    Source/FoundationQuestService.cpp
+    Source/FoundationWorldService.cpp
+    Source/FoundationSocietyService.cpp
+    Source/FoundationEncounterService.cpp
     Source/GameConnectionService.cpp
     Source/GameConnectionService.h
     Source/AssetBrowserPreviewRefreshService.cpp
@@ -54,6 +61,8 @@ set(FILES
     Source/FoundationWorkspaceLoadService.h
     Source/LocalSetupDetectionService.cpp
     Source/LocalSetupDetectionService.h
+    Source/PackDraftRecoveryService.cpp
+    Source/PackDraftRecoveryService.h
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/PathPolicyService.cpp

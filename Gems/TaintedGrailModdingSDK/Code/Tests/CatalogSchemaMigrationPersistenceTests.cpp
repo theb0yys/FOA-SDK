@@ -466,9 +466,9 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(
         CatalogSchemaMigrationPersistenceTests,
-        SchemaOnePreviewMigratesToSchemaTwoWithEmptyPopulationAndPreservesLegacyProjection)
+        SchemaOnePreviewMigratesToCurrentWithEmptyPopulationAndPreservesLegacyProjection)
     {
-        EXPECT_EQ(CurrentCatalogSchemaVersion, PopulationCatalogSchemaVersion);
+        EXPECT_EQ(CurrentCatalogSchemaVersion, AssetLocalisationCatalogSchemaVersion);
         WorkspacePersistenceService workspacePersistence;
         auto workspaceResult = workspacePersistence.Load(
             PreviewPath("preview.tgworkspace.json"));
@@ -519,9 +519,9 @@ namespace TaintedGrailModdingSDK
             &error)) << error.c_str();
 
         CatalogDocument expected = loaded;
-        expected.m_schemaVersion = PopulationCatalogSchemaVersion;
+        expected.m_schemaVersion = CurrentCatalogSchemaVersion;
         const CatalogDocument migrated = catalog.BuildDocument(workspace, *profile);
-        EXPECT_EQ(migrated.m_schemaVersion, PopulationCatalogSchemaVersion);
+        EXPECT_EQ(migrated.m_schemaVersion, CurrentCatalogSchemaVersion);
         EXPECT_TRUE(migrated.m_actorProfiles.empty());
         EXPECT_TRUE(migrated.m_troopProfiles.empty());
         EXPECT_TRUE(migrated.m_troopMembers.empty());
@@ -572,7 +572,7 @@ namespace TaintedGrailModdingSDK
         QTemporaryDir futureDirectory;
         ASSERT_TRUE(futureDirectory.isValid());
         QJsonObject future = MakePlainEmptyCatalogObject();
-        future.insert(QStringLiteral("SchemaVersion"), 3);
+        future.insert(QStringLiteral("SchemaVersion"), static_cast<int>(CurrentCatalogSchemaVersion + 1));
         future.insert(QStringLiteral("FuturePopulationData"), QJsonArray{});
         write = WriteCatalogJson(
             ToAzString(futureDirectory.path()),
@@ -580,7 +580,7 @@ namespace TaintedGrailModdingSDK
         ASSERT_TRUE(write.IsSuccess()) << write.GetError().c_str();
         auto futureResult = persistence.Load(ToAzString(futureDirectory.path()));
         ASSERT_FALSE(futureResult.IsSuccess());
-        EXPECT_NE(futureResult.GetError().find("3"), AZStd::string::npos);
+        EXPECT_NE(futureResult.GetError().find("5"), AZStd::string::npos);
         EXPECT_NE(
             futureResult.GetError().find("unsupported"),
             AZStd::string::npos);
@@ -650,7 +650,7 @@ namespace TaintedGrailModdingSDK
             registryResult.GetValue(),
             &error)) << error.c_str();
         const CatalogDocument promoted = catalog.BuildDocument(workspace, *profile);
-        EXPECT_EQ(promoted.m_schemaVersion, PopulationCatalogSchemaVersion);
+        EXPECT_EQ(promoted.m_schemaVersion, CurrentCatalogSchemaVersion);
         EXPECT_TRUE(promoted.m_actorProfiles.empty());
         EXPECT_TRUE(promoted.m_troopProfiles.empty());
         EXPECT_TRUE(promoted.m_troopMembers.empty());
@@ -717,7 +717,7 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(
         CatalogSchemaMigrationPersistenceTests,
-        WriterRejectsSchemaOneAndWritesPlainSchemaTwoWithExplicitPopulationArrays)
+        WriterRejectsSchemaOneAndWritesPlainCurrentWithExplicitPopulationArrays)
     {
         CatalogPersistenceService persistence;
         auto legacy = persistence.Load(TG_SDK_PREVIEW_TEMPLATE_ROOT);
@@ -744,7 +744,7 @@ namespace TaintedGrailModdingSDK
         const CatalogDocument schemaTwo = catalog.BuildDocument(
             workspace,
             *profile);
-        ASSERT_EQ(schemaTwo.m_schemaVersion, PopulationCatalogSchemaVersion);
+        ASSERT_EQ(schemaTwo.m_schemaVersion, CurrentCatalogSchemaVersion);
 
         auto schemaTwoSave = persistence.Save(
             schemaTwo,
@@ -765,7 +765,7 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(object.contains(QStringLiteral("ClassData")));
         EXPECT_EQ(
             object.value(QStringLiteral("SchemaVersion")).toInt(),
-            static_cast<int>(PopulationCatalogSchemaVersion));
+            static_cast<int>(CurrentCatalogSchemaVersion));
         EXPECT_TRUE(object.value(QStringLiteral("ActorProfiles")).isArray());
         EXPECT_TRUE(object.value(QStringLiteral("TroopProfiles")).isArray());
         EXPECT_TRUE(object.value(QStringLiteral("TroopMembers")).isArray());
@@ -782,7 +782,7 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(
         CatalogSchemaMigrationPersistenceTests,
-        SchemaTwoSaveLoadSaveIsByteStable)
+        CurrentSaveLoadSaveIsByteStable)
     {
         QTemporaryDir firstDirectory;
         QTemporaryDir secondDirectory;
@@ -829,7 +829,7 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(
         CatalogSchemaMigrationPersistenceTests,
-        SchemaTwoSaveClearLoadAndReplacePreservesCanonicalState)
+        CurrentSaveClearLoadAndReplacePreservesCanonicalState)
     {
         QTemporaryDir directory;
         ASSERT_TRUE(directory.isValid());
@@ -882,7 +882,7 @@ namespace TaintedGrailModdingSDK
 
     TEST_F(
         CatalogSchemaMigrationPersistenceTests,
-        MalformedSchemaTwoDocumentDoesNotReplacePublishedCatalog)
+        MalformedCurrentDocumentDoesNotReplacePublishedCatalog)
     {
         QTemporaryDir directory;
         ASSERT_TRUE(directory.isValid());
@@ -957,7 +957,7 @@ namespace TaintedGrailModdingSDK
                 saveCalled = true;
                 EXPECT_EQ(
                     document.m_schemaVersion,
-                    PopulationCatalogSchemaVersion);
+                    CurrentCatalogSchemaVersion);
                 EXPECT_EQ(document.m_actorProfiles.size(), 1);
                 EXPECT_EQ(document.m_troopProfiles.size(), 1);
                 EXPECT_EQ(document.m_troopMembers.size(), 1);
@@ -983,6 +983,73 @@ namespace TaintedGrailModdingSDK
             candidate.FindPopulationActorProfile(ActorRecordId)->m_archetype,
             "synthetic_veteran_guard");
     }
+
+    TEST_F(CatalogSchemaMigrationPersistenceTests, SchemaTwoMigrationPreservesPopulationAndExactOriginalBytes)
+    {
+        QTemporaryDir directory; ASSERT_TRUE(directory.isValid());
+        const auto root = ToAzString(directory.path());
+        const auto workspace = MakePopulationWorkspace(root);
+        const auto& profile = *workspace.FindActiveGameProfile();
+        auto source = MakePopulationCatalog().BuildDocument(workspace, profile);
+        source.m_schemaVersion = PopulationCatalogSchemaVersion;
+        const auto envelope = SerializeObject(source); ASSERT_TRUE(envelope.IsSuccess());
+        const QByteArray original(envelope.GetValue().data(), static_cast<qsizetype>(envelope.GetValue().size()));
+        ASSERT_TRUE(WriteCatalogBytes(root, original).IsSuccess());
+        CatalogPersistenceService persistence;
+        const auto loaded = persistence.Load(root); ASSERT_TRUE(loaded.IsSuccess()) << loaded.GetError().c_str();
+        EXPECT_EQ(loaded.GetValue().m_schemaVersion, PopulationCatalogSchemaVersion);
+        CatalogDatabase migrated; AZStd::string error;
+        ASSERT_TRUE(migrated.ReplaceFromBoundDocument(loaded.GetValue(), workspace, profile, MakePopulationRegistry(), &error)) << error.c_str();
+        const auto document = migrated.BuildDocument(workspace, profile);
+        EXPECT_EQ(document.m_schemaVersion, CurrentCatalogSchemaVersion);
+        EXPECT_EQ(document.m_records.size(), source.m_records.size());
+        EXPECT_EQ(document.m_actorProfiles.size(), source.m_actorProfiles.size());
+        EXPECT_EQ(document.m_troopProfiles.size(), source.m_troopProfiles.size());
+        EXPECT_EQ(document.m_troopMembers.size(), source.m_troopMembers.size());
+        auto expected = source; expected.m_schemaVersion = CurrentCatalogSchemaVersion;
+        EXPECT_EQ(SerializeObject(expected).GetValue(), SerializeObject(document).GetValue());
+        ASSERT_TRUE(persistence.Save(document, root).IsSuccess());
+        const auto backups = QDir(directory.path() + "/Catalog").entryList({"*.schema-2.*.backup.json"}, QDir::Files);
+        ASSERT_EQ(backups.size(), 1);
+        QFile backup(directory.path() + "/Catalog/" + backups.front());
+        ASSERT_TRUE(backup.open(QIODevice::ReadOnly)); EXPECT_EQ(backup.readAll(), original); backup.close();
+        ASSERT_TRUE(persistence.Save(document, root).IsSuccess());
+        EXPECT_EQ(QDir(directory.path() + "/Catalog").entryList({"*.backup.json"}, QDir::Files).size(), 1);
+    }
+
+    TEST_F(CatalogSchemaMigrationPersistenceTests, MigrationBackupFailureLeavesOriginalCatalogUnchanged)
+    {
+        QTemporaryDir directory; ASSERT_TRUE(directory.isValid());
+        const auto root = ToAzString(directory.path());
+        const auto workspace = MakePopulationWorkspace(root);
+        const auto& profile = *workspace.FindActiveGameProfile();
+        auto document = MakePopulationCatalog().BuildDocument(workspace, profile);
+        auto old = document; old.m_schemaVersion = PopulationCatalogSchemaVersion;
+        const auto serialized = SerializeObject(old); ASSERT_TRUE(serialized.IsSuccess());
+        const QByteArray bytes(serialized.GetValue().data(), static_cast<qsizetype>(serialized.GetValue().size()));
+        ASSERT_TRUE(WriteCatalogBytes(root, bytes).IsSuccess());
+        const QString hash = QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
+        const QString backupPath = ToQString(CatalogPath(root)) + ".schema-2." + hash + ".backup.json";
+        ASSERT_TRUE(QDir().mkdir(backupPath)); // a path collision prevents making the exact recovery copy
+        const auto saved = CatalogPersistenceService().Save(document, root);
+        ASSERT_FALSE(saved.IsSuccess()); EXPECT_NE(saved.GetError().find("backup"), AZStd::string::npos);
+        EXPECT_EQ(ReadFile(CatalogPath(root)).GetValue(), bytes);
+    }
+
+    TEST_F(CatalogSchemaMigrationPersistenceTests, LegacyVersionsCannotSmuggleEncounterDefinitions)
+    {
+        for (const auto version : {LegacyCatalogSchemaVersion, PopulationCatalogSchemaVersion})
+        {
+            QTemporaryDir directory; ASSERT_TRUE(directory.isValid());
+            auto object = MakePlainEmptyCatalogObject();
+            object["SchemaVersion"] = static_cast<int>(version);
+            object["EncounterDefinitions"] = QJsonArray{QJsonObject{{"RecordId", "encounter.illegal"}}};
+            ASSERT_TRUE(WriteCatalogJson(ToAzString(directory.path()), QJsonDocument(object)).IsSuccess());
+            const auto loaded = CatalogPersistenceService().Load(ToAzString(directory.path()));
+            ASSERT_FALSE(loaded.IsSuccess()); EXPECT_NE(loaded.GetError().find("encounter"), AZStd::string::npos);
+        }
+    }
+
     TEST_F(CatalogSchemaMigrationPersistenceTests, EconomyDefinitionsAndJoinsPersistAndRejectWrongRecipeRemoval)
     {
         QTemporaryDir temporary;

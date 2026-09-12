@@ -39,7 +39,7 @@ Catalog/catalog.tgcatalog.json
 
 The file contains:
 
-- explicit catalog schema version 2;
+- explicit catalog schema version 3;
 - canonical records;
 - first-class relationships;
 - validation history;
@@ -54,7 +54,7 @@ Catalog schema 1 is a read-only compatibility input. A valid schema-1 document l
 collections, and compatibility normalization leaves its detected version unchanged.
 The loaded candidate remains schema 1.
 Directly saving it is refused; only successful bound replacement followed by `BuildDocument` produces the
-schema-2 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
+schema-7 document accepted by the writer. A schema-1 document cannot carry non-empty population collections.
 Newer, malformed, or unsafe versions fail without replacing the published catalog.
 
 ## Search
@@ -322,9 +322,9 @@ The superseding record ID must exist. Supersession does not silently delete evid
 
 Use **Save Catalog** to persist the current canonical document.
 
-Catalog saves write explicit schema 2 even when all population collections are empty. Saving does not publish
+Catalog saves write explicit schema 7 even when all population collections are empty. Saving does not publish
 a new schema-1 document. A loaded schema-1 compatibility candidate must first pass bound replacement; direct
-save remains refused until `BuildDocument` emits the validated schema-2 projection.
+save remains refused until `BuildDocument` emits the validated schema-7 projection.
 
 Use **Reload Catalog** to reload and validate the workspace document. Reload rejects:
 
@@ -343,7 +343,37 @@ Use **Reload Catalog** to reload and validate the workspace document. Reload rej
 
 Legacy O3DE catalog envelopes that predate an explicit nested catalog schema remain a bounded schema-1
 migration input. They retain schema 1 after loading and normalization, just like plain schema-1 input. Current
-saves use the plain schema-2 durable document produced only after successful bound replacement.
+saves use the plain schema-7 durable document produced only after successful bound replacement.
+
+## Encounter plans and migration recovery
+
+Schema 3 adds pack-owned encounter definitions. Their composition binds exact saved actors or troops;
+activation and placement descriptions remain local authoring intent. The Spawn and Encounter Editor
+previews composition and preserves entry identities when quantities change. Saving a complete encounter
+removes omitted entries from that encounter only.
+
+Schemas 1, 2, 3, 4, 5 and 6 remain load-only inputs and retain their detected versions until bound validation and projection
+succeed. Before replacing a schema-1/2/3/4/5/6 catalog, the writer creates and verifies an exact sibling
+`catalog.tgcatalog.json.schema-<version>.<sha256>.backup.json`. A missing, conflicting or unwritable
+backup prevents replacement. Future versions and malformed originals are not overwritten. Existing catalog files are read within a
+256 MiB limit before replacement; exceeding that limit fails without replacing the file.
+
+Editors supporting only schemas 1–6 cannot read schema 7. To return to an older Editor, close the Editor, preserve the current workspace,
+and restore the earlier catalog backup. Changes made after the backup are not backported; quest authoring profiles require schema 6. Keep the workspace's
+pack manifests and Sources/Evidence directories with the catalog when making recovery copies.
+
+See [Spawn and Encounter Editor guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md).
+
+## Factions, cultures and authority
+
+Schema 4 adds pack-owned society/culture and society/faction profiles, plus first-class FactionLinks.
+Membership binds saved actors/troops; dispositions bind another faction in one direction; jurisdiction
+binds a saved world location/scene/region or an explicitly unverified territory reference. Each link has its
+own stable identity and exact authoring evidence. A complete faction save removes only that faction's omitted
+links; it does not edit target actors, troops or other factions. Surviving links preserve their identities.
+
+See [Data Formats](DATA_FORMATS.md#society-profiles-and-faction-links) and the
+[Faction and Authority Editor guide](FACTION_AUTHORITY_EDITOR_GUIDE.md).
 
 ## Safe workflow
 
@@ -384,3 +414,12 @@ The catalog is deliberately scoped to an exact profile/version/branch. Switch ba
 ### Record is visible but blocked for runtime use
 
 Visibility is not permission. Complete the required validation and permission process; do not remove `no_unvalidated_runtime_use` without proof.
+
+## World places, roads and routes
+
+Schema 5 adds pack-owned world profiles and independently identified graph nodes and edges. Places can be referenced by existing faction jurisdiction and encounter placement definitions. See the [World and Route Editor guide](WORLD_ROUTE_EDITOR_GUIDE.md) for creation, visual previews, graph editing and recovery.
+
+
+## Project images and localisation
+
+The Asset and Localisation Manager adds schema-7 project images, translated text and pack-scoped assignments. Schemas 1–6 load through bound validation and receive a verified exact backup before the first schema-7 save. Editors supporting only schemas 1–6 require the pre-migration catalog backup to downgrade. Preserve images under Media/Owned, pack manifests and source/evidence documents with the workspace. Metadata loads even if an image is missing, so it can be repaired in the Manager. See the [Manager guide](ASSET_LOCALISATION_MANAGER_GUIDE.md).

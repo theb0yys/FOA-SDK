@@ -240,6 +240,41 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
     )
 
     ly_add_dependencies(${gem_name}.CanonicalInterchange.Tests AZ::AzTestRunner)
+
+    # M1 execution contracts have no Framework or Editor dependency.
+    ly_add_target(
+        NAME ${gem_name}.CapabilityExecution.Tests ${PAL_TRAIT_TEST_TARGET_TYPE}
+        NAMESPACE Gem
+        NO_UNITY
+        FILES_CMAKE
+            taintedgrailmoddingsdk_capability_execution_tests_files.cmake
+        INCLUDE_DIRECTORIES
+            PRIVATE
+                Source
+                Tests
+        BUILD_DEPENDENCIES
+            PRIVATE
+                Gem::${gem_name}.Core.Static
+                AZ::AzTest
+    )
+
+    set(tg_capability_execution_ctest_command
+        "${Python_EXECUTABLE}"
+        -B
+        -s
+        "${CMAKE_CURRENT_LIST_DIR}/../Tools/run_aztest_without_gtest_xml.py"
+        $<TARGET_FILE_DIR:${gem_name}.CapabilityExecution.Tests>/$<TARGET_FILE_NAME:AZ::AzTestRunner>
+        $<TARGET_FILE:${gem_name}.CapabilityExecution.Tests>
+        AzRunUnitTests
+    )
+
+    ly_add_googletest(
+        NAME Gem::${gem_name}.CapabilityExecution.Tests
+        LABELS REQUIRES_tiaf
+        TEST_COMMAND ${tg_capability_execution_ctest_command}
+    )
+
+    ly_add_dependencies(${gem_name}.CapabilityExecution.Tests AZ::AzTestRunner)
 endif()
 
 # Tool Gems are resolved for both Editor/Project Manager tools and builder hosts.

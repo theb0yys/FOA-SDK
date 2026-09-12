@@ -43,7 +43,9 @@ jobs:
   item-viewer-windows:
     name: Exact-head Item Viewer Editor lifecycle
     runs-on: windows-2022
-    timeout-minutes: 180
+    # A cold pinned Editor build exceeded 180 minutes on windows-2022
+    # (run 34662682095). Keep build parallelism and the 600-second smoke bound.
+    timeout-minutes: 300
     env:
       O3DE_COMMIT: "68683f23fb747380d3efa2424bd5f30242e9c5a2"
     steps:
@@ -63,7 +65,14 @@ jobs:
           path: o3de
           persist-credentials: false
           fetch-depth: 1
+          # Fetch after checkout so Git LFS can read the pinned .lfsconfig endpoint.
           lfs: false
+
+      - name: Download pinned O3DE LFS assets
+        shell: pwsh
+        run: |
+          git -C o3de lfs pull
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Set up Python
         uses: actions/setup-python@v5

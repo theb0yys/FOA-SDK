@@ -98,6 +98,7 @@ There is no `pull_request_target` trigger. Validation must not push commits, mov
 
 The host/build jobs are conditional:
 
+- `tool-execution-operational` runs for the selected compiled host surface, builds both M2 test targets plus the native fixture, requires that fixture to exist, and runs nonzero matching CTest cases;
 - `canonical-interchange-compiled` runs only when C++/CMake/Gem/project/O3DE-lock or validation-workflow paths can affect the compiled host surface;
 - `windows-prerequisites` runs only when Developer Preview, project, O3DE-lock, or validation-workflow paths can affect Windows prerequisites;
 - `windows-installer-smoke` runs only when Windows installer launcher, packaging, installer-test, or validation-workflow paths can affect the installer front door.
@@ -190,3 +191,50 @@ For every reported check, record enough information to identify what actually ra
 Pending is not passing. Queued, skipped, absent, stale-head, wrong-commit, or zero-test results are not passes. Self-declared metadata are not proof that the repository owner authorized an action.
 
 Use `PASSED`, `FAILED`, `PARTIAL`, `BLOCKED`, `NOT_RUN`, or `NOT_APPLICABLE`.
+
+## Capability execution M1 validation
+
+M1 follows its merged [implementation authority](CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md).
+The automatic read-only `capability-execution-compiled` Windows job checks out the exact PR
+head and pinned O3DE, builds `TaintedGrailModdingSDK.CapabilityExecution.Tests`, and runs its
+CTest registration with `--no-tests=error`. This Core/AzTest target uses NO_UNITY and its own
+three-file manifest. No production source is recompiled inside the test target.
+
+`run_local_validation.py` includes `validate_capability_execution_contracts.py` in static
+mode. Full mode runs an independent M1 CTest command after legacy Catalog/CanonicalInterchange,
+so a missing M1 test cannot be hidden by successful legacy tests. Python adversarial fixtures
+exercise missing files, altered types, dependency/ownership changes and CI permission drift.
+
+Required local evidence includes prerequisites, pinned configure, Core and dedicated tests,
+legacy compiled regression and Editor/AssetProcessorBatch build compatibility. Reused host
+build inputs must be from the same pin and configuration, with product targets rebuilt from
+the reviewed checkout. M1 has no operational consumers; Editor/UI, provider processes,
+deployment/rollback execution and game runtime proof are NOT_APPLICABLE. Compilation and
+synthetic receipt tests must not be reported as those forms of operational evidence.
+
+## M2 Tool Execution Service validation
+
+The accepted M2 design requires L0-L4. Static validation includes both
+ExternalToolchain validators and their negative unit tests. The separate pure
+execution Core and host libraries must build against the locked O3DE revision;
+run both `ExternalToolchain.Execution.Tests` and
+`ExternalToolchain.Execution.Operational.Tests`, plus existing discovery, M1
+and canonical-interchange regressions. Build the fixture and affected Editor
+modules before running their tests. A reused dependency build is permissible
+only at the same pin/configuration; it does not replace changed-target builds.
+
+The operational CTest command supplies `FOA_M2_FIXTURE` with the built native
+fixture path. A missing fixture, unavailable LPAC, zero matching tests or failed
+isolation probe is not a pass. Network initialization failure cannot substitute
+for observing access denial on a functioning socket API. A child that cannot
+start cannot prove descendant cleanup. No test may silently grant additional
+capabilities or launch an unsandboxed fixture to obtain a green result.
+
+L3 starts and normally closes the Editor with M2 connected but default-denied,
+and observes the service's activation/deactivation markers. A startup exception,
+forced termination or successful link alone does not satisfy that lifecycle row.
+L4 uses disposable repository-owned native fixtures and private resource roots;
+it grants no game, deployment or release authority. Preserve exact command,
+source snapshot, build configuration, actual test counts, timing, failures and
+skips in private evidence. An incomplete operational or lifecycle row leaves M2
+PARTIAL even when all contract tests pass.

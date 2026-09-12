@@ -122,11 +122,43 @@ namespace TaintedGrailModdingSDK
         return m_initialized;
     }
 
-    void FoundationService::SetWorkspace(const WorkspaceModel& workspace)
+    bool FoundationService::BeginWorkspaceChange()
     {
+        if (m_workspaceChangeInProgress)
+        {
+            return false;
+        }
+        m_workspaceChangeInProgress = true;
+        bool allowed = true;
+        FoundationNotificationBus::EnumerateHandlers([this, &allowed](FoundationNotifications* handler)
+        {
+            allowed = handler->CanChangeWorkspace(*this);
+            return allowed; // Stop at the first veto; another handler cannot override it.
+        });
+        if (!allowed)
+        {
+            m_workspaceChangeInProgress = false;
+        }
+        return allowed;
+    }
+
+    void FoundationService::FinishWorkspaceChange()
+    {
+        RefreshSnapshot();
+        FoundationNotificationBus::Broadcast(&FoundationNotifications::OnWorkspaceChanged, *this);
+        m_workspaceChangeInProgress = false;
+    }
+
+    bool FoundationService::SetWorkspace(const WorkspaceModel& workspace)
+    {
+        if (!BeginWorkspaceChange())
+        {
+            return false;
+        }
         ClearWorkspaceScopedState(true);
         m_workspace = workspace;
-        RefreshSnapshot();
+        FinishWorkspaceChange();
+        return true;
     }
 
     bool FoundationService::SaveWorkspace(
@@ -179,8 +211,25 @@ namespace TaintedGrailModdingSDK
 
     bool FoundationService::LoadWorkspace(
         const AZStd::string& filePath,
-        AZStd::string* error)
+        AZStd::string* error,
+        bool* cancelled)
     {
+        if (cancelled)
+        {
+            *cancelled = false;
+        }
+        if (m_workspaceChangeInProgress)
+        {
+            if (cancelled)
+            {
+                *cancelled = true;
+            }
+            if (error)
+            {
+                *error = "Workspace change already in progress.";
+            }
+            return false;
+        }
         auto candidateResult = m_workspaceLoadService.BuildCandidate(filePath);
         if (!candidateResult.IsSuccess())
         {
@@ -192,6 +241,18 @@ namespace TaintedGrailModdingSDK
         }
 
         FoundationWorkspaceLoadCandidate candidate = candidateResult.TakeValue();
+        if (!BeginWorkspaceChange())
+        {
+            if (cancelled)
+            {
+                *cancelled = true;
+            }
+            if (error)
+            {
+                *error = "Workspace change cancelled; the current workspace remains open.";
+            }
+            return false;
+        }
         ClearWorkspaceScopedState(true);
         m_workspace = AZStd::move(candidate.m_workspace);
         m_workspaceFilePath = AZStd::move(candidate.m_workspaceFilePath);
@@ -200,7 +261,7 @@ namespace TaintedGrailModdingSDK
         m_importIssues = AZStd::move(candidate.m_importIssues);
         m_catalog = AZStd::move(candidate.m_catalog);
         m_catalogFilePath = AZStd::move(candidate.m_catalogFilePath);
-        RefreshSnapshot();
+        FinishWorkspaceChange();
         return true;
     }
 
@@ -261,6 +322,37 @@ namespace TaintedGrailModdingSDK
         {
             m_activePackFilePath.clear();
         }
+        RefreshSnapshot();
+        return true;
+    }
+
+    bool FoundationService::SavePackAndActivate(
+        const PackManifest& pack,
+        const AZStd::string& filePath,
+        AZStd::string* error)
+    {
+        // The persistence boundary validates the draft and destination before any
+        // published state changes. Do not call UpsertPack: it notifies observers.
+        const auto result = m_packPersistence.Save(pack, filePath);
+        if (!result.IsSuccess())
+        {
+            if (error)
+            {
+                *error = result.GetError();
+            }
+            return false;
+        }
+
+        if (PackManifest* existing = FindPackById(pack.m_packId))
+        {
+            *existing = pack;
+        }
+        else
+        {
+            m_packs.push_back(pack);
+        }
+        m_activePackId = pack.m_packId;
+        m_activePackFilePath = filePath;
         RefreshSnapshot();
         return true;
     }

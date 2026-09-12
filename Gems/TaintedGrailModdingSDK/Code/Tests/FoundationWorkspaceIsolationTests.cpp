@@ -6,6 +6,7 @@
  */
 
 #include "FoundationService.h"
+#include "FoundationNotificationBus.h"
 #include "FoundationValidationService.h"
 #include "PackagePathValidation.h"
 #include "PackPersistenceService.h"
@@ -372,7 +373,164 @@ namespace TaintedGrailModdingSDK
             bool m_created = false;
             bool m_installedFileIo = false;
         };
+
+        class PackChangeObserver final
+            : public FoundationNotificationBus::Handler
+        {
+        public:
+            PackChangeObserver() { BusConnect(); }
+            ~PackChangeObserver() override { BusDisconnect(); }
+            void OnFoundationChanged() override { ++m_changes; }
+            int m_changes = 0;
+        };
     } // namespace
+
+    TEST_F(PackPersistenceServiceTests, DirectSaveRetainsNestedDirectoryCreationAndReaderCompatibility)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const auto path = ToAzString(temporary.path() + "/Packs/new-folder/pack.tgpack.json");
+        const PackManifest pack = MakePackageGuardPack();
+        PackPersistenceService persistence;
+        const auto saved = persistence.Save(pack, path);
+        ASSERT_TRUE(saved.IsSuccess()) << saved.GetError().c_str();
+        const auto loaded = persistence.Load(path);
+        ASSERT_TRUE(loaded.IsSuccess()) << loaded.GetError().c_str();
+        EXPECT_EQ(loaded.GetValue().m_packId, pack.m_packId);
+        EXPECT_EQ(loaded.GetValue().m_assetPaths, pack.m_assetPaths);
+        EXPECT_EQ(loaded.GetValue().m_contentDefinitionPaths, pack.m_contentDefinitionPaths);
+    }
+    TEST_F(PackPersistenceServiceTests, DraftSavePublishesOnceAndReopensThroughExistingReader)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        WorkspaceModel workspace;
+        workspace.m_rootPath = ToAzString(temporary.path());
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        service.SetWorkspace(workspace);
+        PackManifest pack = MakePackageGuardPack();
+        const auto path = ToAzString(temporary.path() + "/Packs/pack.tgpack.json");
+        PackChangeObserver observer;
+        AZStd::string error;
+        ASSERT_TRUE(service.SavePackAndActivate(pack, path, &error)) << error.c_str();
+        ASSERT_NE(service.GetActivePack(), nullptr);
+        EXPECT_EQ(observer.m_changes, 1);
+        EXPECT_EQ(service.GetPacks().size(), 1);
+        EXPECT_EQ(service.GetActivePackFilePath(), path);
+
+        pack.m_displayName = "Edited mod";
+        pack.m_version = "1.2.3";
+        pack.m_dependencies = { "owner.dependency" };
+        ASSERT_TRUE(service.SavePackAndActivate(pack, path, &error)) << error.c_str();
+        EXPECT_EQ(observer.m_changes, 2);
+        EXPECT_EQ(service.GetPacks().size(), 1);
+        EXPECT_EQ(service.GetActivePack()->m_displayName, pack.m_displayName);
+        ASSERT_TRUE(service.SaveActivePack(&error)) << error.c_str();
+        service.ClearActivePack();
+        ASSERT_TRUE(service.LoadPack(path, &error)) << error.c_str();
+        ASSERT_NE(service.GetActivePack(), nullptr);
+        EXPECT_EQ(service.GetActivePack()->m_version, pack.m_version);
+        EXPECT_EQ(service.GetActivePack()->m_dependencies, pack.m_dependencies);
+        EXPECT_EQ(service.GetActivePack()->m_assetPaths, pack.m_assetPaths);
+        EXPECT_EQ(service.GetActivePack()->m_schemaVersion, 1);
+    }
+
+    TEST_F(PackPersistenceServiceTests, InvalidDraftPreservesSavedBytesAndPublishedPack)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        WorkspaceModel workspace;
+        workspace.m_rootPath = ToAzString(temporary.path());
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        service.SetWorkspace(workspace);
+        const PackManifest pack = MakePackageGuardPack();
+        const QString filePath = temporary.path() + "/Packs/pack.tgpack.json";
+        const auto path = ToAzString(filePath);
+        AZStd::string error;
+        ASSERT_TRUE(service.SavePackAndActivate(pack, path, &error)) << error.c_str();
+        QFile file(filePath);
+        ASSERT_TRUE(file.open(QIODevice::ReadOnly));
+        const QByteArray saved = file.readAll();
+        file.close();
+        PackChangeObserver observer;
+        for (int invalidCase = 0; invalidCase < 4; ++invalidCase)
+        {
+            PackManifest draft = pack;
+            draft.m_displayName = "Must not be published";
+            if (invalidCase == 0) { draft.m_version = "invalid"; }
+            if (invalidCase == 1) { draft.m_schemaVersion = 2; }
+            if (invalidCase == 2) { draft.m_runtimeActionsEnabled = true; }
+            if (invalidCase == 3) { draft.m_assetPaths = { "../escape" }; }
+            EXPECT_FALSE(service.SavePackAndActivate(draft, path, &error));
+            EXPECT_FALSE(error.empty());
+            ASSERT_NE(service.GetActivePack(), nullptr);
+            EXPECT_EQ(service.GetActivePack()->m_displayName, pack.m_displayName);
+            EXPECT_EQ(service.GetActivePackFilePath(), path);
+            EXPECT_EQ(service.GetSnapshot().m_activePackName, pack.m_displayName);
+            EXPECT_EQ(service.GetPacks().size(), 1);
+            ASSERT_TRUE(file.open(QIODevice::ReadOnly));
+            EXPECT_EQ(file.readAll(), saved);
+            file.close();
+        }
+        EXPECT_EQ(observer.m_changes, 0);
+    }
+
+    TEST_F(PackPersistenceServiceTests, FailedNewDraftCanBeCorrectedWithoutChangingActivePack)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        WorkspaceModel workspace;
+        workspace.m_rootPath = ToAzString(temporary.path());
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        service.SetWorkspace(workspace);
+        const PackManifest original = MakePack();
+        const auto path = ToAzString(temporary.path() + "/Packs/original.tgpack.json");
+        AZStd::string error;
+        ASSERT_TRUE(service.SavePackAndActivate(original, path, &error)) << error.c_str();
+        PackManifest draft = original;
+        draft.m_packId = "owner.new-mod";
+        draft.m_displayName = "New mod";
+        const QString blocked = temporary.path() + "/blocked";
+        ASSERT_TRUE(WriteFile(blocked, "directory blocker"));
+        PackChangeObserver observer;
+        EXPECT_FALSE(service.SavePackAndActivate(draft, ToAzString(blocked + "/pack.tgpack.json"), &error));
+        EXPECT_FALSE(error.empty());
+        EXPECT_EQ(observer.m_changes, 0);
+        ASSERT_NE(service.GetActivePack(), nullptr);
+        EXPECT_EQ(service.GetActivePack()->m_packId, original.m_packId);
+        EXPECT_EQ(service.GetActivePackFilePath(), path);
+        EXPECT_EQ(service.GetPacks().size(), 1);
+        const auto correctedPath = ToAzString(temporary.path() + "/Packs/new.tgpack.json");
+        ASSERT_TRUE(service.SavePackAndActivate(draft, correctedPath, &error)) << error.c_str();
+        EXPECT_EQ(observer.m_changes, 1);
+        EXPECT_EQ(service.GetActivePack()->m_packId, draft.m_packId);
+        EXPECT_EQ(service.GetActivePackFilePath(), correctedPath);
+        EXPECT_EQ(service.GetPacks().size(), 2);
+        ASSERT_TRUE(service.LoadPack(path, &error)) << error.c_str();
+        EXPECT_EQ(service.GetActivePack()->m_packId, original.m_packId);
+    }
+
+    TEST_F(PackPersistenceServiceTests, UnsafeDestinationCannotActivateFirstDraft)
+    {
+        QTemporaryDir temporary;
+        QTemporaryDir outside;
+        ASSERT_TRUE(temporary.isValid());
+        ASSERT_TRUE(outside.isValid());
+        WorkspaceModel workspace;
+        workspace.m_rootPath = ToAzString(temporary.path());
+        FoundationService service(FoundationWorkspaceLoadDependencies{});
+        service.SetWorkspace(workspace);
+        PackChangeObserver observer;
+        AZStd::string error;
+        const QString path = outside.path() + "/pack.tgpack.json";
+        EXPECT_FALSE(service.SavePackAndActivate(MakePack(), ToAzString(path), &error));
+        EXPECT_FALSE(error.empty());
+        EXPECT_FALSE(QFileInfo::exists(path));
+        EXPECT_EQ(service.GetActivePack(), nullptr);
+        EXPECT_TRUE(service.GetPacks().empty());
+        EXPECT_TRUE(service.GetActivePackFilePath().empty());
+        EXPECT_EQ(observer.m_changes, 0);
+    }
 
     TEST(FoundationWorkspaceIsolationTests, SetWorkspaceClearsAllPriorWorkspaceStateAndSaveTarget)
     {

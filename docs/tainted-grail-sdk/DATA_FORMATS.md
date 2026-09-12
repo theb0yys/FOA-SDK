@@ -498,7 +498,7 @@ The document is bound to one workspace and exact game profile:
 
 ```json
 {
-  "SchemaVersion": 2,
+  "SchemaVersion": 7,
   "WorkspaceId": "owner.workspace",
   "ProfileId": "foa.mono.current",
   "GameVersion": "exact-version",
@@ -513,13 +513,26 @@ The document is bound to one workspace and exact game profile:
   "RecipeOutputs": [],
   "ActorProfiles": [],
   "TroopProfiles": [],
-  "TroopMembers": []
+  "TroopMembers": [],
+  "EncounterDefinitions": [],
+  "CultureProfiles": [],
+  "FactionProfiles": [],
+  "FactionLinks": [],
+  "WorldPlaces": [],
+  "WorldPaths": [],
+  "WorldPathNodes": [],
+  "WorldPathEdges": [],
+  "QuestProfiles": [],
+  "ProjectAssets": [],
+  "LocalisationEntries": [],
+  "PresentationBindings": []
 }
 ```
 
-Schema 2 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
-older schema-1 documents without them load as empty economy collections. Schema 2 adds the three population
-arrays shown above.
+Schema 6 is the current writable catalog format. The four economy arrays remain compatible with schema 1;
+older schema-1 documents without them load as empty economy collections. Schema 2 added the three population
+arrays shown above. Schema 3 adds `EncounterDefinitions`; schema-1/2 inputs must not contain encounter rows.
+Schema 4 adds `CultureProfiles`, `FactionProfiles` and `FactionLinks`; schema-1/2/3 inputs must not contain society rows.
 
 Schema-1 migration is read-only and fail-closed:
 
@@ -529,8 +542,8 @@ Schema-1 migration is read-only and fail-closed:
 4. legacy validation and governance compatibility rules run without changing the detected schema version;
 5. the complete candidate is validated against the active workspace, profile, evidence registry, and catalog
    integrity rules before successful bound replacement;
-6. only successful bound replacement followed by `BuildDocument` produces a schema-2 document;
-7. the next successful catalog save writes that schema-2 document, including when every population collection
+6. only successful bound replacement followed by `BuildDocument` produces a schema-7 document;
+7. the next successful catalog save writes that schema-7 document, including when every population collection
    is empty.
 
 A loaded schema-1 candidate remains schema 1 after compatibility normalization.
@@ -540,9 +553,78 @@ and failed persistence are rejected without replacing the published catalog. Mig
 records, relationships, validation history, governance history, economy collections, and their stable order.
 Plain catalog documents require an explicit `SchemaVersion`. A legacy O3DE `JsonSerialization` envelope that
 predates a nested catalog schema is treated only as a schema-1 migration input. Current saves always emit the
-plain schema-2 document with explicit empty collections, not a new O3DE envelope.
+plain schema-7 document with explicit empty collections, not a new O3DE envelope.
 
 Reload rejects a mismatched workspace ID, profile ID, game version, or branch.
+
+## Encounter definition
+
+Array: `EncounterDefinitions` (catalog schema 3).
+
+| Field | Meaning |
+| --- | --- |
+| `RecordId` | Existing synthetic, pack-owned population/encounter identity. |
+| `Entries` | 1–128 distinct actor/troop bindings; each has `EntryId`, `TargetRecordId`, `MinimumCount`, `MaximumCount` (1–1000). Entry identities cannot move between encounters. |
+| `PlacementRecordId`, `PlacementSubjectRef` | Optional exact world location/scene/region binding and agreeing subject, or an unverified local reference. |
+| `ActivationMode`, `Conditions` | `manual` with no conditions, or `all_conditions` with 1–64 distinct descriptions of at most 256 bytes. |
+| `MaximumActiveInstances` | 1–1000 planned concurrent instances. |
+| `PopulationLimit` | 1–1,000,000; must cover the maximum declared actors across active instances. |
+| `UniqueEncounter` | Requires exactly one maximum active instance. |
+| `CleanupNotes`, `RollbackNotes` | Single-line authoring descriptions up to 1024 bytes, never executable actions. |
+| `EvidenceIds` | Exact profile-bound authoring evidence for this complete definition and each entry. |
+
+Whole-definition replacement removes omitted entries only from that encounter. Existing records,
+population/economy profiles, relationships, governance and evidence keep their identities. Entry IDs,
+condition descriptions and evidence IDs are canonicalized on copies; duplicates fail. Unique actor
+constraints include direct entries and troop members.
+
+Schema-1/2 documents containing encounter definitions and future schemas are rejected. Schema-1/2
+inputs are backed up byte-for-byte before a successful current-schema overwrite; backup failure blocks the
+write. Restoring the old backup is the downgrade route; new encounter data has no schema-2 projection.
+See [encounter design](SPAWN_ENCOUNTER_EDITOR_DESIGN.md) for the authoring boundary.
+
+## Society profiles and faction links
+
+Catalog schema 4 adds three arrays. Profiles attach to existing synthetic, pack-owned canonical
+society/culture and society/faction records; display names remain on the canonical record.
+
+| Array | Fields |
+| --- | --- |
+| `CultureProfiles` | `RecordId`, `Description` (2048 bytes), `Language` (128 bytes), `EvidenceIds`. |
+| `FactionProfiles` | `RecordId`, optional `CultureRecordId`, `Description` and `AuthorityNotes` (2048 bytes each), `EvidenceIds`. |
+| `FactionLinks` | `LinkId`, `FactionRecordId`, `Kind`, `TargetRecordId`, `TargetSubjectRef`, `Value`, `Notes`, `EvidenceIds`. |
+
+Link kinds: `member` targets a saved actor/troop with `member`, `officer` or `leader`;
+`disposition` targets another saved faction with `friendly`, `neutral` or `hostile`;
+`jurisdiction` targets a saved world location/scene/region (with an agreeing exact subject) or a nonempty
+unverified reference, with `controls`, `claims` or `protects`. References and notes are single-line text
+up to 1024 bytes. A leader must be an individual actor; each faction has at most one. Relationships are
+directed, never automatically reciprocal. These values describe SDK authoring intent, not game enums.
+
+Catalog limits: 1000 cultures, 1000 factions, 10000 links; at most 128 links of each kind per faction.
+Evidence arrays require 1–64 distinct stable IDs. Profiles and links sort by identity; evidence arrays
+sort on copies. Duplicate identities or targets within a kind are rejected. Links cannot move to another
+faction or change kind. Complete-definition saves preserve surviving IDs and remove only omitted links
+belonging to that faction. Invalid evidence, ownership, references or disk writes prevent publication.
+
+Schema-1/2/3 inputs carrying society rows are rejected. Supported older catalogs retain their detected version
+until bound validation and projection; saves write schema 7 and verify the exact original backup before
+overwriting an earlier version. Workspace/pack schemas and canonical interchange are unchanged.
+See [faction design](FACTION_AUTHORITY_EDITOR_DESIGN.md) and [usage](FACTION_AUTHORITY_EDITOR_GUIDE.md).
+
+## World places and path graphs (introduced in catalog schema 5)
+
+`WorldPlaces` stores `RecordId`, `ParentRecordId`, `Description`, `HasPosition`, `X`, `Z` and `EvidenceIds`.
+Only locations may have positions, in scene-local plan units. Region/scene/location hierarchy resolves exact canonical world IDs.
+
+`WorldPaths` stores `RecordId`, `SceneRecordId`, optional `RoadRecordId`, `Description`, `TravelConstraints` and `EvidenceIds`.
+A road reference is permitted only on a route in the same scene.
+
+`WorldPathNodes` stores `NodeId`, `PathRecordId`, `LocationRecordId`, `Notes` and `EvidenceIds`.
+`WorldPathEdges` stores `EdgeId`, `PathRecordId`, `FromNodeId`, `ToNodeId`, `TravelMode`, `Bidirectional`, `TravelCost`, `Notes` and `EvidenceIds`.
+Every node/edge has an independent stable identity and exact author-intent evidence. Modes are `walk`, `ride` or `boat`; cost is a positive finite planning weight.
+
+Schema-1/2/3/4 documents cannot carry these collections; absent arrays load as empty. Schema-4 society data remain supported and preserve their meaning. World authoring never changes Road Atlas, interchange, pack or workspace formats and never grants runtime permissions. See [world contract bounds and graph rules](WORLD_ROUTE_EDITOR_DESIGN.md).
 
 ## Catalog record
 
@@ -903,3 +985,77 @@ Breaking changes require:
 - old/new fixtures and tests;
 - changelog and user-guide updates;
 - release notes and rollback guidance.
+
+## Quest authoring profiles (catalog schema 6)
+
+QuestProfiles attach to synthetic narrative/quest canonical records. RecordId equals the embedded QuestDefinition V1 quest_id; owner_pack_id must match the canonical owner. DefinitionJson is deterministic V1 JSON. Labels contain Id/Text; StateKeys contain KeyId/Type/DefaultValue/Description; Bindings contain SubjectId/RecordId; EvidenceIds support the current authored revision. Local bindings and default declarations do not resolve runtime objects or grant execution permission.
+
+Bounds are 256 quest profiles, 8 MiB combined DefinitionJson, 1 MiB per definition and 256 labels/state keys/bindings per quest. Boolean defaults are true/false; integer defaults are bounded to +/-1000000000; text/default descriptions are bounded single-line strings. State uses must match their declared type. Exact catalog actor, item, world-location and quest references are validated.
+
+Readers accept schemas 1–6 and the writer emits 6. Schema-1/2/3/4/5 documents cannot contain nonempty QuestProfiles. Old catalogs retain an exact verified backup before replacement; future versions and malformed input fail closed. See [quest authoring design](QUEST_AUTHORING_DESIGN.md) and [guide](QUEST_AUTHORING_GUIDE.md).
+
+## Images, translations and presentation assignments (catalog schema 7)
+
+ProjectAssets are synthetic, pack-owned assets/image canonical records. Their typed profile stores RecordId, SourcePath, Fingerprint, MediaType, Provenance, SourceRights, Licence, Redistribution, ByteSize, Width, Height and EvidenceIds. SourcePath is a portable workspace-relative Media/Owned/<owner SHA-256>/<content SHA-256>.png or .jpg path; hashes in the path omit the sha256: prefix. The fingerprint includes that prefix. Limits are 8 MiB, 4096 pixels per side and 4,194,304 pixels total. SourceRights is original_work or licensed (with licence details). Redistribution is not_reviewed, declared_permitted or prohibited; declarations do not establish legal permission.
+
+LocalisationEntries are synthetic, pack-owned localisation/text records. RecordId is stable; Key is case-sensitive and unique per pack, at most 256 ASCII letters, digits, dots, underscores or hyphens. DefaultLanguage must have a variant. Variants contain Language and Text; 1–32 unique lowercase language codes with alphabetic segments of at least two characters, separated by hyphens, up to 16 characters. Each translation allows 8192 UTF-8 bytes of nonempty plain text. Resolution uses an exact language match, otherwise the explicitly selected default, and reports fallback.
+
+PresentationBindings store BindingId, OwnerPackId, TargetRecordId, Slot, ValueRecordId and EvidenceIds. Binding identity is deterministically derived from length-framed owner, target and slot. Empty ValueRecordId clears the assignment while retaining identity. Targets are native or same-pack synthetic items, actors or quests. Slots are item icon, actor portrait, and name/description for all three target types. Values must belong to the same pack and match the slot type. Revision-bound author intent and target/value evidence are validated before publication.
+
+Collections are bounded to 4096 images, 8192 text entries / 16 MiB total text, and 32768 assignments. Schemas 1–6 cannot carry these nonempty collections. Their load results retain their old version until validated projection. Saves emit schema 7 and preserve a verified exact older-catalog backup. Older Editors require that backup to downgrade; later changes are not backported. Missing image bytes do not prevent catalog metadata loading; selected previews and image assignments verify content so the user can repair the source.
+
+See [Manager design](ASSET_LOCALISATION_MANAGER_DESIGN.md) for ownership, immutable file storage and failure behavior.
+
+## Capability execution M1 canonical values
+
+`foa-capability-execution-v1` and `foa-capability-execution-canonical-json-v1` identify an
+additive Core C++ value family and its deterministic UTF-8 fingerprint projection.
+This is not a durable interchange document: no suffix, reader, writer, registry,
+reflection serializer or workspace/pack migration is introduced. Unknown versions are rejected.
+See [canonical rules, contextual validation and bounds](CAPABILITY_EXECUTION_CONTRACT.md#m1-core-value-api).
+Existing persisted and canonical V1 formats remain unchanged.
+
+## ExternalToolchain execution V2 (M2)
+
+Owner: ExternalToolchain. Status: PARTIAL implementation under
+[TOOL_EXECUTION_M2_DESIGN.md](TOOL_EXECUTION_M2_DESIGN.md). Existing canonical V1,
+M1 receipts, packs, workspaces and discovery API 1.1.0 are unchanged. No migration
+or backward parser fallback is supplied for these new execution records.
+
+| Contract | Identity and representation |
+| --- | --- |
+| Command | `foa-tool-command-v2`, integer version 2; includes provider/probe identity, execution profile, argument convention and ceilings |
+| Semantic request | `foa-tool-invocation-v2`, integer version 2, canonical profile `foa-tool-invocation-canonical-json-v2`; excludes attempt ID and its own fingerprint |
+| Output manifest | `foa-tool-output-manifest-v2`, integer version 2; binds exact attempt and request fingerprint to declared output files |
+| Invocation record | `foa-tool-invocation-record-v2`, integer version 2; independent outcome, verification, cleanup and persistence observations |
+
+Canonical JSON uses fixed property order. ID-keyed collections are sorted;
+arguments retain order. SHA-256 fingerprints use `sha256:` followed by 64 lowercase
+hex digits. Unknown versions, duplicate/unknown properties, invalid UTF-8,
+embedded controls and over-limit input are refused. Manifests and records are
+limited to 256 KiB. Limits are compositional, so a valid individual field can
+still exceed an aggregate limit.
+
+File references contain stable IDs, root IDs, relative paths, kind, byte count
+and digest. Paths reject traversal, device names, alternate streams and aliases.
+The host reserves `manifest.v2.json`. Accepted outputs retain an invocation-owned
+staging root ID; this is custody evidence, not permission to import or deploy.
+
+Private journal slots are named `<attempt>.record.0` and `.record.1`; each holds a
+fingerprint line followed by the canonical record. Temporary writes are flushed
+before same-volume replacement. Readers retain the latest valid slot; corrupt
+attempts with no valid slot block recovery. A fingerprint detects corruption and
+does not authenticate the writer or authorise replay.
+
+Redacted stdout/stderr are bounded private log files. Recovery intents are a
+separate private V2 inventory with exact generated staging/profile identity and
+creation observations. They are never returned by the execution bus or included
+in shareable receipts. Interrupted processes are not relaunched on restart.
+
+The M2 production execution profile is windows-lpac-registry-read-batch-v1.
+Its canonical command fingerprint includes that exact identity and its request
+fingerprints bind the canonical command. Commands for windows-lpac-batch-v1 and
+requests bound to its fingerprint are rejected, with no silent capability upgrade.
+Execution API version 2.0.0 and discovery API 1.1.0 are unchanged. Historical
+invocation records retain their observed profile fingerprint and remain readable;
+they never authorize replay, migration to a new profile, or artifact promotion.

@@ -40,7 +40,11 @@ namespace TaintedGrailModdingSDK
         constexpr const char* CatalogBrowserPane = "Tainted Grail Catalog Browser";
         constexpr const char* CatalogGovernancePane = "Tainted Grail Catalog Governance";
         constexpr const char* ItemRecipeEditorPane = "Tainted Grail Item and Recipe Editor";
+        constexpr const char* AssetLocalisationPane = "Tainted Grail Asset and Localisation Manager";
         constexpr const char* QuestStateInspectorPane = "Tainted Grail Quest and State Inspector";
+        constexpr const char* SpawnEncounterEditorPane = "Tainted Grail Spawn and Encounter Editor";
+        constexpr const char* WorldRouteEditorPane = "Tainted Grail World and Route Editor";
+        constexpr const char* FactionAuthorityEditorPane = "Tainted Grail Faction and Authority Editor";
         constexpr const char* ActorTroopEditorPane = "Tainted Grail Actor and Troop Editor";
         constexpr const char* RoadAtlasEditorPane = "Tainted Grail Map Editor (Road Atlas)";
         constexpr const char* AvalonAIEditorPane = "Tainted Grail Avalon AI Editor";
@@ -282,7 +286,11 @@ namespace TaintedGrailModdingSDK
                 { tr("Map editor"), tr("Build and edit map and road content."), RoadAtlasEditorPane },
                 { tr("Items and recipes"), tr("Create and edit items, recipes, and economy data."), ItemRecipeEditorPane },
                 { tr("Actors and troops"), tr("Create and edit actors and troop composition."), ActorTroopEditorPane },
-                { tr("Quests and state"), tr("Inspect and work with quest/state definitions."), QuestStateInspectorPane },
+                { tr("Spawns and encounters"), tr("Plan encounter composition, placement and population limits."), SpawnEncounterEditorPane },
+                { tr("World and routes"), tr("Create places, roads and routes with a visual graph."), WorldRouteEditorPane },
+                { tr("Factions and authority"), tr("Edit cultures, membership, relationships and jurisdiction."), FactionAuthorityEditorPane },
+                { tr("Assets and text"), tr("Manage images, translations and content assignments."), AssetLocalisationPane },
+                { tr("Quests and state"), tr("Browse quests, edit local definitions and preview progression."), QuestStateInspectorPane },
                 { tr("Avalon AI"), tr("Create and edit Avalon AI packages and plans."), AvalonAIEditorPane },
             });
         contentLayout->addWidget(m_authoringGroup);

@@ -270,7 +270,10 @@ try {
         $o3deRoot = Join-Path $extractedRoot "PreviewArtifacts\O3DE"
         New-Item -ItemType Directory -Path $o3deRoot -Force | Out-Null
         $seedO3deRoot = Join-Path $seedRoot "workspace\Extracted\PreviewArtifacts\O3DE"
-        Copy-Item -LiteralPath (Join-Path $seedO3deRoot "*") -Destination $o3deRoot -Recurse -Force
+        Get-ChildItem -LiteralPath $seedO3deRoot -Force -ErrorAction Stop |
+            ForEach-Object {
+                Copy-Item -LiteralPath $_.FullName -Destination $o3deRoot -Recurse -Force -ErrorAction Stop
+            }
         $assetBrowserRoot = Join-Path $extractedRoot "PreviewArtifacts\AssetBrowser"
         Remove-Item -LiteralPath $assetBrowserRoot -Recurse -Force -ErrorAction SilentlyContinue
 
@@ -283,6 +286,7 @@ try {
             "--project-path=$projectRoot",
             "--runpythontest",
             $smokeScript,
+            "--pythontestcase=ItemViewerLifecycleSmoke",
             "-rhi=null",
             "-autotest_mode",
             "-skipWelcomeScreenDialog"

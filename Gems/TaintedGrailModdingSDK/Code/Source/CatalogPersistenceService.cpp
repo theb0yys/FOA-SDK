@@ -15,6 +15,8 @@
 #include <AzCore/std/utility/move.h>
 
 #include <QByteArray>
+#include <QCryptographicHash>
+#include <QFile>
 #include <QDir>
 #include <QFileInfo>
 #include <QSaveFile>
@@ -59,10 +61,15 @@ namespace TaintedGrailModdingSDK
 
             const AZ::u32 version = schemaVersion->value.GetUint();
             if (version != LegacyCatalogSchemaVersion
+                && version != PopulationCatalogSchemaVersion
+                && version != EncounterCatalogSchemaVersion
+                && version != SocietyCatalogSchemaVersion
+                && version != WorldCatalogSchemaVersion
+                && version != QuestCatalogSchemaVersion
                 && version != CurrentCatalogSchemaVersion)
             {
                 return AZ::Failure(AZStd::string::format(
-                    "Catalog schema version %u is unsupported; this editor supports schema 1 migration and schema 2.",
+                    "Catalog schema version %u is unsupported; this editor supports schema 1/2/3/4/5/6 migration and schema 7.",
                     version));
             }
             return AZ::Success(version);
@@ -98,6 +105,69 @@ namespace TaintedGrailModdingSDK
                     "Catalog JsonSerialization envelopes require an object ClassData payload."));
             }
             return ReadCatalogSchemaVersion(classData->value, true);
+        }
+
+        AZ::Outcome<void, AZStd::string> PreserveMigrationInput(const QString& path, const QString& workspaceRoot)
+        {
+            const QFileInfo info(path);
+            const QString root = QFileInfo(workspaceRoot).canonicalFilePath();
+            const QString parent = QFileInfo(info.absolutePath()).canonicalFilePath();
+            const auto sensitivity = QDir::separator() == QChar('\\') ? Qt::CaseInsensitive : Qt::CaseSensitive;
+            if (root.isEmpty() || parent.isEmpty() || !parent.startsWith(root + '/', sensitivity) || info.isSymLink())
+            {
+                return AZ::Failure(AZStd::string("Catalog migration paths must remain inside the workspace without file links."));
+            }
+            if (!info.exists()) { return AZ::Success(); }
+            QFile original(path);
+            constexpr qint64 maximumBytes = 256 * 1024 * 1024;
+            if (!original.open(QIODevice::ReadOnly) || original.size() > maximumBytes)
+            {
+                return AZ::Failure(AZStd::string("Cannot safely read the existing catalog within the 256 MiB migration limit."));
+            }
+            const QByteArray bytes = original.read(maximumBytes + 1);
+            if (original.error() != QFileDevice::NoError || bytes.size() > maximumBytes)
+            {
+                return AZ::Failure(AZStd::string("Cannot read the complete existing catalog for migration."));
+            }
+            rapidjson::Document json;
+            json.Parse(bytes.constData(), static_cast<size_t>(bytes.size()));
+            if (json.HasParseError())
+            {
+                return AZ::Failure(AZStd::string("The existing catalog is invalid; it was not replaced."));
+            }
+            const auto version = DetectCatalogSchemaVersion(json);
+            if (!version.IsSuccess()) { return AZ::Failure(AZStd::string(version.GetError())); }
+            if (version.GetValue() == CurrentCatalogSchemaVersion) { return AZ::Success(); }
+            const QString hash = QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
+            const QString backupPath = path + QString(".schema-%1.%2.backup.json").arg(version.GetValue()).arg(hash);
+            const QFileInfo backupInfo(backupPath);
+            if (backupInfo.isSymLink())
+            {
+                return AZ::Failure(AZStd::string("The migration backup path is a link; the catalog was not replaced."));
+            }
+            if (backupInfo.exists())
+            {
+                QFile backup(backupPath);
+                if (!backup.open(QIODevice::ReadOnly) || backup.size() != bytes.size()
+                    || backup.read(maximumBytes + 1) != bytes)
+                {
+                    return AZ::Failure(AZStd::string("The existing migration backup is not an exact copy; the catalog was not replaced."));
+                }
+                return AZ::Success();
+            }
+            // NewOnly never overwrites another migration copy. Failed or partial backups block the catalog commit.
+            QFile backup(backupPath);
+            if (!backup.open(QIODevice::WriteOnly | QIODevice::NewOnly) || backup.write(bytes) != bytes.size() || !backup.flush())
+            {
+                return AZ::Failure(AZStd::string("Cannot preserve the catalog migration backup; the catalog was not replaced."));
+            }
+            backup.close();
+            QFile verify(backupPath);
+            if (!verify.open(QIODevice::ReadOnly) || verify.size() != bytes.size() || verify.read(maximumBytes + 1) != bytes)
+            {
+                return AZ::Failure(AZStd::string("The migration backup could not be verified; the catalog was not replaced."));
+            }
+            return AZ::Success();
         }
 
         AZ::Outcome<AZStd::string, AZStd::string> SerializePlainCatalog(
@@ -524,13 +594,30 @@ namespace TaintedGrailModdingSDK
         if (document.m_schemaVersion != CurrentCatalogSchemaVersion)
         {
             return AZ::Failure(AZStd::string(
-                "Canonical catalog saves require schema 2; schema 1 is a load-only migration input."));
+                "Canonical catalog saves require schema 7; schemas 1/2/3/4/5/6 are load-only migration inputs."));
         }
         if (document.m_workspaceId.empty() || document.m_profileId.empty()
             || document.m_gameVersion.empty() || document.m_branch.empty())
         {
             return AZ::Failure(AZStd::string(
                 "Canonical catalog documents require workspace, profile, game version, and branch binding."));
+        }
+        if (document.m_schemaVersion < EncounterCatalogSchemaVersion && !document.m_encounterDefinitions.empty())
+        {
+            return AZ::Failure(AZStd::string("Catalog schemas 1/2 cannot contain encounter definitions."));
+        }
+        if (document.m_schemaVersion < AssetLocalisationCatalogSchemaVersion && (!document.m_projectAssets.empty()
+            || !document.m_localisationEntries.empty() || !document.m_presentationBindings.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1-6 cannot contain asset/localisation collections.")); }
+        if (document.m_schemaVersion < QuestCatalogSchemaVersion && !document.m_questProfiles.empty())
+        { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4/5 cannot contain quest collections.")); }
+        if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
+            || !document.m_worldPaths.empty() || !document.m_worldPathNodes.empty() || !document.m_worldPathEdges.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4 cannot contain world collections.")); }
+        if (document.m_schemaVersion < SocietyCatalogSchemaVersion && (!document.m_cultureProfiles.empty()
+            || !document.m_factionProfiles.empty() || !document.m_factionLinks.empty()))
+        {
+            return AZ::Failure(AZStd::string("Catalog schemas 1/2/3 cannot contain society collections."));
         }
         const AZ::Outcome<void, AZStd::string> identityResult = ValidatePersistedIdentity(document);
         if (!identityResult.IsSuccess())
@@ -558,6 +645,9 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string("Unable to create the catalog directory inside the workspace."));
         }
+
+        const auto backup = PreserveMigrationInput(ToQString(path), ToQString(workspaceRoot));
+        if (!backup.IsSuccess()) { return AZ::Failure(AZStd::string(backup.GetError())); }
 
         QSaveFile file(ToQString(path));
         file.setDirectWriteFallback(false);
@@ -628,6 +718,23 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::Failure(AZStd::string(
                 "Catalog schema 1 cannot contain population collections."));
+        }
+        if (document.m_schemaVersion < EncounterCatalogSchemaVersion && !document.m_encounterDefinitions.empty())
+        {
+            return AZ::Failure(AZStd::string("Catalog schemas 1/2 cannot contain encounter definitions."));
+        }
+        if (document.m_schemaVersion < AssetLocalisationCatalogSchemaVersion && (!document.m_projectAssets.empty()
+            || !document.m_localisationEntries.empty() || !document.m_presentationBindings.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1-6 cannot contain asset/localisation collections.")); }
+        if (document.m_schemaVersion < QuestCatalogSchemaVersion && !document.m_questProfiles.empty())
+        { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4/5 cannot contain quest collections.")); }
+        if (document.m_schemaVersion < WorldCatalogSchemaVersion && (!document.m_worldPlaces.empty()
+            || !document.m_worldPaths.empty() || !document.m_worldPathNodes.empty() || !document.m_worldPathEdges.empty()))
+        { return AZ::Failure(AZStd::string("Catalog schemas 1/2/3/4 cannot contain world collections.")); }
+        if (document.m_schemaVersion < SocietyCatalogSchemaVersion && (!document.m_cultureProfiles.empty()
+            || !document.m_factionProfiles.empty() || !document.m_factionLinks.empty()))
+        {
+            return AZ::Failure(AZStd::string("Catalog schemas 1/2/3 cannot contain society collections."));
         }
         const AZ::Outcome<void, AZStd::string> identityResult = ValidatePersistedIdentity(document);
         if (!identityResult.IsSuccess())

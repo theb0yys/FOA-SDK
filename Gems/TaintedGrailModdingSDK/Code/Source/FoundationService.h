@@ -26,6 +26,8 @@
 #include "TaintedFrameworkEditorServices.h"
 #include "TaintedInterfaceUiUtilities.h"
 
+class QImage;
+
 namespace TaintedGrailModdingSDK
 {
     struct FoundationLocalSetupResult
@@ -61,13 +63,18 @@ namespace TaintedGrailModdingSDK
             const AZStd::string& explicitInstallPath = {},
             const AZStd::string& workspaceRootHint = {});
 
-        void SetWorkspace(const WorkspaceModel& workspace);
+        //! Returns false if a draft owner vetoes replacement or a replacement is already in progress.
+        bool SetWorkspace(const WorkspaceModel& workspace);
         bool SaveWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr);
         bool SaveWorkspace(AZStd::string* error = nullptr);
-        bool LoadWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr);
+        //! Validates the candidate before asking draft owners, then publishes it atomically.
+        //! cancelled distinguishes a veto (including failed draft save) from a load error.
+        bool LoadWorkspace(const AZStd::string& filePath, AZStd::string* error = nullptr, bool* cancelled = nullptr);
 
         bool UpsertPack(const PackManifest& pack, AZStd::string* error = nullptr);
         bool SetActivePack(const PackManifest& pack, AZStd::string* error = nullptr);
+        //! Validates and persists a draft before publishing it as the active pack.
+        bool SavePackAndActivate(const PackManifest& pack, const AZStd::string& filePath, AZStd::string* error = nullptr);
         bool SaveActivePack(const AZStd::string& filePath, AZStd::string* error = nullptr);
         bool SaveActivePack(AZStd::string* error = nullptr);
         bool LoadPack(const AZStd::string& filePath, AZStd::string* error = nullptr);
@@ -117,6 +124,31 @@ namespace TaintedGrailModdingSDK
         bool ImportNativePopulation(const AZStd::string& path, AZStd::string* error = nullptr);
         bool CreatePopulationRecord(const AZStd::string& kind, const AZStd::string& name,
             const AZStd::string& leaderActorId, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveProjectAsset(ProjectAssetProfile asset, const AZStd::string& name, const AZStd::string& sourceFile,
+            const AZStd::string& expectedRevision, AZStd::string& id, AZStd::string* error = nullptr);
+        bool SaveLocalisationEntry(LocalisationEntry entry, const AZStd::string& expectedRevision,
+            AZStd::string& id, AZStd::string* error = nullptr);
+        bool SavePresentationBinding(const AZStd::string& target, const AZStd::string& slot,
+            const AZStd::string& value, const AZStd::string& expectedRevision, AZStd::string* error = nullptr);
+        bool ReadProjectAssetImage(const AZStd::string& id, QImage& image, AZStd::string* error = nullptr) const;
+        bool ReadQuestDocument(const AZStd::string& path, QuestAuthoringDraft& draft, AZStd::string* error = nullptr) const;
+        bool CreateQuestDefinition(const AZStd::string& name, AZStd::string& id, AZStd::string* error = nullptr);
+        bool AdoptQuestDefinition(QuestAuthoringDraft draft, AZStd::string& id, AZStd::string* error = nullptr);
+        bool SaveQuestDefinition(const QuestAuthoringDraft& draft, const AZStd::string& expectedRevision, AZStd::string* error = nullptr);
+        bool CreateWorldPlace(const AZStd::string& kind, const AZStd::string& name, const AZStd::string& parentId,
+            AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveWorldPlace(const WorldPlaceProfile& place, const AZStd::string& name, AZStd::string* error = nullptr);
+        bool CreateWorldPath(const AZStd::string& kind, const AZStd::string& name, const AZStd::string& sceneId,
+            AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveWorldPath(const WorldPathDefinition& path, const AZStd::string& name, AZStd::string* error = nullptr);
+
+        bool CreateCultureProfile(const AZStd::string& name, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveCultureProfile(const CultureProfile& profile, const AZStd::string& name, AZStd::string* error = nullptr);
+        bool CreateFactionDefinition(const AZStd::string& name, AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveFactionDefinition(const FactionDefinition& definition, const AZStd::string& name, AZStd::string* error = nullptr);
+        bool CreateEncounterDefinition(const AZStd::string& name, const AZStd::string& initialTargetId,
+            AZStd::string& recordId, AZStd::string* error = nullptr);
+        bool SaveEncounterDefinition(const EncounterDefinition& definition, const AZStd::string& name, AZStd::string* error = nullptr);
         bool SaveAuthoredPopulationTroop(const PopulationTroopDefinition& definition, AZStd::string* error = nullptr);
         bool UpsertPopulationActorProfile(
             const PopulationActorProfile& actor,
@@ -202,6 +234,16 @@ namespace TaintedGrailModdingSDK
 
     private:
         bool ImportEconomyDocument(const AZStd::string& path, bool custom, AZStd::string* error);
+        bool CanAuthorPresentation(AZStd::string* error) const;
+        bool CommitPresentationEdit(ProjectAssetProfile asset, LocalisationEntry entry, PresentationBinding binding,
+            const AZStd::string& name, int kind, AZStd::string* error);
+        bool CommitQuestDefinition(QuestAuthoringDraft draft, const AZStd::string& expectedRevision, bool creating, AZStd::string* error);
+        bool CommitAuthoredWorld(WorldPlaceProfile place, WorldPathDefinition path, const AZStd::string& kind,
+            const AZStd::string& name, bool isPlace, bool creating, AZStd::string* error);
+        bool CommitAuthoredSociety(CultureProfile culture, FactionDefinition faction, const AZStd::string& name,
+            bool isCulture, bool creating, AZStd::string* error);
+        bool CommitAuthoredEncounter(const EncounterDefinition& definition, const AZStd::string& name,
+            bool creating, AZStd::string* error);
         bool PrepareAuthoredPopulationEvidence(const AZStd::string& rowsJson, SourceEvidenceRegistry& registry,
             SourceImportResult& imported, AZStd::string* error);
         bool CommitPopulationIntake(const CatalogDatabase& candidate, SourceEvidenceRegistry registry,
@@ -209,6 +251,8 @@ namespace TaintedGrailModdingSDK
         bool WriteAuthoredEconomyDocument(const AZStd::string& json, AZStd::string* error);
         FoundationService();
 
+        bool BeginWorkspaceChange();
+        void FinishWorkspaceChange();
         void ClearWorkspaceScopedState(bool clearWorkspaceLocation);
         bool UpsertCatalogRecord(const CatalogRecord& record, AZStd::string* error = nullptr);
         bool PersistCatalogCandidate(const CatalogDatabase& candidate, AZStd::string* error);
@@ -249,5 +293,6 @@ namespace TaintedGrailModdingSDK
         FoundationWorkspaceLoadService m_workspaceLoadService;
         FoundationSnapshot m_snapshot;
         bool m_initialized = false;
+        bool m_workspaceChangeInProgress = false;
     };
 } // namespace TaintedGrailModdingSDK

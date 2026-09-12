@@ -8,6 +8,15 @@ The project follows Keep a Changelog principles. Version numbers will follow Sem
 
 ### Added
 
+- M2 Tool Execution Service: separate V2 contracts, a bounded asynchronous supervisor, explicit admission, Windows LPAC/Job Object containment, output verification and a durable private journal. Native fixture tests cover execution, denial, cancellation, timeout, recovery and filesystem isolation. The Editor supervisor joins on the early Qt quit notification before the pinned host terminates. A bounded job-drain period avoids false console-host cleanup failures. The accepted registryRead profile enables native Windows APIs while retaining network denial, exact capability checks and explicit admission. Old profile requests refuse; Editor execution stays disabled pending Framework integration.
+
+- M1 Core execution contracts with independent decision axes, exact plan/provider/artifact and inverse rollback bindings, bounded deterministic fingerprints, contextual receipt validation and dedicated compiled/static gates. No execution service, persisted format or Editor workflow is introduced.
+
+- Asset and Localisation Manager with bounded PNG/JPEG intake, image and translated-text previews, language variants and fallback, assignments to items/actors/quests, custom item icons and actor portraits, and save/reopen/draft/recovery checks.
+- Catalog schema 7 project assets, localisation entries and pack-scoped presentation bindings, with revision-bound author intent, portable managed image paths and verified schema-1–6 migration backups. Native deployment, runtime localisation and mesh/audio conversion remain separate capabilities.
+
+- Quest and State Inspector with searchable saved/imported definitions, local quest creation, typed element and state-key forms, exact catalog links, a progression graph, and save/reopen/recovery validation.
+- Catalog schema 6 quest authoring profiles with canonical QuestDefinition V1 payloads, display labels, authored state defaults and local subject bindings. Current readers accept schemas 1–7; saves emit 7 and retain an exact pre-migration backup. Older Editors require restoring that backup. Quest execution and game-state mutation remain outside this authoring workflow.
 - Governed optional O3DE Tool Gem infrastructure with exact schema-1 package validation, dependency-cycle rejection, deterministic project selection, cross-module ExtensionAPI registration/revocation, and host-owned atomic extension documents without workspace-path disclosure.
 - Independently selectable Road Atlas and Avalon AI authoring Tool Gems with registered panes, typed JSON parsing, exact contract validation, deterministic planning fingerprints, atomic save/load/revert workflows, Hub routes, and no runtime authority.
 - Twenty-six-pane lifecycle and Windows evidence coverage with adversarial checks for missing routes, missing deactivation, duplicate layout keys, non-atomic writes, unsafe capabilities, and process leakage.

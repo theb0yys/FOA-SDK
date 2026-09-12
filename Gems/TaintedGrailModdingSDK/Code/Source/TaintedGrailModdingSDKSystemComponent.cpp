@@ -42,6 +42,7 @@
 #include "FoundationModels.h"
 #include "FoundationService.h"
 #include "FoundationStatusWidget.h"
+#include "GameConnectionWidget.h"
 #include "ItemRecipeEditorWidget.h"
 #include "PackManagerWidget.h"
 #include "QuestStateInspectorWidget.h"
@@ -63,6 +64,7 @@ namespace TaintedGrailModdingSDK
     namespace
     {
         constexpr const char* DevelopmentHubViewPaneName = "FOA Development Hub";
+        constexpr const char* GameConnectionViewPaneName = "Tainted Grail Connect to Game";
         constexpr const char* FoundationStatusViewPaneName = "Tainted Grail SDK Status";
         constexpr const char* PackManagerViewPaneName = "Tainted Grail Pack Manager";
         constexpr const char* SourceIntakeViewPaneName = "Tainted Grail Source Intake";
@@ -171,6 +173,7 @@ namespace TaintedGrailModdingSDK
         if (m_viewRegistered)
         {
             AzToolsFramework::UnregisterViewPane(DevelopmentHubViewPaneName);
+            AzToolsFramework::UnregisterViewPane(GameConnectionViewPaneName);
             AzToolsFramework::UnregisterViewPane(FoundationStatusViewPaneName);
             AzToolsFramework::UnregisterViewPane(PackManagerViewPaneName);
             AzToolsFramework::UnregisterViewPane(SourceIntakeViewPaneName);
@@ -232,6 +235,16 @@ namespace TaintedGrailModdingSDK
             DevelopmentHubViewPaneName,
             "Tainted Grail SDK",
             hubOptions);
+
+        AzToolsFramework::ViewPaneOptions connectionOptions;
+        connectionOptions.paneRect = QRect(100, 100, 640, 560);
+        connectionOptions.preferedDockingArea = Qt::RightDockWidgetArea;
+        connectionOptions.isDeletable = true;
+        connectionOptions.isPreview = true;
+        connectionOptions.showInMenu = false;
+        connectionOptions.saveKeyName = QStringLiteral("TaintedGrailModdingSDK.GameConnection");
+        AzToolsFramework::RegisterViewPane<GameConnectionWidget>(
+            GameConnectionViewPaneName, "Tainted Grail SDK", connectionOptions);
 
         AzToolsFramework::ViewPaneOptions statusOptions;
         statusOptions.paneRect = QRect(100, 100, 760, 900);

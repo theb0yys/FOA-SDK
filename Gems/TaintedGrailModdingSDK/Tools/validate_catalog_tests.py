@@ -149,6 +149,7 @@ def main() -> int:
             "Tests/FrameworkPlannerTests.cpp",
             "Tests/FrameworkPlannerTestFixtures.h",
             "Tests/PackDraftRecoveryTests.cpp",
+            "Tests/GameConnectionServiceTests.cpp",
             "Tests/Main.cpp",
             "Tests/PopulationActionLaneServiceTests.cpp",
             "Tests/PopulationAuthoringTests.cpp",

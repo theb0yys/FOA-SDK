@@ -14,6 +14,9 @@
 
 #include <QAbstractItemView>
 #include <QByteArray>
+#include <QCloseEvent>
+#include <QMessageBox>
+#include <QScopedValueRollback>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
@@ -176,7 +179,6 @@ namespace TaintedGrailModdingSDK
         rootLayout->addWidget(m_tabs, 1);
 
         auto* itemContent = new QWidget(m_tabs);
-        m_itemForm = itemContent;
         auto* itemLayout = new QVBoxLayout(itemContent);
 
         auto* itemRecordGroup = new QGroupBox(tr("Canonical Item"), itemContent);
@@ -193,6 +195,8 @@ namespace TaintedGrailModdingSDK
         m_assignedIcon->setMinimumHeight(96); itemLayout->addWidget(m_assignedIcon);
 
         auto* itemProfileGroup = new QGroupBox(tr("Typed Item Profile"), itemContent);
+        m_itemForm = itemProfileGroup;
+        m_itemForm->setObjectName("economyItemProfile");
         auto* itemProfileLayout = new QFormLayout(itemProfileGroup);
         m_itemCategory = new QLineEdit(itemProfileGroup);
         m_itemSubtype = new QLineEdit(itemProfileGroup);
@@ -254,7 +258,6 @@ namespace TaintedGrailModdingSDK
         m_tabs->addTab(WrapScrollable(itemContent, m_tabs), tr("Items"));
 
         auto* recipeContent = new QWidget(m_tabs);
-        m_recipeForm = recipeContent;
         auto* recipeLayout = new QVBoxLayout(recipeContent);
 
         auto* recipeRecordGroup = new QGroupBox(tr("Canonical Recipe"), recipeContent);
@@ -268,6 +271,7 @@ namespace TaintedGrailModdingSDK
         recipeLayout->addWidget(recipeRecordGroup);
 
         auto* recipeProfileGroup = new QGroupBox(tr("Typed Recipe Profile"), recipeContent);
+        m_recipeForm = recipeProfileGroup;
         auto* recipeProfileLayout = new QFormLayout(recipeProfileGroup);
         m_recipeType = new QLineEdit(recipeProfileGroup);
         m_recipeTab = new QLineEdit(recipeProfileGroup);
@@ -326,6 +330,8 @@ namespace TaintedGrailModdingSDK
         recipeLayout->addWidget(recipeEvidenceGroup);
 
         auto* ingredientGroup = new QGroupBox(tr("Recipe Ingredients"), recipeContent);
+        m_ingredientForm = ingredientGroup;
+        m_ingredientForm->setObjectName("economyIngredientForm");
         auto* ingredientLayout = new QVBoxLayout(ingredientGroup);
         m_ingredientTable = new QTableWidget(0, 6, ingredientGroup);
         m_ingredientTable->setHorizontalHeaderLabels({
@@ -366,6 +372,8 @@ namespace TaintedGrailModdingSDK
         recipeLayout->addWidget(ingredientGroup);
 
         auto* outputGroup = new QGroupBox(tr("Recipe Outputs and By-products"), recipeContent);
+        m_outputForm = outputGroup;
+        m_outputForm->setObjectName("economyOutputForm");
         auto* outputLayout = new QVBoxLayout(outputGroup);
         m_outputTable = new QTableWidget(0, 6, outputGroup);
         m_outputTable->setHorizontalHeaderLabels({
@@ -425,6 +433,8 @@ namespace TaintedGrailModdingSDK
         m_tabs->addTab(WrapScrollable(recipeContent, m_tabs), tr("Recipes"));
 
         auto* relationshipGroup = new QGroupBox(tr("Economy Acquisition Relationship"), this);
+        m_relationshipForm = relationshipGroup;
+        m_relationshipForm->setObjectName("economyRelationshipForm");
         auto* relationshipLayout = new QGridLayout(relationshipGroup);
         m_relationshipSource = new QComboBox(relationshipGroup);
         m_relationshipId = new QLineEdit(relationshipGroup);
@@ -472,11 +482,11 @@ namespace TaintedGrailModdingSDK
         connect(m_recipeRecord, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { LoadCurrentRecipe(); });
         connect(m_relationshipSource, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { RefreshAcquisitionRelationships(); });
         connect(usePreviewRouteButton, &QPushButton::clicked, this, [this]() { ApplyLatestPreviewRouteToItem(); });
-        connect(saveItemButton, &QPushButton::clicked, this, [this]() { SaveItemProfile(); });
-        connect(saveRecipeButton, &QPushButton::clicked, this, [this]() { SaveRecipeProfile(); });
-        connect(saveIngredientButton, &QPushButton::clicked, this, [this]() { SaveIngredient(); });
-        connect(saveOutputButton, &QPushButton::clicked, this, [this]() { SaveOutput(); });
-        connect(saveRelationshipButton, &QPushButton::clicked, this, [this]() { SaveAcquisitionRelationship(); });
+        connect(saveItemButton, &QPushButton::clicked, this, [this]() { if (SaveItemProfile()) { RefreshAll(); } });
+        connect(saveRecipeButton, &QPushButton::clicked, this, [this]() { if (SaveRecipeProfile()) { RefreshAll(); } });
+        connect(saveIngredientButton, &QPushButton::clicked, this, [this]() { if (SaveIngredient()) { RefreshAll(); } });
+        connect(saveOutputButton, &QPushButton::clicked, this, [this]() { if (SaveOutput()) { RefreshAll(); } });
+        connect(saveRelationshipButton, &QPushButton::clicked, this, [this]() { if (SaveAcquisitionRelationship()) { RefreshAll(); } });
 
         m_itemRecord->setObjectName("economyItemChoice");
         m_recipeRecord->setObjectName("economyRecipeChoice");
@@ -484,6 +494,13 @@ namespace TaintedGrailModdingSDK
         m_outputItemRecord->setObjectName("economyOutputChoice");
         m_itemWeight->setObjectName("economyItemWeight");
         m_recipeType->setObjectName("economyRecipeType");
+        m_itemEvidence->setObjectName("economyItemEvidence");
+        m_recipeEvidence->setObjectName("economyRecipeEvidence");
+        m_relationshipSource->setObjectName("economyRelationshipSource");
+        m_relationshipId->setObjectName("economyRelationshipId");
+        m_relationshipTargetSubject->setObjectName("economyRelationshipSubject");
+        m_relationshipEvidence->setObjectName("economyRelationshipEvidence");
+        saveRelationshipButton->setObjectName("economySaveRelationship");
         m_ingredientQuantity->setObjectName("economyIngredientQuantity");
         m_outputQuantity->setObjectName("economyOutputQuantity");
         m_ingredientTable->setObjectName("economyIngredients");
@@ -539,7 +556,7 @@ namespace TaintedGrailModdingSDK
         m_outputLinkId->setPlaceholderText(tr("Assigned when added"));
         // Name draft fields once; identities use combo item data, never display names.
         int draftField = 0;
-        for (QWidget* form : {m_itemForm, m_recipeForm})
+        for (QWidget* form : {m_itemForm, m_recipeForm, m_ingredientForm, m_outputForm, m_relationshipForm})
         {
             for (QWidget* child : form->findChildren<QWidget*>())
             {
@@ -547,7 +564,6 @@ namespace TaintedGrailModdingSDK
             }
         }
         if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
-        m_workspaceIdentity = ToQString(FoundationService::Get().GetWorkspaceFilePath());
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
     }
@@ -559,16 +575,42 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::OnFoundationChanged()
     {
-        const QString workspace = ToQString(FoundationService::Get().GetWorkspaceFilePath());
-        if (workspace != m_workspaceIdentity)
-        {
-            m_drafts.clear();
-            m_loadedItem.clear();
-            m_loadedRecipe.clear();
-            m_workspaceIdentity = workspace;
-            m_nativeReader->Cancel();
-        }
+        // Our synchronous save commands publish before returning. Keep the submitted
+        // fields intact until the result has advanced that form's baseline.
+        if (m_saving) { return; }
         RefreshAll();
+    }
+
+    bool ItemRecipeEditorWidget::CanChangeWorkspace(const FoundationService& service)
+    {
+        return &service != &FoundationService::Get()
+            || ConfirmDraftReplacement(tr("switching workspaces"));
+    }
+
+    void ItemRecipeEditorWidget::OnWorkspaceChanged(const FoundationService& service)
+    {
+        if (&service != &FoundationService::Get()) { return; }
+        // Admission only records a choice. Retire old form state after every
+        // handler admitted and Foundation actually committed the replacement.
+        m_nativeReader->Cancel();
+        m_drafts.clear();
+        m_baselines.clear();
+        m_loadedItem.clear();
+        m_loadedRecipe.clear();
+        const QSignalBlocker itemBlocker(m_itemRecord);
+        const QSignalBlocker recipeBlocker(m_recipeRecord);
+        const QSignalBlocker sourceBlocker(m_relationshipSource);
+        m_itemRecord->setCurrentIndex(0);
+        m_recipeRecord->setCurrentIndex(0);
+        m_relationshipSource->setCurrentIndex(0);
+        m_relationshipId->clear();
+        m_relationshipKind->setCurrentIndex(0);
+        m_relationshipTargetRecord->setCurrentIndex(0);
+        m_relationshipTargetSubject->clear();
+        m_relationshipEvidence->clear();
+        m_relationshipAttributes->clear();
+        RefreshAll();
+        SetStatus(tr("Workspace changed. Select an item or recipe to edit."));
     }
 
     void ItemRecipeEditorWidget::RefreshAll()
@@ -578,12 +620,12 @@ namespace TaintedGrailModdingSDK
             return;
         }
         m_refreshing = true;
-        StoreDraft("item:" + m_loadedItem, m_itemForm);
-        StoreDraft("recipe:" + m_loadedRecipe, m_recipeForm);
+        StoreCurrentDrafts();
         RefreshRecordChoices();
         LoadCurrentItem();
         LoadCurrentRecipe();
         RefreshAcquisitionRelationships();
+        RestoreDraft("acquisition:", m_relationshipForm);
         m_refreshing = false;
     }
 
@@ -714,6 +756,7 @@ namespace TaintedGrailModdingSDK
             m_itemAssetRef->clear();
             m_itemTags->clear();
             m_itemEvidence->clear();
+            RestoreDraft("item:" + m_loadedItem, m_itemForm);
             RefreshItemLaneTable();
             return;
         }
@@ -771,7 +814,7 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::LoadCurrentRecipe()
     {
-        if (!m_refreshing) { StoreDraft("recipe:" + m_loadedRecipe, m_recipeForm); }
+        if (!m_refreshing) { StoreRecipeDrafts(); }
         const AZStd::string recordId = ToAzString(m_recipeRecord->currentData().toString());
         m_loadedRecipe = ToQString(recordId);
         const CatalogDatabase& catalog = FoundationService::Get().GetCatalog();
@@ -791,6 +834,9 @@ namespace TaintedGrailModdingSDK
             RefreshRecipeLaneTable();
             RefreshRecipeEvidence();
             RefreshRecipeJoins();
+            NewJoin(false, false);
+            NewJoin(true, false);
+            RestoreRecipeDrafts();
             return;
         }
         m_recipeIdentity->setText(
@@ -828,9 +874,9 @@ namespace TaintedGrailModdingSDK
         RefreshRecipeLaneTable();
         RefreshRecipeEvidence();
         RefreshRecipeJoins();
-        NewJoin(false);
-        NewJoin(true);
-        RestoreDraft("recipe:" + m_loadedRecipe, m_recipeForm);
+        NewJoin(false, false);
+        NewJoin(true, false);
+        RestoreRecipeDrafts();
     }
 
     void ItemRecipeEditorWidget::ApplyLatestPreviewRouteToItem()
@@ -878,8 +924,9 @@ namespace TaintedGrailModdingSDK
         SetStatus(tr("Latest preview route copied into item refs. Save the item profile to persist it."));
     }
 
-    void ItemRecipeEditorWidget::SaveItemProfile()
+    bool ItemRecipeEditorWidget::SaveItemProfile()
     {
+        const QScopedValueRollback<bool> saving(m_saving, true);
         EconomyItemProfile profile;
         profile.m_recordId = ToAzString(m_itemRecord->currentData().toString());
         profile.m_category = ToAzString(m_itemCategory->text());
@@ -903,13 +950,16 @@ namespace TaintedGrailModdingSDK
         if (!FoundationService::Get().UpsertEconomyItemProfile(profile, &error))
         {
             SetStatus(ToQString(error), true);
-            return;
+            return false;
         }
+        AcceptDraft("item:" + m_loadedItem, m_itemForm);
         SetStatus(tr("Typed item profile saved to the canonical catalog."));
+        return true;
     }
 
-    void ItemRecipeEditorWidget::SaveRecipeProfile()
+    bool ItemRecipeEditorWidget::SaveRecipeProfile()
     {
+        const QScopedValueRollback<bool> saving(m_saving, true);
         EconomyRecipeProfile profile;
         profile.m_recordId = ToAzString(m_recipeRecord->currentData().toString());
         profile.m_recipeType = ToAzString(m_recipeType->text());
@@ -925,13 +975,16 @@ namespace TaintedGrailModdingSDK
         if (!FoundationService::Get().UpsertEconomyRecipeProfile(profile, &error))
         {
             SetStatus(ToQString(error), true);
-            return;
+            return false;
         }
+        AcceptDraft("recipe:" + m_loadedRecipe, m_recipeForm);
         SetStatus(tr("Typed recipe profile saved to the canonical catalog."));
+        return true;
     }
 
-    void ItemRecipeEditorWidget::SaveIngredient()
+    bool ItemRecipeEditorWidget::SaveIngredient()
     {
+        const QScopedValueRollback<bool> saving(m_saving, true);
         if (m_ingredientLinkId->text().isEmpty())
         {
             m_ingredientLinkId->setText("ingredient." + QUuid::createUuid().toString(QUuid::WithoutBraces));
@@ -950,13 +1003,16 @@ namespace TaintedGrailModdingSDK
         if (!FoundationService::Get().SaveAuthoredRecipeIngredient(ingredient, &error))
         {
             SetStatus(ToQString(error), true);
-            return;
+            return false;
         }
+        AcceptDraft("ingredient:" + m_loadedRecipe, m_ingredientForm);
         SetStatus(tr("Recipe ingredient saved."));
+        return true;
     }
 
-    void ItemRecipeEditorWidget::SaveOutput()
+    bool ItemRecipeEditorWidget::SaveOutput()
     {
+        const QScopedValueRollback<bool> saving(m_saving, true);
         if (m_outputLinkId->text().isEmpty())
         {
             m_outputLinkId->setText("output." + QUuid::createUuid().toString(QUuid::WithoutBraces));
@@ -975,13 +1031,16 @@ namespace TaintedGrailModdingSDK
         if (!FoundationService::Get().SaveAuthoredRecipeOutput(output, &error))
         {
             SetStatus(ToQString(error), true);
-            return;
+            return false;
         }
+        AcceptDraft("output:" + m_loadedRecipe, m_outputForm);
         SetStatus(tr("Recipe output saved."));
+        return true;
     }
 
-    void ItemRecipeEditorWidget::SaveAcquisitionRelationship()
+    bool ItemRecipeEditorWidget::SaveAcquisitionRelationship()
     {
+        const QScopedValueRollback<bool> saving(m_saving, true);
         EconomyAcquisitionRequest request;
         request.m_relationshipId = ToAzString(m_relationshipId->text());
         request.m_sourceRecordId = ToAzString(m_relationshipSource->currentData().toString());
@@ -997,15 +1056,17 @@ namespace TaintedGrailModdingSDK
         if (!result.IsSuccess())
         {
             SetStatus(ToQString(result.GetError()), true);
-            return;
+            return false;
         }
         AZStd::string error;
         if (!FoundationService::Get().UpsertCatalogRelationship(result.GetValue(), &error))
         {
             SetStatus(ToQString(error), true);
-            return;
+            return false;
         }
+        AcceptDraft("acquisition:", m_relationshipForm);
         SetStatus(tr("Economy acquisition relationship saved as reviewed-but-unvalidated."));
+        return true;
     }
 
     void ItemRecipeEditorWidget::RefreshItemLaneTable()
@@ -1207,7 +1268,7 @@ namespace TaintedGrailModdingSDK
         SetStatus(tr("Created %1 in the active mod. Edit its fields and save your changes.").arg(name));
     }
 
-    void ItemRecipeEditorWidget::NewJoin(bool output)
+    void ItemRecipeEditorWidget::NewJoin(bool output, bool resetBaseline)
     {
         (output ? m_outputTable : m_ingredientTable)->clearSelection();
         (output ? m_outputLinkId : m_ingredientLinkId)->clear();
@@ -1218,6 +1279,11 @@ namespace TaintedGrailModdingSDK
         (output ? m_outputEvidence : m_ingredientEvidence)->clear();
         if (output) { m_outputChance->setValue(1); m_outputByProduct->setChecked(false); }
         else { m_ingredientConsumed->setChecked(true); m_ingredientAlternativeGroup->clear(); }
+        if (resetBaseline)
+        {
+            AcceptDraft((output ? "output:" : "ingredient:") + m_loadedRecipe,
+                output ? m_outputForm : m_ingredientForm);
+        }
     }
 
     void ItemRecipeEditorWidget::SelectJoin(bool output)
@@ -1257,6 +1323,8 @@ namespace TaintedGrailModdingSDK
                 m_ingredientEvidence->setText(JoinValues(link.m_evidenceIds));
             }
         }
+        AcceptDraft((output ? "output:" : "ingredient:") + m_loadedRecipe,
+            output ? m_outputForm : m_ingredientForm);
     }
 
     void ItemRecipeEditorWidget::RemoveJoin(bool output)
@@ -1278,10 +1346,9 @@ namespace TaintedGrailModdingSDK
         SetStatus(tr("Selected link removed and saved."));
     }
 
-    void ItemRecipeEditorWidget::StoreDraft(const QString& key, QWidget* form)
+    ItemRecipeEditorWidget::FormValues ItemRecipeEditorWidget::ReadForm(QWidget* form) const
     {
-        if (key.endsWith(':')) { return; }
-        QHash<QString, QVariant> values;
+        FormValues values;
         for (QWidget* child : form->findChildren<QWidget*>())
         {
             if (child == m_itemRecord || child == m_recipeRecord || child->parentWidget() == m_itemRecord
@@ -1294,15 +1361,33 @@ namespace TaintedGrailModdingSDK
             else if (auto* check = qobject_cast<QCheckBox*>(child)) { values.insert(name, check->isChecked()); }
             else if (auto* combo = qobject_cast<QComboBox*>(child))
             {
-                values.insert(name, QVariantMap{{"data", combo->currentData()}, {"text", combo->currentText()}});
+                values.insert(name, QVariantMap{{"data", combo->currentData()},
+                    {"text", combo->currentData().isValid() ? QString() : combo->currentText()}});
             }
         }
-        m_drafts.insert(key, values);
+        return values;
+    }
+
+    void ItemRecipeEditorWidget::StoreDraft(const QString& key, QWidget* form)
+    {
+        if (!m_baselines.contains(form)) { return; }
+        const FormValues values = ReadForm(form);
+        const FormValues baseline = m_baselines.value(form);
+        // Keep clean loaded forms as well: notifications and failed saves must
+        // preserve the selected join fields, just as definition switching does.
+        m_drafts.insert(key, Draft{values, baseline});
     }
 
     void ItemRecipeEditorWidget::RestoreDraft(const QString& key, QWidget* form)
     {
-        const auto values = m_drafts.value(key);
+        if (!m_drafts.contains(key))
+        {
+            m_baselines.insert(form, ReadForm(form));
+            return;
+        }
+        const Draft draft = m_drafts.value(key);
+        m_baselines.insert(form, draft.m_baseline);
+        const auto& values = draft.m_values;
         for (QWidget* child : form->findChildren<QWidget*>())
         {
             if (!values.contains(child->objectName())) { continue; }
@@ -1319,6 +1404,112 @@ namespace TaintedGrailModdingSDK
                     ? combo->findData(selection.value("data")) : combo->findText(selection.value("text").toString());
                 combo->setCurrentIndex(index >= 0 ? index : 0);
             }
+        }
+    }
+
+    void ItemRecipeEditorWidget::AcceptDraft(const QString& key, QWidget* form)
+    {
+        m_baselines.insert(form, ReadForm(form));
+        m_drafts.remove(key);
+    }
+
+    void ItemRecipeEditorWidget::StoreRecipeDrafts()
+    {
+        StoreDraft("recipe:" + m_loadedRecipe, m_recipeForm);
+        StoreDraft("ingredient:" + m_loadedRecipe, m_ingredientForm);
+        StoreDraft("output:" + m_loadedRecipe, m_outputForm);
+    }
+
+    void ItemRecipeEditorWidget::RestoreRecipeDrafts()
+    {
+        RestoreDraft("recipe:" + m_loadedRecipe, m_recipeForm);
+        RestoreDraft("ingredient:" + m_loadedRecipe, m_ingredientForm);
+        RestoreDraft("output:" + m_loadedRecipe, m_outputForm);
+    }
+
+    void ItemRecipeEditorWidget::StoreCurrentDrafts()
+    {
+        StoreDraft("item:" + m_loadedItem, m_itemForm);
+        StoreRecipeDrafts();
+        StoreDraft("acquisition:", m_relationshipForm);
+    }
+
+    QStringList ItemRecipeEditorWidget::UnsavedDraftKeys() const
+    {
+        QStringList keys;
+        for (auto draft = m_drafts.cbegin(); draft != m_drafts.cend(); ++draft)
+        {
+            if (draft->m_values != draft->m_baseline) { keys.push_back(draft.key()); }
+        }
+        keys.sort();
+        return keys;
+    }
+
+    bool ItemRecipeEditorWidget::SaveAllDrafts()
+    {
+        // Only edited forms participate. Each existing command is its own durable
+        // transaction; a later failure must not mark the remaining drafts saved.
+        const QStringList keys = UnsavedDraftKeys();
+        for (const QString& key : keys)
+        {
+            const QString kind = key.section(':', 0, 0);
+            if (kind != "acquisition")
+            {
+                QComboBox* choice = kind == "item" ? m_itemRecord : m_recipeRecord;
+                const QString id = key.mid(key.indexOf(':') + 1);
+                const int index = choice->findData(id);
+                if (index < 0)
+                {
+                    SetStatus(tr("Cannot save draft for missing definition %1. The pane remains open.").arg(id), true);
+                    return false;
+                }
+                choice->setCurrentIndex(index);
+                m_tabs->setCurrentIndex(kind == "item" ? 0 : 1);
+            }
+            else { m_tabs->setCurrentIndex(2); }
+            const bool saved = kind == "item" ? SaveItemProfile()
+                : kind == "recipe" ? SaveRecipeProfile()
+                : kind == "ingredient" ? SaveIngredient()
+                : kind == "output" ? SaveOutput()
+                : SaveAcquisitionRelationship();
+            if (!saved)
+            {
+                RefreshAll();
+                return false;
+            }
+        }
+        StoreCurrentDrafts();
+        return UnsavedDraftKeys().isEmpty();
+    }
+
+    bool ItemRecipeEditorWidget::ConfirmDraftReplacement(const QString& action)
+    {
+        if (m_confirmingReplacement) { return false; }
+        const QScopedValueRollback<bool> confirming(m_confirmingReplacement, true);
+        StoreCurrentDrafts();
+        if (UnsavedDraftKeys().isEmpty()) { return true; }
+        QMessageBox prompt(QMessageBox::Warning, tr("Unsaved item and recipe changes"),
+            tr("Save all drafts before %1?").arg(action),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+        prompt.setObjectName(QStringLiteral("economyUnsavedChangesDialog"));
+        prompt.setTextFormat(Qt::PlainText);
+        prompt.setInformativeText(tr("This includes drafts for other definitions. Discard loses unsaved changes. "
+            "Each form saves separately; if one fails, earlier successful saves are kept."));
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.setEscapeButton(QMessageBox::Cancel);
+        const int choice = prompt.exec();
+        return choice == QMessageBox::Discard || (choice == QMessageBox::Save && SaveAllDrafts());
+    }
+
+    void ItemRecipeEditorWidget::closeEvent(QCloseEvent* event)
+    {
+        if (ConfirmDraftReplacement(tr("closing Item and Recipe Editor")))
+        {
+            QWidget::closeEvent(event);
+        }
+        else
+        {
+            event->ignore();
         }
     }
 

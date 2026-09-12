@@ -256,6 +256,24 @@ namespace TaintedGrailModdingSDK
             }
             return false;
         }
+        // Admission handlers can persist drafts in the still-current workspace.
+        // A reload (including an alias document for that root) must publish those
+        // saved catalog/source values, not the pre-admission candidate.
+        const bool sameRoot = PathPolicyService::IsCanonicalPathContained(
+            m_workspaceRootPath, candidate.m_workspaceRootPath, AZ_TRAIT_USE_WINDOWS_FILE_API)
+            && PathPolicyService::IsCanonicalPathContained(
+                candidate.m_workspaceRootPath, m_workspaceRootPath, AZ_TRAIT_USE_WINDOWS_FILE_API);
+        if (sameRoot)
+        {
+            auto refreshed = m_workspaceLoadService.BuildCandidate(filePath);
+            if (!refreshed.IsSuccess())
+            {
+                m_workspaceChangeInProgress = false;
+                if (error) { *error = AZStd::string(refreshed.GetError()); }
+                return false;
+            }
+            candidate = refreshed.TakeValue();
+        }
         ClearWorkspaceScopedState(true);
         m_workspace = AZStd::move(candidate.m_workspace);
         m_workspaceFilePath = AZStd::move(candidate.m_workspaceFilePath);

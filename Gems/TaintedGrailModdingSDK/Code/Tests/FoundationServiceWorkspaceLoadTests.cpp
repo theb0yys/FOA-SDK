@@ -35,6 +35,9 @@ namespace TaintedGrailModdingSDK
         {
             FailureStage m_failure = FailureStage::None;
             AZStd::string m_tag = "old";
+            AZStd::string m_savedRecordName;
+            bool m_rejectCatalogReload = false;
+            int m_catalogLoads = 0;
         };
 
         WorkspaceModel MakeWorkspace(const AZStd::string& tag, bool invalidProfile = false)
@@ -205,6 +208,10 @@ namespace TaintedGrailModdingSDK
                 SourceDocument source = MakeSourceDocument(
                     workspace,
                     scenario.m_failure == FailureStage::RegistryBinding && scenario.m_tag == "new");
+                if (!scenario.m_savedRecordName.empty() && scenario.m_tag == "old")
+                {
+                    source.m_source.m_title = scenario.m_savedRecordName;
+                }
                 evidence.push_back(MakeEvidenceDocument(
                     workspace,
                     source,
@@ -219,14 +226,36 @@ namespace TaintedGrailModdingSDK
             dependencies.m_loadCatalog = [&scenario](const AZStd::string&)
                 -> AZ::Outcome<CatalogDocument, AZStd::string>
             {
-                if (scenario.m_failure == FailureStage::CatalogLoad && scenario.m_tag == "new")
+                ++scenario.m_catalogLoads;
+                if (scenario.m_rejectCatalogReload
+                    || (scenario.m_failure == FailureStage::CatalogLoad && scenario.m_tag == "new"))
                 {
                     return AZ::Failure(AZStd::string("injected catalog load failure"));
                 }
-                return AZ::Success(MakeCatalogDocument(
+                CatalogDocument document = MakeCatalogDocument(
                     MakeWorkspace(scenario.m_tag),
                     scenario.m_failure == FailureStage::CatalogBinding && scenario.m_tag == "new",
-                    scenario.m_failure == FailureStage::CatalogValidation && scenario.m_tag == "new"));
+                    scenario.m_failure == FailureStage::CatalogValidation && scenario.m_tag == "new");
+                if (!scenario.m_savedRecordName.empty() && scenario.m_tag == "old")
+                {
+                    CatalogRecord record;
+                    record.m_recordId = "record.saved";
+                    record.m_displayName = scenario.m_savedRecordName;
+                    record.m_domain = "economy";
+                    record.m_recordKind = "item";
+                    record.m_subjectRef = "subject:test";
+                    record.m_identityKind = "synthetic";
+                    record.m_ownerPackId = "owner.pack";
+                    record.m_researchStage = "S1";
+                    record.m_confidence = "documented";
+                    record.m_operationalRisk = "unknown";
+                    record.m_validationState = "unvalidated";
+                    record.m_stalenessState = "unknown";
+                    record.m_forbiddenUsages = { "no_unvalidated_runtime_use" };
+                    record.m_evidenceIds = { "evidence.old.workspace" };
+                    document.m_records.push_back(AZStd::move(record));
+                }
+                return AZ::Success(AZStd::move(document));
             };
             dependencies.m_getCatalogPath = [](const AZStd::string& root)
             {
@@ -452,6 +481,106 @@ namespace TaintedGrailModdingSDK
         EXPECT_EQ(observer.m_changes, 0);
         observer.m_allow = true;
         EXPECT_TRUE(service.LoadWorkspace("old"));
+        EXPECT_EQ(observer.m_changes, 1);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, SameRootReloadPublishesCatalogAndSourcesSavedDuringAdmission)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_admit = [&scenario]() { scenario.m_savedRecordName = "Saved during admission"; return true; };
+        AZStd::string error;
+        ASSERT_TRUE(service.LoadWorkspace("old", &error)) << error.c_str();
+        const CatalogRecord* record = service.GetCatalog().FindByRecordId("record.saved");
+        ASSERT_NE(record, nullptr);
+        EXPECT_EQ(record->m_displayName, scenario.m_savedRecordName);
+        EXPECT_EQ(service.GetSourceRegistry().GetSources().front().m_title, scenario.m_savedRecordName);
+        EXPECT_EQ(scenario.m_catalogLoads, 3); // Initial load, preflight, post-save candidate.
+        EXPECT_EQ(observer.m_requests, 1);
+        EXPECT_EQ(observer.m_changes, 1);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, AliasDocumentForCurrentRootAlsoRebuildsAfterAdmission)
+    {
+        Scenario scenario;
+        auto dependencies = MakeDependencies(scenario);
+        const auto originalLoad = dependencies.m_loadWorkspace;
+        dependencies.m_loadWorkspace = [originalLoad](const AZStd::string& path)
+        {
+            auto result = originalLoad(path == "alias" ? AZStd::string("old") : path);
+            if (result.IsSuccess() && path == "alias")
+            {
+                result.GetValue().m_filePath = "/documents/alias.tgworkspace.json";
+            }
+            return result;
+        };
+        FoundationService service(AZStd::move(dependencies));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_admit = [&scenario]() { scenario.m_savedRecordName = "Saved through alias"; return true; };
+        AZStd::string error;
+        ASSERT_TRUE(service.LoadWorkspace("alias", &error)) << error.c_str();
+        EXPECT_EQ(service.GetWorkspaceFilePath(), "/documents/alias.tgworkspace.json");
+        EXPECT_NE(service.GetCatalog().FindByRecordId("record.saved"), nullptr);
+        EXPECT_EQ(scenario.m_catalogLoads, 3);
+        EXPECT_EQ(observer.m_changes, 1);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, RootComparisonRespectsPlatformCaseSemantics)
+    {
+        Scenario scenario;
+        bool uppercase = false;
+        auto dependencies = MakeDependencies(scenario);
+        dependencies.m_resolveWorkspaceRoot = [&uppercase](const WorkspaceModel&, const AZStd::string&)
+        {
+            return AZ::Success(AZStd::string(uppercase ? "/CANONICAL/OLD.WORKSPACE" : "/canonical/old.workspace"));
+        };
+        FoundationService service(AZStd::move(dependencies));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_admit = [&scenario]() { scenario.m_savedRecordName = "Saved before case alias"; return true; };
+        uppercase = true;
+        AZStd::string error;
+        ASSERT_TRUE(service.LoadWorkspace("old", &error)) << error.c_str();
+        EXPECT_EQ(scenario.m_catalogLoads, AZ_TRAIT_USE_WINDOWS_FILE_API ? 3 : 2);
+        EXPECT_EQ(service.GetCatalog().FindByRecordId("record.saved") != nullptr, AZ_TRAIT_USE_WINDOWS_FILE_API != 0);
+        EXPECT_EQ(observer.m_changes, 1);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, FailedPostAdmissionReloadPreservesStateAndAllowsRetry)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        const AZStd::string before = StateSignature(service);
+        WorkspaceObserver observer(service);
+        observer.m_admit = [&scenario]() { scenario.m_rejectCatalogReload = true; return true; };
+        AZStd::string error;
+        bool cancelled = true;
+        EXPECT_FALSE(service.LoadWorkspace("old", &error, &cancelled));
+        EXPECT_FALSE(cancelled);
+        EXPECT_FALSE(error.empty());
+        EXPECT_EQ(StateSignature(service), before);
+        EXPECT_EQ(observer.m_changes, 0);
+        scenario.m_rejectCatalogReload = false;
+        observer.m_admit = {};
+        EXPECT_TRUE(service.LoadWorkspace("old", &error, &cancelled));
+        EXPECT_FALSE(cancelled);
+        EXPECT_EQ(observer.m_changes, 1);
+    }
+
+    TEST(FoundationServiceWorkspaceLoadTests, DifferentRootDoesNotRebuildItsCandidateAfterAdmission)
+    {
+        Scenario scenario;
+        FoundationService service(MakeDependencies(scenario));
+        ASSERT_TRUE(service.LoadWorkspace("old"));
+        WorkspaceObserver observer(service);
+        observer.m_admit = [&scenario]() { scenario.m_savedRecordName = "Saved in old root"; return true; };
+        ASSERT_TRUE(service.LoadWorkspace("new"));
+        EXPECT_EQ(scenario.m_catalogLoads, 2);
+        EXPECT_TRUE(service.GetCatalog().GetRecords().empty());
         EXPECT_EQ(observer.m_changes, 1);
     }
 

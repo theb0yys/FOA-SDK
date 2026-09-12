@@ -15,7 +15,9 @@
 #include <QWidget>
 #include <QHash>
 #include <QVariant>
+#include <QStringList>
 
+class QCloseEvent;
 class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
@@ -38,18 +40,23 @@ namespace TaintedGrailModdingSDK
         explicit ItemRecipeEditorWidget(QWidget* parent = nullptr);
         ~ItemRecipeEditorWidget() override;
 
+    protected:
+        void closeEvent(QCloseEvent* event) override;
+
     private:
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
         void RefreshAll();
         void RefreshRecordChoices();
         void LoadCurrentItem();
         void LoadCurrentRecipe();
         void ApplyLatestPreviewRouteToItem();
-        void SaveItemProfile();
-        void SaveRecipeProfile();
-        void SaveIngredient();
-        void SaveOutput();
-        void SaveAcquisitionRelationship();
+        bool SaveItemProfile();
+        bool SaveRecipeProfile();
+        bool SaveIngredient();
+        bool SaveOutput();
+        bool SaveAcquisitionRelationship();
         void RefreshItemLaneTable();
         void RefreshRecipeLaneTable();
         void RefreshRecipeEvidence();
@@ -59,8 +66,22 @@ namespace TaintedGrailModdingSDK
         void ReadGameDefinitions();
         void CreateRecord(bool recipe);
         void SelectJoin(bool output);
-        void NewJoin(bool output);
+        void NewJoin(bool output, bool resetBaseline = true);
         void RemoveJoin(bool output);
+        using FormValues = QHash<QString, QVariant>;
+        struct Draft
+        {
+            FormValues m_values;
+            FormValues m_baseline;
+        };
+        FormValues ReadForm(QWidget* form) const;
+        void StoreCurrentDrafts();
+        void StoreRecipeDrafts();
+        void RestoreRecipeDrafts();
+        void AcceptDraft(const QString& key, QWidget* form);
+        QStringList UnsavedDraftKeys() const;
+        bool SaveAllDrafts();
+        bool ConfirmDraftReplacement(const QString& action);
         void StoreDraft(const QString& key, QWidget* form);
         void RestoreDraft(const QString& key, QWidget* form);
 
@@ -134,14 +155,19 @@ namespace TaintedGrailModdingSDK
         QLabel* m_status = nullptr;
         EconomyAuthoringService m_economyAuthoring;
         bool m_refreshing = false;
+        bool m_saving = false;
+        bool m_confirmingReplacement = false;
         NativeItemPreviewService* m_nativeReader = nullptr;
         QPushButton* m_readGame = nullptr;
         QLabel* m_catalogSummary = nullptr;
         QString m_loadedItem;
         QString m_loadedRecipe;
-        QString m_workspaceIdentity;
         QWidget* m_itemForm = nullptr;
         QWidget* m_recipeForm = nullptr;
-        QHash<QString, QHash<QString, QVariant>> m_drafts;
+        QWidget* m_ingredientForm = nullptr;
+        QWidget* m_outputForm = nullptr;
+        QWidget* m_relationshipForm = nullptr;
+        QHash<QWidget*, FormValues> m_baselines;
+        QHash<QString, Draft> m_drafts;
     };
 } // namespace TaintedGrailModdingSDK

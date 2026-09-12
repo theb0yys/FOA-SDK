@@ -173,9 +173,15 @@ namespace TaintedGrailModdingSDK
         connect(m_getVitals, &QPushButton::clicked, m_service, &GameConnectionService::GetPlayerVitals);
         connect(m_browseComposition, &QPushButton::clicked, this, [this]()
         {
-            const QString path = QFileDialog::getOpenFileName(this, tr("Choose encounter composition"),
-                QString(), tr("Encounter compositions (*.json)"));
-            if (!path.isEmpty()) { m_composition->setText(path); }
+            auto* dialog = new QFileDialog(this, tr("Choose encounter composition"), QString(), tr("Encounter compositions (*.json)"));
+            dialog->setObjectName(QStringLiteral("TgeCompositionDialog"));
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+            dialog->setFileMode(QFileDialog::ExistingFile);
+            dialog->setAcceptMode(QFileDialog::AcceptOpen);
+            dialog->setOption(QFileDialog::DontUseNativeDialog);
+            dialog->setWindowModality(Qt::WindowModal);
+            connect(dialog, &QFileDialog::fileSelected, m_composition, &QLineEdit::setText);
+            dialog->open();
         });
         connect(m_composition, &QLineEdit::textChanged, this, [this]() { m_service->ClearEncounterPreview(); });
         connect(m_previewEncounter, &QPushButton::clicked, this, [this]() { m_service->PreviewEncounter(m_composition->text()); });

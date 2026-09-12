@@ -26,6 +26,46 @@ Required: Core composition/identity/boundary regressions; exact evidence and pac
 
 The September 10, 2026 acceptance exercised the captain-and-three-guards plan in a private copy with 885 actors, 3,914 items and 356 recipes. Six live check groups passed, including migration, editing, invalid input, failed writes and workspace reopening; maximum measured UI timer gap was 2.86 seconds. The compiled catalog suite discovered 440 tests: 438 passed and two explicitly skipped unavailable Windows symlink privileges. All 39 canonical-interchange tests passed. Static/source-policy checks passed. These results establish the local authoring workflow only.
 
+## Pane-close protection completion
+
+The pane-close follow-up is a Routine UI change owned by `ui-framework`. A dirty pane offers
+Save / Discard / Cancel; Cancel is the default and escape action. Save uses the existing complete
+Foundation encounter command and accepts the close only after that command succeeds. Discard accepts
+without publication. Cancel, prompt dismissal, a nested close request, validation failure or write
+failure leaves the pane open with raw fields and composition staging intact. A scoped prompt guard
+prevents a nested close from bypassing the decision. Clean close performs no save.
+
+No public contract, catalog schema or save transaction changes. Workspace switching, whole-Editor exit
+coordination and crash recovery remain separate tasks.
+
+The dedicated native acceptance runner creates only disposable synthetic data outside product and
+engine sources and uses an inactive private Windows desktop. It requires the pinned built Editor,
+an already prepared asset cache, the expected loaded SDK module hash, nonzero acceptance checks and
+normal Editor exit. Run with fresh external output paths:
+
+```powershell
+& Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_encounter_close_smoke.ps1 `
+  -EditorExecutable '<external-build>/bin/profile/Editor.exe' `
+  -EngineRoot '<pinned-engine>' -CacheRoot '<prepared-cache>' `
+  -OutputRoot '<fresh-external-output>'
+```
+
+The fixture exercises actual docked and floating pane controls. It checks all three choices, Escape,
+prompt dismissal, reentrancy, clean close, name-only saves, complete fields and composition edits,
+stable entry identities, untouched records, invalid quantities, insufficient population limits,
+missing conditions, empty composition, a real locked-file save failure and corrected retries.
+Rejected saves and discarded drafts are compared with the exact previously saved catalog bytes.
+Accepted closes must destroy the pane; rejected closes must preserve the visible pane and raw draft.
+Each automated close has a five-second responsiveness budget including prompt interaction.
+
+September 13, 2026 local close acceptance passed all 28 checks on the pinned Windows Profile Editor.
+Maximum automated close was 0.593 seconds; the isolated fixture exited normally with code 0 after
+66.972 seconds, with `aboutToQuit` observed and no forced stop. The prompt image was visually checked.
+The Editor/Catalog build, static lane and ten SDK source-policy validators passed. Catalog CTest ran
+543 tests: 541 passed, including all six encounter regressions, and two existing Windows symlink
+privilege cases were explicitly skipped. Static Python tests passed 918 plus 10 ExternalToolchain
+cases, with 33 conditional/platform skips. These results cover local authoring and pane closure.
+
 ## Boundary
 
 The pane authors and validates plans. It does not place scene entities, spawn actors, evaluate game conditions, launch Fall of Avalon, execute cleanup/rollback, deploy files, or mutate saves. Placement, conditions, cleanup and runtime activation need separately established native contracts before runtime implementation.

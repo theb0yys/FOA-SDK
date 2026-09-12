@@ -38,7 +38,7 @@ namespace TaintedGrailModdingSDK
         void AddEntry();
         void RemoveEntry();
         void Create();
-        void Save();
+        bool Save();
         void Status(const QString& text, bool error = false);
         void ReadFields();
         bool SameWorkspace() const;
@@ -68,5 +68,6 @@ namespace TaintedGrailModdingSDK
         bool m_loading = false;
         bool m_dirty = false;
         bool m_saving = false;
+        bool m_unsavedPromptOpen = false;
     };
 } // namespace TaintedGrailModdingSDK

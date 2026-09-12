@@ -23,6 +23,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScopedValueRollback>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QTableWidget>
@@ -182,11 +183,21 @@ namespace TaintedGrailModdingSDK
     SpawnEncounterEditorWidget::~SpawnEncounterEditorWidget() { FoundationNotificationBus::Handler::BusDisconnect(); }
     void SpawnEncounterEditorWidget::closeEvent(QCloseEvent* event)
     {
-        if (m_dirty && QMessageBox::warning(this, tr("Unsaved encounter"),
-            tr("Discard your unsaved encounter changes and close the pane?"),
-            QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Discard)
+        if (m_unsavedPromptOpen) { event->ignore(); return; }
+        if (m_dirty)
         {
-            event->ignore(); return;
+            const QScopedValueRollback<bool> prompting(m_unsavedPromptOpen, true);
+            QMessageBox prompt(QMessageBox::Warning, tr("Unsaved encounter"),
+                tr("Save your encounter changes before closing the pane?"),
+                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+            prompt.setObjectName("encounterUnsavedChangesDialog");
+            prompt.setDefaultButton(QMessageBox::Cancel);
+            prompt.setEscapeButton(QMessageBox::Cancel);
+            const int choice = prompt.exec();
+            if (choice != QMessageBox::Discard && (choice != QMessageBox::Save || !Save()))
+            {
+                event->ignore(); return;
+            }
         }
         QWidget::closeEvent(event);
     }
@@ -404,13 +415,14 @@ namespace TaintedGrailModdingSDK
         if (!success) { Status(Q(error), true); return; }
         RefreshChoices(); Load(id); Status(tr("Encounter created and saved. Add the remaining actors or troops below."));
     }
-    void SpawnEncounterEditorWidget::Save()
+    bool SpawnEncounterEditorWidget::Save()
     {
-        if (!SameWorkspace()) { Status(tr("Return to the original workspace and profile before saving this draft."), true); return; }
+        if (!SameWorkspace()) { Status(tr("Return to the original workspace and profile before saving this draft."), true); return false; }
         ReadFields(); AZStd::string error; m_saving = true;
         const bool success = FoundationService::Get().SaveEncounterDefinition(m_draft, A(m_name->text()), &error);
         m_saving = false;
-        if (!success) { Status(Q(error), true); return; }
+        if (!success) { Status(Q(error), true); return false; }
         const auto id = m_draft.m_recordId; m_dirty = false; RefreshChoices(); Load(id); Status(tr("Encounter saved."));
+        return true;
     }
 } // namespace TaintedGrailModdingSDK

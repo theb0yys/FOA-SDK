@@ -27,9 +27,15 @@ Other encounters, actors and troops remain intact.
 
 An encounter is owned by the mod that created it. To edit another mod's encounter, activate its owning
 mod first. Save or revert a dirty draft before choosing a different encounter or creating one.
-Closing a dirty pane asks whether to discard it. Failed saves preserve the draft and the previously
-published catalog. A workspace/profile change disables saving that draft until the original workspace
-is restored or the draft is reverted.
+Closing a dirty docked or floating pane offers **Save / Discard / Cancel**. **Save** validates and
+saves the encounter name, fields and complete composition before closing. If validation or writing
+fails, the pane stays open with its raw fields and staged additions, quantity edits and removals intact;
+correct the problem and try again. **Discard** closes without saving, so reopening shows the last saved
+encounter. **Cancel**, Escape and dismissing the prompt keep the pane open. Cancel is the default.
+A clean pane closes without a prompt or another save.
+
+A workspace/profile change disables saving that draft until the original workspace is restored or the
+draft is reverted.
 
 After reopening the workspace or pane, select the encounter to continue. The preview identifies
 missing actor/troop references, invalid quantity ranges, unique-actor conflicts and population limits.

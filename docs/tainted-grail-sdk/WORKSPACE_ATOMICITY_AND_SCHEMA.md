@@ -63,15 +63,22 @@ Candidate construction executes in this order:
 7. load the catalog when present;
 8. validate workspace/profile/catalog bindings and rebuild the catalog database.
 
-`FoundationService::LoadWorkspace` publishes only after every stage succeeds. Publication replaces the workspace, document path, canonical root, registry, import issues, catalog and catalog path, then builds one new snapshot. Failure publishes nothing and leaves all previous objects, paths, packs and the previous snapshot unchanged.
+`FoundationService::LoadWorkspace` publishes only after every stage succeeds. Publication replaces the workspace, document path, canonical root, registry, import issues, catalog and catalog path, then builds one new snapshot. Candidate failure publishes nothing and leaves all previous objects, paths, packs and the previous snapshot unchanged.
 
 After candidate validation, `BeginWorkspaceChange` asks trusted host handlers for
 admission before clearing or replacing live state. Cancel or a failed draft Save
 vetoes the switch; Save writes to the original workspace. A completed Save remains
-saved if another handler later vetoes. After all workspace objects are published,
-`FinishWorkspaceChange` refreshes the snapshot, sends `OnWorkspaceChanged`, and
-releases the reentrancy guard. Pack Manager resets its draft only on that commit
-notification. The atomicity validator checks this ordering across both functions;
+saved if another handler later vetoes. When the candidate shares the current
+canonical root, Foundation rebuilds it after admission to include any newly saved
+catalog and source evidence. This also covers another workspace document pointing
+to that root, with platform-appropriate path case comparison. A failed rebuild
+preserves the live workspace, including completed saves, and releases the guard
+for retry. Candidates for other roots do not require this extra read.
+
+After all workspace objects are published, `FinishWorkspaceChange` refreshes the
+snapshot, sends `OnWorkspaceChanged`, and releases the reentrancy guard. Pack
+Manager and Item and Recipe Editor reset their drafts only on that commit
+notification, including same-workspace reloads. The atomicity validator checks this ordering across both functions;
 mutation tests reject missing steps and premature publication or notification.
 
 Candidate loading does not update the persistence boundary's published path. Pack containment reads the live `FoundationService` workspace path, so a failed candidate cannot redirect a later pack operation.
@@ -79,6 +86,12 @@ Candidate loading does not update the persistence boundary's published path. Pac
 ## Test evidence
 
 Direct `FoundationService` integration tests inject failures at workspace loading, active-profile validation, path validation, source loading, import issues, registry binding, evidence binding, catalog loading, catalog binding and catalog database validation. Every failure compares the complete old live-state signature before and after the attempted transition.
+
+Admission integration tests also cover same-root Save freshness for catalog and
+sources, alias documents, platform case semantics, post-admission failure and
+retry, and avoiding redundant candidate construction for another root. Item and
+Recipe Editor workspace acceptance is described in
+[its guide](ITEM_RECIPE_EDITOR_GUIDE.md#workspace-switch-acceptance).
 
 Local-setup integration tests cover stale legacy workspace hints, manual install
 replacement and derived paths, restart persistence, and rejected selections.

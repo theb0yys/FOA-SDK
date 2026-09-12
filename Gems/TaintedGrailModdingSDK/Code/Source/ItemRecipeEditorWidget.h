@@ -45,6 +45,8 @@ namespace TaintedGrailModdingSDK
 
     private:
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
         void RefreshAll();
         void RefreshRecordChoices();
         void LoadCurrentItem();
@@ -79,6 +81,7 @@ namespace TaintedGrailModdingSDK
         void AcceptDraft(const QString& key, QWidget* form);
         QStringList UnsavedDraftKeys() const;
         bool SaveAllDrafts();
+        bool ConfirmDraftReplacement(const QString& action);
         void StoreDraft(const QString& key, QWidget* form);
         void RestoreDraft(const QString& key, QWidget* form);
 
@@ -153,13 +156,12 @@ namespace TaintedGrailModdingSDK
         EconomyAuthoringService m_economyAuthoring;
         bool m_refreshing = false;
         bool m_saving = false;
-        bool m_confirmingClose = false;
+        bool m_confirmingReplacement = false;
         NativeItemPreviewService* m_nativeReader = nullptr;
         QPushButton* m_readGame = nullptr;
         QLabel* m_catalogSummary = nullptr;
         QString m_loadedItem;
         QString m_loadedRecipe;
-        QString m_workspaceIdentity;
         QWidget* m_itemForm = nullptr;
         QWidget* m_recipeForm = nullptr;
         QWidget* m_ingredientForm = nullptr;

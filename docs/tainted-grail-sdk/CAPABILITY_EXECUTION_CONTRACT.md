@@ -527,6 +527,8 @@ The owner requested this batch on 12 September 2026. Its [exact M3 design and ac
 
 Wrap existing build, package, deployment, work-order, and assessment services as pure phase previews/assessment. Do not add side effects to them.
 
+The owner requested this batch on 12 September 2026. The [M4 implementation scope](FRAMEWORK_PLANNER_M4_DESIGN.md) adds the Foundation planner route and immutable source snapshots. M3 execution restrictions and all inert V1 contracts remain unchanged.
+
 ### M5 — Isolated Synthetic Spine
 
 Prove Build -> Package -> Deploy -> Launch -> Verify -> Rollback against a harmless sandbox provider and target before touching the game installation.

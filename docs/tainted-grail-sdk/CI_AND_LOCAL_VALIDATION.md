@@ -265,3 +265,26 @@ fixture functions exist only in the acceptance DLL. Record normal exit and joine
 workers separately from successful compilation.
 
 M3 does not establish game-runtime, deployment, signing or release evidence.
+
+
+## M4 Framework planner validation
+
+The [M4 design](FRAMEWORK_PLANNER_M4_DESIGN.md) adds a pure Framework preview
+adapter and routes six existing panes through Foundation. Run
+`validate_framework_planners.py` plus the existing M1, Catalog and source-policy
+checks. The exact M4 consumer allowlist does not broaden M1 Core dependencies.
+
+Build and run the Catalog tests, including FrameworkPlanner, assessment and
+work-order parity tests. The M3 operational target additionally exercises a
+real Framework Preview callback reading the exact M4 source snapshot; that test
+does not submit a process. Existing M1/M3 regressions still apply. Use
+`--no-tests=error` for every CTest selection.
+
+Run `Tools/editor_tests/framework_planner_lifecycle_smoke.py` in a disposable
+pinned Editor project with `FOA_M4_EDITOR_OUTPUT` set to private evidence output.
+The test opens, checks the read-only tables, closes and reopens all six existing
+panes. Its empty-workspace screenshots prove pane lifecycle only. Ready/refused
+planner payloads and source binding are proved by compiled synthetic fixtures.
+
+M4 adds no provider execution, persistence format, installer operation or game
+deployment. Those operational rows are NOT_APPLICABLE to this change, not passes.

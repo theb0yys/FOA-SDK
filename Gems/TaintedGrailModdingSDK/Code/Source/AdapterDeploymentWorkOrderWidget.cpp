@@ -6,6 +6,7 @@
  */
 
 #include "AdapterDeploymentWorkOrderWidget.h"
+#include "FoundationService.h"
 
 #include <QAbstractItemView>
 #include <QFont>
@@ -185,7 +186,7 @@ namespace TaintedGrailModdingSDK
         for (size_t index = 0; index < requests.size(); ++index)
         {
             const AdapterDeploymentWorkOrder workOrder =
-                m_service.BuildWorkOrder(requests[index]);
+                FoundationService::Get().GetFrameworkPlanners().BuildWorkOrder(requests[index]);
             if (workOrder.m_status
                 == AdapterDeploymentWorkOrderStatus::ReviewReady)
             {

@@ -7,6 +7,7 @@
 #include "ExecutionFramework/FrameworkToolExecutionAdapter.h"
 #include "FoundationService.h"
 #include "FrameworkExecutionTestFixtures.h"
+#include "FrameworkPlannerTestFixtures.h"
 #include "SourceEvidenceRegistry.h"
 #include <AzCore/Interface/Interface.h>
 #include <Execution/Platform/Windows/ToolSandbox_Windows.h>
@@ -1115,4 +1116,43 @@ extern "C" __declspec(dllexport) int FOAM3EditorNativeStage()
         return -2;
     }
     return static_cast<int>(snapshot.m_toolStage);
+}
+
+
+TEST_F(FrameworkNative, M4PlannerSourceIsConsumedOnlyByTheExactFrameworkPreview)
+{
+    auto input = PlannerTests::MakeBuildRequest();
+    m_fixture = Fixture(ProfileFingerprint(input.m_profile));
+    m_fixture.m_context.m_packId = input.m_pack.m_packId;
+    m_fixture.m_request.m_packId = input.m_pack.m_packId;
+    ASSERT_TRUE(Seal(m_fixture.m_request));
+    m_fixture.m_host.m_resolve = [current = m_current](auto& output) { output = *current; return true; };
+    FrameworkPlannerService planners;
+    auto bound = planners.BindBuild(m_fixture.m_request, input);
+    ASSERT_TRUE(bound.IsSuccess()) << bound.GetError().c_str();
+    auto snapshot = std::make_shared<PlannerSnapshot>(bound.TakeValue());
+    const auto original = m_fixture.m_host.m_preview;
+    int accepted = 0;
+    m_fixture.m_host.m_previewContractId = "foa.planner.build.v1";
+    m_fixture.m_host.m_preview = [snapshot, original, &accepted](const auto& request, PhasePreview& output)
+    {
+        auto source = snapshot->ReadSource(PlannerSourceKind::Build, CE::Phase::BUILD, request);
+        if (!source.IsSuccess()) { return Result{Error::Drifted}; }
+        if (!CE::Validate(source.GetValue()->m_reference).IsSuccess()) { return Result{Error::Invalid}; }
+        ++accepted;
+        return original(request, output);
+    };
+    FrameworkExecutionService service(m_fixture.m_context, m_root + "/store");
+    Configure(service);
+    CE::CapabilityExecutionPlanV1 plan;
+    ASSERT_TRUE(service.Preview(m_fixture.m_descriptor, snapshot->GetRequest(), {}, plan));
+    EXPECT_EQ(accepted, 1);
+    EXPECT_EQ(plan.m_request.m_fingerprint, snapshot->GetRequest().m_fingerprint);
+    EXPECT_EQ(plan.m_authorizationIntent.m_state, CE::AuthorizationState::PENDING);
+    auto changed = snapshot->GetRequest();
+    changed.m_id = "request.changed";
+    ASSERT_TRUE(Seal(changed));
+    EXPECT_EQ(service.Preview(m_fixture.m_descriptor, changed, {}, plan).m_error, Error::Drifted);
+    EXPECT_EQ(accepted, 1);
+    EXPECT_TRUE(service.Page(0, 16).empty());
 }

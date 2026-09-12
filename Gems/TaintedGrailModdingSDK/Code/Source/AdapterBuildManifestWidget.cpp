@@ -270,7 +270,7 @@ namespace TaintedGrailModdingSDK
         const FoundationService& foundation = FoundationService::Get();
         const WorkspaceModel& workspace = foundation.GetWorkspace();
         const GameProfile* profile = workspace.FindActiveGameProfile();
-        const AdapterWorkOrderPlanSet planSet = m_planningService.BuildPlans(
+        const AdapterWorkOrderPlanSet planSet = FoundationService::Get().GetFrameworkPlanners().BuildPlans(
             workspace,
             foundation.GetPacks(),
             AdapterContractRegistry::Get(),
@@ -288,7 +288,7 @@ namespace TaintedGrailModdingSDK
                     AdapterContractRegistry::Get().FindByAdapterId(plan.m_adapterId);
                 if (pack && declaration)
                 {
-                    manifests.push_back(m_manifestService.BuildManifest(
+                    manifests.push_back(FoundationService::Get().GetFrameworkPlanners().BuildManifest(
                         BuildPreviewRequest(plan, *pack, *profile, *declaration)));
                 }
             }

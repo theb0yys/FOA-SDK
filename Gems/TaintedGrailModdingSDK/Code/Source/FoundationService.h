@@ -24,6 +24,7 @@
 #include "SourceEvidenceRegistry.h"
 #include "SourceImportService.h"
 #include "TaintedFrameworkEditorServices.h"
+#include "ExecutionPlanning/FrameworkPlannerService.h"
 #include "TaintedInterfaceUiUtilities.h"
 
 #include <memory>
@@ -68,6 +69,7 @@ namespace TaintedGrailModdingSDK
         explicit FoundationService(FoundationWorkspaceLoadDependencies workspaceLoadDependencies);
 
         ~FoundationService();
+        const ExecutionFramework::FrameworkPlannerService& GetFrameworkPlanners() const;
         AZStd::string GetFrameworkProfileFingerprint() const;
         ExecutionFramework::FrameworkExecutionService* GetFrameworkExecution() const;
         bool ConfigureFrameworkExecution(const ExecutionFramework::Context&, const AZStd::string& privateRoot,
@@ -286,6 +288,7 @@ namespace TaintedGrailModdingSDK
             AZStd::string message,
             AZStd::string locator);
 
+        ExecutionFramework::FrameworkPlannerService m_frameworkPlanners;
         std::unique_ptr<ExecutionFramework::FrameworkExecutionService> m_frameworkExecution;
         WorkspaceModel m_workspace;
         AZStd::string m_workspaceFilePath;

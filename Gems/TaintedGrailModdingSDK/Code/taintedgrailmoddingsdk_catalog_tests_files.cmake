@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Tests/FrameworkPlannerTests.cpp
+    Tests/FrameworkPlannerTestFixtures.h
     Tests/AssetLocalisationAuthoringTests.cpp
     Tests/WorldAuthoringTests.cpp
     Tests/QuestAuthoringTests.cpp

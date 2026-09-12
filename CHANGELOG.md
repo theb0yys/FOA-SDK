@@ -1,5 +1,15 @@
 # Changelog
 
+## M4 Framework planner adaptation
+
+- Route existing work-order, build, package, deployment and assessment previews
+  through Foundation's shared planner service.
+- Bind immutable build/package/deployment source snapshots to exact execution
+  requests, preserving V1 canonical bytes and refusing stale or unready inputs.
+- Add compiled owner parity, source drift, rollback-plan and performance coverage,
+  an M3 preview consumer check and a six-pane Editor lifecycle fixture.
+
+
 ## Framework execution M3
 
 - Add Foundation-owned immutable planning, reviewed provider/policy admission and

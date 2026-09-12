@@ -6,6 +6,9 @@
 #
 
 set(FILES
+    Source/ExecutionPlanning/FrameworkPlannerService.h
+    Source/ExecutionPlanning/FrameworkPlannerService.cpp
+    Source/FoundationPlannerService.cpp
     Source/FoundationExecutionService.cpp
     Source/FoundationAssetLocalisationService.cpp
     Source/ProjectImageService.cpp

@@ -66,6 +66,8 @@ set(FILES
     Source/PackDraftRecoveryService.h
     Source/ItemRecipeDraftRecoveryService.h
     Source/ItemRecipeDraftRecoveryService.cpp
+    Source/ActorTroopDraftRecoveryService.h
+    Source/ActorTroopDraftRecoveryService.cpp
     Source/PackPersistenceService.cpp
     Source/PackPersistenceService.h
     Source/PathPolicyService.cpp

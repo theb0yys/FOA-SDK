@@ -19,6 +19,7 @@ set(FILES
     Source/GameConnectionWidget.cpp
     Source/GameConnectionWidget.h
     Source/ActorTroopEditorWidget.cpp
+    Source/ActorTroopEditorWidgetRecovery.cpp
     Source/ActorTroopEditorWidgetWorkflow.cpp
     Source/ActorTroopEditorWidget.h
     Source/AdapterBuildManifestWidget.cpp

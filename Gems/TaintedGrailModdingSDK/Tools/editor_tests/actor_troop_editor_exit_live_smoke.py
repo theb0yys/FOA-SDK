@@ -57,7 +57,7 @@ def run_population_exit_smoke():
 
     def edit(name, value):
         field = control(name)
-        assert field.isEnabled() and not field.isReadOnly(), name
+        assert field.isEnabled() and not field.isReadOnly(), (name, control('populationRecoveryStatus').text())
         # The product deliberately listens to textEdited, not programmatic
         # textChanged. Exercise actual keyboard editing on the owning tab.
         tabs = control('populationTabs')
@@ -274,6 +274,7 @@ def run_population_exit_smoke():
             assert current.isVisible(), 'Cancelled exit lost the Actor/Troop pane'
             root = current
             _keep.append(root)
+            assert control('populationTabs').isEnabled(), control('populationRecoveryStatus').text()
             if choice != 'Save':
                 assert snapshot() == before, 'Cancelled exit lost retained drafts'
         checked(route + '_' + str(choice) + ('_accepted' if accepted else '_kept_editor_and_drafts'))

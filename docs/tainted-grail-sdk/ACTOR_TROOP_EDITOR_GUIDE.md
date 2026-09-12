@@ -222,8 +222,9 @@ successful actor save. Clean forms do not prompt or get saved again.
 Discard takes effect only when the entire Editor exit succeeds. If another pane
 later cancels exit, the Actor/Troop pane reopens with its raw fields (including
 invalid member text), selected records/member, staged changes and dirty flags.
-Successful saves remain saved if a later pane cancels. The retained state belongs
-only to this close attempt and the same workspace; it is not crash recovery.
+Successful saves remain saved if a later pane cancels. This in-memory rollback belongs
+to the same close attempt and workspace. The separate recovery checkpoint described
+below also survives an interrupted Editor process.
 
 ### Whole-Editor exit acceptance
 
@@ -247,6 +248,36 @@ The five-second interaction budget applies only to the synthetic fixture.
 The pinned Windows Profile acceptance passed all 50 whole-exit checks with normal
 Editor exits. The maximum recorded whole-exit interaction was 1.500 seconds.
 Pane-close and both workspace-picker regressions also passed (123 checks).
+
+### Recovering after a crash or forced shutdown
+
+The Actor/Troop Editor keeps a local recovery checkpoint for its current workspace.
+After an interrupted session, reopening the pane offers **Restore drafts** or
+**Discard recovery copy**. Restore brings back raw actor/troop/member fields and
+staged member additions, edits and removals for review; it does not save them to
+the catalog. Review the forms before saving if the saved catalog has changed.
+
+An unresolved offer blocks editing and survives closing the pane or switching
+away. Unreadable, incompatible or unavailable-definition copies are kept with an
+explanation. **Retry recovery** checks again after the problem is corrected;
+**Discard recovery copy** explicitly removes that copy. A live second Editor
+cannot read, overwrite or discard the first Editor's owned checkpoint.
+
+Completed checkpoints survive forced termination. Edits since the most recent
+checkpoint can be lost. Save checkpoints the remaining drafts; successful
+pane/workspace/Editor Discard retires the appropriate copy only after acceptance.
+A later pane's exit veto or a failed Save preserves recovery.
+
+See [Actor and Troop draft recovery](ACTOR_TROOP_DRAFT_RECOVERY.md) for the private
+format, bounds, lifecycle and native multi-process acceptance command.
+
+Pinned Windows Profile acceptance passed 13 recovery process phases (44 checks),
+including five deliberate terminations after verified checkpoints and eight normal
+exits. The maximum measured checkpoint UI gap was 0.078 seconds against a 0.5-second
+budget. All 173 existing close/workspace/exit regression checks passed against the
+same module; maximum interaction was 2.266 seconds against the five-second fixture
+budget. Compiled acceptance passed 541 tests, including 11 new recovery tests; two
+existing symlink-privilege cases remain explicitly skipped.
 
 ## Persistence expectations
 

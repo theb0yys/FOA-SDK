@@ -540,4 +540,8 @@ The guard captures raw UI values rather than serializing population models, so
 invalid member text remains editable after rollback. Save uses existing actor
 and atomic troop commands; the snapshot is taken after successful saves so later
 cancellation never marks saved forms dirty again. Workspace commit forgets any
-retained exit snapshot. No public contract or durable recovery format is added.
+retained exit snapshot. The shared raw snapshot also feeds the private, versioned
+[Actor/Troop recovery service](ACTOR_TROOP_DRAFT_RECOVERY.md). That service owns
+atomic checkpoints and per-workspace locks; the guard retains its drained store
+through all later exit prompts and retires the copy only on final acceptance.
+Public authoring contracts remain unchanged.

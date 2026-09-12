@@ -27,6 +27,7 @@ set(FILES
     Tests/FoundationWorkspaceIsolationTests.cpp
     Tests/PackDraftRecoveryTests.cpp
     Tests/ItemRecipeDraftRecoveryTests.cpp
+    Tests/ActorTroopDraftRecoveryTests.cpp
     Tests/Main.cpp
     Tests/PopulationActionLaneServiceTests.cpp
     Tests/PopulationAuthoringTests.cpp

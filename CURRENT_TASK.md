@@ -1,27 +1,14 @@
-# M1 - Shared execution core contracts
+# M2 - Tool Execution Service
 
-Status: implemented; final exact-head validation and PR handoff in progress.
-Request: implement the first Build and Test Runner slice, M1.
-Primary owner: capability-execution. Supporting owners: artifact-ownership, execution-receipts and runtime-verification (observation shapes only).
-Classification: Significant, introducing an additive public contract family; medium performance risk.
-
-Authority: merged CAPABILITY_EXECUTION_M0_IMPLEMENTATION_AUTHORITY.md and the owner's current instruction. Base: cbd8409ae3cc1dde61772a20c3f40928b7d46cf8. Working branch: codex/capability-execution-m1-core-contracts, using the current agent branch prefix.
-
-Scope: the exact M0 six-file Core family, dedicated three-file compiled test target, strict source validator and its tests, read-only validation integration and the authorised documentation paths.
-No production consumers, persistence, executors, provider resolution, policy evaluation, UI or external processes are introduced.
-
-Design: independent typed decisions and observations; bounded versioned value records; explicit upstream canonical bytes and digests; immutable phase and complete plans; ordered artifact dependencies and inverse rollback declarations; exact contextual receipt validation. Canonical output uses fixed keys, copy-free sorting through indices/pointers for sets, preserved sequences and checked byte/cardinality budgets. It excludes capture metadata and each object's own fingerprint. Existing V1 contracts are unchanged.
-
-Proof: M0 preflight helpers, source/compatibility guards, compiled enum/canonical/negative/boundary and complete-chain tests, pinned configure/build, dedicated CTest, legacy catalog/interchange regression, full validation and read-only CI. Editor/UI and operational/runtime evidence are NOT_APPLICABLE to M1.
-
-Pre-edit review: owners and producer/consumer boundaries mapped; source allowlist fixed by M0; semantic and event identity separated; no protected inputs required. The existing test-plan helper has a PowerShell line-continuation parser defect; its identical selection logic was reproduced in memory with that syntax corrected, without editing the helper.
-
-M1 completion does not start M2. Runtime sign-off not performed.
-
-Implemented: 25 versioned value types, 23 typed enums, checked scalar/collection/canonical budgets, exact contextual plan/provider/artifact/rollback/receipt bindings, separate authorization intent and exact-plan observations, a Core-only compiled test target and read-only local/CI guards.
-
-Executed before commit: 48 initial compiled tests passed; two additional regression tests exposed and now guard rollback-plan identity and immutable-input path aliasing; Core, Framework, Catalog.Tests, CanonicalInterchange.Tests, SDK Editor, consumer Tool Gems, Editor and AssetProcessorBatch built against the exact O3DE pin. Legacy CTest passed after precreating its output XML file; no source or generated test command was changed. Final full validation is pending.
-
-Evidence limitation: M0 declares Editor/UI execution NOT_APPLICABLE, while the existing validation-receipt tool requires a passed windows-ui row or explicit maintainer risk acceptance for merge-ready finalization. M1 does not edit that tool or invent UI proof. This mismatch will remain explicit in the exact-head receipt and PR until the maintainer resolves it.
-
-Post-edit review: no existing production consumers, canonical helpers or persisted formats changed; the six-file family has unique Core ownership. All changed paths are in the M0 allowlist. Runtime, game files, saves, installer state and release artifacts were not accessed.
+Status: IMPLEMENTED; submit for maintainer review with exact-head validation.
+Goal: ExternalToolchain supervisor, V2 API, cancellation, bounded diagnostics, verified outputs and durable records.
+Classification: Critical/Runtime. Primary owner: external-toolchain.
+Authority: original M2 scope and amendment B accepted by the owner on 12 September 2026; commit and PR explicitly requested.
+In scope: the exact 43 paths in TOOL_EXECUTION_M2_DESIGN.md; Windows LPAC registryRead batch profile and synthetic proof.
+Implemented: V2 contracts, admission and bounded workers, LPAC/Job Object backend, output validation, private journal/recovery, native fixture and Editor lifecycle integration. Editor execution remains default-disabled pending separate Framework integration.
+Compatibility: windows-lpac-registry-read-batch-v1 requires exactly one enabled registryRead SID. Old profile commands and their request fingerprints refuse. Historical records do not grant replay authority.
+Validation: final production-source results belong to the exact-head private receipt and PR. Earlier amendment A experimental results remain separate evidence.
+Current branch: codex/tool-execution-m2-design, isolated from concurrent SDK-client work.
+Next action: maintainer review of the M2 PR. M3 requires a new owner instruction.
+Out of scope: interactive tools, secrets, game/Unity launch, deployment, release and protected data.
+Runtime sign-off not performed.

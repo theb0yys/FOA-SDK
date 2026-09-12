@@ -411,12 +411,35 @@ def validate_read_only_mode(repo_root: Path, automatic: str) -> None:
         validate_legacy_fixture_mode(repo_root, automatic)
 
 
+def validate_tool_execution_workflow(automatic: str) -> None:
+    start = automatic.find("  tool-execution-operational:")
+    end = automatic.find("  windows-prerequisites:", start)
+    if not 0 <= start < end:
+        raise CiRunnerPolicyError("M2 requires a separate native operational job.")
+    require_fragments(
+        automatic[start:end],
+        (
+            "runs-on: windows-2022",
+            "persist-credentials: false",
+            "ExternalToolchain.Execution.Tests",
+            "ExternalToolchain.Execution.Operational.Tests",
+            "ExternalToolchain.Execution.Fixture",
+            "Test-Path -LiteralPath $fixture -PathType Leaf",
+            "BLOCKED: M2 native fixture is unavailable.",
+            "--no-tests=error",
+        ),
+        "M2 native operational job",
+    )
+
+
 def validate_ci_runner_policy(repo_root: Path) -> None:
     progressive = uses_progressive_process(repo_root)
     validate_agent_policy(repo_root, progressive=progressive)
     validate_removed_workflows(repo_root)
     automatic = read_text(repo_root / AUTOMATIC_STATIC_WORKFLOW)
     validate_read_only_mode(repo_root, automatic)
+    if (repo_root / "Gems/ExternalToolchain/Code/Include/ExternalToolchain/ToolExecutionTypes.h").is_file():
+        validate_tool_execution_workflow(automatic)
     validate_manual_workflows(repo_root, require_explicit_read_only=True)
     validate_local_runner(repo_root, progressive=progressive)
 

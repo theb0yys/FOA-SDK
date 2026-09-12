@@ -10,11 +10,13 @@
 #include "ExternalToolchainConfigurationService.h"
 #include "ExternalToolchainDiscoveryService.h"
 #include "ExternalToolchainRegistry.h"
+#include "Execution/ToolExecutionService.h"
 
 #include <ExternalToolchain/ExternalToolchainBus.h>
 #include <ExternalToolchain/ExternalToolchainTypeIds.h>
 
 #include <AzCore/Component/Component.h>
+#include <QtCore/QMetaObject>
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
 #include <AzToolsFramework/ActionManager/ActionManagerRegistrationNotificationBus.h>
 
@@ -76,6 +78,8 @@ namespace ExternalToolchain
 
     private:
         void NotifyRegisterViews() override;
+        void NotifyQtApplicationAvailable(QApplication* application) override;
+        void StopExecution();
         void OnPostActionManagerRegistrationHook() override;
         void NotifyConfigurationChanged(const AZStd::string& providerId);
 
@@ -84,6 +88,8 @@ namespace ExternalToolchain
         ExternalToolchainConfigurationService m_configurationService;
         SystemFileExternalToolPathProbe m_pathProbe;
         ExternalToolchainDiscoveryService m_discoveryService;
+        std::unique_ptr<ToolExecutionService> m_execution;
+        QMetaObject::Connection m_quitConnection;
         bool m_viewRegistered = false;
     };
 } // namespace ExternalToolchain

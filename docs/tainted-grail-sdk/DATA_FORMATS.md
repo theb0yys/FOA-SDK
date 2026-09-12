@@ -1014,3 +1014,48 @@ This is not a durable interchange document: no suffix, reader, writer, registry,
 reflection serializer or workspace/pack migration is introduced. Unknown versions are rejected.
 See [canonical rules, contextual validation and bounds](CAPABILITY_EXECUTION_CONTRACT.md#m1-core-value-api).
 Existing persisted and canonical V1 formats remain unchanged.
+
+## ExternalToolchain execution V2 (M2)
+
+Owner: ExternalToolchain. Status: PARTIAL implementation under
+[TOOL_EXECUTION_M2_DESIGN.md](TOOL_EXECUTION_M2_DESIGN.md). Existing canonical V1,
+M1 receipts, packs, workspaces and discovery API 1.1.0 are unchanged. No migration
+or backward parser fallback is supplied for these new execution records.
+
+| Contract | Identity and representation |
+| --- | --- |
+| Command | `foa-tool-command-v2`, integer version 2; includes provider/probe identity, execution profile, argument convention and ceilings |
+| Semantic request | `foa-tool-invocation-v2`, integer version 2, canonical profile `foa-tool-invocation-canonical-json-v2`; excludes attempt ID and its own fingerprint |
+| Output manifest | `foa-tool-output-manifest-v2`, integer version 2; binds exact attempt and request fingerprint to declared output files |
+| Invocation record | `foa-tool-invocation-record-v2`, integer version 2; independent outcome, verification, cleanup and persistence observations |
+
+Canonical JSON uses fixed property order. ID-keyed collections are sorted;
+arguments retain order. SHA-256 fingerprints use `sha256:` followed by 64 lowercase
+hex digits. Unknown versions, duplicate/unknown properties, invalid UTF-8,
+embedded controls and over-limit input are refused. Manifests and records are
+limited to 256 KiB. Limits are compositional, so a valid individual field can
+still exceed an aggregate limit.
+
+File references contain stable IDs, root IDs, relative paths, kind, byte count
+and digest. Paths reject traversal, device names, alternate streams and aliases.
+The host reserves `manifest.v2.json`. Accepted outputs retain an invocation-owned
+staging root ID; this is custody evidence, not permission to import or deploy.
+
+Private journal slots are named `<attempt>.record.0` and `.record.1`; each holds a
+fingerprint line followed by the canonical record. Temporary writes are flushed
+before same-volume replacement. Readers retain the latest valid slot; corrupt
+attempts with no valid slot block recovery. A fingerprint detects corruption and
+does not authenticate the writer or authorise replay.
+
+Redacted stdout/stderr are bounded private log files. Recovery intents are a
+separate private V2 inventory with exact generated staging/profile identity and
+creation observations. They are never returned by the execution bus or included
+in shareable receipts. Interrupted processes are not relaunched on restart.
+
+The M2 production execution profile is windows-lpac-registry-read-batch-v1.
+Its canonical command fingerprint includes that exact identity and its request
+fingerprints bind the canonical command. Commands for windows-lpac-batch-v1 and
+requests bound to its fingerprint are rejected, with no silent capability upgrade.
+Execution API version 2.0.0 and discovery API 1.1.0 are unchanged. Historical
+invocation records retain their observed profile fingerprint and remain readable;
+they never authorize replay, migration to a new profile, or artifact promotion.

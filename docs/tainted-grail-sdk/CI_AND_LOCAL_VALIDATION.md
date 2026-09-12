@@ -91,6 +91,7 @@ There is no `pull_request_target` trigger. Validation must not push commits, mov
 - records the reviewed base/head;
 - runs `git diff --check`;
 - validates the pull-request policy contract;
+- installs the pinned binary-only source-reader dependencies from `item_preview_requirements.txt` for the synthetic terrain and scene tests;
 - runs the non-compiled repository validation layer;
 - classifies whether the changed paths can affect the O3DE host/build, Windows prerequisite, or Windows installer surfaces.
 

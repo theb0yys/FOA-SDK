@@ -691,7 +691,7 @@ def validate_preview_and_quest_wiring(gem_root: Path, repo_root: Path) -> None:
         gem_root / "README.md",
         (
             "Tainted Grail Asset Browser Preview",
-            "28 panes",
+            "29 panes",
             "QuestDefinition contract coverage and inspector routing",
         ),
     )

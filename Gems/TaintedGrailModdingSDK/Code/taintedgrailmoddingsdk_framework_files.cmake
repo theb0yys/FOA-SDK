@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/GameConnectionService.cpp
+    Source/GameConnectionService.h
     Source/AssetBrowserPreviewRefreshService.cpp
     Source/AssetBrowserPreviewRefreshService.h
     Source/NativeItemPreviewService.cpp

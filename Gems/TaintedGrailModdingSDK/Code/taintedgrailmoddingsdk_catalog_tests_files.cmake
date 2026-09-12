@@ -6,6 +6,7 @@
 #
 
 set(FILES
+    Tests/GameConnectionServiceTests.cpp
     Tests/AdapterContractTests.cpp
     Tests/CanonicalFingerprintTests.cpp
     Tests/CatalogDatabaseTests.cpp

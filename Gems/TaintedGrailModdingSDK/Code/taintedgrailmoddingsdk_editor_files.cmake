@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/GameConnectionWidget.cpp
+    Source/GameConnectionWidget.h
     Source/ActorTroopEditorWidget.cpp
     Source/ActorTroopEditorWidgetWorkflow.cpp
     Source/ActorTroopEditorWidget.h

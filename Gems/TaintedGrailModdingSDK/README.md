@@ -26,9 +26,10 @@ Windows security exceptions or administrator execution.
 
 ## Editor tools
 
-Available under **Tools → Tainted Grail SDK**:
+Open **Tools → Tainted Grail SDK → FOA-SDK Home** to reach:
 
 - **FOA Development Hub** (opens as the default entry surface)
+- **Tainted Grail Connect to Game** — authenticated extender status, service discovery, **Get Player Position** and **Get Player Vitals**; see the [connection guide](../../docs/tainted-grail-sdk/TGE_SDK_ADAPTER.md), [player-position guide](../../docs/tainted-grail-sdk/TGE_PLAYER_POSITION.md) and [vitals guide](../../docs/tainted-grail-sdk/TGE_PLAYER_VITALS.md).
 - **Tainted Grail SDK Status**
 - **Tainted Grail Pack Manager**
 - **Tainted Grail Source Intake**
@@ -44,7 +45,7 @@ Available under **Tools → Tainted Grail SDK**:
 - **Tainted Grail Road Atlas Editor** (optional authoring Tool Gem)
 - **Tainted Grail Avalon AI Editor** (optional authoring Tool Gem)
 
-The complete registered inventory contains 28 panes. The FOA Development Hub exposes every specialist pane through task routes, while each pane remains directly available from the Tools menu.
+The complete registered inventory contains 29 panes. The FOA Development Hub exposes every specialist pane through task routes.
 
 ## Workspace documents
 

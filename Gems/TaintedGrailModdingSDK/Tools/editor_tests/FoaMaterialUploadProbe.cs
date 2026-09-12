@@ -132,11 +132,13 @@ public static class FoaMaterialUploadProbe
     public static void Run()
     {
         string output=Environment.GetEnvironmentVariable("FOA_MATERIAL_UPLOAD_OUTPUT");
+        bool outputAccepted = false;
         try
         {
             string input=Environment.GetEnvironmentVariable("FOA_MATERIAL_UPLOAD_INPUT");
             PrivatePath(input); PrivatePath(output); PrivatePath(Application.dataPath);
             Require(File.Exists(input) && new FileInfo(input).Length<=64*1024*1024 && Directory.Exists(output) && !File.Exists(Path.Combine(output,"uploads.json")),"Bounded input and fresh private output required.");
+            outputAccepted = true;
             Require(Application.unityVersion=="6000.0.64f1" && SystemInfo.graphicsDeviceType==GraphicsDeviceType.Direct3D11 &&
                 SystemInfo.renderingThreadingMode==RenderingThreadingMode.Direct && BitConverter.IsLittleEndian,"Qualified direct Unity D3D11 host required.");
             byte[] inputBytes=File.ReadAllBytes(input); var request=JsonUtility.FromJson<Request>(Encoding.UTF8.GetString(inputBytes));
@@ -163,8 +165,15 @@ public static class FoaMaterialUploadProbe
         catch(Exception error)
         {
             Debug.LogException(error);
-            if(!String.IsNullOrEmpty(output) && Directory.Exists(output)) File.WriteAllText(Path.Combine(output,"failure.txt"),error.ToString());
-            EditorApplication.Exit(1);
+            try
+            {
+                // A rejected output path must not become writable through error reporting.
+                if (outputAccepted)
+                    using (var writer = new StreamWriter(new FileStream(Path.Combine(output,"failure.txt"),FileMode.CreateNew,FileAccess.Write,FileShare.None)))
+                        writer.Write(error.ToString());
+            }
+            catch (Exception diagnosticError) { Debug.LogException(diagnosticError); }
+            finally { EditorApplication.Exit(1); }
         }
     }
 }

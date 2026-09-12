@@ -1987,7 +1987,11 @@ saved numeric properties using 34 generated declaration layouts. A total of
 properties; Gamma mode retained every input byte. Separate controls compare
 shader defaults, setters, cross-setters and saved reload, including Gamma/HDR
 flags, with 90 invalid-read rejections. A mismatched host color space rejects
-before drawing and produces no upload receipt.
+before drawing and produces no upload receipt. Error reporting only writes to an
+accepted private output folder and never overwrites an existing diagnostic.
+Six isolated Unity rejection cases passed for the two probes: Git-parent output,
+existing receipt and existing diagnostic. Rejected outputs remained unchanged;
+diagnostic-write failure still exited with an error.
 
 Source layout validation packed 24,620 material/layout combinations and checked
 361,626 uniform fields (13,944,144 bytes) against measured values and original

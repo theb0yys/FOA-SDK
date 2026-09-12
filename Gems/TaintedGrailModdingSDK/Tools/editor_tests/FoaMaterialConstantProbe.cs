@@ -39,10 +39,12 @@ public static class FoaMaterialConstantProbe
     public static void Run()
     {
         string output = Environment.GetEnvironmentVariable("FOA_MATERIAL_CONSTANT_OUTPUT");
+        bool outputAccepted = false;
         try
         {
             PrivatePath(output); PrivatePath(Application.dataPath);
             if (!Directory.Exists(output) || File.Exists(Path.Combine(output,"constants.json"))) throw new InvalidOperationException("Fresh output required.");
+            outputAccepted = true;
             if (Application.unityVersion != "6000.0.64f1" || SystemInfo.graphicsDeviceType != GraphicsDeviceType.Direct3D11 ||
                 SystemInfo.renderingThreadingMode != RenderingThreadingMode.Direct) throw new InvalidOperationException("Qualified direct Unity D3D11 required.");
             ShaderUtil.allowAsyncCompilation = false;
@@ -118,8 +120,15 @@ ENDHLSL
         catch (Exception error)
         {
             Debug.LogException(error);
-            if (!String.IsNullOrEmpty(output) && Directory.Exists(output)) File.WriteAllText(Path.Combine(output,"failure.txt"),error.ToString());
-            EditorApplication.Exit(1);
+            try
+            {
+                // A rejected output path must not become writable through error reporting.
+                if (outputAccepted)
+                    using (var writer = new StreamWriter(new FileStream(Path.Combine(output,"failure.txt"),FileMode.CreateNew,FileAccess.Write,FileShare.None)))
+                        writer.Write(error.ToString());
+            }
+            catch (Exception diagnosticError) { Debug.LogException(diagnosticError); }
+            finally { EditorApplication.Exit(1); }
         }
     }
     static void Capture(Report report, Material material, string name)

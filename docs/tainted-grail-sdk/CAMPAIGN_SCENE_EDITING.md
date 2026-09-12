@@ -1838,3 +1838,46 @@ caller-owned buffer data. This persistence test does not claim that moving the
 entity updates those instance matrices; individual instance editing and actual
 runtime visibility remain separate obligations. Full maps, final lighting and
 materials, the four-map interface and game export are still unfinished.
+
+
+### Non-directional light selection and GPU records
+
+The private LightData codec (`foa_scene_light_data.py`) accepts complete records
+for the qualified Unity/HDRP profile. Its 224-byte ABI contains 34 fields; all
+vectors, scalar types, integer ranges, padding and unused fields are explicit.
+Missing fields, unknown fields, unqualified profiles and mismatched structured
+buffer declarations are rejected. The 4,096-record limit bounds one packed
+payload to 917,504 bytes. Finite values use floats; non-finite values require a
+`$foa_float32_bits` tag containing four little-endian bytes as lowercase hex.
+This preserves original GPU NaN payloads without silently clamping them.
+
+`editor_tests/FoaVisibleGpuProbe.cs`, alongside `FoaLightMigrationProbe.cs`, runs
+in the isolated, package-free pinned Unity fixture. `FOA_LIGHT_MANAGED` selects
+the already authorized original assembly directory. `FOA_VISIBLE_INPUT` and
+`FOA_VISIBLE_OUTPUT` must identify private files outside Git and the game install.
+The fixture verifies the HDRP fingerprint and calls the original visible-light
+processing and initial GPU-record methods by reflection. Native culling receives
+the stored hierarchy, active state, masks and baking inputs. Bounding-sphere
+values use explicit float bits, avoiding Unity JSON's loss of tagged NaNs.
+Getter readback verifies the values; source raw Light records remain separately
+preserved. Decoded source NaNs do not establish their original payload bits.
+
+The qualification uses an explicit camera per light and explicit global settings;
+it includes no scene occluders or live controller execution. Across 3,469 source
+non-directional lights, 3,446 produced initial records, 22 were absent from the
+native cull and one was filtered. Two separate controls verify inactive hierarchy
+and zero-dimmer rejection. All 771,904 produced bytes matched the codec, including
+one non-finite original GPU field retained with its exact bits. A failed initial
+run that converted source bounding-sphere NaNs to zero remains in private evidence;
+only the corrected run supports the source-state result.
+
+`source_light_data_gpu.py` constructs independent original and codec structured
+buffers. `source_light_data_editor.py` submits them through the native DX12 route
+using `FOA_LIGHT_DATA_DRAW_ROOT` for private fixture/capture storage. Three cases
+check unchanged data, corruption of every word, and corruption of one word per
+light. Native comparisons passed for 578,928 words and 579,264 cleared-draw cell
+checks. The fixture tests transfer of the records, not light shading equivalence.
+
+Full game visibility, final cookies and shadow atlases, light-volume construction,
+remaining source shader passes, complete scenes, four-map UI and game export
+remain unfinished. These receipts do not qualify full maps for 1:1 testing.

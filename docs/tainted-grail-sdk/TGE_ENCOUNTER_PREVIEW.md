@@ -40,6 +40,63 @@ Packaging adds the existing `tge_encounters.py` beside the connection worker in
 `scripts/foa-sdk`. No composition, wire, workspace or save schema changes.
 The runtime service and command-line spawn/remove workflow are unchanged.
 
-Validation status: focused input/plan/session tests PASSED; build and Editor
-checks are in progress. Actual installed-game preview acceptance is NOT_RUN.
-Synthetic tests do not establish native placement, spawn or save behavior.
+Validation on 2026-09-12: PASSED for 90 Python tests with no skips, 22 compiled
+connection-service tests, exact-pin Windows Profile configure/build, and 28 actual
+Editor UI checks using a synthetic authenticated listener. The picker opens
+asynchronously; cancelling it preserves the selected file. UI checks cover
+composition display, new file contents, expiry, invalid input, absent service,
+rejected plans, cancellation and pane lifecycle. The preview text was visually
+inspected for clipping. Maximum event gaps were 12 ms in compiled tests and
+110 ms in the Editor, below the 500 ms test budget. Scoped static/source-policy
+checks passed. Evidence and preserved failed test attempts remain outside the
+source checkout.
+
+Actual installed-game preview acceptance is NOT_RUN; overall runtime acceptance
+is PARTIAL. Synthetic tests do not establish native placement, spawn or save
+behavior.
+
+A subsequent owner-approved live attempt passed authenticated game identity and
+encounter/player discovery. Three typed player reads returned player_unavailable;
+the connection failed and the game exited before any preview request. Native
+shutdown markers were observed, but the process exit code was not retained.
+The temporary app-ID was removed, original config bytes restored, and installed
+profile/DLL integrity verified. No preview or spawn/remove request was sent.
+
+That attempt's Editor launcher omitted --rhi=null, the renderer mode used by the
+passed pane checks, and failed while loading a viewport shader. A disconnected
+recheck with the original mode opened the Preview Encounter pane successfully.
+Actual loaded-game preview remains a separate pending check; failed-attempt and
+cleanup evidence is retained outside the source checkout.
+
+A later attempt connected the actual Editor to the installed game successfully.
+All twenty typed position reads reported player_unavailable, so no preview was
+released. Computer Use was stopped by the owner; after game exit, original
+configuration restoration and temporary app-ID removal PASSED. A title-screen
+language diagnostic was observed; its cause and relation to exit are unproven.
+The subsequent retry used a fresh native-loading completion check plus a
+same-session player read before releasing the one Editor preview. The launcher
+authenticated, but transport failed while the game remained active and the
+Editor observer never accepted a preview. The owner again stopped Computer Use
+with Escape; the queued preview was revoked. After game exit, exact config and
+app-ID cleanup and installed profile/DLL checks PASSED. Exit cause and code were
+not established. No preview or spawn/remove request was sent. Live preview,
+expiry and cancellation remain NOT_RUN; UI control is paused. NPC appearance/
+removal evidence from another task does not prove this UI route.
+
+The latest attempt passed native loading completion and loaded-player readiness,
+then connected the actual Editor to that same game session. Its loaded SDK module
+matched the validated binary. The file-selection step remained pending: Browse
+was invoked but no visible picker or selected file was observed. The cause remains
+unproven. The owner stopped Computer Use with Escape before further diagnosis;
+no preview request was sent. The game exited with code 0, original config/app-ID
+cleanup and installed profile/DLL integrity PASSED, and the disposable Editor was
+closed. Actual loaded-game preview, expiry and cancellation remain NOT_RUN.
+
+A private observer mode is prepared for the next owner-resumed check. It enters
+the composition path directly in the editable field and refreshes the bound
+session, skipping both automatic Browse steps. Picker selection/cancellation are
+NOT_RUN in this mode; the live picker issue remains unresolved. Fifty-three
+synthetic observer/controller tests PASSED with no skips, including retaining an
+accepted preview when a later Cancel check is PARTIAL. No SDK binary changed and
+no game or Editor was launched for this preparation. Live acceptance remains
+NOT_RUN while UI control is paused.

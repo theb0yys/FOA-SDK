@@ -39,6 +39,20 @@ Owns editor-side orchestration and services that require host-tool or Qt facilit
 
 Framework depends publicly on Core and privately on host-tool facilities. Framework must not own widgets, the Editor module, or the Editor system component.
 
+### `TaintedGrailModdingSDK.FrameworkExecution.Static`
+
+Owns the Framework execution service and its host-private synthetic target and
+workflow factory. Synthetic deployment is an explicit opt-in using the exact M5
+profile. Its process commands still use ExternalToolchain's production supervisor.
+The M3 staging constructor and Foundation configuration signature remain available.
+
+### `TaintedGrailModdingSDK.Synthetic.Provider`
+
+Owns only `ExecutionSynthetic/FrameworkSyntheticProvider.cpp`, a Windows console
+application for the harmless M5 format. It has no Core, Framework or Editor link
+dependency. The native acceptance lane builds this executable and supplies its
+exact path to the Framework; the provider does not register itself or grant policy.
+
 ### `TaintedGrailModdingSDK.Editor`
 
 Owns only composition and presentation:

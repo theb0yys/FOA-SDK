@@ -251,6 +251,18 @@ def validate_build_graph(repo_root: Path) -> None:
     framework_entries = parse_manifest(framework_manifest)
     execution_manifest = code_root / "taintedgrailmoddingsdk_framework_execution_files.cmake"
     execution_entries = parse_manifest(execution_manifest) if execution_manifest.is_file() else ()
+    synthetic_manifest = code_root / "taintedgrailmoddingsdk_framework_synthetic_files.cmake"
+    synthetic_entries = parse_manifest(synthetic_manifest) if synthetic_manifest.is_file() else ()
+    provider_manifest = code_root / "taintedgrailmoddingsdk_synthetic_provider_files.cmake"
+    provider_entries = parse_manifest(provider_manifest) if provider_manifest.is_file() else ()
+    if synthetic_entries or provider_entries:
+        execution_block = find_call_block(cmake, "ly_add_target", "NAME ${gem_name}.FrameworkExecution.Static")
+        require_fragments(execution_block, (synthetic_manifest.name,), "Synthetic transaction owner")
+        provider_block = find_call_block(cmake, "ly_add_target", "NAME ${gem_name}.Synthetic.Provider")
+        require_fragments(provider_block, ("APPLICATION", provider_manifest.name), "Synthetic native provider owner")
+        if provider_entries != ("Source/ExecutionSynthetic/FrameworkSyntheticProvider.cpp",):
+            raise BuildGraphContractError("The synthetic application must own exactly its harmless provider source.")
+
     editor_entries = parse_manifest(editor_manifest)
     catalog_test_entries = parse_manifest(catalog_test_manifest)
     path_test_entries = parse_manifest(path_test_manifest)
@@ -279,11 +291,12 @@ def validate_build_graph(repo_root: Path) -> None:
         {
             "Core": core_entries,
             "Framework": framework_entries,
-            "FrameworkExecution": execution_entries,
+            "FrameworkExecution": (*execution_entries, *synthetic_entries),
+            "SyntheticProvider": provider_entries,
             "Editor": editor_entries,
         },
     )
-    validate_core_includes(code_root, core_entries, (*framework_entries, *execution_entries))
+    validate_core_includes(code_root, core_entries, (*framework_entries, *execution_entries, *synthetic_entries, *provider_entries))
 
     infrastructure = read_text(gem_root / "Infrastructure/README.md")
     require_fragments(

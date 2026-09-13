@@ -7,7 +7,7 @@ This folder records the shared infrastructure boundaries used by the Tainted Gra
 The first two scaffolded boundaries now have real internal build targets while source paths remain stable under `Code/Source`:
 
 - `TaintedCore/` maps to `TaintedGrailModdingSDK.Core.Static` for shared domain primitives and pure core services;
-- `TaintedFramework/` maps to `TaintedGrailModdingSDK.Framework.Static` for persistence, path policy, workspace loading, and Foundation orchestration;
+- `TaintedFramework/` maps to `TaintedGrailModdingSDK.Framework.Static` for persistence, path policy, workspace loading, Foundation orchestration, and native source-asset processing services;
 - the Tool Gem `Editor` target owns Qt widgets, the Editor system component, and module composition.
 
 `Core.Static` and `Framework.Static` are internal implementation targets. Only the existing Editor module is exposed through the Tool and Builder aliases.
@@ -31,3 +31,18 @@ Tests link `Framework.Static` and receive Core transitively. Test manifests own 
 ## Runtime boundary
 
 This build split remains entirely editor-side. It adds no FoA runtime adapter, game launch, deployment, injection, save mutation, or telemetry behavior.
+
+The Framework also owns `SourceShaderBuilderComponent` and the private
+`SourceShaderRenderComponent` automation boundary. Windows builds link pinned
+Atom DX12 reflection and RPI Edit libraries to create native assets from exact
+source bytecode. The engine checkout remains external and unchanged. Source
+program packets, textures, native products and pixel evidence stay outside source
+control. See `docs/tainted-grail-sdk/CAMPAIGN_SCENE_EDITING.md` for packet versions,
+resource/lifetime bounds and the limited native shader acceptance scope.
+
+`SourceScenePlacementComponent` also belongs to Framework and is registered by
+the Editor module. It is an editor entity component, not a required system or game
+runtime component. Its private source binding and full-affine placement contract
+are documented in `docs/tainted-grail-sdk/CAMPAIGN_SCENE_EDITING.md`.
+
+SourceSceneRenderComponent is a Framework-owned editor component. It binds a private source draw to SourceScenePlacementComponent, routes resource ownership through SourceShaderRenderComponent, and follows native transform, visibility and activation events. It does not select game passes or provide runtime export authority.

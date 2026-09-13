@@ -33,6 +33,7 @@
         "TaintedGrailModdingSDK",
         "AvalonAIAuthoring",
         "RoadAtlasAuthoring",
-        "TerrainAuthoring"
+        "TerrainAuthoring",
+        "Terrain"
     ]
 }

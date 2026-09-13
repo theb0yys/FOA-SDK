@@ -65,7 +65,7 @@ def validate(root: Path = ROOT) -> list[str]:
                     require(entries.count(f"Source/{name}") == 1, f"Duplicate inventory: {name}")
             require(owners == ["taintedgrailmoddingsdk_core_files.cmake"], f"Unique Core ownership required: {name}")
         for path in source.rglob("*"):
-            if path.is_file() and path.name not in FAMILY and path.suffix in (".h", ".cpp") and path.relative_to(source).as_posix() != "ExecutionFramework/FrameworkExecutionCodec.h":
+            if path.is_file() and path.name not in FAMILY and path.suffix in (".h", ".cpp") and path.relative_to(source).as_posix() not in ("ExecutionFramework/FrameworkExecutionCodec.h", "ExecutionPlanning/FrameworkPlannerService.h"):
                 require(not re.search(r'#include\s+[<"][^>"]*CapabilityExecution', code_only(path.read_text(encoding="utf-8"))),
                         f"Unauthorised production consumer: {path.name}")
         manifest = read(root, CODE / MANIFEST)

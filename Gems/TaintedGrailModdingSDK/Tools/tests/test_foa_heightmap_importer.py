@@ -13,7 +13,10 @@ import contextlib
 import io
 import importlib.util
 import json
+import os
 import shutil
+import math
+import struct
 import sys
 import tempfile
 import unittest
@@ -48,6 +51,63 @@ class FoAHeightmapImporterTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         shutil.rmtree(self.temp_root, ignore_errors=True)
+
+
+    def test_matrix_preserves_parent_scale_and_child_rotation(self):
+        def pointer(data, identity):
+            return SimpleNamespace(path_id=identity, file_id=0, read=lambda: data)
+        active = pointer(SimpleNamespace(m_IsActive=True), 10)
+        parent_data = SimpleNamespace(m_LocalPosition=(10, 0, 0), m_LocalScale=(2, 1, 1),
+            m_LocalRotation=SimpleNamespace(x=0, y=0, z=0, w=1), m_Father=None, m_GameObject=active)
+        parent = pointer(parent_data, 1)
+        child_data = SimpleNamespace(m_LocalPosition=(1, 0, 0), m_LocalScale=(1, 1, 1),
+            m_LocalRotation=SimpleNamespace(x=0, y=0, z=math.sqrt(.5), w=math.sqrt(.5)),
+            m_Father=parent, m_GameObject=active)
+        child = pointer(child_data, 2)
+        matrix, enabled = heightmaps.transform_matrix(child, {})
+        self.assertTrue(enabled)
+        for value, expected in zip(heightmaps.apply_matrix(matrix, (1, 0, 0)), (12, 1, 0)):
+            self.assertAlmostEqual(value, expected)
+        parent_data.m_GameObject = pointer(SimpleNamespace(m_IsActive=False), 11)
+        self.assertFalse(heightmaps.transform_matrix(child, {})[1])
+        parent_data.m_Father = child
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "cyclic"):
+            heightmaps.transform_matrix(child, {})
+
+    def test_game_object_resolves_transform_component_and_rejects_missing(self):
+        component = SimpleNamespace(deref=lambda: SimpleNamespace(type=SimpleNamespace(name="Transform")))
+        game_object = SimpleNamespace(m_Component=[SimpleNamespace(component=component)])
+        self.assertIs(heightmaps.game_object_transform(game_object), component)
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "no resolvable Transform"):
+            heightmaps.game_object_transform(SimpleNamespace(m_Component=[]))
+
+    def test_bounded_bundle_directory_reader_uses_only_metadata(self):
+        cab = "cab-" + "a" * 32
+        directory = bytes(16) + struct.pack(">II", 0, 1) + bytes(20) + cab.encode() + b"\0"
+        prefix = b"UnityFS\0" + struct.pack(">I", 7) + b"5.x.x\0" + b"0.0.0\0"
+        start = (len(prefix) + 20 + 15) // 16 * 16
+        payload = prefix + struct.pack(">QIII", start + len(directory), len(directory), len(directory), 0)
+        payload += bytes(start - len(payload)) + directory
+        path = self.temp_root / "synthetic.bundle"
+        path.write_bytes(payload)
+        self.assertEqual(heightmaps.read_bundle_cab_names(path), ([cab], len(directory)))
+        path.write_bytes(payload[:-1])
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "sizes"):
+            heightmaps.read_bundle_cab_names(path)
+
+    def test_dependency_metadata_budget_is_cumulative_across_resolutions(self):
+        root = self.temp_root / "bundles"
+        root.mkdir()
+        for name in ("a", "b"):
+            (root / (name + ".bundle")).write_bytes(b"synthetic")
+        cab_a, cab_b = "cab-" + "a" * 32, "cab-" + "b" * 32
+        resolver = heightmaps.CabDependencyResolver(None, root)
+        def metadata(path):
+            return ([cab_a if path.stem == "a" else cab_b], 40 * 1024 * 1024)
+        with mock.patch.object(heightmaps, "read_bundle_cab_names", side_effect=metadata):
+            self.assertEqual(resolver.resolve(cab_a), root / "a.bundle")
+            with self.assertRaisesRegex(heightmaps.HeightmapImportError, "byte budget"):
+                resolver.resolve(cab_b)
 
     def test_addressable_key_table_decodes_campaign_keys(self) -> None:
         encoded = key_table("CampaignMap_HOS", "CampaignMap_HOS_merged_Static", "Other")
@@ -85,12 +145,12 @@ class FoAHeightmapImporterTests(unittest.TestCase):
         self.assertEqual(world.position, (12.0, 4.0, 6.0))
         self.assertEqual(world.scale, (1.0, 2.0, 3.0))
 
-    def test_rasterize_triangle_fills_grid_and_normalizes_u16(self) -> None:
+    def test_rasterize_complete_mesh_and_normalize_u16(self) -> None:
         instance = heightmaps.MeshInstance(
             game_object_name="terrain",
             mesh_name="triangle",
-            vertices=((0.0, 0.0, 0.0), (10.0, 10.0, 0.0), (0.0, 20.0, 10.0)),
-            triangles=((0, 1, 2),),
+            vertices=((0.0, 0.0, 0.0), (10.0, 10.0, 0.0), (0.0, 20.0, 10.0), (10.0, 30.0, 10.0)),
+            triangles=((0, 1, 2), (1, 3, 2)),
         )
 
         raster = heightmaps.rasterize_instances([instance], resolution=8, max_triangles=10)
@@ -334,6 +394,224 @@ class FoAHeightmapImporterTests(unittest.TestCase):
 
         with self.assertRaisesRegex(heightmaps.HeightmapImportError, "missing dependency"):
             heightmaps.collect_mesh_instances(env, object, settings, dependency_resolver=resolver)
+
+
+    def output_fixture(self, op_id="terrain-import.transaction-test"):
+        game_root = self.temp_root / "source"
+        game_root.mkdir(exist_ok=True)
+        scene_bundle = game_root / "synthetic.bundle"
+        scene_bundle.write_bytes(b"synthetic scene identity; no game data")
+        settings = heightmaps.ImportSettings(
+            game_root=game_root, workspace_root=self.temp_root / "workspace",
+            map_key="hos", resolution=2, mesh_source="collider",
+            include_inactive=False, include_name_regex=None, exclude_name_regex=None,
+            max_meshes=None, max_triangles=10, created_at_utc="2026-09-07T00:00:00Z",
+            operation_id=op_id, profile_id="profile.synthetic", game_version="synthetic",
+            branch="local", runtime_target="Mono",
+        )
+        return dict(
+            settings=settings,
+            install=heightmaps.GameInstall(game_root, game_root, game_root / "catalog.json"),
+            campaign=heightmaps.CAMPAIGN_MAPS["hos"], scene_bundle=scene_bundle,
+            dependency_count=0, component_stats={"accepted_components": 1},
+            raster=heightmaps.RasterResult(
+                2, 2, heightmaps.Bounds(0, 1, 0, 10, 0, 1), array("f", [0, 5, 7, 10]), 4, 2),
+            samples=array("H", [0, 32768, 45875, 65535]),
+            min_height=0, max_height=10, op_id=op_id,
+        )
+
+    def assert_no_published_output(self, workspace):
+        self.assertFalse(list(workspace.glob("Derived/Terrain/**/terrain.tgheightmap.json")))
+        self.assertFalse(list(workspace.glob("Derived/Terrain/**/*.terrain.u16le")))
+        self.assertFalse(list(workspace.glob("SourceObservations/Terrain/**/source-observation.json")))
+
+    def test_tile_write_failure_leaves_no_published_revision(self):
+        arguments = self.output_fixture()
+        original = heightmaps.write_tile
+        def fail_after_tile(*args, **kwargs):
+            original(*args, **kwargs)
+            raise OSError("synthetic interrupted tile write")
+        with mock.patch.object(heightmaps, "write_tile", side_effect=fail_after_tile):
+            with self.assertRaisesRegex(OSError, "interrupted tile"):
+                heightmaps.write_import_outputs(**arguments)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+
+    def test_observation_failure_leaves_no_published_revision(self):
+        arguments = self.output_fixture()
+        original = heightmaps.write_json_atomic
+        def fail_observation(path, value):
+            if path.name == "source-observation.json":
+                raise OSError("synthetic observation failure")
+            original(path, value)
+        with mock.patch.object(heightmaps, "write_json_atomic", side_effect=fail_observation):
+            with self.assertRaisesRegex(OSError, "observation failure"):
+                heightmaps.write_import_outputs(**arguments)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+
+    def test_import_rejects_escaping_operation_before_writing(self):
+        arguments = self.output_fixture("../../escaped")
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "operation-id"):
+            heightmaps.write_import_outputs(**arguments)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+
+    def test_output_grid_and_sample_count_are_checked_before_writing(self):
+        arguments = self.output_fixture()
+        arguments["samples"] = array("H", [0])
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "sample"):
+            heightmaps.write_import_outputs(**arguments)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+
+    def test_cancelled_publication_leaves_no_revision_and_can_retry(self):
+        arguments = self.output_fixture()
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "cancelled"):
+            heightmaps.write_import_outputs(**arguments, cancelled=lambda: True)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+        result = heightmaps.write_import_outputs(**arguments)
+        self.assertTrue(Path(result["manifest_path"]).is_file())
+
+    def test_repeat_operation_preserves_existing_manifest_and_observation(self):
+        arguments = self.output_fixture()
+        result = heightmaps.write_import_outputs(**arguments)
+        paths = [Path(result["manifest_path"]), Path(result["source_observation_path"])]
+        before = [p.read_bytes() for p in paths]
+        arguments["samples"] = array("H", [0, 1, 2, 3])
+        with self.assertRaises(heightmaps.HeightmapImportError):
+            heightmaps.write_import_outputs(**arguments)
+        self.assertEqual([p.read_bytes() for p in paths], before)
+
+
+
+    def test_cancellation_after_observation_rolls_back_and_retries(self):
+        arguments = self.output_fixture()
+        state = {"cancelled": False}
+        original = heightmaps.write_json_atomic
+        def cancel_after_observation(path, value):
+            original(path, value)
+            if path.name == "source-observation.json":
+                state["cancelled"] = True
+        with mock.patch.object(heightmaps, "write_json_atomic", side_effect=cancel_after_observation):
+            with self.assertRaisesRegex(heightmaps.HeightmapImportError, "cancelled"):
+                heightmaps.write_import_outputs(**arguments, cancelled=lambda: state["cancelled"])
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+        self.assertTrue(Path(heightmaps.write_import_outputs(**arguments)["manifest_path"]).is_file())
+
+    def test_publish_rename_failure_rolls_back_observation_and_tiles(self):
+        arguments = self.output_fixture()
+        original = Path.rename
+        def fail_publish(path, target):
+            if target.name.startswith("terrain-revision."):
+                raise OSError("synthetic publish failure")
+            return original(path, target)
+        with mock.patch.object(Path, "rename", new=fail_publish):
+            with self.assertRaisesRegex(OSError, "publish failure"):
+                heightmaps.write_import_outputs(**arguments)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+        self.assertTrue(Path(heightmaps.write_import_outputs(**arguments)["manifest_path"]).is_file())
+
+    def test_existing_staging_state_is_preserved(self):
+        arguments = self.output_fixture()
+        staging = arguments["settings"].workspace_root / "Staging/Terrain" / arguments["op_id"]
+        staging.mkdir(parents=True)
+        sentinel = staging / "in-progress.txt"
+        sentinel.write_bytes(b"existing operation")
+        with self.assertRaisesRegex(heightmaps.HeightmapImportError, "already exists"):
+            heightmaps.write_import_outputs(**arguments)
+        self.assertEqual(sentinel.read_bytes(), b"existing operation")
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+
+    def test_workspace_output_junction_or_symlink_is_rejected(self):
+        arguments = self.output_fixture()
+        workspace = arguments["settings"].workspace_root
+        workspace.mkdir()
+        external = self.temp_root / "unrelated"
+        external.mkdir()
+        sentinel = external / "keep.txt"
+        sentinel.write_bytes(b"preserve unrelated data")
+        link = workspace / "Derived"
+        if os.name == "nt":
+            import _winapi
+            _winapi.CreateJunction(str(external), str(link))
+        else:
+            link.symlink_to(external, target_is_directory=True)
+        try:
+            with self.assertRaisesRegex(heightmaps.HeightmapImportError, "links or reparse"):
+                heightmaps.write_import_outputs(**arguments)
+            self.assertEqual(list(external.iterdir()), [sentinel])
+            self.assertEqual(sentinel.read_bytes(), b"preserve unrelated data")
+        finally:
+            if os.name == "nt":
+                link.rmdir()
+            else:
+                link.unlink()
+
+    def test_corrupted_staged_tile_is_rejected_before_publication(self):
+        arguments = self.output_fixture()
+        original = heightmaps.write_tile
+        def corrupt_tile(samples, width, path, *dimensions):
+            fingerprint = original(samples, width, path, *dimensions)
+            path.write_bytes(b"corrupt")
+            return fingerprint
+        with mock.patch.object(heightmaps, "write_tile", side_effect=corrupt_tile):
+            with self.assertRaisesRegex(heightmaps.HeightmapImportError, "tile validation"):
+                heightmaps.write_import_outputs(**arguments)
+        self.assert_no_published_output(arguments["settings"].workspace_root)
+
+
+
+    def test_complete_candidate_is_staged_before_atomic_publish(self):
+        arguments = self.output_fixture()
+        width, height = 1025, 1025
+        arguments["raster"] = heightmaps.replace(arguments["raster"], width=width, height=height)
+        arguments["samples"] = array("H", [12345]) * (width * height)
+        original_rename = Path.rename
+        def inspect_commit(path, target):
+            if target.name.startswith("terrain-revision."):
+                self.assertFalse(target.exists())
+                self.assertEqual(len(list(path.glob("*/terrain.tgheightmap.json"))), 1)
+                self.assertEqual(len(list(path.glob("*/Tiles/*.terrain.u16le"))), 4)
+                self.assertTrue(list(arguments["settings"].workspace_root.glob(
+                    "SourceObservations/Terrain/**/source-observation.json")))
+            return original_rename(path, target)
+        with mock.patch.object(Path, "rename", new=inspect_commit):
+            with mock.patch.object(heightmaps, "write_tile", wraps=heightmaps.write_tile) as tile_writer:
+                result = heightmaps.write_import_outputs(**arguments)
+        self.assertEqual(tile_writer.call_count, 4)
+        document = json.loads(Path(result["manifest_path"]).read_text(encoding="utf-8"))
+        self.assertEqual([(tile["width"], tile["height"]) for tile in document["tiles"]],
+                         [(1024, 1024), (1, 1024), (1024, 1), (1, 1)])
+        self.assertEqual(sum(tile["byte_size"] for tile in document["tiles"]), width * height * 2)
+
+    def test_manifest_and_tiles_are_deterministic_across_three_workspaces(self):
+        arguments = self.output_fixture()
+        outputs = []
+        for index in range(3):
+            arguments["settings"] = heightmaps.replace(
+                arguments["settings"], workspace_root=self.temp_root / f"workspace-{index}")
+            result = heightmaps.write_import_outputs(**arguments)
+            outputs.append((Path(result["manifest_path"]).read_bytes(),
+                            [Path(path).read_bytes() for path in result["tile_paths"]]))
+        self.assertEqual(outputs[0], outputs[1])
+        self.assertEqual(outputs[1], outputs[2])
+        self.assertNotIn(str(self.temp_root).encode(), outputs[0][0])
+
+    def test_cleanup_error_after_commit_reports_published_result(self):
+        arguments = self.output_fixture()
+        error = io.StringIO()
+        with mock.patch.object(heightmaps, "remove_owned_staging", side_effect=OSError("cleanup denied")):
+            with contextlib.redirect_stderr(error):
+                result = heightmaps.write_import_outputs(**arguments)
+        self.assertTrue(Path(result["manifest_path"]).is_file())
+        self.assertIn("revision published", error.getvalue())
+
+    def test_cli_reports_io_failure_without_traceback(self):
+        error = io.StringIO()
+        with mock.patch.object(heightmaps, "import_campaign_map", side_effect=OSError("disk full")):
+            with contextlib.redirect_stderr(error):
+                code = heightmaps.main(["import", "--workspace-root", str(self.temp_root / "workspace"),
+                                       "--map", "hos"])
+        self.assertEqual(code, 1)
+        self.assertIn("disk full", error.getvalue())
+        self.assertNotIn("Traceback", error.getvalue())
 
 
 if __name__ == "__main__":

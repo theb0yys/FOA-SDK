@@ -12,6 +12,8 @@ import ast
 import re
 from pathlib import Path
 
+from validate_core_framework_build_graph import find_call_block
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -92,10 +94,19 @@ def validate_item_viewer(root: Path = ROOT) -> None:
             raise RuntimeError("Forbidden process-exit contract in embedded adapter: SystemExit")
 
     require(code_cmake, "TG_SDK_ASSET_BROWSER_PANE_REFRESH_TOOL_SOURCE", "developer-checkout refresh-adapter path")
-    require(code_cmake, "ly_install_files", "installed refresh tooling packaging")
-    require(code_cmake, "DESTINATION\n        scripts/foa-sdk\n", "private installed refresh tooling location")
-    require(code_cmake, "../Tools/foa_asset_browser_pane_refresh.py", "installed embedded refresh adapter")
-    require(code_cmake, "../Tools/foa_asset_browser_pane_model.py", "installed pane-model generator")
+    # Other tools may use the same destination. Bind each file to its own install
+    # call so an unrelated tool cannot mask a missing or redirected refresh file.
+    for relative, label in (
+        ("../Tools/foa_asset_browser_pane_refresh.py", "installed embedded refresh adapter"),
+        ("../Tools/foa_asset_browser_pane_model.py", "installed pane-model generator"),
+    ):
+        try:
+            install = find_call_block(code_cmake, "ly_install_files", relative)
+        except RuntimeError as error:
+            raise RuntimeError(f"Missing {label}: {relative}") from error
+        if not re.search(r"\bDESTINATION\s+scripts/foa-sdk(?=\s|\))", install):
+            raise RuntimeError(f"Missing private installed refresh tooling location for {relative}")
+
 
     require(installer, "new ItemVisualLifecycleEnhancer(selector)", "direct lifecycle integration")
     require(selector, "PreviewerFrame", "registered live O3DE previewer")

@@ -213,13 +213,26 @@ class ItemViewerWorkingLifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.copy_fixture(root)
-            self.mutate(
-                root,
-                "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt",
-                "scripts/foa-sdk",
-                "scripts/missing-item-viewer-tool",
-            )
+            path = root / "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
+            text = path.read_text(encoding="utf-8")
+            block = contract.find_call_block(text, "ly_install_files", "../Tools/foa_asset_browser_pane_refresh.py")
+            # Retain another correct destination to detect cross-tool false passes.
+            text = text.replace(block, block.replace("scripts/foa-sdk", "scripts/missing-item-viewer-tool"))
+            text += "\nly_install_files(FILES decoy.py DESTINATION scripts/foa-sdk)\n"
+            path.write_text(text, encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "private installed refresh tooling location"):
+                contract.validate_item_viewer(root)
+
+    def test_refresh_file_reference_outside_install_does_not_count(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.copy_fixture(root)
+            path = root / "Gems/TaintedGrailModdingSDK/Code/CMakeLists.txt"
+            text = path.read_text(encoding="utf-8")
+            relative = "../Tools/foa_asset_browser_pane_refresh.py"
+            block = contract.find_call_block(text, "ly_install_files", relative)
+            path.write_text(text.replace(block, block.replace(relative, "decoy.py")), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "installed embedded refresh adapter"):
                 contract.validate_item_viewer(root)
 
     def test_internal_model_path_cannot_return_to_settings(self) -> None:
@@ -274,13 +287,19 @@ class ItemViewerPaneLookupTests(unittest.TestCase):
 class ItemViewerCloseWaitTests(unittest.TestCase):
     def closed_condition(self, *, pane_valid: bool, container_valid: bool | None, visible: bool = False):
         smoke = ast.parse((TOOLS_ROOT / "editor_tests/alpha_item_viewer_live_smoke.py").read_text(encoding="utf-8"))
-        condition = next(node for node in ast.walk(smoke) if isinstance(node, ast.Lambda)
-                         and "not isValid(pane)" in ast.unparse(node))
+        condition = next(node for node in ast.walk(smoke) if isinstance(node, ast.FunctionDef)
+                         and node.name == "pane_destroyed")
+        waits = []
         namespace = {"pane": {"valid": pane_valid},
                      "closing_container": None if container_valid is None else {"valid": container_valid},
                      "general": type("General", (), {"is_pane_visible": staticmethod(lambda name: visible)}),
+                     "QtTest": type("QtTest", (), {"QTest": type("QTest", (), {
+                         "qWait": staticmethod(waits.append)})}),
                      "PANE_NAME": "fixture pane", "isValid": lambda widget: widget["valid"]}
-        return eval(compile(ast.Expression(body=condition), "pane-close-condition", "eval"), namespace)()
+        exec(compile(ast.Module(body=[condition], type_ignores=[]), "pane-close-condition", "exec"), namespace)
+        result = namespace["pane_destroyed"]()
+        self.assertEqual([25], waits, "The close check must pump Qt's deferred-deletion events")
+        return result
 
     def test_waits_for_pending_floating_container_deletion(self) -> None:
         self.assertFalse(self.closed_condition(pane_valid=False, container_valid=True))

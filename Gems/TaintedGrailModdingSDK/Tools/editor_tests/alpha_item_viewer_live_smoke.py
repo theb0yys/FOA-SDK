@@ -23,7 +23,7 @@ import sys
 
 import azlmbr.paths
 import azlmbr.legacy.general as general
-from PySide6 import QtWidgets
+from PySide6 import QtTest, QtWidgets
 from shiboken6 import isValid
 
 PANE_NAME = "Tainted Grail Item and Recipe Editor"
@@ -288,15 +288,17 @@ def ItemViewerLifecycleSmoke() -> None:
     pane.close()
     # Wait for both: restoring into a container still queued for deletion removes
     # the newly opened pane on the next event-loop iteration.
+    def pane_destroyed() -> bool:
+        # Qt must process deferred deletion while this Python test is still running.
+        QtTest.QTest.qWait(25)
+        return (
+            not general.is_pane_visible(PANE_NAME) and not isValid(pane)
+            and (closing_container is None or not isValid(closing_container))
+        )
+
     Report.critical_result(
         Tests.pane_closed,
-        helper.wait_for_condition(
-            lambda: (
-                not general.is_pane_visible(PANE_NAME) and not isValid(pane)
-                and (closing_container is None or not isValid(closing_container))
-            ),
-            10.0
-        ),
+        helper.wait_for_condition(pane_destroyed, 10.0),
     )
     general.open_pane(PANE_NAME)
     # Retain the owning PySide wrapper while querying the reopened dock's children.

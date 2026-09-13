@@ -6,6 +6,8 @@ The implementation lives in the companion `Tainted-Grail-The-Fall-of-Avalon-mods
 
 The additive [player-position service](TGE_PLAYER_POSITION.md) now exposes `tge.foa.player@0.1` through this adapter. Its native reader belongs to the extender's BepInEx host; the SDK consumes its position and active-scene snapshot.
 
+The [inventory and equipment service](TGE_INVENTORY.md) adds `tge.foa.inventory@0.1`, also owned by the extender. Its Python consumer reads eight equipment slots and inventory pages with item identities, names and quantities.
+
 The SDK codec is [tge_sdk_client.py](../../Gems/TaintedGrailModdingSDK/Tools/tge_sdk_client.py). The live local client is [tge_sdk_transport.py](../../Gems/TaintedGrailModdingSDK/Tools/tge_sdk_transport.py). Both use only the Python standard library.
 
 ## Implemented boundary

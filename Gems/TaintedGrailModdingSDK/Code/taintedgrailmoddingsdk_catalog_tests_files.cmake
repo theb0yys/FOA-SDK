@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Tests/FrameworkPlannerTests.cpp
+    Tests/FrameworkPlannerTestFixtures.h
     Tests/AssetLocalisationAuthoringTests.cpp
     Tests/WorldAuthoringTests.cpp
     Tests/QuestAuthoringTests.cpp
@@ -26,6 +28,8 @@ set(FILES
     Tests/FoAInstallDiscoveryServiceTests.cpp
     Tests/FoundationWorkspaceIsolationTests.cpp
     Tests/PackDraftRecoveryTests.cpp
+    Tests/ItemRecipeDraftRecoveryTests.cpp
+    Tests/ActorTroopDraftRecoveryTests.cpp
     Tests/Main.cpp
     Tests/PopulationActionLaneServiceTests.cpp
     Tests/PopulationAuthoringTests.cpp

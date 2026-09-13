@@ -1,0 +1,13 @@
+# Qualified local campaign worker, Python 3.10 on Windows. No packages are vendored in source.
+UnityPy==1.24.2
+Pillow==12.3.0
+lz4==4.4.5
+brotli==1.2.0
+texture2ddecoder==1.0.6
+etcpak==0.9.15
+astc-encoder-py==0.1.12
+fmod-toolkit==0.1.3
+fsspec==2026.7.0
+attrs==26.1.0
+archspec==0.2.6
+pyfmodex==0.7.2

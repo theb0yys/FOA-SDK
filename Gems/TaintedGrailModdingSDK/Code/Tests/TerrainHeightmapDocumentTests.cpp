@@ -6,6 +6,12 @@
  */
 
 #include "TerrainHeightmapDocument.h"
+#include "TerrainImportHost.h"
+#include "TerrainNativeHandoff.h"
+#include "TerrainCampaignExportHost.h"
+#include <thread>
+#include <chrono>
+#include <QJsonArray>
 
 #include <AzTest/AzTest.h>
 
@@ -16,6 +22,9 @@
 #include <QFileInfo>
 #include <QImage>
 #include <QImageWriter>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDirIterator>
 #include <QTemporaryDir>
 
 #include <limits>
@@ -1197,4 +1206,360 @@ namespace TaintedGrailModdingSDK
         EXPECT_FALSE(second.IsSuccess());
         EXPECT_NE(second.GetError().find("already exists"), AZStd::string::npos);
     }
+
+    TEST(TerrainHeightmapDocumentTests, SavedDocumentParserRoundTripsAndRejectsSchemaDrift)
+    {
+        auto document = MakeDocument();
+        const auto canonical = TerrainHeightmap::BuildCanonicalDocumentJson(document);
+        auto parsed = TerrainHeightmap::ParseDocumentJson(canonical);
+        ASSERT_TRUE(parsed.IsSuccess()) << parsed.GetError().c_str();
+        EXPECT_EQ(TerrainHeightmap::BuildCanonicalDocumentJson(parsed.GetValue()), canonical);
+        const auto original = QJsonDocument::fromJson(QByteArray(canonical.data(), static_cast<int>(canonical.size()))).object();
+        for (const auto* field : {"schema", "authority", "tiles", "profile_binding"})
+        {
+            auto changed = original;
+            changed.remove(field);
+            EXPECT_FALSE(TerrainHeightmap::ParseDocumentJson(ToAzString(QJsonDocument(changed).toJson())).IsSuccess()) << field;
+        }
+        auto changed = original;
+        changed["unknown"] = true;
+        EXPECT_FALSE(TerrainHeightmap::ParseDocumentJson(ToAzString(QJsonDocument(changed).toJson())).IsSuccess());
+        changed = original;
+        auto authority = changed.value("authority").toObject();
+        authority["game_write_allowed"] = "false";
+        changed["authority"] = authority;
+        EXPECT_FALSE(TerrainHeightmap::ParseDocumentJson(ToAzString(QJsonDocument(changed).toJson())).IsSuccess());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, PreviewReopensSamplesAndRejectsChangedTilesOrProfiles)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString rawPath = QDir(temporary.path()).filePath("preview.raw");
+        const QString sidecarPath = rawPath + ".json";
+        ASSERT_TRUE(WriteFile(rawPath, LittleEndianSamples({0, 32768, 65535, 16384})));
+        ASSERT_TRUE(WriteFile(sidecarPath, SidecarJson(2, 2, "little-endian")));
+        const auto request = MakeImportRequest(temporary, rawPath, sidecarPath);
+        auto imported = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        ASSERT_TRUE(imported.IsSuccess()) << imported.GetError().c_str();
+        const auto relative = ToAzString(QDir(temporary.path()).relativeFilePath(QString::fromUtf8(imported.GetValue().m_publishedManifestPath.c_str())));
+        auto preview = TerrainHeightmap::LoadWorkspaceTerrainPreview(request.m_workspaceRoot, relative, request.m_profileBinding);
+        ASSERT_TRUE(preview.IsSuccess()) << preview.GetError().c_str();
+        EXPECT_EQ(preview.GetValue().m_width, 2);
+        EXPECT_EQ(preview.GetValue().m_height, 2);
+        EXPECT_EQ(preview.GetValue().m_grayscale, (AZStd::vector<AZ::u8>{0, 128, 255, 64}));
+        auto stale = request.m_profileBinding;
+        stale.m_gameVersion = "different";
+        EXPECT_FALSE(TerrainHeightmap::LoadWorkspaceTerrainPreview(request.m_workspaceRoot, relative, stale).IsSuccess());
+        EXPECT_FALSE(TerrainHeightmap::LoadWorkspaceTerrainPreview(request.m_workspaceRoot, "../escape.json", request.m_profileBinding).IsSuccess());
+        ASSERT_TRUE(WriteFile(QString::fromUtf8(imported.GetValue().m_publishedTilePaths.front().c_str()), QByteArray(8, '\0')));
+        auto changed = TerrainHeightmap::LoadWorkspaceTerrainPreview(request.m_workspaceRoot, relative, request.m_profileBinding);
+        ASSERT_FALSE(changed.IsSuccess());
+        EXPECT_NE(changed.GetError().find("fingerprint"), AZStd::string::npos);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, RawCancellationBeforePublicationRollsBackAndCanRetry)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString rawPath = QDir(temporary.path()).filePath("cancel.raw");
+        const QString sidecarPath = rawPath + ".json";
+        ASSERT_TRUE(WriteFile(rawPath, QByteArray(2050, '\0')));
+        ASSERT_TRUE(WriteFile(sidecarPath, SidecarJson(1025, 1, "little-endian")));
+        auto request = MakeImportRequest(temporary, rawPath, sidecarPath);
+        bool cancelled = false;
+        TerrainHeightmap::ImportControl control;
+        control.m_cancelled = [&]() { return cancelled; };
+        control.m_progress = [&](AZ::u64 done, AZ::u64) { if (done > 0) { cancelled = true; } };
+        request.m_control = &control;
+        EXPECT_FALSE(TerrainHeightmap::ImportRawHeightmapToWorkspace(request).IsSuccess());
+        QDirIterator files(temporary.path(), {"terrain.tgheightmap.json", "source-observation.json"}, QDir::Files, QDirIterator::Subdirectories);
+        EXPECT_FALSE(files.hasNext());
+        request.m_control = nullptr;
+        auto retry = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        ASSERT_TRUE(retry.IsSuccess()) << retry.GetError().c_str();
+        EXPECT_EQ(retry.GetValue().m_tileCount, 2);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageSidecarRequiresScaleAndMatchesImageDimensions)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("metadata.png");
+        ASSERT_TRUE(WriteGrayscale16Image(imagePath, "PNG", 2, 2, {0, 16384, 32768, 65535}));
+        const QString sidecarPath = imagePath + ".json";
+        auto object = QJsonDocument::fromJson(SidecarJson(2, 2, "little-endian")).object();
+        object["schema"] = "foa.terrain-heightmap.image-import-metadata";
+        object.remove("byte_order");
+        ASSERT_TRUE(WriteFile(sidecarPath, QJsonDocument(object).toJson()));
+        auto request = MakeImageImportRequest(temporary, imagePath);
+        ASSERT_TRUE(TerrainHeightmap::ReadImageImportSidecar(ToAzString(sidecarPath), request).IsSuccess());
+        EXPECT_EQ(request.m_gridMetadata.m_width, 2);
+        auto imported = TerrainHeightmap::ImportImageHeightmapToWorkspace(request);
+        ASSERT_TRUE(imported.IsSuccess()) << imported.GetError().c_str();
+        object["width"] = 3;
+        ASSERT_TRUE(WriteFile(sidecarPath, QJsonDocument(object).toJson()));
+        ASSERT_TRUE(TerrainHeightmap::ReadImageImportSidecar(ToAzString(sidecarPath), request).IsSuccess());
+        EXPECT_FALSE(TerrainHeightmap::ImportImageHeightmapToWorkspace(request).IsSuccess());
+        object.remove("min_height_metres");
+        ASSERT_TRUE(WriteFile(sidecarPath, QJsonDocument(object).toJson()));
+        EXPECT_FALSE(TerrainHeightmap::ReadImageImportSidecar(ToAzString(sidecarPath), request).IsSuccess());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, ImageCancellationAfterFinalTileDoesNotPublish)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString imagePath = QDir(temporary.path()).filePath("cancel.png");
+        ASSERT_TRUE(WriteGrayscale16Image(imagePath, "PNG", 2, 2, {0, 16384, 32768, 65535}));
+        auto request = MakeImageImportRequest(temporary, imagePath);
+        bool cancelled = false;
+        TerrainHeightmap::ImportControl control;
+        control.m_cancelled = [&]() { return cancelled; };
+        control.m_progress = [&](AZ::u64, AZ::u64) { cancelled = true; };
+        request.m_control = &control;
+        EXPECT_FALSE(TerrainHeightmap::ImportImageHeightmapToWorkspace(request).IsSuccess());
+        QDirIterator files(temporary.path(), {"terrain.tgheightmap.json", "source-observation.json"}, QDir::Files, QDirIterator::Subdirectories);
+        EXPECT_FALSE(files.hasNext());
+        request.m_control = nullptr;
+        EXPECT_TRUE(TerrainHeightmap::ImportImageHeightmapToWorkspace(request).IsSuccess());
+    }
+
+
+    TEST(TerrainHeightmapDocumentTests, HostImportsRefreshesAndReopensWithoutExposingWorkspacePaths)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString rawPath = QDir(temporary.path()).filePath("host.raw");
+        const QString sidecarPath = rawPath + ".json";
+        ASSERT_TRUE(WriteFile(rawPath, LittleEndianSamples({0, 32768, 65535, 16384})));
+        ASSERT_TRUE(WriteFile(sidecarPath, SidecarJson(2, 2, "little-endian")));
+        auto profile = MakeImportRequest(temporary, rawPath, sidecarPath).m_profileBinding;
+        TerrainImportHost host;
+        auto send = [&](const QJsonObject& command)
+        {
+            auto response = host.Dispatch(command, temporary.path(), {}, profile);
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (response.value("busy").toBool() && std::chrono::steady_clock::now() < deadline)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                response = host.Dispatch({{"action", "poll"}}, temporary.path(), {}, profile);
+            }
+            EXPECT_FALSE(response.value("busy").toBool());
+            EXPECT_FALSE(QJsonDocument(response).toJson().contains(temporary.path().toUtf8()));
+            EXPECT_FALSE(response.contains("locator"));
+            return response;
+        };
+        auto imported = send({{"action", "import"}, {"source", rawPath}});
+        ASSERT_EQ(imported.value("status").toString(), "complete") << imported.value("message").toString().toUtf8().constData();
+        const auto preview = imported.value("preview");
+        const auto revision = imported.value("revision");
+        ASSERT_FALSE(preview.toString().isEmpty());
+        const auto inventory = send({{"action", "refresh"}});
+        ASSERT_EQ(inventory.value("rows").toArray().size(), 1);
+        EXPECT_EQ(inventory.value("rows").toArray().first().toObject().value("revision"), revision);
+        const auto reopened = send({{"action", "open"}, {"revision", revision}});
+        EXPECT_EQ(reopened.value("preview"), preview);
+        profile.m_gameVersion = "changed";
+        auto stale = send({{"action", "open"}, {"revision", revision}});
+        EXPECT_EQ(stale.value("status").toString(), "failed");
+        EXPECT_TRUE(send({{"action", "refresh"}}).value("rows").toArray().isEmpty());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, HostRejectsSourcesInsideRegisteredGameBeforeImport)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString rawPath = QDir(temporary.path()).filePath("protected.raw");
+        ASSERT_TRUE(WriteFile(rawPath, LittleEndianSamples({0, 32768})));
+        const auto profile = MakeImportRequest(temporary, rawPath, rawPath + ".json").m_profileBinding;
+        TerrainImportHost host;
+        auto response = host.Dispatch({{"action", "import"}, {"source", rawPath}}, temporary.path(), temporary.path(), profile);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (response.value("busy").toBool() && std::chrono::steady_clock::now() < deadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            response = host.Dispatch({{"action", "poll"}}, temporary.path(), temporary.path(), profile);
+        }
+        ASSERT_FALSE(response.value("busy").toBool());
+        EXPECT_EQ(response.value("status").toString(), "failed");
+        EXPECT_TRUE(response.value("message").toString().contains("outside the game"));
+        EXPECT_FALSE(QDir(QDir(temporary.path()).filePath("Derived")).exists());
+    }
+
+    TEST(TerrainHeightmapDocumentTests, CampaignExportProvenanceSurvivesRawImportAndStrictReopen)
+    {
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString rawPath = QDir(temporary.path()).filePath("campaign.raw");
+        ASSERT_TRUE(WriteFile(rawPath, LittleEndianSamples({0, 32768})));
+        auto metadata = QJsonDocument::fromJson(SidecarJson(2, 1, "little-endian")).object();
+        metadata["source_extraction"] = QJsonObject{{"schema", "foa.campaign-heightmap-export.receipt"},
+            {"source_sha256", QString::fromUtf8(Sha('a').c_str())}};
+        ASSERT_TRUE(WriteFile(rawPath + ".json", QJsonDocument(metadata).toJson()));
+        auto request = MakeImportRequest(temporary, rawPath, rawPath + ".json");
+        request.m_importerId = "importer.campaign-ground-raw";
+        request.m_provenanceLimitations = "Synthetic ground coverage 60%; estimated cells remain marked in the source export.";
+        auto imported = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        ASSERT_TRUE(imported.IsSuccess()) << imported.GetError().c_str();
+        EXPECT_EQ(imported.GetValue().m_document.m_provenance.m_limitations, request.m_provenanceLimitations);
+        EXPECT_EQ(imported.GetValue().m_document.m_sourceBinding.m_configurationFingerprint, imported.GetValue().m_sidecarFingerprint);
+        EXPECT_FALSE(imported.GetValue().m_document.m_authority.m_publicationAllowed);
+        const auto relative = ToAzString(QDir(temporary.path()).relativeFilePath(QString::fromUtf8(imported.GetValue().m_publishedManifestPath.c_str())));
+        auto reopened = TerrainHeightmap::LoadWorkspaceTerrainPreview(request.m_workspaceRoot, relative, request.m_profileBinding);
+        ASSERT_TRUE(reopened.IsSuccess()) << reopened.GetError().c_str();
+        EXPECT_EQ(reopened.GetValue().m_document.m_sourceBinding.m_exporterId, request.m_importerId);
+    }
+
+    TEST(TerrainHeightmapDocumentTests, HostRejectsCampaignImportBeforeStartingWorker)
+    {
+        QTemporaryDir temporary;
+        const auto profile = MakeImportRequest(temporary, {}, {}).m_profileBinding;
+        TerrainImportHost host;
+        const auto result = host.Dispatch({{"action", "import-campaign"}, {"campaign", "hos"}}, temporary.path(), {}, profile);
+        EXPECT_EQ(result.value("status").toString(), "failed");
+        EXPECT_FALSE(result.value("busy").toBool());
+        EXPECT_TRUE(result.value("message").toString().contains("game round-trip"));
+        EXPECT_FALSE(QDir(temporary.path()).exists("Staging"));
+        EXPECT_FALSE(QDir(temporary.path()).exists("Derived"));
+    }
+
+    TEST(TerrainHeightmapDocumentTests, LegacyCampaignCannotOpenForEditingOrReimportAsLocalHeightmap)
+    {
+        QTemporaryDir temporary;
+        const auto source = temporary.filePath("legacy-campaign.raw");
+        const QByteArray samples = QByteArray::fromHex("000001013412ffff");
+        ASSERT_TRUE(WriteFile(source, samples));
+        auto metadata = QJsonDocument::fromJson(SidecarJson(2, 2, "little-endian")).object();
+        metadata["source_extraction"] = QJsonObject{{"schema", "foa.campaign-heightmap-export.receipt"}};
+        ASSERT_TRUE(WriteFile(source + ".json", QJsonDocument(metadata).toJson()));
+        auto request = MakeImportRequest(temporary, source, source + ".json");
+        request.m_importerId = "importer.campaign-ground-raw";
+        const auto imported = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        ASSERT_TRUE(imported.IsSuccess());
+        const auto locator = QDir(temporary.path()).relativeFilePath(QString::fromUtf8(imported.GetValue().m_publishedManifestPath.c_str()));
+        const auto rejected = PrepareNativeTerrain(temporary.path(), locator, request.m_profileBinding, nullptr);
+        EXPECT_EQ(rejected.value("status").toString(), "failed");
+        EXPECT_TRUE(rejected.value("message").toString().contains("does not preserve the original map"));
+        EXPECT_FALSE(QDir(temporary.path()).exists("EditorAssets"));
+        EXPECT_FALSE(QDir(temporary.path()).exists("Staging/TerrainNative"));
+        EXPECT_EQ(ReadAll(ToAzString(source)), samples);
+        EXPECT_TRUE(TerrainHeightmap::LoadWorkspaceTerrainPreview(request.m_workspaceRoot, ToAzString(locator), request.m_profileBinding).IsSuccess());
+        TerrainImportHost host;
+        auto response = host.Dispatch({{"action", "import"}, {"source", source}}, temporary.path(), {}, request.m_profileBinding);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (response.value("busy").toBool() && std::chrono::steady_clock::now() < deadline)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            response = host.Dispatch({{"action", "poll"}}, temporary.path(), {}, request.m_profileBinding);
+        }
+        EXPECT_FALSE(response.value("busy").toBool());
+        EXPECT_EQ(response.value("status").toString(), "failed");
+        EXPECT_TRUE(response.value("message").toString().contains("unsupported campaign reconstruction"));
+    }
+
+    TEST(TerrainHeightmapDocumentTests, CampaignWorkerRejectsUnknownCampaignWithoutWrites)
+    {
+        QTemporaryDir temporary;
+        TerrainCampaignProvider provider;
+        TerrainHeightmap::ProfileBinding profile;
+        auto result = ExportTerrainCampaign(provider, temporary.path(), temporary.path(), "6000.0.64f1",
+            profile, "unknown", "terrain-import.invalid", "2026-09-08T00:00:00Z", nullptr);
+        EXPECT_EQ(result.value("status").toString(), "failed");
+        EXPECT_FALSE(QDir(temporary.path()).exists("Staging"));
+    }
+
+    TEST(TerrainHeightmapDocumentTests, CampaignWorkerFailureTimeoutCancellationAndMalformedResultsFailClosed)
+    {
+        const QString python = qEnvironmentVariable("FOA_HEIGHTMAP_TEST_PYTHON");
+        if (python.isEmpty()) { GTEST_SKIP() << "Set FOA_HEIGHTMAP_TEST_PYTHON to the qualified local worker runtime."; }
+        ASSERT_TRUE(QFileInfo(python).isFile());
+        QTemporaryDir temporary;
+        ASSERT_TRUE(temporary.isValid());
+        const QString workspace = QDir(temporary.path()).filePath("Workspace");
+        const QString game = QDir(temporary.path()).filePath("SyntheticGame");
+        const QString aa = QDir(game).filePath("Fall of Avalon_Data/StreamingAssets/aa");
+        ASSERT_TRUE(QDir().mkpath(workspace));
+        ASSERT_TRUE(QDir().mkpath(aa + "/StandaloneWindows64"));
+        ASSERT_TRUE(WriteFile(aa + "/catalog.json", "{}"));
+        for (const auto& suffix : {QString(".bundle"), QString("_static.bundle")})
+        {
+            ASSERT_TRUE(WriteFile(aa + "/StandaloneWindows64/scenes_scenes_campaignmap_hos" + suffix, "synthetic"));
+        }
+        const QString script = QDir(workspace).filePath("synthetic-worker.py");
+        const TerrainCampaignProvider provider{python, script};
+        TerrainHeightmap::ProfileBinding profile;
+        profile.m_profileId = "profile.synthetic";
+        profile.m_profileFingerprint = Sha('a');
+        for (int mode = 0; mode < 4; ++mode)
+        {
+            const QByteArray body = mode == 0 ? QByteArray("import sys; sys.exit(9)\n")
+                : mode == 1 || mode == 2 ? QByteArray("import time; time.sleep(60)\n")
+                : QByteArray("from pathlib import Path\nPath('result.json').write_text('{}')\n");
+            ASSERT_TRUE(WriteFile(script, body));
+            TerrainHeightmap::ImportControl control;
+            control.m_cancelled = [mode]() { return mode == 2; };
+            const auto result = ExportTerrainCampaign(provider, workspace, game, "6000.0.64f1", profile,
+                "hos", "terrain-import.process-" + QString::number(mode), "2026-09-08T00:00:00Z",
+                &control, mode == 1 ? 30 : 10000);
+            EXPECT_EQ(result.value("status").toString(), "failed") << mode;
+            if (mode == 1) { EXPECT_TRUE(result.value("message").toString().contains("limit")); }
+            if (mode == 2) { EXPECT_TRUE(result.value("message").toString().contains("cancelled")); }
+            if (mode == 3) { EXPECT_TRUE(result.value("message").toString().contains("invalid")); }
+            EXPECT_FALSE(QDir(workspace).exists("Derived"));
+            EXPECT_FALSE(QDir(workspace).exists("SourceExports"));
+        }
+    }
+
+    TEST(TerrainHeightmapTests, NativeProjectionPreservesU16SamplesAndDoesNotOverwritePaintedImage)
+    {
+        QTemporaryDir temporary;
+        const auto raw = temporary.filePath("source.raw");
+        const QByteArray samples = QByteArray::fromHex("000001013412ffff");
+        ASSERT_TRUE(WriteFile(raw, samples));
+        ASSERT_TRUE(WriteFile(raw + ".json", SidecarJson(2, 2, "little-endian")));
+        const auto request = MakeImportRequest(temporary, raw, raw + ".json");
+        const auto imported = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        ASSERT_TRUE(imported.IsSuccess());
+        const auto locator = QDir(temporary.path()).relativeFilePath(QString::fromUtf8(imported.GetValue().m_publishedManifestPath.c_str()));
+        const auto prepared = PrepareNativeTerrain(temporary.path(), locator, request.m_profileBinding, nullptr);
+        ASSERT_EQ(prepared.value("status").toString(), "running");
+        QFile handoff(prepared.value("native_request").toString());
+        ASSERT_TRUE(handoff.open(QIODevice::ReadOnly));
+        const auto metadata = QJsonDocument::fromJson(handoff.readAll()).object();
+        const auto imagePath = metadata.value("image").toString();
+        const auto roundtrip = TerrainHeightmap::ImportImageHeightmapToWorkspace(MakeImageImportRequest(temporary, imagePath));
+        ASSERT_TRUE(roundtrip.IsSuccess());
+        ASSERT_EQ(roundtrip.GetValue().m_publishedTilePaths.size(), 1);
+        EXPECT_EQ(ReadAll(roundtrip.GetValue().m_publishedTilePaths.front()), samples);
+        EXPECT_TRUE(imagePath.endsWith("height_gsi.tif"));
+        ASSERT_TRUE(WriteFile(imagePath, "painted-image-placeholder"));
+        EXPECT_EQ(PrepareNativeTerrain(temporary.path(), locator, request.m_profileBinding, nullptr).value("status").toString(), "running");
+        QFile painted(imagePath); ASSERT_TRUE(painted.open(QIODevice::ReadOnly));
+        EXPECT_EQ(painted.readAll(), "painted-image-placeholder");
+        QFile source(raw); ASSERT_TRUE(source.open(QIODevice::ReadOnly)); EXPECT_EQ(source.readAll(), samples);
+        for (const char* path : {"EditorAssets/foa_maps/example/Map.prefab", "EditorAssets/foa_maps/example/height_gsi.tif", "Staging/TerrainNative/request.json"})
+        { EXPECT_FALSE(TerrainHeightmap::ValidateTerrainPackagePath(path).m_allowed); }
+    }
+
+    TEST(TerrainHeightmapTests, NativeProjectionRejectsStaleProfilesCancellationAndSourceCheckouts)
+    {
+        QTemporaryDir temporary;
+        const auto raw = temporary.filePath("source.raw");
+        ASSERT_TRUE(WriteFile(raw, QByteArray::fromHex("000001013412ffff")));
+        ASSERT_TRUE(WriteFile(raw + ".json", SidecarJson(2, 2, "little-endian")));
+        const auto request = MakeImportRequest(temporary, raw, raw + ".json");
+        const auto imported = TerrainHeightmap::ImportRawHeightmapToWorkspace(request);
+        ASSERT_TRUE(imported.IsSuccess());
+        const auto locator = QDir(temporary.path()).relativeFilePath(QString::fromUtf8(imported.GetValue().m_publishedManifestPath.c_str()));
+        auto stale = request.m_profileBinding; stale.m_gameVersion = "stale";
+        EXPECT_EQ(PrepareNativeTerrain(temporary.path(), locator, stale, nullptr).value("status").toString(), "failed");
+        TerrainHeightmap::ImportControl cancelled; cancelled.m_cancelled = []() { return true; };
+        EXPECT_EQ(PrepareNativeTerrain(temporary.path(), locator, request.m_profileBinding, &cancelled).value("status").toString(), "failed");
+        EXPECT_FALSE(QDir(temporary.path()).exists("EditorAssets"));
+        ASSERT_TRUE(WriteFile(temporary.filePath(".git"), "gitdir: synthetic"));
+        EXPECT_EQ(PrepareNativeTerrain(temporary.path(), locator, request.m_profileBinding, nullptr).value("status").toString(), "failed");
+        EXPECT_FALSE(QDir(temporary.path()).exists("EditorAssets"));
+    }
+
 } // namespace TaintedGrailModdingSDK

@@ -123,8 +123,161 @@ The pane protects unsaved work:
 
 - record, troop, and member selection changes are refused while the corresponding draft is dirty;
 - Foundation refreshes are deferred until drafts are saved or reverted;
-- closing the pane prompts before discarding unsaved drafts;
-- save failures do not publish partial state.
+- closing the pane, switching workspaces or exiting the Editor offers **Save / Discard / Cancel** for actor, troop and member drafts;
+- each save command publishes only after its validation and persistence succeed.
+
+Save includes the current unstaged member form and staged member additions, edits
+and removals. It saves the actor first, then the complete troop definition through
+the existing atomic troop command. These are separate transactions: if the troop
+save fails after the actor succeeds, the actor remains saved and the troop draft
+stays open for correction or retry.
+
+Cancel, Escape and closing the prompt keep the pane open without saving or
+discarding anything. Failed validation or persistence also keeps it open.
+Discard closes the pane without saving its remaining drafts. Clean panes close
+without a prompt. Both docked and floating pane close controls use this protection.
+
+### Pane-close acceptance
+
+Run the native regression against a built pinned Windows Profile Editor and a
+prepared asset cache. Use a fresh output directory outside the product and engine
+source trees:
+
+```powershell
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $FreshOutputRoot
+```
+
+The runner uses an inactive private desktop and synthetic workspace. Its 33
+checks cover docked/floating native close controls, individual and combined
+drafts, cancellation without writes, failed validation, actual locked-catalog
+write failures and retries, staged membership changes, and clean reopening.
+A pass requires the expected loaded module hash and normal Editor exit. The
+recorded acceptance completed all checks with a maximum close transition of
+0.453 seconds against a five-second synthetic fixture budget; this does not
+establish performance for large user catalogs.
+
+### Switching workspaces
+
+Both **SDK Status → Open existing workspace...** and **Catalog Browser → Open
+Workspace...** use the same protection for docked and floating Actor/Troop panes.
+Foundation validates the destination before prompting. Cancel, Escape, dismissing
+the prompt, cancelling the picker or an invalid destination preserves the current
+workspace and drafts.
+
+After opening a workspace, reopen the saved mod in Pack Manager before authoring.
+Population saves require an active mod; a missing active mod is a failed Save and
+keeps the current workspace open.
+
+**Save** writes dirty actor and troop/member forms to the current workspace before
+switching. A failed Save keeps that workspace open for correction or retry. If an
+earlier actor save succeeds, it stays saved even when the troop save fails or
+another pane later cancels the switch. **Discard** grants permission to replace the
+workspace, but the drafts remain in memory until Foundation commits the change.
+Another pane's veto or a failed destination reload therefore preserves them.
+
+After a successful switch, selections, member staging and all draft forms reset,
+including on same-workspace reloads. Saving before reloading the same workspace
+reads the newly saved catalog and evidence. Matching record IDs in another
+workspace never inherit the previous workspace's drafts. Clean panes do not prompt.
+
+### Workspace-switch acceptance
+
+Run both picker routes with separate fresh external output directories:
+
+```powershell
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $StatusOutputRoot `
+  -Suite workspace-status
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $CatalogOutputRoot `
+  -Suite workspace-catalog
+```
+
+Each route requires 45 checks spanning docked and floating layouts, retained draft
+fields and saved catalog bytes, partial saves, actual locked-file failures, retries,
+staged member changes, later-pane vetoes, failed post-admission reloads and shared
+IDs in separate roots. The runner also verifies the loaded module and normal
+Editor exit. Its five-second per-interaction budget applies to this synthetic
+fixture, not arbitrary catalog sizes.
+
+The pinned Windows Profile acceptance passed all 90 workspace checks with normal
+Editor exits. Maximum measured workspace interaction was 1.204 seconds.
+
+### Exiting the entire Editor
+
+**File → Exit** and the main Editor window close control offer **Save / Discard /
+Cancel** for dirty Actor/Troop forms, in both docked and floating layouts. Cancel,
+Escape and dismissing the prompt keep the Editor open with the drafts intact.
+Failed validation or persistence also cancels exit so the remaining drafts can
+be corrected or saved again. A nested exit request while a prompt is open is refused.
+
+Save includes actor, troop, staged member additions/edits/removals and the current
+unstaged member form. The actor saves first; a later troop failure keeps that
+successful actor save. Clean forms do not prompt or get saved again.
+
+Discard takes effect only when the entire Editor exit succeeds. If another pane
+later cancels exit, the Actor/Troop pane reopens with its raw fields (including
+invalid member text), selected records/member, staged changes and dirty flags.
+Successful saves remain saved if a later pane cancels. This in-memory rollback belongs
+to the same close attempt and workspace. The separate recovery checkpoint described
+below also survives an interrupted Editor process.
+
+### Whole-Editor exit acceptance
+
+Run each suite with a separate fresh external output directory:
+
+```powershell
+& ./Gems/TaintedGrailModdingSDK/Tools/editor_tests/run_actor_troop_close_smoke.ps1 `
+  -EditorExecutable "$BuildRoot/bin/profile/Editor.exe" `
+  -EngineRoot $EngineRoot -CacheRoot $CacheRoot -OutputRoot $FreshOutputRoot `
+  -Suite exit-save
+```
+
+Repeat with `exit-discard`, `exit-clean` and `exit-rollback`. These native suites
+exercise File → Exit, the main window close control and cancellation through
+legacy Python exit; they do not use forced pane-close APIs. They check raw forms,
+catalog bytes, actual locked-file failure and retry, partial saves, staged member
+changes, repeated later-pane rollback and clean reopening after a successful save.
+Each successful final case must load the expected module and exit normally.
+The five-second interaction budget applies only to the synthetic fixture.
+
+The pinned Windows Profile acceptance passed all 50 whole-exit checks with normal
+Editor exits. The maximum recorded whole-exit interaction was 1.500 seconds.
+Pane-close and both workspace-picker regressions also passed (123 checks).
+
+### Recovering after a crash or forced shutdown
+
+The Actor/Troop Editor keeps a local recovery checkpoint for its current workspace.
+After an interrupted session, reopening the pane offers **Restore drafts** or
+**Discard recovery copy**. Restore brings back raw actor/troop/member fields and
+staged member additions, edits and removals for review; it does not save them to
+the catalog. Review the forms before saving if the saved catalog has changed.
+
+An unresolved offer blocks editing and survives closing the pane or switching
+away. Unreadable, incompatible or unavailable-definition copies are kept with an
+explanation. **Retry recovery** checks again after the problem is corrected;
+**Discard recovery copy** explicitly removes that copy. A live second Editor
+cannot read, overwrite or discard the first Editor's owned checkpoint.
+
+Completed checkpoints survive forced termination. Edits since the most recent
+checkpoint can be lost. Save checkpoints the remaining drafts; successful
+pane/workspace/Editor Discard retires the appropriate copy only after acceptance.
+A later pane's exit veto or a failed Save preserves recovery.
+
+See [Actor and Troop draft recovery](ACTOR_TROOP_DRAFT_RECOVERY.md) for the private
+format, bounds, lifecycle and native multi-process acceptance command.
+
+Pinned Windows Profile acceptance passed 13 recovery process phases (44 checks),
+including five deliberate terminations after verified checkpoints and eight normal
+exits. The maximum measured checkpoint UI gap was 0.078 seconds against a 0.5-second
+budget. All 173 existing close/workspace/exit regression checks passed against the
+same module; maximum interaction was 2.266 seconds against the five-second fixture
+budget. Compiled acceptance passed 541 tests, including 11 new recovery tests; two
+existing symlink-privilege cases remain explicitly skipped.
 
 ## Persistence expectations
 

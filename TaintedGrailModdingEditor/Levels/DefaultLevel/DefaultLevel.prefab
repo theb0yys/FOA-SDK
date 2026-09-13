@@ -113,6 +113,15 @@
                 "Component_[952797371922080273]": {
                     "$type": "EditorPendingCompositionComponent",
                     "Id": 952797371922080273
+                },
+                "EditorPhysicalSkyComponent": {
+                    "$type": "AZ::Render::EditorPhysicalSkyComponent",
+                    "Id": 10388470246601544901,
+                    "Controller": {
+                        "Configuration": {
+                            "Turbidity": 2
+                        }
+                    }
                 }
             }
         },
@@ -473,21 +482,6 @@
             "Id": "Entity_[1180934129011]",
             "Name": "Global Sky",
             "Components": {
-                "Component_[11231930600558681245]": {
-                    "$type": "AZ::Render::EditorHDRiSkyboxComponent",
-                    "Id": 11231930600558681245,
-                    "Controller": {
-                        "Configuration": {
-                            "CubemapAsset": {
-                                "assetId": {
-                                    "guid": "{215E47FD-D181-5832-B1AB-91673ABF6399}",
-                                    "subId": 1000
-                                },
-                                "assetHint": "lightingpresets/highcontrast/goegap_4k_skyboxcm.exr.streamingimage"
-                            }
-                        }
-                    }
-                },
                 "Component_[1428633914413949476]": {
                     "$type": "EditorLockComponent",
                     "Id": 1428633914413949476

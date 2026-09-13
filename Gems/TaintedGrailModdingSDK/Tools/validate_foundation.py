@@ -102,8 +102,10 @@ def validate_gem_metadata(gem_root: Path) -> None:
             fail(f"gem.json {key} must be {expected!r}")
     if not isinstance(gem.get("version"), str) or not re.fullmatch(r"\d+\.\d+\.\d+", gem["version"]):
         fail("gem.json version must use MAJOR.MINOR.PATCH")
-    if gem.get("dependencies") != []:
-        fail("The editor foundation must not add Gem dependencies yet")
+    # The supervised terrain provider consumes the editor-only discovery API.
+    # Keep this exact allow-list: optional authoring Gems must not become core dependencies.
+    if gem.get("dependencies") != ["ExternalToolchain"]:
+        fail("The editor foundation must depend only on ExternalToolchain")
 
 
 def validate_cmake(gem_root: Path) -> None:
@@ -121,6 +123,7 @@ def validate_cmake(gem_root: Path) -> None:
             "Gem::${gem_name}.Core.Static",
             "Gem::${gem_name}.Framework.Static",
             "AZ::AzToolsFramework",
+            "Gem::ExternalToolchain.API",
             "NAME ${gem_name}.Catalog.Tests",
             "ly_add_googletest",
             "ly_create_alias(NAME ${gem_name}.Tools",

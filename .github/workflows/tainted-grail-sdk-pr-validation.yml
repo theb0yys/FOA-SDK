@@ -119,6 +119,10 @@ jobs:
       - name: Validate pull-request policy contract
         run: python Gems/TaintedGrailModdingSDK/Tools/validate_pr_policy.py --event "$GITHUB_EVENT_PATH"
 
+      - name: Install pinned native source-reader test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --only-binary=:all: --no-deps -r Gems/TaintedGrailModdingSDK/Tools/item_preview_requirements.txt
+
       - name: Run non-compiled TG SDK validation layer
         shell: bash
         run: |

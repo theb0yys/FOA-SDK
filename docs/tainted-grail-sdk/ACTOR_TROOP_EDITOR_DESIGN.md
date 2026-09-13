@@ -365,8 +365,13 @@ The **Tainted Grail Actor and Troop Editor** should provide:
 - read-only action-lane matrix;
 - save and revert controls;
 - independently tracked actor, troop, and unstaged-member drafts: selection and shared Foundation refreshes
-  cannot discard them, saving one tab preserves the other tab, and closing with unsaved work requires explicit
-  discard confirmation;
+  cannot discard them, saving one tab preserves the other tab, and closing with unsaved work offers
+  Save/Discard/Cancel. Save uses the existing actor and atomic troop commands, including the unstaged member
+  form; Cancel and failed Save keep the pane open. Earlier successful saves remain saved if a later save fails;
+- workspace admission uses the same Save/Discard/Cancel decisions and saves to the still-current workspace.
+  Discard retires drafts only on Foundation's successful replacement notification, so another handler's veto
+  or failed reload preserves them. Successful replacement resets selections and member staging even for
+  same-workspace reloads or matching record IDs in another root;
 - clear empty, invalid, blocked, and persistence-failure states.
 
 The pane does not create canonical records, grant permission, invoke an adapter, launch FoA, or expose spawn
@@ -518,3 +523,25 @@ Approval authorises this actor/troop authoring vertical slice and the schema-2 m
 It does not authorise spawn or encounter execution, faction mutation, world placement, quest behavior, asset
 extraction, runtime adapters, process launch, deployment, save mutation, telemetry, proprietary fixtures, or
 later Phase 6 schemas not covered by a focused review.
+
+
+### Whole-Editor close transaction
+
+The ui-framework-owned Actor/Troop pane uses the same transaction-local guard
+pattern as the existing Item/Recipe pane. At the pinned host's main-window close
+dispatch, accepted panes can be destroyed before later panes or independent files
+veto shutdown. A shared guard therefore retains authoring controls, stable
+selections, staged member rows/removals and dirty flags after this pane accepts.
+If shutdown is vetoed, it reopens and restores the pane only in the same workspace.
+The retained snapshot is released at the end of the synchronous close dispatch.
+Repeated/nested close events cannot overwrite the outer snapshot.
+
+The guard captures raw UI values rather than serializing population models, so
+invalid member text remains editable after rollback. Save uses existing actor
+and atomic troop commands; the snapshot is taken after successful saves so later
+cancellation never marks saved forms dirty again. Workspace commit forgets any
+retained exit snapshot. The shared raw snapshot also feeds the private, versioned
+[Actor/Troop recovery service](ACTOR_TROOP_DRAFT_RECOVERY.md). That service owns
+atomic checkpoints and per-workspace locks; the guard retains its drained store
+through all later exit prompts and retires the copy only on final acceptance.
+Public authoring contracts remain unchanged.

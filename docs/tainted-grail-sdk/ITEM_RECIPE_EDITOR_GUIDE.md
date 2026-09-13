@@ -67,7 +67,32 @@ workspace files leave the current forms intact.
 Reloading the same workspace uses the same protection. A successful Save reloads
 the newly saved profiles, links and evidence. A successful replacement resets the
 forms, so drafts cannot appear in another workspace with matching record IDs.
-Crash recovery for this editor remains separate work. Saved definitions and links
+Exiting the entire Editor also offers **Save / Discard / Cancel** for every
+retained draft when using File Exit or the main window's Close button. Cancel,
+Escape, prompt dismissal or a failed Save keeps the Editor open. If another pane
+cancels after Item and Recipe Editor has accepted, its forms are restored with their saved/unsaved state intact. Earlier
+successful saves remain saved, even when a later pane cancels the exit.
+
+Legacy Python `general.exit()` calls Qt's close-all-windows operation, which may
+close floating panes individually before reaching the main window. Those panes
+use their ordinary close guard; use File Exit or main-window Close for coordinated
+shutdown rollback.
+
+After a crash or forced shutdown, reopening the same workspace offers **Restore
+drafts** or **Discard recovery copy**. Restore brings back checkpointed item and
+recipe profiles, ingredient/output forms and acquisition fields, including drafts
+for other definitions. It changes the forms only; use the ordinary Save commands
+to write the catalog. Recovery copies stay separate for each workspace.
+
+Checkpoints run in the background after edits, at intervals of about 750 ms.
+Changes made after the last completed checkpoint can be lost. An unresolved offer
+is kept when closing or switching away. A damaged or incompatible copy is kept
+with an explanation; Retry recovery or explicitly discard it to continue.
+
+Successful Save updates recovery for the remaining unsaved forms. Discard retires
+the copy, while Cancel and failed Save preserve drafts. See
+[Item and Recipe draft recovery](ITEM_RECIPE_DRAFT_RECOVERY.md) for storage,
+compatibility limits and verification. Saved definitions and links continue to
 use the canonical catalog's supported schema and migration path.
 
 Acquisition relationships and evidence/permission details have separate tabs.
@@ -450,3 +475,18 @@ catalog writes, partial Save and retry, same-root reload freshness, a later Pack
 Manager veto, failed post-admission reload and matching record IDs across roots.
 Each workspace interaction must complete within the five-second synthetic fixture
 budget. Run the default close suite as a separate regression check.
+
+## Whole-Editor exit acceptance
+
+Run the private Editor runner with `-Suite exit-save`, `-Suite exit-discard`,
+`-Suite exit-clean` and `-Suite exit-rollback`, each with a fresh external output
+root. These cases exercise the actual File Exit action, main-window Close and
+posted Python exit cancellation with docked/floating forms. They check all retained
+profiles, joins and acquisition fields; validation and real file-lock failures;
+partial Save and retry; and a later Pack Manager veto after Discard and Save.
+
+A pass requires the expected catalog bytes, per-check results, a matching loaded
+SDK module, about-to-quit, and native exit code zero with no forced cleanup.
+Cancellation must leave the Editor and drafts usable. The synthetic interaction
+budget is five seconds. Run the separate pane-close and workspace-switch suites
+as regressions. This is Editor authoring evidence, not game runtime sign-off.

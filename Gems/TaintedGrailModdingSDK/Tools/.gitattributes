@@ -1,0 +1,4 @@
+# Preserve reviewed transport bytes used by extender acceptance checkpoints.
+# Formatting changes require fresh evidence bindings.
+tge_sdk_client.py -text whitespace=cr-at-eol
+tge_sdk_transport.py -text whitespace=cr-at-eol

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include <AzCore/Outcome/Outcome.h>
 #include <AzCore/base.h>
 #include <AzCore/std/containers/vector.h>
@@ -183,6 +185,13 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         AZStd::vector<ValidationIssue> m_issues;
     };
 
+    struct ImportControl
+    {
+        std::function<bool()> m_cancelled;
+        std::function<void(AZ::u64, AZ::u64)> m_progress;
+        bool IsCancelled() const { return m_cancelled && m_cancelled(); }
+    };
+
     struct RawHeightmapImportRequest
     {
         AZStd::string m_workspaceRoot;
@@ -194,6 +203,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         AZStd::string m_createdAtUtc;
         AZStd::string m_importerId = "importer.terrain-heightmap.raw-u16";
         AZStd::string m_importerVersion = "1.0.0";
+        AZStd::string m_provenanceLimitations;
+        const ImportControl* m_control = nullptr;
     };
 
     struct RawHeightmapImportResult
@@ -222,6 +233,7 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         AZStd::string m_createdAtUtc;
         AZStd::string m_importerId = "importer.terrain-heightmap.image-u16";
         AZStd::string m_importerVersion = "1.0.0";
+        const ImportControl* m_control = nullptr;
     };
 
     struct ImageHeightmapImportResult
@@ -236,6 +248,22 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         AZ::u64 m_sourceByteSize = 0;
         AZ::u64 m_tileCount = 0;
     };
+
+    struct WorkspaceTerrainPreview
+    {
+        TerrainHeightmapDocumentV1 m_document;
+        AZ::u32 m_width = 0;
+        AZ::u32 m_height = 0;
+        AZStd::vector<AZ::u8> m_grayscale;
+        AZStd::vector<AZ::u16> m_samples;
+    };
+
+    AZ::Outcome<TerrainHeightmapDocumentV1, AZStd::string> ParseDocumentJson(const AZStd::string& json);
+    AZ::Outcome<void, AZStd::string> ReadImageImportSidecar(
+        const AZStd::string& path, ImageHeightmapImportRequest& request);
+    AZ::Outcome<WorkspaceTerrainPreview, AZStd::string> LoadWorkspaceTerrainPreview(
+        const AZStd::string& workspaceRoot, const AZStd::string& manifestRelativePath,
+        const ProfileBinding& profile, const ImportControl* control = nullptr, bool includeSamples = false);
 
     ValidationResult ValidateDocument(const TerrainHeightmapDocumentV1& document);
     AZStd::string BuildCanonicalDocumentJson(const TerrainHeightmapDocumentV1& document);

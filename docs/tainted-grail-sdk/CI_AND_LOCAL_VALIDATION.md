@@ -91,6 +91,7 @@ There is no `pull_request_target` trigger. Validation must not push commits, mov
 - records the reviewed base/head;
 - runs `git diff --check`;
 - validates the pull-request policy contract;
+- installs the pinned binary-only source-reader dependencies from `item_preview_requirements.txt` for the synthetic terrain and scene tests;
 - runs the non-compiled repository validation layer;
 - classifies whether the changed paths can affect the O3DE host/build, Windows prerequisite, or Windows installer surfaces.
 
@@ -265,3 +266,54 @@ fixture functions exist only in the acceptance DLL. Record normal exit and joine
 workers separately from successful compilation.
 
 M3 does not establish game-runtime, deployment, signing or release evidence.
+
+
+## M4 Framework planner validation
+
+The [M4 design](FRAMEWORK_PLANNER_M4_DESIGN.md) adds a pure Framework preview
+adapter and routes six existing panes through Foundation. Run
+`validate_framework_planners.py` plus the existing M1, Catalog and source-policy
+checks. The exact M4 consumer allowlist does not broaden M1 Core dependencies.
+
+Build and run the Catalog tests, including FrameworkPlanner, assessment and
+work-order parity tests. The M3 operational target additionally exercises a
+real Framework Preview callback reading the exact M4 source snapshot; that test
+does not submit a process. Existing M1/M3 regressions still apply. Use
+`--no-tests=error` for every CTest selection.
+
+Run `Tools/editor_tests/framework_planner_lifecycle_smoke.py` in a disposable
+pinned Editor project with `FOA_M4_EDITOR_OUTPUT` set to private evidence output.
+The test opens, checks the read-only tables, closes and reopens all six existing
+panes. Its empty-workspace screenshots prove pane lifecycle only. Ready/refused
+planner payloads and source binding are proved by compiled synthetic fixtures.
+
+M4 adds no provider execution, persistence format, installer operation or game
+deployment. Those operational rows are NOT_APPLICABLE to this change, not passes.
+
+
+## M5 isolated execution validation
+
+The [M5 design](FRAMEWORK_SYNTHETIC_M5_DESIGN.md) adds an explicitly selected,
+private synthetic target and a native provider. Run `validate_framework_synthetic.py`
+and the existing M1/M3/M4 and source-policy guards. Build the affected Framework
+and Editor targets plus `TaintedGrailModdingSDK.Synthetic.Provider`. The existing
+Framework operational CTest selection supplies `FOA_M5_PROVIDER` and runs the
+`FrameworkSyntheticNative.*` cases alongside the original staging regressions.
+Keep `--no-tests=error` on each Catalog, CapabilityExecution, FrameworkExecution
+contract and operational selection.
+
+Acceptance requires actual Build -> Package -> Deploy -> Launch -> Verify ->
+Rollback processes; unchanged baseline/canary and original file identities;
+failed, cancelled and timed-out launches; drift, corrupt backup, revoked admission,
+full recovery storage and explicit recovery refusal/success. Run the committed
+`Tools/editor_tests/framework_synthetic_lifecycle_smoke.py` in a disposable exact-pin
+Editor project in success, cancel, crash and recover modes. Only crash/recover share
+a target. The crash lane deliberately terminates that test Editor after deployment;
+recovery requires fresh confirmation and cannot rewrite prior execution history.
+Record host exit, joined workers, exact restoration and timings. This is
+programmatic Editor service-lifecycle evidence. Manual visual acceptance is a
+separate lane; M5 adds no pane or operator control. Screenshot or window-discovery
+failures must not masquerade as native workflow results.
+
+These results establish the isolated synthetic workflow only. Fall of Avalon
+runtime, installer, release and general deployment validation remain separate.

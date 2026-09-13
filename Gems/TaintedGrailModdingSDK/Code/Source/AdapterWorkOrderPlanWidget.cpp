@@ -204,7 +204,7 @@ namespace TaintedGrailModdingSDK
     void AdapterWorkOrderPlanWidget::Refresh()
     {
         const FoundationService& foundation = FoundationService::Get();
-        const AdapterWorkOrderPlanSet planSet = m_planningService.BuildPlans(
+        const AdapterWorkOrderPlanSet planSet = FoundationService::Get().GetFrameworkPlanners().BuildPlans(
             foundation.GetWorkspace(),
             foundation.GetPacks(),
             AdapterContractRegistry::Get(),

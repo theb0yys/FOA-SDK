@@ -38,12 +38,19 @@ ly_add_source_properties(
             CanonicalManifestBytesMatchV1=CanonicalManifestBytesMatchIncludingEmptyDisplayNameV1
 )
 
+if(PAL_PLATFORM_NAME STREQUAL "Windows")
+    ly_add_target(NAME ${gem_name}.Synthetic.Provider APPLICATION NAMESPACE Gem NO_UNITY
+        FILES_CMAKE taintedgrailmoddingsdk_synthetic_provider_files.cmake
+        COMPILE_DEFINITIONS PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    set_target_properties(${gem_name}.Synthetic.Provider PROPERTIES WIN32_EXECUTABLE FALSE)
+endif()
+
 # M3 is a host-private Framework consumer; M1 retains its Core-only boundary.
 ly_add_target(
     NAME ${gem_name}.FrameworkExecution.Static STATIC
     NAMESPACE Gem
     NO_UNITY
-    FILES_CMAKE taintedgrailmoddingsdk_framework_execution_files.cmake
+    FILES_CMAKE taintedgrailmoddingsdk_framework_execution_files.cmake taintedgrailmoddingsdk_framework_synthetic_files.cmake
     INCLUDE_DIRECTORIES
         PUBLIC Source "${CMAKE_CURRENT_LIST_DIR}/../../ExternalToolchain/Code/Source"
     BUILD_DEPENDENCIES
@@ -68,9 +75,20 @@ ly_add_target(
             Gem::${gem_name}.Core.Static
             Gem::${gem_name}.FrameworkExecution.Static
         PRIVATE
+            Gem::ExternalToolchain.API
             AZ::AzToolsFramework
+            AZ::SceneCore
+            AZ::SceneData
+            AZ::AssetBuilderSDK
+            Gem::Atom_RPI.Public
+            Gem::Atom_RHI.Reflect
 )
 
+# The private source-program route currently targets the qualified Windows DX12 host.
+if(PAL_PLATFORM_NAME STREQUAL "Windows")
+    ly_target_link_libraries(${gem_name}.Framework.Static PRIVATE Gem::Atom_RHI_DX12.Reflect Gem::Atom_RPI.Edit)
+    target_compile_definitions(${gem_name}.Framework.Static PRIVATE TG_SOURCE_SHADER_DX12)
+endif()
 ly_add_target(
     NAME ${gem_name}.Editor GEM_MODULE
     NAMESPACE Gem
@@ -83,6 +101,30 @@ ly_add_target(
         PRIVATE
             Gem::${gem_name}.Framework.Static
             AZ::AzToolsFramework
+            AZ::SceneCore
+            AZ::SceneData
+            AZ::AssetBuilderSDK
+            Gem::Atom_RPI.Public
+            Gem::Atom_RHI.Reflect
+)
+
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_terrain_native_editor.py" tg_native_terrain_tool_source)
+ly_add_source_properties(
+    SOURCES Source/TerrainNativeHandoff.cpp
+    PROPERTY COMPILE_DEFINITIONS
+    VALUES TG_SDK_NATIVE_TERRAIN_TOOL_SOURCE="${tg_native_terrain_tool_source}"
+)
+ly_install_files(FILES ../Tools/foa_terrain_native_editor.py DESTINATION scripts/foa-sdk)
+
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_campaign_heightmap_export.py" tg_campaign_export_tool_source)
+ly_add_source_properties(
+    SOURCES Source/TerrainCampaignExportHost.cpp
+    PROPERTY COMPILE_DEFINITIONS
+    VALUES TG_SDK_CAMPAIGN_EXPORT_TOOL_SOURCE="${tg_campaign_export_tool_source}"
+)
+ly_install_files(
+    FILES ../Tools/foa_campaign_heightmap_export.py ../Tools/foa_heightmap_importer.py
+    DESTINATION scripts/foa-sdk
 )
 
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_asset_browser_pane_refresh.py" tg_asset_browser_pane_refresh_tool_source)
@@ -280,7 +322,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
         endif()
         set(tg_m3_env)
         if(PAL_PLATFORM_NAME STREQUAL "Windows")
-            set(tg_m3_env "${CMAKE_COMMAND}" -E env "FOA_M2_FIXTURE=$<TARGET_FILE:ExternalToolchain.Execution.Fixture>")
+            set(tg_m3_env "${CMAKE_COMMAND}" -E env "FOA_M2_FIXTURE=$<TARGET_FILE:ExternalToolchain.Execution.Fixture>" "FOA_M5_PROVIDER=$<TARGET_FILE:TaintedGrailModdingSDK.Synthetic.Provider>")
         endif()
         ly_add_googletest(
             NAME Gem::${gem_name}.FrameworkExecution.${tg_m3_lane}
@@ -292,7 +334,7 @@ if(PAL_TRAIT_BUILD_TESTS_SUPPORTED AND PAL_TRAIT_TEST_GOOGLE_TEST_SUPPORTED)
         )
         ly_add_dependencies(${gem_name}.FrameworkExecution.${tg_m3_lane} AZ::AzTestRunner)
         if(tg_m3_lane STREQUAL "Operational.Tests")
-            ly_add_dependencies(${gem_name}.FrameworkExecution.${tg_m3_lane} ExternalToolchain.Execution.Fixture)
+            ly_add_dependencies(${gem_name}.FrameworkExecution.${tg_m3_lane} ExternalToolchain.Execution.Fixture ${gem_name}.Synthetic.Provider)
             target_link_libraries(${gem_name}.FrameworkExecution.${tg_m3_lane} PRIVATE Gem::${gem_name}.Framework.Static AZ::AzToolsFramework)
         endif()
     endforeach()

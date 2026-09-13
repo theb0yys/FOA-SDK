@@ -6,6 +6,12 @@
  */
 
 #include "TerrainAuthoringContracts.h"
+#include "TerrainImportWidget.h"
+#include <AzToolsFramework/API/ToolsApplicationAPI.h>
+#include <AzToolsFramework/API/ViewPaneOptions.h>
+#include <QRect>
+#include <QDir>
+#include <ExternalToolchain/ExternalToolchainBus.h>
 
 #include <ExtensionRequestBus.h>
 
@@ -19,6 +25,7 @@ namespace TerrainAuthoring
 {
     class TerrainAuthoringShellComponent final
         : public AZ::Component
+        , private AzToolsFramework::EditorEvents::Bus::Handler
     {
     public:
         AZ_COMPONENT(
@@ -38,10 +45,45 @@ namespace TerrainAuthoring
             AZ::ComponentDescriptor::DependencyArrayType& required)
         {
             required.push_back(AZ_CRC_CE("TaintedGrailModdingSDKService"));
+            required.push_back(AZ_CRC_CE("ExternalToolchainService"));
         }
 
         void Activate() override
         {
+            using namespace ExternalToolchain;
+            ExternalToolProviderDescriptor provider;
+            provider.m_providerId = "foa.terrain-extraction";
+            provider.m_displayName = "Campaign Heightmap Extraction";
+            provider.m_providerVersion = "1.0.0";
+            provider.m_minimumHostApiVersion = {1, 1, 0};
+            provider.m_toolFamily = ToolFamily::Utility;
+            provider.m_platforms = {"windows"};
+            provider.m_capabilities.m_supportsBatch = true;
+            provider.m_capabilities.m_supportsHeadless = true;
+            provider.m_capabilities.m_producesAssetSources = true;
+            const auto runtime = QDir(qEnvironmentVariable("LOCALAPPDATA")).filePath("FOA-SDK/Tools/Heightmap/Scripts/python.exe").toUtf8();
+            provider.m_configuration = {
+                {"executable-path", "Terrain Python runtime", ConfigurationValueKind::Path, AZStd::string(runtime.constData()), true, false},
+                {"tool-version", "UnityPy version", ConfigurationValueKind::SemanticVersion, "1.24.2", true, false}};
+            ExternalToolCommandDescriptor command;
+            command.m_commandId = "export-campaign";
+            command.m_displayName = "Export campaign ground heightmap";
+            command.m_mode = CommandMode::Batch;
+            command.m_inputKinds = {"foa.campaign-heightmap-export.request"};
+            command.m_outputKinds = {"foa.campaign-heightmap-export.result"};
+            command.m_supportsCancellation = true;
+            provider.m_commands.push_back(command);
+            ExternalToolDiscoveryProbeDescriptor probe;
+            probe.m_probeId = "terrain-python";
+            probe.m_pathConfigurationKey = "executable-path";
+            probe.m_versionConfigurationKey = "tool-version";
+            probe.m_minimumSupportedVersion = "1.24.2";
+            probe.m_maximumSupportedVersion = "1.24.2";
+            probe.m_platforms = {"windows"};
+            provider.m_discoveryProbes.push_back(probe);
+            ProviderOperationResult registration;
+            ExternalToolchainRequestBus::BroadcastResult(registration, &ExternalToolchainRequests::RegisterProvider, provider);
+            AZ_Warning("TerrainAuthoring", registration.m_success, "Campaign provider registration: %s", registration.m_message.c_str());
             AZStd::string error;
             if (!ValidateShellContract(&error))
             {
@@ -58,6 +100,10 @@ namespace TerrainAuthoring
                 &TaintedGrailModdingSDK::ExtensionRequests::RegisterExtension,
                 BuildExtensionDeclaration(),
                 &error);
+            if (m_registered)
+            {
+                AzToolsFramework::EditorEvents::Bus::Handler::BusConnect();
+            }
             if (!m_registered)
             {
                 AZ_Error(
@@ -70,6 +116,8 @@ namespace TerrainAuthoring
 
         void Deactivate() override
         {
+            if (m_viewRegistered) { AzToolsFramework::UnregisterViewPane("Heightmap Importer"); m_viewRegistered = false; }
+            AzToolsFramework::EditorEvents::Bus::Handler::BusDisconnect();
             if (!m_registered)
             {
                 return;
@@ -91,6 +139,20 @@ namespace TerrainAuthoring
         }
 
     private:
+        void NotifyRegisterViews() override
+        {
+            if (!m_registered || m_viewRegistered) { return; }
+            AzToolsFramework::ViewPaneOptions options;
+            options.paneRect = QRect(100, 100, 440, 680);
+            options.preferedDockingArea = Qt::LeftDockWidgetArea;
+            options.isDeletable = true;
+            options.isPreview = true;
+            options.showInMenu = false;
+            options.saveKeyName = QStringLiteral("TerrainAuthoring.HeightmapImporter");
+            AzToolsFramework::RegisterViewPane<TerrainImportWidget>("Heightmap Importer", "Tainted Grail SDK", options);
+            m_viewRegistered = true;
+        }
+        bool m_viewRegistered = false;
         bool m_registered = false;
     };
 

@@ -30,6 +30,9 @@ namespace TaintedGrailModdingSDK
     private:
         void closeEvent(QCloseEvent* event) override;
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
+        bool ConfirmDraftReplacement(const QString& action);
         void RefreshChoices();
         void Load(const AZStd::string& recordId);
         void MarkDirty();
@@ -38,7 +41,7 @@ namespace TaintedGrailModdingSDK
         void AddEntry();
         void RemoveEntry();
         void Create();
-        void Save();
+        bool Save();
         void Status(const QString& text, bool error = false);
         void ReadFields();
         bool SameWorkspace() const;
@@ -65,8 +68,11 @@ namespace TaintedGrailModdingSDK
         EncounterDefinition m_draft;
         AZStd::string m_workspaceId;
         AZStd::string m_profileId;
+        AZStd::string m_workspaceFile;
+        AZStd::string m_workspaceRoot;
         bool m_loading = false;
         bool m_dirty = false;
         bool m_saving = false;
+        bool m_unsavedPromptOpen = false;
     };
 } // namespace TaintedGrailModdingSDK

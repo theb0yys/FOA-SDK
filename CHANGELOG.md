@@ -1,5 +1,22 @@
 # Changelog
 
+## M5 isolated synthetic execution
+
+- Add an explicit six-phase synthetic workflow using the existing Framework and M2 supervisor.
+- Apply verified payloads only to a newly owned test target, with pinned file identities, durable intent, exact rollback and bounded recovery observations.
+- Preserve the original execution outcome after rollback and require fresh confirmation for interrupted-target recovery.
+- Add native and disposable Editor acceptance lanes; no game deployment or runtime promotion is enabled.
+
+## M4 Framework planner adaptation
+
+- Route existing work-order, build, package, deployment and assessment previews
+  through Foundation's shared planner service.
+- Bind immutable build/package/deployment source snapshots to exact execution
+  requests, preserving V1 canonical bytes and refusing stale or unready inputs.
+- Add compiled owner parity, source drift, rollback-plan and performance coverage,
+  an M3 preview consumer check and a six-pane Editor lifecycle fixture.
+
+
 ## Framework execution M3
 
 - Add Foundation-owned immutable planning, reviewed provider/policy admission and

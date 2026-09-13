@@ -284,6 +284,7 @@ try {
 
         $editorArguments = @(
             "--project-path=$projectRoot",
+            "--engine-path=$engineRootResolved",
             "--runpythontest",
             $smokeScript,
             "--pythontestcase=ItemViewerLifecycleSmoke",
@@ -297,6 +298,7 @@ try {
             $editorProcess = Start-Process -FilePath $editorCandidates[0].FullName `
                 -ArgumentList $argumentLine `
                 -WorkingDirectory $projectRoot `
+                -WindowStyle Hidden `
                 -PassThru
             try {
                 Wait-Process -Id $editorProcess.Id -Timeout $EditorSmokeTimeoutSeconds -ErrorAction Stop

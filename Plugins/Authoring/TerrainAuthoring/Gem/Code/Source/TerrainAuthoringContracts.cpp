@@ -24,8 +24,7 @@ namespace TerrainAuthoring
         bool StartsWith(const AZStd::string& value, const char* prefix)
         {
             const AZStd::string expected(prefix);
-            return value.size() >= expected.size()
-                && value.substr(0, expected.size()) == expected;
+            return value.size() >= expected.size() && value.substr(0, expected.size()) == expected;
         }
 
         TerrainAuthoringCommandDescriptor Command(
@@ -43,25 +42,20 @@ namespace TerrainAuthoring
             descriptor.m_requiresUserSelectedLocalSource = requiresUserSelectedLocalSource;
             descriptor.m_requiresValidatedTerrainDocument = requiresValidatedTerrainDocument;
             descriptor.m_writesWorkspaceRevision = writesWorkspaceRevision;
-            descriptor.m_availableInShell = false;
+            descriptor.m_availableInShell = kind == TerrainAuthoringCommandKind::ImportLocalHeightmap ||
+                kind == TerrainAuthoringCommandKind::OpenDocument || kind == TerrainAuthoringCommandKind::OpenInEditor;
             descriptor.m_localOnly = true;
-            descriptor.m_invokesPreview = false;
-            descriptor.m_invokesAssetProcessor = false;
+            descriptor.m_invokesPreview = descriptor.m_availableInShell;
+            descriptor.m_invokesAssetProcessor = kind == TerrainAuthoringCommandKind::OpenInEditor;
             descriptor.m_invokesRuntime = false;
             return descriptor;
         }
 
         bool HasBlockedAuthority(const TerrainAuthoringAuthorityState& authority)
         {
-            return !authority.m_runtimeUseAllowed
-                && !authority.m_deploymentAllowed
-                && !authority.m_publicationAllowed
-                && !authority.m_packagingAllowed
-                && !authority.m_gameWriteAllowed
-                && !authority.m_evidencePromotionAllowed
-                && !authority.m_directFoAInstallScanAllowed
-                && !authority.m_externalProcessAllowed
-                && !authority.m_roadAtlasMutationAllowed;
+            return !authority.m_runtimeUseAllowed && !authority.m_deploymentAllowed && !authority.m_publicationAllowed &&
+                !authority.m_packagingAllowed && !authority.m_gameWriteAllowed && !authority.m_evidencePromotionAllowed &&
+                !authority.m_directFoAInstallScanAllowed && !authority.m_externalProcessAllowed && !authority.m_roadAtlasMutationAllowed;
         }
     } // namespace
 
@@ -71,7 +65,7 @@ namespace TerrainAuthoring
         declaration.m_extensionId = TerrainAuthoringExtensionId;
         declaration.m_displayName = TerrainAuthoringDisplayName;
         declaration.m_version = TerrainAuthoringVersion;
-        declaration.m_supportedGameVersions = { "1.23.401" };
+        declaration.m_supportedGameVersions = { "1.0.0", "1.23.401" };
         declaration.m_supportedBranches = { "il2cpp", "mono" };
         declaration.m_capabilities = {
             TaintedGrailModdingSDK::ExtensionAPI::Capability::ReadActiveProfile,
@@ -83,10 +77,24 @@ namespace TerrainAuthoring
     {
         return {
             Command(
+                TerrainAuthoringCommandKind::OpenInEditor,
+                "terrain-authoring.open-in-editor",
+                "Open workspace terrain with native O3DE level components",
+                false,
+                true,
+                false),
+            Command(
                 TerrainAuthoringCommandKind::ImportLocalHeightmap,
                 "terrain-authoring.import-local-heightmap",
                 "Explicit user-selected local TerrainHeightmapDocumentV1 import",
                 true,
+                false,
+                true),
+            Command(
+                TerrainAuthoringCommandKind::ImportCampaignHeightmap,
+                "terrain-authoring.import-campaign-heightmap",
+                "Unavailable pending faithful campaign source preservation and game round-trip proof",
+                false,
                 false,
                 true),
             Command(
@@ -142,30 +150,24 @@ namespace TerrainAuthoring
     bool ValidateShellContract(AZStd::string* error)
     {
         const auto declaration = BuildExtensionDeclaration();
-        if (declaration.m_extensionId != TerrainAuthoringExtensionId
-            || declaration.m_displayName != TerrainAuthoringDisplayName
-            || declaration.m_version != TerrainAuthoringVersion)
+        if (declaration.m_extensionId != TerrainAuthoringExtensionId || declaration.m_displayName != TerrainAuthoringDisplayName ||
+            declaration.m_version != TerrainAuthoringVersion)
         {
             SetError(error, "Terrain Authoring extension identity drifted.");
             return false;
         }
-        if (declaration.m_capabilities.size() != 1
-            || declaration.m_capabilities[0]
-                != TaintedGrailModdingSDK::ExtensionAPI::Capability::ReadActiveProfile)
+        if (declaration.m_capabilities.size() != 1 ||
+            declaration.m_capabilities[0] != TaintedGrailModdingSDK::ExtensionAPI::Capability::ReadActiveProfile)
         {
             SetError(error, "Terrain Authoring shell must remain profile-read-only.");
             return false;
         }
 
         const TerrainAuthoringServiceStatus status = BuildInitialServiceStatus();
-        if (status.m_requiredSchemaId
-                != TaintedGrailModdingSDK::TerrainHeightmap::TerrainHeightmapSchemaId
-            || status.m_requiredSchemaVersion
-                != TaintedGrailModdingSDK::TerrainHeightmap::TerrainHeightmapSchemaVersion
-            || status.m_visiblePaneRegistered
-            || status.m_previewProjectionEnabled
-            || status.m_assetProcessorProjectionEnabled
-            || !HasBlockedAuthority(status.m_authority))
+        if (status.m_requiredSchemaId != TaintedGrailModdingSDK::TerrainHeightmap::TerrainHeightmapSchemaId ||
+            status.m_requiredSchemaVersion != TaintedGrailModdingSDK::TerrainHeightmap::TerrainHeightmapSchemaVersion ||
+            status.m_visiblePaneRegistered || status.m_previewProjectionEnabled || status.m_assetProcessorProjectionEnabled ||
+            !HasBlockedAuthority(status.m_authority))
         {
             SetError(error, "Terrain Authoring shell status must remain non-UI and non-authoritative.");
             return false;
@@ -174,22 +176,24 @@ namespace TerrainAuthoring
         AZStd::vector<AZStd::string> seen;
         for (const TerrainAuthoringCommandDescriptor& command : BuildCommandDescriptors())
         {
-            if (command.m_commandId.empty()
-                || !StartsWith(command.m_commandId, "terrain-authoring.")
-                || AZStd::find(seen.begin(), seen.end(), command.m_commandId) != seen.end()
-                || command.m_availableInShell
-                || !command.m_localOnly
-                || command.m_invokesPreview
-                || command.m_invokesAssetProcessor
-                || command.m_invokesRuntime)
+            if (command.m_commandId.empty() || !StartsWith(command.m_commandId, "terrain-authoring.") ||
+                AZStd::find(seen.begin(), seen.end(), command.m_commandId) != seen.end() || !command.m_localOnly ||
+                command.m_invokesRuntime)
             {
                 SetError(error, "Terrain Authoring shell command contracts drifted.");
+                return false;
+            }
+            const bool implemented = command.m_kind == TerrainAuthoringCommandKind::ImportLocalHeightmap ||
+                command.m_kind == TerrainAuthoringCommandKind::OpenDocument || command.m_kind == TerrainAuthoringCommandKind::OpenInEditor;
+            if (command.m_availableInShell != implemented || command.m_invokesPreview != implemented)
+            {
+                SetError(error, "Terrain editor command availability does not match its implementation.");
                 return false;
             }
             seen.push_back(command.m_commandId);
         }
 
-        if (seen.size() != 7)
+        if (seen.size() != 9)
         {
             SetError(error, "Terrain Authoring shell command inventory is incomplete.");
             return false;

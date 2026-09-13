@@ -11,10 +11,13 @@
 
 namespace TaintedGrailModdingSDK::ExecutionFramework
 {
+    class FrameworkSyntheticTarget;
     class FrameworkExecutionService
     {
     public:
         FrameworkExecutionService(Context context, AZStd::string privateRoot);
+        FrameworkExecutionService(Context context, AZStd::string privateRoot, std::shared_ptr<FrameworkSyntheticTarget> synthetic);
+        Result RecoverSynthetic(const AZStd::string& planFingerprint, CE::RollbackReceiptV1&);
         ~FrameworkExecutionService();
         FrameworkProviderService& Providers();
         FrameworkExecutionPolicyService& Policy();

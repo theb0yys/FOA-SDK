@@ -28,6 +28,7 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QSaveFile>
+#include <QTemporaryDir>
 #include <QImage>
 #include <QImageReader>
 #include <QStringList>
@@ -354,27 +355,25 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
                     "Terrain workspace directories must be safe relative paths."));
             }
 
-            const QString path =
-                QDir(canonicalWorkspaceRoot).filePath(ToQString(relativePath));
-            if (!IsContainedPath(canonicalWorkspaceRoot, path)
-                || !QDir().mkpath(path))
+            QString path = canonicalWorkspaceRoot;
+            for (const QString& component : ToQString(relativePath).split('/'))
             {
-                return AZ::Failure(AZStd::string(
-                    "Unable to create a contained terrain workspace directory."));
+                const QString next = QDir(path).filePath(component);
+                const QFileInfo info(next);
+                if ((info.exists() && ResolveDirectCanonicalDirectory(next).isEmpty())
+                    || (!info.exists() && !QDir(path).mkdir(component)))
+                { return AZ::Failure(AZStd::string("Terrain workspace directory crosses an unsafe storage boundary.")); }
+                path = ResolveDirectCanonicalDirectory(next);
+                if (path.isEmpty() || !IsContainedPath(canonicalWorkspaceRoot, path))
+                { return AZ::Failure(AZStd::string("Terrain workspace directory did not retain containment.")); }
             }
-            const QString canonical = ResolveDirectCanonicalDirectory(path);
-            if (canonical.isEmpty()
-                || !IsContainedPath(canonicalWorkspaceRoot, canonical))
-            {
-                return AZ::Failure(AZStd::string(
-                    "Terrain workspace directory crossed a symbolic link, junction, reparse, or containment boundary."));
-            }
-            return AZ::Success(canonical);
+            return AZ::Success(path);
         }
 
         AZ::Outcome<AZStd::string, AZStd::string> HashFile(
             const FileSnapshot& snapshot,
-            AZ::u64& bytesRead)
+            AZ::u64& bytesRead,
+            const ImportControl* control)
         {
             bytesRead = 0;
             QFile file(snapshot.m_canonicalPath);
@@ -386,12 +385,20 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             QCryptographicHash hash(QCryptographicHash::Sha256);
             while (!file.atEnd())
             {
+                if (control && control->IsCancelled())
+                {
+                    return AZ::Failure(AZStd::string("Terrain import cancelled."));
+                }
                 const QByteArray chunk = file.read(1024 * 1024);
                 if (chunk.isEmpty() && file.error() != QFileDevice::NoError)
                 {
                     return AZ::Failure(AZStd::string("Unable to read terrain source for hashing."));
                 }
                 bytesRead += static_cast<AZ::u64>(chunk.size());
+                if (bytesRead > static_cast<AZ::u64>(snapshot.m_size))
+                {
+                    return AZ::Failure(AZStd::string("The terrain source grew during hashing; no document was published."));
+                }
                 hash.addData(chunk);
             }
             if (!FileSnapshotIsUnchanged(snapshot))
@@ -1411,7 +1418,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             const RawSidecarMetadata& metadata,
             const AZStd::string& operationId,
             const QString& pendingTileRoot,
-            AZStd::vector<Tile>& tiles)
+            AZStd::vector<Tile>& tiles,
+            const ImportControl* control)
         {
             tiles.clear();
             const bool sourceBigEndian = metadata.m_byteOrder == "big-endian";
@@ -1424,6 +1432,10 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
                 for (AZ::u32 originX = 0; originX < metadata.m_grid.m_width;
                      originX += TerrainHeightmapNominalTileSize)
                 {
+                    if (control && control->IsCancelled())
+                    {
+                        return AZ::Failure(AZStd::string("Terrain import cancelled."));
+                    }
                     const AZ::u32 tileWidth = AZStd::min(
                         TerrainHeightmapNominalTileSize,
                         metadata.m_grid.m_width - originX);
@@ -1451,6 +1463,14 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
                     }
                     tile.m_sha256 = hash.TakeValue();
                     tiles.push_back(AZStd::move(tile));
+                    if (control && control->m_progress)
+                    {
+                        const AZ::u64 countX = (metadata.m_grid.m_width + TerrainHeightmapNominalTileSize - 1)
+                            / TerrainHeightmapNominalTileSize;
+                        const AZ::u64 countY = (metadata.m_grid.m_height + TerrainHeightmapNominalTileSize - 1)
+                            / TerrainHeightmapNominalTileSize;
+                        control->m_progress(tiles.size(), countX * countY);
+                    }
                 }
             }
             return AZ::Success();
@@ -1501,7 +1521,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             const RawSidecarMetadata& metadata,
             const AZStd::string& operationId,
             const QString& pendingTileRoot,
-            AZStd::vector<Tile>& tiles)
+            AZStd::vector<Tile>& tiles,
+            const ImportControl* control)
         {
             tiles.clear();
             for (AZ::u32 originY = 0; originY < metadata.m_grid.m_height;
@@ -1513,6 +1534,10 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
                 for (AZ::u32 originX = 0; originX < metadata.m_grid.m_width;
                      originX += TerrainHeightmapNominalTileSize)
                 {
+                    if (control && control->IsCancelled())
+                    {
+                        return AZ::Failure(AZStd::string("Terrain import cancelled."));
+                    }
                     const AZ::u32 tileWidth = AZStd::min(
                         TerrainHeightmapNominalTileSize,
                         metadata.m_grid.m_width - originX);
@@ -1538,6 +1563,14 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
                     }
                     tile.m_sha256 = hash.TakeValue();
                     tiles.push_back(AZStd::move(tile));
+                    if (control && control->m_progress)
+                    {
+                        const AZ::u64 countX = (metadata.m_grid.m_width + TerrainHeightmapNominalTileSize - 1)
+                            / TerrainHeightmapNominalTileSize;
+                        const AZ::u64 countY = (metadata.m_grid.m_height + TerrainHeightmapNominalTileSize - 1)
+                            / TerrainHeightmapNominalTileSize;
+                        control->m_progress(tiles.size(), countX * countY);
+                    }
                 }
             }
             return AZ::Success();
@@ -1649,7 +1682,9 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             document.m_provenance.m_sourceEvidenceId =
                 "evidence.terrain." + request.m_operationId;
             document.m_provenance.m_limitations =
-                "User-selected RAW U16 with mandatory sidecar; no game-source conversion or native map identity claim.";
+                request.m_provenanceLimitations.empty()
+                ? "User-selected RAW U16 with mandatory sidecar; no game-source conversion or native map identity claim."
+                : request.m_provenanceLimitations;
             document.m_legalState = "user-exported-local-only";
             document.m_revision.m_revisionId =
                 "terrain-revision." + request.m_operationId;
@@ -2618,6 +2653,10 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         if (StartsWith(folded, "derived/terrain/")
             || StartsWith(folded, "staging/terrain/")
             || StartsWith(folded, "sourceobservations/terrain/")
+            || StartsWith(folded, "sourceexports/terrain/")
+            || StartsWith(folded, "staging/terraincampaign/")
+            || StartsWith(folded, "staging/terrainnative/")
+            || StartsWith(folded, "editorassets/foa_maps/")
             || EndsWith(folded, ".tgheightmap.json")
             || EndsWith(folded, ".terrain.u16le")
             || folded.find("_gsi") != AZStd::string::npos)
@@ -2709,7 +2748,7 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         }
 
         AZ::u64 sourceByteSize = 0;
-        auto sourceFingerprint = HashFile(rawSource.GetValue(), sourceByteSize);
+        auto sourceFingerprint = HashFile(rawSource.GetValue(), sourceByteSize, request.m_control);
         if (!sourceFingerprint.IsSuccess())
         {
             return AZ::Failure(AZStd::string(sourceFingerprint.GetError()));
@@ -2755,7 +2794,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             metadata.GetValue(),
             request.m_operationId,
             pendingTileRoot,
-            tiles);
+            tiles,
+            request.m_control);
         if (!tileWrite.IsSuccess())
         {
             RemoveContainedDirectory(canonicalWorkspaceRoot, canonicalPendingRoot);
@@ -2912,7 +2952,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             return AZ::Failure(AZStd::string(observationWrite.GetError()));
         }
 
-        if (!IsContainedPath(canonicalWorkspaceRoot, publishedRoot)
+        if ((request.m_control && request.m_control->IsCancelled())
+            || !IsContainedPath(canonicalWorkspaceRoot, publishedRoot)
             || !QDir().rename(canonicalStagingRoot, publishedRoot))
         {
             RemoveContainedDirectory(canonicalWorkspaceRoot, canonicalStagingRoot);
@@ -2985,12 +3026,16 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         }
 
         AZ::u64 sourceByteSize = 0;
-        auto sourceFingerprint = HashFile(imageSource.GetValue(), sourceByteSize);
+        auto sourceFingerprint = HashFile(imageSource.GetValue(), sourceByteSize, request.m_control);
         if (!sourceFingerprint.IsSuccess())
         {
             return AZ::Failure(AZStd::string(sourceFingerprint.GetError()));
         }
 
+        if (request.m_control && request.m_control->IsCancelled())
+        {
+            return AZ::Failure(AZStd::string("Terrain import cancelled."));
+        }
         auto image = ReadBoundedU16HeightmapImage(imageSource.GetValue());
         if (!image.IsSuccess())
         {
@@ -3042,7 +3087,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             metadata.GetValue(),
             request.m_operationId,
             pendingTileRoot,
-            tiles);
+            tiles,
+            request.m_control);
         if (!tileWrite.IsSuccess())
         {
             RemoveContainedDirectory(canonicalWorkspaceRoot, canonicalPendingRoot);
@@ -3198,7 +3244,8 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
             return AZ::Failure(AZStd::string(observationWrite.GetError()));
         }
 
-        if (!IsContainedPath(canonicalWorkspaceRoot, publishedRoot)
+        if ((request.m_control && request.m_control->IsCancelled())
+            || !IsContainedPath(canonicalWorkspaceRoot, publishedRoot)
             || !QDir().rename(canonicalStagingRoot, publishedRoot))
         {
             RemoveContainedDirectory(canonicalWorkspaceRoot, canonicalStagingRoot);
@@ -3231,4 +3278,245 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         }
         return AZ::Success(AZStd::move(result));
     }
+
+    AZ::Outcome<TerrainHeightmapDocumentV1, AZStd::string> ParseDocumentJson(const AZStd::string& json)
+    {
+        if (json.size() > 4 * 1024 * 1024)
+        {
+            return AZ::Failure(AZStd::string("Terrain manifest exceeds its size limit."));
+        }
+        QJsonParseError error;
+        const auto parsed = QJsonDocument::fromJson(QByteArray(json.data(), static_cast<int>(json.size())), &error);
+        if (error.error != QJsonParseError::NoError || !parsed.isObject())
+        {
+            return AZ::Failure(AZStd::string("Terrain manifest is not a valid JSON object."));
+        }
+        const auto root = parsed.object();
+        TerrainHeightmapDocumentV1 document;
+        auto number = [](const QJsonObject& object, const char* name) -> AZ::u32
+        {
+            const double value = object.value(name).toDouble(-1);
+            return std::isfinite(value) && value >= 0 && value <= std::numeric_limits<AZ::u32>::max()
+                && std::floor(value) == value ? static_cast<AZ::u32>(value) : 0;
+        };
+        document.m_schema = ToAzString(root.value("schema").toString());
+        document.m_documentId = ToAzString(root.value("document_id").toString());
+        document.m_legalState = ToAzString(root.value("legal_state").toString());
+        document.m_localPayloadState = ToAzString(root.value("local_payload_state").toString());
+        document.m_schemaVersion = number(root, "schema_version");
+        const auto map_identity = root.value("map_identity").toObject();
+        document.m_mapIdentity.m_mapId = ToAzString(map_identity.value("map_id").toString());
+        document.m_mapIdentity.m_displayName = ToAzString(map_identity.value("display_name").toString());
+        document.m_mapIdentity.m_nativeIdentityEvidenceId = ToAzString(map_identity.value("native_identity_evidence_id").toString());
+        const auto profile_binding = root.value("profile_binding").toObject();
+        document.m_profileBinding.m_profileId = ToAzString(profile_binding.value("profile_id").toString());
+        document.m_profileBinding.m_gameVersion = ToAzString(profile_binding.value("game_version").toString());
+        document.m_profileBinding.m_branch = ToAzString(profile_binding.value("branch").toString());
+        document.m_profileBinding.m_runtimeTarget = ToAzString(profile_binding.value("runtime_target").toString());
+        document.m_profileBinding.m_profileFingerprint = ToAzString(profile_binding.value("profile_fingerprint").toString());
+        const auto source_binding = root.value("source_binding").toObject();
+        document.m_sourceBinding.m_sourceKind = ToAzString(source_binding.value("source_kind").toString());
+        document.m_sourceBinding.m_sourceContainerSha256 = ToAzString(source_binding.value("source_container_sha256").toString());
+        document.m_sourceBinding.m_sourceObjectIdentifier = ToAzString(source_binding.value("source_object_identifier").toString());
+        document.m_sourceBinding.m_sourceSubresourceSha256 = ToAzString(source_binding.value("source_subresource_sha256").toString());
+        document.m_sourceBinding.m_exporterId = ToAzString(source_binding.value("exporter_id").toString());
+        document.m_sourceBinding.m_exporterVersion = ToAzString(source_binding.value("exporter_version").toString());
+        document.m_sourceBinding.m_configurationFingerprint = ToAzString(source_binding.value("configuration_fingerprint").toString());
+        document.m_sourceBinding.m_redactedRootToken = ToAzString(source_binding.value("redacted_root_token").toString());
+        document.m_sourceBinding.m_relativeLocator = ToAzString(source_binding.value("relative_locator").toString());
+        const auto sample_encoding = root.value("sample_encoding").toObject();
+        document.m_sampleEncoding.m_format = ToAzString(sample_encoding.value("format").toString());
+        document.m_sampleEncoding.m_byteOrder = ToAzString(sample_encoding.value("byte_order").toString());
+        document.m_sampleEncoding.m_storageOrder = ToAzString(sample_encoding.value("storage_order").toString());
+        const auto coordinate_space = root.value("coordinate_space").toObject();
+        document.m_coordinateSpace.m_handedness = ToAzString(coordinate_space.value("handedness").toString());
+        document.m_coordinateSpace.m_upAxis = ToAzString(coordinate_space.value("up_axis").toString());
+        document.m_coordinateSpace.m_forwardAxis = ToAzString(coordinate_space.value("forward_axis").toString());
+        document.m_coordinateSpace.m_rowZeroOrientation = ToAzString(coordinate_space.value("row_zero_orientation").toString());
+        document.m_coordinateSpace.m_samplePosition = ToAzString(coordinate_space.value("sample_position").toString());
+        const auto provenance = root.value("provenance").toObject();
+        document.m_provenance.m_createdAtUtc = ToAzString(provenance.value("created_at_utc").toString());
+        document.m_provenance.m_importerId = ToAzString(provenance.value("importer_id").toString());
+        document.m_provenance.m_importerVersion = ToAzString(provenance.value("importer_version").toString());
+        document.m_provenance.m_sourceEvidenceId = ToAzString(provenance.value("source_evidence_id").toString());
+        document.m_provenance.m_limitations = ToAzString(provenance.value("limitations").toString());
+        const auto revision = root.value("revision").toObject();
+        document.m_revision.m_revisionId = ToAzString(revision.value("revision_id").toString());
+        document.m_revision.m_parentDocumentFingerprint = ToAzString(revision.value("parent_document_fingerprint").toString());
+        document.m_revision.m_operationFingerprint = ToAzString(revision.value("operation_fingerprint").toString());
+        document.m_revision.m_createdAtUtc = ToAzString(revision.value("created_at_utc").toString());
+        for (const auto& alias : map_identity.value("public_aliases").toArray())
+        {
+            document.m_mapIdentity.m_publicAliases.push_back(ToAzString(alias.toString()));
+        }
+        const auto grid = root.value("grid").toObject();
+        document.m_grid.m_width = number(grid, "width");
+        document.m_grid.m_height = number(grid, "height");
+        document.m_grid.m_sampleSpacingXMetres = grid.value("sample_spacing_x_metres").toDouble();
+        document.m_grid.m_sampleSpacingYMetres = grid.value("sample_spacing_y_metres").toDouble();
+        document.m_sampleEncoding.m_bitsPerSample = number(sample_encoding, "bits_per_sample");
+        document.m_sampleEncoding.m_unsignedInteger = sample_encoding.value("unsigned_integer").toBool();
+        const auto vertical = root.value("vertical_mapping").toObject();
+        document.m_verticalMapping.m_minHeightMetres = vertical.value("min_height_metres").toDouble();
+        document.m_verticalMapping.m_maxHeightMetres = vertical.value("max_height_metres").toDouble();
+        for (const auto& value : coordinate_space.value("source_to_canonical_transform").toArray())
+        {
+            document.m_coordinateSpace.m_sourceToCanonicalTransform.push_back(value.toDouble());
+        }
+        const auto tiles = root.value("tiles").toArray();
+        if (tiles.size() > static_cast<int>(TerrainHeightmapMaximumTileCount))
+        {
+            return AZ::Failure(AZStd::string("Terrain manifest has too many tiles."));
+        }
+        for (const auto& value : tiles)
+        {
+            const auto object = value.toObject();
+            Tile tile;
+            tile.m_tileId = ToAzString(object.value("tile_id").toString());
+            tile.m_originX = number(object, "origin_x");
+            tile.m_originY = number(object, "origin_y");
+            tile.m_width = number(object, "width");
+            tile.m_height = number(object, "height");
+            tile.m_byteSize = number(object, "byte_size");
+            tile.m_relativePath = ToAzString(object.value("relative_path").toString());
+            tile.m_sha256 = ToAzString(object.value("sha256").toString());
+            document.m_tiles.push_back(AZStd::move(tile));
+        }
+        const auto authority = root.value("authority").toObject();
+        document.m_authority.m_runtimeUseAllowed = authority.value("runtime_use_allowed").toBool();
+        document.m_authority.m_deploymentAllowed = authority.value("deployment_allowed").toBool();
+        document.m_authority.m_publicationAllowed = authority.value("publication_allowed").toBool();
+        document.m_authority.m_packagingAllowed = authority.value("packaging_allowed").toBool();
+        document.m_authority.m_gameWriteAllowed = authority.value("game_write_allowed").toBool();
+        document.m_authority.m_evidencePromotionAllowed = authority.value("evidence_promotion_allowed").toBool();
+        const auto validation = ValidateDocument(document);
+        if (!validation.m_accepted)
+        {
+            return AZ::Failure(AZStd::string("Terrain manifest validation failed: ")
+                + (validation.m_issues.empty() ? "unknown" : validation.m_issues.front().m_code));
+        }
+        const auto canonical = BuildCanonicalDocumentJson(document);
+        if (QJsonDocument::fromJson(QByteArray(canonical.data(), static_cast<int>(canonical.size()))) != parsed)
+        {
+            return AZ::Failure(AZStd::string("Terrain manifest contains missing, mistyped, unsupported, or noncanonical fields."));
+        }
+        return AZ::Success(AZStd::move(document));
+    }
+
+    AZ::Outcome<void, AZStd::string> ReadImageImportSidecar(
+        const AZStd::string& path, ImageHeightmapImportRequest& request)
+    {
+        auto file = ResolveDirectCanonicalFile(path, "Heightmap metadata");
+        if (!file.IsSuccess()) { return AZ::Failure(AZStd::string(file.GetError())); }
+        AZStd::string fingerprint;
+        auto bytes = ReadBoundedSidecar(file.GetValue(), fingerprint);
+        if (!bytes.IsSuccess()) { return AZ::Failure(AZStd::string(bytes.GetError())); }
+        QJsonParseError error;
+        auto parsed = QJsonDocument::fromJson(bytes.GetValue(), &error);
+        if (error.error != QJsonParseError::NoError || !parsed.isObject()
+            || parsed.object().value("schema").toString() != "foa.terrain-heightmap.image-import-metadata")
+        {
+            return AZ::Failure(AZStd::string("The image needs its exported heightmap metadata sidecar beside it."));
+        }
+        auto object = parsed.object();
+        object["schema"] = "foa.raw-u16-heightmap-sidecar";
+        object["byte_order"] = "little-endian";
+        auto metadata = ParseRawSidecar(QJsonDocument(object).toJson(QJsonDocument::Compact));
+        if (!metadata.IsSuccess()) { return AZ::Failure(AZStd::string(metadata.GetError())); }
+        request.m_gridMetadata = metadata.GetValue().m_grid;
+        request.m_verticalMapping = metadata.GetValue().m_verticalMapping;
+        request.m_coordinateSpace = metadata.GetValue().m_coordinateSpace;
+        return AZ::Success();
+    }
+
+    AZ::Outcome<WorkspaceTerrainPreview, AZStd::string> LoadWorkspaceTerrainPreview(
+        const AZStd::string& workspaceRoot, const AZStd::string& manifestRelativePath,
+        const ProfileBinding& profile, const ImportControl* control, bool includeSamples)
+    {
+        if (!IsSafeWorkspaceRelativePath(manifestRelativePath))
+        {
+            return AZ::Failure(AZStd::string("Terrain revision path is unsafe."));
+        }
+        auto root = ResolveWorkspaceRoot(workspaceRoot);
+        if (!root.IsSuccess()) { return AZ::Failure(AZStd::string(root.GetError())); }
+        auto source = ResolveDirectCanonicalFile(ToAzString(QDir(root.GetValue()).filePath(ToQString(manifestRelativePath))), "Terrain revision");
+        if (!source.IsSuccess()) { return AZ::Failure(AZStd::string(source.GetError())); }
+        if (!IsContainedPath(root.GetValue(), source.GetValue().m_canonicalPath)
+            || source.GetValue().m_size > 4 * 1024 * 1024)
+        {
+            return AZ::Failure(AZStd::string("Terrain revision exceeds its workspace boundary or size limit."));
+        }
+        QFile file(source.GetValue().m_canonicalPath);
+        if (!file.open(QIODevice::ReadOnly)) { return AZ::Failure(AZStd::string("Unable to open terrain revision.")); }
+        const auto bytes = file.read(4 * 1024 * 1024 + 1);
+        auto parsed = ParseDocumentJson(AZStd::string(bytes.constData(), static_cast<size_t>(bytes.size())));
+        if (!parsed.IsSuccess()) { return AZ::Failure(AZStd::string(parsed.GetError())); }
+        const auto& document = parsed.GetValue();
+        const auto& binding = document.m_profileBinding;
+        if (binding.m_profileId != profile.m_profileId || binding.m_gameVersion != profile.m_gameVersion
+            || binding.m_branch != profile.m_branch || binding.m_runtimeTarget != profile.m_runtimeTarget
+            || binding.m_profileFingerprint != profile.m_profileFingerprint)
+        {
+            return AZ::Failure(AZStd::string("Terrain revision belongs to a different or stale game profile."));
+        }
+        WorkspaceTerrainPreview result;
+        if (includeSamples)
+        {
+            const AZ::u64 count = static_cast<AZ::u64>(document.m_grid.m_width) * document.m_grid.m_height;
+            if (count > 32ull * 1024 * 1024)
+            { return AZ::Failure(AZStd::string("This terrain exceeds the editing cache budget. Import at a lower resolution.")); }
+            result.m_samples.resize(static_cast<size_t>(count));
+        }
+        result.m_width = AZStd::min<AZ::u32>(256, document.m_grid.m_width);
+        result.m_height = AZStd::min<AZ::u32>(256, document.m_grid.m_height);
+        result.m_grayscale.resize(static_cast<size_t>(result.m_width) * result.m_height);
+        const QString revisionRoot = QFileInfo(source.GetValue().m_canonicalPath).absolutePath();
+        for (const auto& tile : document.m_tiles)
+        {
+            if (control && control->IsCancelled()) { return AZ::Failure(AZStd::string("Terrain open cancelled.")); }
+            auto payload = ResolveDirectCanonicalFile(ToAzString(QDir(revisionRoot).filePath(ToQString(tile.m_relativePath))), "Terrain tile");
+            if (!payload.IsSuccess()) { return AZ::Failure(AZStd::string(payload.GetError())); }
+            if (!IsContainedPath(revisionRoot, payload.GetValue().m_canonicalPath)
+                || static_cast<AZ::u64>(payload.GetValue().m_size) != tile.m_byteSize
+                || tile.m_byteSize > 2 * TerrainHeightmapNominalTileSize * TerrainHeightmapNominalTileSize)
+            {
+                return AZ::Failure(AZStd::string("Terrain tile has invalid containment or size."));
+            }
+            QFile input(payload.GetValue().m_canonicalPath);
+            if (!input.open(QIODevice::ReadOnly)) { return AZ::Failure(AZStd::string("Unable to read terrain tile.")); }
+            const auto data = input.read(static_cast<qint64>(tile.m_byteSize) + 1);
+            if (static_cast<AZ::u64>(data.size()) != tile.m_byteSize
+                || ToSha256Fingerprint(QCryptographicHash::hash(data, QCryptographicHash::Sha256)) != tile.m_sha256)
+            {
+                return AZ::Failure(AZStd::string("Terrain tile fingerprint changed; the revision was not opened."));
+            }
+            if (includeSamples)
+            {
+                for (AZ::u32 y = 0; y < tile.m_height; ++y)
+                {
+                    for (AZ::u32 x = 0; x < tile.m_width; ++x)
+                    {
+                        const size_t offset = 2 * (static_cast<size_t>(y) * tile.m_width + x);
+                        result.m_samples[static_cast<size_t>(tile.m_originY + y) * document.m_grid.m_width + tile.m_originX + x] =
+                            static_cast<AZ::u8>(data.at(offset)) | (static_cast<AZ::u16>(static_cast<AZ::u8>(data.at(offset + 1))) << 8);
+                    }
+                }
+            }
+            for (AZ::u32 y = 0; y < result.m_height; ++y)
+            {
+                const AZ::u32 sourceY = result.m_height == 1 ? 0 : y * (document.m_grid.m_height - 1) / (result.m_height - 1);
+                if (sourceY < tile.m_originY || sourceY >= tile.m_originY + tile.m_height) { continue; }
+                for (AZ::u32 x = 0; x < result.m_width; ++x)
+                {
+                    const AZ::u32 sourceX = result.m_width == 1 ? 0 : x * (document.m_grid.m_width - 1) / (result.m_width - 1);
+                    if (sourceX < tile.m_originX || sourceX >= tile.m_originX + tile.m_width) { continue; }
+                    const size_t offset = 2 * (static_cast<size_t>(sourceY - tile.m_originY) * tile.m_width + sourceX - tile.m_originX);
+                    result.m_grayscale[static_cast<size_t>(y) * result.m_width + x] = static_cast<AZ::u8>(data.at(static_cast<int>(offset + 1)));
+                }
+            }
+        }
+        result.m_document = parsed.TakeValue();
+        return AZ::Success(AZStd::move(result));
+    }
+
 } // namespace TaintedGrailModdingSDK::TerrainHeightmap

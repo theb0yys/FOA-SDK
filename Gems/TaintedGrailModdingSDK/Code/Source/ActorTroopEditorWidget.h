@@ -8,8 +8,11 @@
 #pragma once
 
 #include "FoundationNotificationBus.h"
+#include "ActorTroopDraftRecoveryService.h"
+#include <QMap>
 #include "PopulationModels.h"
 
+#include <QSharedPointer>
 #include <QWidget>
 
 class QCheckBox;
@@ -21,6 +24,9 @@ class QListWidget;
 class QPlainTextEdit;
 class QPushButton;
 class QSpinBox;
+class QThread;
+class QTimer;
+class QShowEvent;
 class QString;
 class QTableWidget;
 class QTabWidget;
@@ -41,8 +47,27 @@ namespace TaintedGrailModdingSDK
         ~ActorTroopEditorWidget() override;
 
     private:
+        class EditorCloseGuard;
         void closeEvent(QCloseEvent* event) override;
+        void showEvent(QShowEvent* event) override;
+        void InitializeRecovery();
+        void StartRecoveryForWorkspace();
+        void SetRecoveryPending(bool pending);
+        void ScheduleRecovery();
+        void CheckpointRecovery();
+        bool FlushRecovery();
+        bool ClearRecovery();
+        void ReleaseRecovery(bool holdForEditorExit);
+        bool TryResumeRecoveryAfterExit();
+        void StopRecovery();
+        void RestoreRecovery();
+        bool CanRestoreRecovery(const ActorTroopDraftRecovery& draft) const;
+        QMap<QString, QWidget*> DraftControls() const;
+        ActorTroopDraftRecovery CaptureRecovery(bool bounded = false) const;
+        void RestoreDraftState(const ActorTroopDraftRecovery& draft);
         void OnFoundationChanged() override;
+        bool CanChangeWorkspace(const FoundationService& service) override;
+        void OnWorkspaceChanged(const FoundationService& service) override;
 
         void RefreshAll();
         void ApplyPendingFoundationRefresh();
@@ -79,6 +104,8 @@ namespace TaintedGrailModdingSDK
         void HandleTroopRecordChange();
         void HandleMemberSelectionChange();
         bool HasDirtyDrafts() const;
+        bool ConfirmDraftReplacement(const QString& action);
+        bool SaveDirtyDrafts();
 
         PopulationActorProfile BuildActorProfile() const;
         PopulationTroopProfile BuildTroopProfile() const;
@@ -89,6 +116,26 @@ namespace TaintedGrailModdingSDK
         void SetStatus(const QString& message, bool error = false);
         void UpdateEnabledStates();
 
+        std::shared_ptr<ActorTroopDraftRecoveryService> m_recoveryStore;
+        ActorTroopDraftRecoveryRead m_recoveryRead;
+        ActorTroopDraftRecovery m_recoveryExitDraft;
+        QThread* m_recoveryThread = nullptr;
+        QObject* m_recoveryWorker = nullptr;
+        QTimer* m_recoveryTimer = nullptr;
+        QHash<QWidget*, bool> m_recoveryControls;
+        QLabel* m_recoveryStatus = nullptr;
+        QWidget* m_recoveryPanel = nullptr;
+        QPushButton* m_restoreRecovery = nullptr;
+        QPushButton* m_discardRecovery = nullptr;
+        QPushButton* m_retryRecovery = nullptr;
+        quint64 m_recoveryGeneration = 0;
+        bool m_recoveryPending = false;
+        bool m_recoveryStoreReady = false;
+        bool m_recoveryWriteInFlight = false;
+        bool m_recoveryClosing = false;
+        bool m_recoveryHeldForExit = false;
+        bool m_recoveryResumeAfterExit = false;
+        QSharedPointer<EditorCloseGuard> m_editorCloseGuard;
         QTabWidget* m_tabs = nullptr;
         NativeItemPreviewService* m_nativeReader = nullptr;
         QPushButton* m_readGame = nullptr;
@@ -169,6 +216,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string m_loadedActorRecordId;
         AZStd::string m_loadedTroopRecordId;
         AZStd::string m_selectedMemberLinkId;
+        bool m_unsavedPromptOpen = false;
         bool m_actorDirty = false;
         bool m_troopDirty = false;
         bool m_memberEditorDirty = false;

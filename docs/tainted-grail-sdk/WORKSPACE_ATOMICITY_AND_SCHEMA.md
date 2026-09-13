@@ -77,8 +77,8 @@ for retry. Candidates for other roots do not require this extra read.
 
 After all workspace objects are published, `FinishWorkspaceChange` refreshes the
 snapshot, sends `OnWorkspaceChanged`, and releases the reentrancy guard. Pack
-Manager and Item and Recipe Editor reset their drafts only on that commit
-notification, including same-workspace reloads. The atomicity validator checks this ordering across both functions;
+Manager, Item and Recipe Editor, Actor/Troop Editor, and Spawn/Encounter Editor reset their drafts
+only on that commit notification, including same-workspace reloads. The atomicity validator checks this ordering across both functions;
 mutation tests reject missing steps and premature publication or notification.
 
 Candidate loading does not update the persistence boundary's published path. Pack containment reads the live `FoundationService` workspace path, so a failed candidate cannot redirect a later pack operation.
@@ -91,7 +91,12 @@ Admission integration tests also cover same-root Save freshness for catalog and
 sources, alias documents, platform case semantics, post-admission failure and
 retry, and avoiding redundant candidate construction for another root. Item and
 Recipe Editor workspace acceptance is described in
-[its guide](ITEM_RECIPE_EDITOR_GUIDE.md#workspace-switch-acceptance).
+[its guide](ITEM_RECIPE_EDITOR_GUIDE.md#workspace-switch-acceptance). Actor/Troop
+Editor uses the same admission/commit contract; its retained actor, troop and
+member forms and both picker routes are covered in
+[its guide](ACTOR_TROOP_EDITOR_GUIDE.md#workspace-switch-acceptance). Spawn/Encounter Editor uses the
+same contract for complete encounter fields and composition staging; see
+[its acceptance guide](SPAWN_ENCOUNTER_EDITOR_GUIDE.md#workspace-switch-acceptance).
 
 Local-setup integration tests cover stale legacy workspace hints, manual install
 replacement and derived paths, restart persistence, and rejected selections.

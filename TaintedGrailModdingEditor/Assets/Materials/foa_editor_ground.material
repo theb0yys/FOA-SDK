@@ -1,0 +1,17 @@
+{
+    "description": "FOA-SDK neutral moss ground for terrain authoring. Original material; no game content.",
+    "materialType": "@gemroot:Terrain@/Assets/Materials/Terrain/TerrainDetailMaterial.materialtype",
+    "materialTypeVersion": 1,
+    "propertyValues": {
+        "baseColor.color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "baseColor.useTexture": false,
+        "metallic.factor": 0.0,
+        "roughness.factor": 0.9,
+        "roughness.useTexture": false
+    }
+}

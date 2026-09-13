@@ -6,6 +6,7 @@
  */
 
 #include "AdapterPostDeploymentVerificationWidget.h"
+#include "FoundationService.h"
 
 #include <QAbstractItemView>
 #include <QFont>
@@ -179,7 +180,7 @@ namespace TaintedGrailModdingSDK
         for (const AdapterDeploymentWorkOrderRequest& request :
             AdapterDeploymentWorkOrderRegistry::Get().GetRequests())
         {
-            workOrders.push_back(m_workOrderService.BuildWorkOrder(request));
+            workOrders.push_back(FoundationService::Get().GetFrameworkPlanners().BuildWorkOrder(request));
         }
 
         const AZStd::vector<AdapterDeploymentExecutionResultEnvelope>& envelopes =
@@ -228,7 +229,7 @@ namespace TaintedGrailModdingSDK
             const AdapterDeploymentExecutionEvidenceReturn evidenceReturn =
                 m_evidenceService.BuildEvidenceReturn(*workOrder, envelope);
             const AdapterPostDeploymentVerificationReport report =
-                m_reportService.BuildReport(
+                FoundationService::Get().GetFrameworkPlanners().BuildReport(
                     *workOrder,
                     envelope,
                     evidenceReturn);

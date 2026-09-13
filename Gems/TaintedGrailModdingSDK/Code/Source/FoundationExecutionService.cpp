@@ -7,6 +7,7 @@
 #include "ExecutionFramework/FrameworkExecutionEvidenceProjection.h"
 #include "ExecutionFramework/FrameworkExecutionService.h"
 #include "FoundationService.h"
+#include "ExecutionSynthetic/FrameworkSyntheticTarget.h"
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/sort.h>
 
@@ -43,16 +44,26 @@ namespace TaintedGrailModdingSDK
         }
     }
     bool FoundationService::ConfigureFrameworkExecution(
+        const ExecutionFramework::Context& context, const AZStd::string& privateRoot,
+        const AZStd::vector<ExecutionFramework::HostBinding>& bindings,
+        const AZStd::vector<ExecutionFramework::Qualification>& qualifications,
+        const ExecutionFramework::HostPolicy& policy, AZStd::string* error)
+    {
+        return ConfigureFrameworkExecution(context, privateRoot, bindings, qualifications, policy, error, {});
+    }
+    bool FoundationService::ConfigureFrameworkExecution(
         const ExecutionFramework::Context& context,
         const AZStd::string& privateRoot,
         const AZStd::vector<ExecutionFramework::HostBinding>& bindings,
         const AZStd::vector<ExecutionFramework::Qualification>& qualifications,
         const ExecutionFramework::HostPolicy& policy,
-        AZStd::string* error)
+        AZStd::string* error,
+        std::shared_ptr<ExecutionFramework::FrameworkSyntheticTarget> synthetic)
     {
         using namespace ExecutionFramework;
         if (!CanChangeFrameworkContext() || context.m_workspaceId != m_workspace.m_workspaceId || context.m_packId != m_activePackId ||
-            context.m_profileFingerprint != GetFrameworkProfileFingerprint() || bindings.empty())
+            context.m_profileFingerprint != (synthetic ? FrameworkSyntheticTarget::Profile() : GetFrameworkProfileFingerprint()) ||
+            (synthetic && synthetic->Backup().m_ownerPackId != context.m_packId) || bindings.empty())
         {
             if (error)
             {
@@ -61,7 +72,7 @@ namespace TaintedGrailModdingSDK
             return false;
         }
         StopFrameworkExecution();
-        auto service = std::make_unique<FrameworkExecutionService>(context, privateRoot);
+        auto service = std::make_unique<FrameworkExecutionService>(context, privateRoot, AZStd::move(synthetic));
         Result result;
         for (const auto& binding : bindings)
         {

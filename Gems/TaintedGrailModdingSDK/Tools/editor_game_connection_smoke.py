@@ -256,10 +256,34 @@ def run():
         assert preview.isEnabled()
         # Exercise the actual Browse dialog; selecting the test file needs no
         # game connection and preserves the user's other Editor instances.
-        QtCore.QTimer.singleShot(100, lambda: next(dialog for dialog in app.topLevelWidgets()
-            if isinstance(dialog, QtWidgets.QFileDialog)).reject())
-        app.setAttribute(QtCore.Qt.AA_DontUseNativeDialogs, True)
+        picker_cancelled = []
+        picker_deadline = time.monotonic() + 8
+        picker_timer = QtCore.QTimer(widget)
+        picker_timer.setInterval(50)
+        def cancel_picker():
+            # C++-created dialogs may have a generic QWidget Python wrapper.
+            # Query the Qt metaobject and invoke its real slot instead.
+            dialog = next((candidate for candidate in app.allWidgets() if candidate.objectName() == "TgeCompositionDialog"), None)
+            if dialog is not None:
+                picker_timer.stop()
+                picker_cancelled.append(True)
+                QtCore.QMetaObject.invokeMethod(dialog, "reject", QtCore.Qt.QueuedConnection)
+            elif time.monotonic() >= picker_deadline:
+                picker_timer.stop()
+                result["pickerFailure"] = "No QFileDialog metaobject found"
+                result["topLevelClasses"] = [candidate.metaObject().className() for candidate in app.topLevelWidgets()]
+                (output / "editor-picker-failure.json").write_text(json.dumps(result))
+                general.exit_no_prompt()
+        picker_timer.timeout.connect(cancel_picker)
+        result["pickerButton"] = {"enabled": browse.isEnabled(), "visible": browse.isVisible(),
+                                  "blocked": browse.signalsBlocked(), "receivers": browse.receivers(QtCore.SIGNAL("clicked(bool)"))}
+        assert browse.isEnabled(), "Composition browse button unexpectedly disabled"
+        widget.findChild(QtWidgets.QScrollArea).ensureWidgetVisible(browse)
+        app.processEvents()
+        picker_timer.start()
         browse.click()
+        wait(lambda: bool(picker_cancelled), timeout=9)
+        assert picker_cancelled, "Composition picker did not open"
         assert composition.text() == str(composition_path)
         result["checks"].append("Composition picker cancellation preserves the selected file")
         before_file = composition_path.read_bytes()

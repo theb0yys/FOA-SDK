@@ -1,23 +1,33 @@
-# M3 - Framework Orchestrator and Repositories
+# Current Task
 
-Status: accepted M3 implementation provided; acceptance is recorded in the exact-head validation receipt.
-Goal: connect reviewed plans and live admission to M2, with durable execution,
-artifact custody, target ownership and candidate evidence projection.
-Classification: Significant design; Critical/Runtime implementation.
-Primary owner: capability-execution in Framework.
-Owner request: "Next: M3 — the Framework Orchestrator and Repositories."
+Status: implementation combined. Final validation and merge results are recorded
+in the integration pull request.
+Goal: integrate the owner's pending FOA-SDK commits, resolve merge conflicts and
+validate the combined Editor and Framework result.
+Classification: Critical/Runtime, because the requested integration includes
+previously implemented external process execution and synthetic rollback.
+Primary coordination owner: integration; existing subsystem ownership is retained.
 
-In scope now: implementation of the accepted M3 design, exact source paths,
-failure/recovery behavior and acceptance lanes.
-Implementation scope: docs/tainted-grail-sdk/FRAMEWORK_EXECUTION_M3_DESIGN.md.
-First execution profile: M2 Windows staging-only native batch phases.
-Out of scope: M4 planner adaptation, M5 full deployment pipeline, game/Unity launch,
-protected installations/saves, signing/publication and unrelated SDK-client work.
+In scope: pending PR histories #266, #269, #270, #271, #273, #274, #275, #276,
+#277, #278, #279, #280 and #281; necessary conflict resolution and validation.
+The owner explicitly requested merging the commits. Use normal merge commits and
+a reviewable integration PR; preserve existing feature commits and evidence.
 
-Acceptance: scope accepted before source implementation; then required exact-head
-static/compiled/native/Editor gates actually pass. A design is not working-service
-proof. Existing M1/M2 contracts and isolated engine remain unchanged.
-Current branch: codex/framework-orchestrator-m3, based on validated M2 c41be264c7.
-Handoff: exact-head static, compiled, native and Editor evidence accompanies the focused M3 pull request.
-Maintainer review and merge remain separate actions. M4/M5 are not started.
-Runtime sign-off not performed.
+Out of scope: completing M6 native terrain qualification, unfinished campaign
+rendering/export, paused SDK preview acceptance, game/save writes and releases.
+M6 remains PARTIAL/BLOCKED as documented in its design and qualification brief.
+Earlier evidence stays bound to its source/artifacts and is not promoted to new
+runtime signoff. The original dirty SDK-client checkout is not modified.
+
+Acceptance criteria: all requested PR heads are ancestors of the integrated
+result; conflicts are reviewed; applicable static, compiled and Editor checks
+are reported accurately; remote main and remaining PR states are verified.
+Known hosted failures under investigation: M3 maximum-metadata reopen performance
+and Item Viewer Editor startup. Pending or failed jobs are not reported as passes.
+
+Current branch: codex/integrate-pending-sdk-work.
+Integration details: task-status conflicts were resolved to this scope; both
+Framework planner and terrain CMake registrations were retained. The Item Viewer
+validation launcher now binds the explicit external engine, and its close check
+uses the Qt event loop for deferred deletion. The inventory rejection fixture
+uses an equivalent Unicode escape required by source policy.

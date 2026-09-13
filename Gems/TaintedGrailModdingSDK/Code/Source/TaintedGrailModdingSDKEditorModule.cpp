@@ -10,6 +10,12 @@
 #include "AdapterReleaseSigningPaneSystemComponent.h"
 #include "ItemVisualSelectorInstallerSystemComponent.h"
 #include "TaintedGrailModdingSDKSystemComponent.h"
+#include "SourceMeshPreservationComponent.h"
+#include "SourceTextureBuilderComponent.h"
+#include "SourceShaderBuilderComponent.h"
+#include "SourceShaderRenderComponent.h"
+#include "SourceScenePlacementComponent.h"
+#include "SourceSceneRenderComponent.h"
 
 #include <AzCore/Memory/SystemAllocator.h>
 #include <AzCore/Module/Module.h>
@@ -32,6 +38,12 @@ namespace TaintedGrailModdingSDK
                 m_descriptors.end(),
                 {
                     TaintedGrailModdingSDKSystemComponent::CreateDescriptor(),
+                    SourceMeshPreservationComponent::CreateDescriptor(),
+                    SourceTextureBuilderComponent::CreateDescriptor(),
+                    SourceShaderBuilderComponent::CreateDescriptor(),
+                    SourceShaderRenderComponent::CreateDescriptor(),
+                    SourceScenePlacementComponent::CreateDescriptor(),
+                    SourceSceneRenderComponent::CreateDescriptor(),
                     ItemVisualSelectorInstallerSystemComponent::CreateDescriptor(),
                     AdapterReleaseArtifactPaneSystemComponent::CreateDescriptor(),
                     AdapterReleaseAssemblyPaneSystemComponent::CreateDescriptor(),
@@ -43,6 +55,7 @@ namespace TaintedGrailModdingSDK
         {
             return AZ::ComponentTypeList{
                 azrtti_typeid<TaintedGrailModdingSDKSystemComponent>(),
+                azrtti_typeid<SourceShaderRenderComponent>(),
                 azrtti_typeid<ItemVisualSelectorInstallerSystemComponent>(),
                 azrtti_typeid<AdapterReleaseArtifactPaneSystemComponent>(),
                 azrtti_typeid<AdapterReleaseAssemblyPaneSystemComponent>(),

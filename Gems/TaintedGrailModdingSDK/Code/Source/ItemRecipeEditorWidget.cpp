@@ -11,7 +11,10 @@
 #include "FoundationService.h"
 #include "NativeItemPreviewService.h"
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
+#include <AzCore/Debug/Trace.h>
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QAbstractItemView>
 #include <QByteArray>
 #include <QCloseEvent>
@@ -134,8 +137,147 @@ namespace TaintedGrailModdingSDK
         }
     } // namespace
 
+    // The pinned host destroys each accepted pane before asking later panes and
+    // level-independent files. Keep a transaction-local copy outside the pane so
+    // cancellation can restore it after that destruction. Retain the recovery lock
+    // and checkpoint until the entire close dispatch accepts or cancels exit.
+    class ItemRecipeEditorWidget::EditorCloseGuard final : public QObject
+    {
+    public:
+        static QSharedPointer<EditorCloseGuard> Get()
+        {
+            static QWeakPointer<EditorCloseGuard> weakGuard;
+            auto guard = weakGuard.toStrongRef();
+            if (!guard)
+            {
+                guard.reset(new EditorCloseGuard());
+                weakGuard = guard;
+                guard->m_self = guard;
+            }
+            return guard;
+        }
+
+        void Attach(ItemRecipeEditorWidget* pane)
+        {
+            m_pane = pane;
+            QWidget* mainWindow = nullptr;
+            AzToolsFramework::EditorRequests::Bus::BroadcastResult(
+                mainWindow, &AzToolsFramework::EditorRequests::GetMainWindow);
+            if (m_mainWindow != mainWindow)
+            {
+                if (m_mainWindow) { m_mainWindow->removeEventFilter(this); }
+                m_mainWindow = mainWindow;
+                if (m_mainWindow) { m_mainWindow->installEventFilter(this); }
+            }
+        }
+
+        bool IsClosingEditor() const { return m_forwardedEvent != nullptr; }
+        void ForgetDrafts()
+        {
+            m_drafts.clear();
+            m_heldRecovery.reset();
+            m_retireRecovery = false;
+        }
+
+        void RememberDrafts(ItemRecipeEditorWidget* pane)
+        {
+            if (!IsClosingEditor()) { return; }
+            pane->StoreCurrentDrafts();
+            m_drafts = pane->m_drafts;
+            m_workspaceFile = ToQString(FoundationService::Get().GetWorkspaceFilePath());
+            m_workspaceRoot = ToQString(FoundationService::Get().GetWorkspaceRootPath());
+            m_item = pane->m_itemRecord->currentData().toString();
+            m_recipe = pane->m_recipeRecord->currentData().toString();
+            m_tab = pane->m_tabs->currentIndex();
+            m_recipeExpanded = qobject_cast<QGroupBox*>(pane->m_recipeForm)->isChecked();
+            m_heldRecovery = pane->m_recoveryStore;
+            m_retireRecovery = !pane->m_recoveryPending;
+        }
+
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (watched != m_mainWindow || event->type() != QEvent::Close)
+            {
+                return false;
+            }
+            // Survive destruction of the old pane only for this dispatch. A
+            // reconstructed pane takes ownership; a committed exit releases us.
+            const auto keepAlive = m_self.toStrongRef();
+            if (m_forwardedEvent)
+            {
+                if (event == m_forwardedEvent) { return false; }
+                // A second exit request from a nested prompt must not begin a
+                // second teardown or overwrite the outer attempt's retained forms.
+                event->ignore();
+                return true;
+            }
+            if (!m_pane) { return false; }
+            const QScopedValueRollback<QEvent*> forwarding(m_forwardedEvent, event);
+            ForgetDrafts();
+            QCoreApplication::sendEvent(watched, event);
+            if (m_heldRecovery)
+            {
+                // The pane drained its worker and transferred the held lock to
+                // this dispatch. Keep the checkpoint throughout all later prompts.
+                if (event->isAccepted() && m_retireRecovery)
+                {
+                    QString error;
+                    if (!m_heldRecovery->Clear(error))
+                    {
+                        AZ_Warning("TaintedGrailModdingSDK", false,
+                            "Editor exit accepted but draft recovery cleanup failed; the copy was kept: %s", error.toUtf8().constData());
+                    }
+                }
+                m_heldRecovery->Release();
+            }
+            if (!event->isAccepted() && m_mainWindow && !m_drafts.isEmpty()
+                && m_workspaceFile == ToQString(FoundationService::Get().GetWorkspaceFilePath())
+                && m_workspaceRoot == ToQString(FoundationService::Get().GetWorkspaceRootPath()))
+            {
+                // Open immediately: the host may have queued a replacement, or a
+                // later file veto may have skipped pane rollback altogether.
+                AzToolsFramework::OpenViewPane("Tainted Grail Item and Recipe Editor");
+                if (m_pane)
+                {
+                    const QSignalBlocker itemBlocker(m_pane->m_itemRecord);
+                    const QSignalBlocker recipeBlocker(m_pane->m_recipeRecord);
+                    m_pane->m_itemRecord->setCurrentIndex(qMax(0, m_pane->m_itemRecord->findData(m_item)));
+                    m_pane->m_recipeRecord->setCurrentIndex(qMax(0, m_pane->m_recipeRecord->findData(m_recipe)));
+                    m_pane->m_loadedItem.clear();
+                    m_pane->m_loadedRecipe.clear();
+                    m_pane->m_baselines.clear();
+                    m_pane->m_drafts = m_drafts;
+                    m_pane->RefreshAll();
+                    qobject_cast<QGroupBox*>(m_pane->m_recipeForm)->setChecked(m_recipeExpanded);
+                    m_pane->m_tabs->setCurrentIndex(m_tab);
+                    m_pane->m_recoveryResumeAfterExit = m_retireRecovery;
+                    m_pane->TryResumeRecoveryAfterExit();
+                    m_pane->SetStatus(tr("Editor exit cancelled. Your draft forms have been restored."));
+                }
+            }
+            ForgetDrafts();
+            return true; // The original close event was delivered synchronously above.
+        }
+
+    private:
+        QWeakPointer<EditorCloseGuard> m_self;
+        QPointer<QWidget> m_mainWindow;
+        QPointer<ItemRecipeEditorWidget> m_pane;
+        QEvent* m_forwardedEvent = nullptr;
+        QHash<QString, Draft> m_drafts;
+        std::shared_ptr<ItemRecipeDraftRecoveryService> m_heldRecovery;
+        bool m_retireRecovery = false;
+        QString m_workspaceFile;
+        QString m_workspaceRoot;
+        QString m_item;
+        QString m_recipe;
+        int m_tab = 0;
+        bool m_recipeExpanded = false;
+    };
+
     ItemRecipeEditorWidget::ItemRecipeEditorWidget(QWidget* parent)
         : QWidget(parent)
+        , m_editorCloseGuard(EditorCloseGuard::Get())
     {
         auto* rootLayout = new QVBoxLayout(this);
         auto* heading = new QLabel(tr("Tainted Grail Item and Recipe Editor"), this);
@@ -554,23 +696,67 @@ namespace TaintedGrailModdingSDK
         m_outputLinkId->setReadOnly(true);
         m_ingredientLinkId->setPlaceholderText(tr("Assigned when added"));
         m_outputLinkId->setPlaceholderText(tr("Assigned when added"));
-        // Name draft fields once; identities use combo item data, never display names.
-        int draftField = 0;
-        for (QWidget* form : {m_itemForm, m_recipeForm, m_ingredientForm, m_outputForm, m_relationshipForm})
-        {
-            for (QWidget* child : form->findChildren<QWidget*>())
-            {
-                if (child->objectName().isEmpty()) { child->setObjectName(QString("economyField%1").arg(++draftField)); }
-            }
-        }
+        // Persisted form identity must not depend on widget creation or layout order.
+        m_itemCategory->setObjectName("economyItemCategory");
+        m_itemSubtype->setObjectName("economyItemSubtype");
+        m_itemStackLimit->setObjectName("economyItemStackLimit");
+        m_itemWeight->setObjectName("economyItemWeight");
+        m_itemBaseValue->setObjectName("economyItemBaseValue");
+        m_itemRarity->setObjectName("economyItemRarity");
+        m_itemQuality->setObjectName("economyItemQuality");
+        m_itemDurability->setObjectName("economyItemDurability");
+        m_itemQuest->setObjectName("economyItemQuest");
+        m_itemUnique->setObjectName("economyItemUnique");
+        m_itemHidden->setObjectName("economyItemHidden");
+        m_itemNameRef->setObjectName("economyItemNameRef");
+        m_itemDescriptionRef->setObjectName("economyItemDescriptionRef");
+        m_itemIconRef->setObjectName("economyItemIconRef");
+        m_itemAssetRef->setObjectName("economyItemAssetRef");
+        m_itemTags->setObjectName("economyItemTags");
+        m_itemEvidence->setObjectName("economyItemEvidence");
+        m_recipeType->setObjectName("economyRecipeType");
+        m_recipeTab->setObjectName("economyRecipeTab");
+        m_recipeStations->setObjectName("economyRecipeStations");
+        m_recipeUnlockMode->setObjectName("economyRecipeUnlockMode");
+        m_recipeUnlockRefs->setObjectName("economyRecipeUnlockRefs");
+        m_recipeDuplicateKey->setObjectName("economyRecipeDuplicateKey");
+        m_recipePersistence->setObjectName("economyRecipePersistence");
+        m_recipeHidden->setObjectName("economyRecipeHidden");
+        m_recipeEvidence->setObjectName("economyRecipeEvidence");
+        m_ingredientLinkId->setObjectName("economyIngredientLinkId");
+        m_ingredientItemRecord->setObjectName("economyIngredientChoice");
+        m_ingredientSubjectRef->setObjectName("economyIngredientSubject");
+        m_ingredientQuantity->setObjectName("economyIngredientQuantity");
+        m_ingredientAlternativeGroup->setObjectName("economyIngredientAlternativeGroup");
+        m_ingredientConsumed->setObjectName("economyIngredientConsumed");
+        m_ingredientConditions->setObjectName("economyIngredientConditions");
+        m_ingredientEvidence->setObjectName("economyIngredientEvidence");
+        m_outputLinkId->setObjectName("economyOutputLinkId");
+        m_outputItemRecord->setObjectName("economyOutputChoice");
+        m_outputSubjectRef->setObjectName("economyOutputSubject");
+        m_outputQuantity->setObjectName("economyOutputQuantity");
+        m_outputChance->setObjectName("economyOutputChance");
+        m_outputByProduct->setObjectName("economyOutputByProduct");
+        m_outputConditions->setObjectName("economyOutputConditions");
+        m_outputEvidence->setObjectName("economyOutputEvidence");
+        m_relationshipSource->setObjectName("economyRelationshipSource");
+        m_relationshipId->setObjectName("economyRelationshipId");
+        m_relationshipKind->setObjectName("economyRelationshipKind");
+        m_relationshipTargetRecord->setObjectName("economyRelationshipTarget");
+        m_relationshipTargetSubject->setObjectName("economyRelationshipSubject");
+        m_relationshipEvidence->setObjectName("economyRelationshipEvidence");
+        m_relationshipAttributes->setObjectName("economyRelationshipAttributes");
         if (FoundationService::Get().GetWorkspaceFilePath().empty()) { FoundationService::Get().RefreshLocalSetup(); }
         FoundationNotificationBus::Handler::BusConnect();
         RefreshAll();
+        m_editorCloseGuard->Attach(this);
+        InitializeRecovery();
     }
 
     ItemRecipeEditorWidget::~ItemRecipeEditorWidget()
     {
         FoundationNotificationBus::Handler::BusDisconnect();
+        StopRecovery();
     }
 
     void ItemRecipeEditorWidget::OnFoundationChanged()
@@ -590,6 +776,9 @@ namespace TaintedGrailModdingSDK
     void ItemRecipeEditorWidget::OnWorkspaceChanged(const FoundationService& service)
     {
         if (&service != &FoundationService::Get()) { return; }
+        const bool retired = m_recoveryPending || ClearRecovery();
+        m_recoveryResumeAfterExit = false;
+        m_editorCloseGuard->ForgetDrafts();
         // Admission only records a choice. Retire old form state after every
         // handler admitted and Foundation actually committed the replacement.
         m_nativeReader->Cancel();
@@ -610,7 +799,9 @@ namespace TaintedGrailModdingSDK
         m_relationshipEvidence->clear();
         m_relationshipAttributes->clear();
         RefreshAll();
-        SetStatus(tr("Workspace changed. Select an item or recipe to edit."));
+        SetStatus(retired ? tr("Workspace changed. Select an item or recipe to edit.")
+            : tr("Workspace changed, but the previous workspace's recovery copy could not be cleared."), !retired);
+        StartRecoveryForWorkspace();
     }
 
     void ItemRecipeEditorWidget::RefreshAll()
@@ -1411,6 +1602,7 @@ namespace TaintedGrailModdingSDK
     {
         m_baselines.insert(form, ReadForm(form));
         m_drafts.remove(key);
+        FlushRecovery();
     }
 
     void ItemRecipeEditorWidget::StoreRecipeDrafts()
@@ -1447,6 +1639,11 @@ namespace TaintedGrailModdingSDK
 
     bool ItemRecipeEditorWidget::SaveAllDrafts()
     {
+        if (m_recoveryPending)
+        {
+            SetStatus(tr("Resolve draft recovery before saving."), true);
+            return false;
+        }
         // Only edited forms participate. Each existing command is its own durable
         // transaction; a later failure must not mark the remaining drafts saved.
         const QStringList keys = UnsavedDraftKeys();
@@ -1503,8 +1700,13 @@ namespace TaintedGrailModdingSDK
 
     void ItemRecipeEditorWidget::closeEvent(QCloseEvent* event)
     {
-        if (ConfirmDraftReplacement(tr("closing Item and Recipe Editor")))
+        auto& guard = *m_editorCloseGuard;
+        if (ConfirmDraftReplacement(guard.IsClosingEditor()
+            ? tr("exiting the Editor") : tr("closing Item and Recipe Editor"))
+            && (m_recoveryPending || (guard.IsClosingEditor() ? FlushRecovery() : ClearRecovery())))
         {
+            guard.RememberDrafts(this);
+            ReleaseRecovery(guard.IsClosingEditor());
             QWidget::closeEvent(event);
         }
         else

@@ -6,6 +6,8 @@
 #
 
 set(FILES
+    Source/TerrainImportWidget.h
+    Source/TerrainImportWidget.cpp
     Source/TerrainAuthoringContracts.cpp
     Source/TerrainAuthoringContracts.h
     Source/TerrainAuthoringEditorModule.cpp

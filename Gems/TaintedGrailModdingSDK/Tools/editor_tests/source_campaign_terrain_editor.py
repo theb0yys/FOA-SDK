@@ -275,13 +275,21 @@ def step(_args):
         assert time.monotonic()-started<1800, 'Native campaign acceptance deadline exceeded'
         next_step=time.monotonic()+next(job)
     except StopIteration:
-        complete=True; tick.disconnect()
+        complete=True; tick.disconnect(); heartbeat.stop()
         if os.environ.get('FOA_CAMPAIGN_TERRAIN_KEEP_OPEN')!='1': general.exit_no_prompt()
     except Exception as error:
-        complete=True; tick.disconnect()
+        complete=True; tick.disconnect(); heartbeat.stop()
         report.update(error=str(error),traceback=traceback.format_exc()); record('failed'); general.exit_no_prompt()
     finally: stepping=False
 
+def keep_ticking():
+    # Qt focus changes may disable Editor idle processing between maps. Only
+    # request engine ticks here; all scene operations still run in OnTick.
+    if not general.is_idle_enabled():
+        report['idle_wakeups']=report.get('idle_wakeups',0)+1
+        general.idle_enable(True)
+
+heartbeat=QtCore.QTimer(); heartbeat.setInterval(100); heartbeat.timeout.connect(keep_ticking); heartbeat.start()
 general.idle_enable(True)
 record('awaiting-first-editor-tick')
 tick.connect(); tick.add_callback('OnTick',step)

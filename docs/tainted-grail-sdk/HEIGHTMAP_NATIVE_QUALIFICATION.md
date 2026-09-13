@@ -9,8 +9,11 @@ or an assertion that the game can load the resulting terrain.
 
 World Authoring's test source is
 [`FoaHeightmapNativeProbe.cs`](../../Gems/TaintedGrailModdingSDK/Tools/editor_tests/FoaHeightmapNativeProbe.cs).
-It generates only the SDK-owned 33 by 33 U16LE pattern defined in that source.
-It accepts no game input, arbitrary script, canonical document or campaign map.
+The fixed control generates the SDK-owned 33 by 33 U16LE pattern defined in that
+source. The additive Core mode accepts a bounded, exactly bound neutral terrain
+packet through `FoaTerrainBuildInput.cs`; see the
+[Core handoff contract](HEIGHTMAP_CORE_HANDOFF.md). Neither mode accepts a game
+installation or campaign map.
 Its raw fixture SHA-256 is
 `65c80672d5236056df92ae134fe3374e25f5e491d27dd81258ab32dcf1946a18`.
 
@@ -35,7 +38,8 @@ its adjacent Unity DLL was
 `0a43985e3f46a33cd6c3705d21ef8b76f6eedbf88fa695e0bf9376eff33a8d8a`.
 These identify observations; they are not an authenticity or licence grant.
 
-Use a fresh private project containing only this Editor script, and an existing
+Use a fresh private project containing only `FoaHeightmapNativeProbe.cs` and
+`FoaTerrainBuildInput.cs` in `Assets/Editor`, and an existing
 empty output directory outside that project and all source checkouts. Let Unity
 create its own project and metadata. Set `FOA_HEIGHTMAP_OUTPUT` to that output
 root. Disable Package Manager with `-noUpm`; the measured projects contained no
@@ -125,12 +129,15 @@ skips, ten tooling tests, and four sets of ten source-policy checks. Its first
 attempt failed because the test environment lacked the already-pinned UnityPy
 and lz4 dependencies. They were installed into a private validation directory,
 and the complete lane was rerun successfully. No dependency pin changed.
-O3DE configure/build and product UI interaction are NOT_APPLICABLE to this
-source-only Unity test fixture and Python auditor; no C++, CMake or pane changed.
+For that fixed-fixture increment, O3DE configure/build and product UI interaction
+were NOT_APPLICABLE: no C++, CMake or pane changed. The subsequent Core handoff
+increment changes C++ and has separate pinned-engine compiled validation.
 
-The versioned qualification report is test-owned candidate evidence; no existing
-public contract, canonical V1 schema, persistent workspace format or M1/M2/M3
-execution API changed. Private evidence retains command lines, process results,
+The fixed-fixture increment produced test-owned candidate evidence without changing
+public contracts, canonical V1, persistence or execution APIs. The later Core
+handoff adds internal preparation/planner APIs and a neutral packet while preserving
+those existing formats; its compatibility and compiled checks are documented
+[separately](HEIGHTMAP_CORE_HANDOFF.md). Private evidence retains command lines, process results,
 compiler references, source hashes, Unity-generated metadata, artifact inventories,
 logs, failed attempts and independent auditor results. Hashes do not prove that
 an untrusted receipt is authentic or authorize a subsequent operation.
@@ -142,15 +149,16 @@ an untrusted receipt is authentic or authorize a subsequent operation.
 | Fixed synthetic native terrain creation/readback | PASSED |
 | Fresh-process bundle reopen and collider observations | PASSED in Unity Editor |
 | Evidence auditor negative tests | PASSED |
-| Canonical/Core import and handoff to native provider | NOT_RUN; fixture currently generates its own fixed source |
+| Canonical/Core import and handoff to native consumer | PASSED locally; bounded V1 input and actual Unity readback |
 | Production M2 native process isolation and dependency closure | BLOCKED; current profile does not cover this invocation |
-| Framework six-phase native terrain binding | NOT_RUN |
+| Framework terrain binding | PARTIAL: immutable BUILD preview; six-phase execution NOT_RUN |
 | Owned-target deployment and fresh-process recovery | NOT_RUN for terrain |
 | Exact-install game load, observations and unload | NOT_RUN |
 | End-to-end game rollback | NOT_RUN |
 
-Next implementation must bind Core-validated terrain data to the native provider
-and qualify the exact process/dependency boundary, including negative isolation,
+The [Core handoff increment](HEIGHTMAP_CORE_HANDOFF.md) adds the validated terrain
+input and immutable Framework BUILD preview. The next implementation must qualify
+the exact process/dependency boundary, including negative isolation,
 cancellation and timeout proof. Do not replace that work with a direct Unity or
 game subprocess fallback. Final game execution requires the reviewed package,
 exact destination/side effects and rollback plan. Runtime sign-off not performed.

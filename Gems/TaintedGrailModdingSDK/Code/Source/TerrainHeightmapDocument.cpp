@@ -3519,4 +3519,93 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         return AZ::Success(AZStd::move(result));
     }
 
+    AZ::Outcome<NativeTerrainBuildInputV1, AZStd::string> PrepareNativeTerrainBuildInput(
+        const AZStd::string& workspaceRoot, const AZStd::string& manifestRelativePath,
+        const ProfileBinding& profile, const AZStd::string& expectedDocumentFingerprint,
+        const ImportControl* control)
+    {
+        if (control && control->IsCancelled())
+        { return AZ::Failure(AZStd::string("Native terrain preparation cancelled.")); }
+        if (!IsSafeWorkspaceRelativePath(manifestRelativePath))
+        { return AZ::Failure(AZStd::string("Native terrain revision path is unsafe.")); }
+        auto root = ResolveWorkspaceRoot(workspaceRoot);
+        if (!root.IsSuccess()) { return AZ::Failure(AZStd::string(root.GetError())); }
+        auto file = ResolveDirectCanonicalFile(
+            ToAzString(QDir(root.GetValue()).filePath(ToQString(manifestRelativePath))), "Native terrain revision");
+        if (!file.IsSuccess()) { return AZ::Failure(AZStd::string(file.GetError())); }
+        if (!IsContainedPath(root.GetValue(), file.GetValue().m_canonicalPath)
+            || file.GetValue().m_size <= 0 || file.GetValue().m_size > NativeTerrainMaximumDocumentBytes)
+        { return AZ::Failure(AZStd::string("Native terrain manifest exceeds its bounded workspace input.")); }
+        QFile manifest(file.GetValue().m_canonicalPath);
+        if (!manifest.open(QIODevice::ReadOnly))
+        { return AZ::Failure(AZStd::string("Unable to read native terrain revision.")); }
+        const QByteArray bytes = manifest.read(NativeTerrainMaximumDocumentBytes + 1);
+        if (bytes.size() > NativeTerrainMaximumDocumentBytes)
+        { return AZ::Failure(AZStd::string("Native terrain manifest grew beyond its limit.")); }
+        const AZStd::string inputJson(bytes.constData(), static_cast<size_t>(bytes.size()));
+        auto parsed = ParseDocumentJson(inputJson);
+        if (!parsed.IsSuccess()) { return AZ::Failure(AZStd::string(parsed.GetError())); }
+        const auto& document = parsed.GetValue();
+        const AZStd::string canonical = BuildCanonicalDocumentJson(document);
+        // Strict canonical bytes also reject duplicate JSON fields, which Qt otherwise folds.
+        if (canonical != inputJson)
+        { return AZ::Failure(AZStd::string("Native conversion requires the exact canonical workspace manifest.")); }
+        const AZStd::string fingerprint = CalculateDocumentFingerprint(document);
+        if (expectedDocumentFingerprint != fingerprint)
+        { return AZ::Failure(AZStd::string("Native terrain revision changed since its build preview.")); }
+        const auto& space = document.m_coordinateSpace;
+        const AZStd::vector<double> identity = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+        // Reject before loading tile payloads or allocating the general terrain editing cache.
+        if (document.m_grid.m_width != 33 || document.m_grid.m_height != 33
+            || document.m_grid.m_sampleSpacingXMetres != 1 || document.m_grid.m_sampleSpacingYMetres != 1
+            || document.m_verticalMapping.m_minHeightMetres != -2 || document.m_verticalMapping.m_maxHeightMetres != 6
+            || space.m_handedness != "right-handed" || space.m_upAxis != "z" || space.m_forwardAxis != "y"
+            || space.m_rowZeroOrientation != "north" || space.m_samplePosition != "grid-vertex"
+            || space.m_sourceToCanonicalTransform != identity || document.m_tiles.size() != 1
+            || document.m_sampleEncoding.m_format != "u16" || document.m_sampleEncoding.m_byteOrder != "little-endian"
+            || document.m_sampleEncoding.m_storageOrder != "row-major")
+        { return AZ::Failure(AZStd::string("Terrain geometry is outside the qualified M6 33-by-33 conversion profile; no resampling is permitted.")); }
+        const auto& binding = document.m_profileBinding;
+        if (binding.m_profileId != profile.m_profileId || binding.m_gameVersion != profile.m_gameVersion
+            || binding.m_branch != profile.m_branch || binding.m_runtimeTarget != profile.m_runtimeTarget
+            || binding.m_profileFingerprint != profile.m_profileFingerprint)
+        { return AZ::Failure(AZStd::string("Native terrain belongs to a different or stale game profile.")); }
+        const auto& tile = document.m_tiles.front();
+        const QString revisionRoot = QFileInfo(file.GetValue().m_canonicalPath).absolutePath();
+        auto payload = ResolveDirectCanonicalFile(
+            ToAzString(QDir(revisionRoot).filePath(ToQString(tile.m_relativePath))), "Native terrain tile");
+        if (!payload.IsSuccess()) { return AZ::Failure(AZStd::string(payload.GetError())); }
+        if (!IsContainedPath(revisionRoot, payload.GetValue().m_canonicalPath)
+            || tile.m_byteSize != NativeTerrainSampleBytes || payload.GetValue().m_size != NativeTerrainSampleBytes)
+        { return AZ::Failure(AZStd::string("Native terrain tile has invalid containment or size.")); }
+        QFile input(payload.GetValue().m_canonicalPath);
+        if (!input.open(QIODevice::ReadOnly))
+        { return AZ::Failure(AZStd::string("Unable to read native terrain tile.")); }
+        const QByteArray sampleBytes = input.read(NativeTerrainSampleBytes + 1);
+        if (sampleBytes.size() != NativeTerrainSampleBytes
+            || ToSha256Fingerprint(QCryptographicHash::hash(sampleBytes, QCryptographicHash::Sha256)) != tile.m_sha256)
+        { return AZ::Failure(AZStd::string("Native terrain tile fingerprint changed.")); }
+        if (control && control->IsCancelled())
+        { return AZ::Failure(AZStd::string("Native terrain preparation cancelled.")); }
+        // Use the captured validated manifest and tile bytes; do not reread mutable metadata.
+        const AZStd::string samples(sampleBytes.constData(), static_cast<size_t>(sampleBytes.size()));
+        NativeTerrainBuildInputV1 result;
+        result.m_documentFingerprint = fingerprint;
+        result.m_bytes.reserve(144 + canonical.size() + samples.size());
+        result.m_bytes = "FOAHM001";
+        auto appendU32 = [&result](AZ::u32 value)
+        {
+            for (AZ::u32 shift = 0; shift != 32; shift += 8)
+            { result.m_bytes.push_back(static_cast<char>((value >> shift) & 255)); }
+        };
+        appendU32(static_cast<AZ::u32>(canonical.size()));
+        appendU32(static_cast<AZ::u32>(samples.size()));
+        result.m_bytes += fingerprint.substr(7);
+        result.m_bytes += CalculateCanonicalSha256(samples).substr(7);
+        result.m_bytes += canonical;
+        result.m_bytes += samples;
+        result.m_inputFingerprint = CalculateCanonicalSha256(result.m_bytes);
+        return AZ::Success(AZStd::move(result));
+    }
+
 } // namespace TaintedGrailModdingSDK::TerrainHeightmap

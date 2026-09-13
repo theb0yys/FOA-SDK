@@ -162,5 +162,75 @@ class NativeProbeAuditorTests(unittest.TestCase):
         self.reject()
 
 
+class CoreBindingAuditorTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix='foa-m6-binding-auditor-')
+        self.addCleanup(self.temporary.cleanup)
+        self.path = Path(self.temporary.name) / 'terrain-input.bin'
+        self.document = {'schema': 'foa.terrain-heightmap', 'schema_version': 1,
+                         'tiles': [{'sha256': 'sha256:' + probe.sha(probe.source_bytes()), 'byte_size': 2178}],
+                         'authority': {key: False for key in ('runtime_use_allowed', 'deployment_allowed',
+                             'publication_allowed', 'packaging_allowed', 'game_write_allowed', 'evidence_promotion_allowed')}}
+        self.encode()
+
+    def encode(self):
+        document = json.dumps(self.document).encode('utf-8')
+        samples = probe.source_bytes()
+        self.data = (b'FOAHM001' + struct.pack('<II', len(document), len(samples)) +
+                     probe.sha(document).encode('ascii') + probe.sha(samples).encode('ascii') + document + samples)
+        self.input_fp, self.doc_fp = 'sha256:' + probe.sha(self.data), 'sha256:' + probe.sha(document)
+        self.path.write_bytes(self.data)
+        self.initial = {'sourceKind': 'core-terrain-handoff', 'inputFingerprint': self.input_fp,
+                        'sourceDocumentFingerprint': self.doc_fp, 'coreInputRejectionChecks': 12}
+        self.reopened = copy.deepcopy(self.initial)
+
+    def verify(self):
+        probe.verify_core_binding(self.initial, self.reopened, self.path, self.input_fp, self.doc_fp)
+
+    def test_matching_core_binding_passes(self):
+        self.verify()
+
+    def test_core_claim_without_independent_input_is_rejected(self):
+        with self.assertRaises(ValueError):
+            probe.verify_core_binding(self.initial, self.reopened, None, None, None)
+
+    def test_missing_negative_checks_or_changed_reopen_binding_is_rejected(self):
+        for key, value in [('coreInputRejectionChecks', 0), ('inputFingerprint', 'sha256:' + '0'*64),
+                           ('sourceDocumentFingerprint', 'sha256:' + '0'*64), ('sourceKind', 'sdk-fixed')]:
+            with self.subTest(key=key):
+                self.reopened[key] = value
+                with self.assertRaises(ValueError): self.verify()
+                self.reopened = copy.deepcopy(self.initial)
+
+    def test_input_drift_truncation_and_trailing_bytes_are_rejected(self):
+        for data in (self.data[:-1], self.data + b'x', self.data[:-1] + bytes([self.data[-1] ^ 1])):
+            self.path.write_bytes(data)
+            with self.assertRaises(ValueError): self.verify()
+
+    def test_forged_packet_lengths_and_version_are_rejected_even_if_rehashed(self):
+        for offset in (7, 8, 12):
+            changed = bytearray(self.data); changed[offset] ^= 1
+            self.path.write_bytes(changed); self.input_fp = 'sha256:' + probe.sha(changed)
+            with self.assertRaises(ValueError): self.verify()
+
+    def test_canonical_authority_and_sample_binding_cannot_be_promoted(self):
+        self.document['authority']['runtime_use_allowed'] = True
+        self.encode()
+        with self.assertRaises(ValueError): self.verify()
+        self.document['authority']['runtime_use_allowed'] = False
+        self.document['tiles'][0]['sha256'] = 'sha256:' + '0'*64
+        self.encode()
+        with self.assertRaises(ValueError): self.verify()
+
+    def test_fixed_fixture_cannot_claim_a_core_binding(self):
+        for initial in ({}, {'sourceKind': 'sdk-fixed'}, {'sourceKind': 'sdk-fixed', 'inputFingerprint': self.input_fp}):
+            with self.assertRaises(ValueError):
+                probe.verify_core_binding(initial, initial, self.path, self.input_fp, self.doc_fp)
+
+    def test_oversized_core_file_is_rejected_before_parse(self):
+        self.path.write_bytes(bytes(144 + 65536 + 2179))
+        with self.assertRaises(ValueError): self.verify()
+
+
 if __name__ == '__main__':
     unittest.main()

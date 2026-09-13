@@ -3,7 +3,8 @@
 Status: PARTIAL implementation and qualification. The owner requested M6 on 13 September 2026.
 The fixed synthetic Unity materialisation fixture now has
 [measured native authoring evidence](HEIGHTMAP_NATIVE_QUALIFICATION.md). The
-production terrain provider, native execution profile and runtime adapter remain
+[Core input and Framework BUILD preview](HEIGHTMAP_CORE_HANDOFF.md) are implemented.
+The production terrain provider, native execution profile and runtime adapter remain
 unqualified; the complete M6 workflow is not yet implemented.
 
 ## Outcome and first fixture
@@ -127,10 +128,10 @@ alone cannot satisfy runtime verification.
 | Lane | Required proof | Current state |
 | --- | --- | --- |
 | M5 prerequisite | Six actual processes, failures, shutdown and fresh crash recovery | PASSED locally on M5; separate exact-commit handoff |
-| M6 canonical input | Existing V1 fixtures unchanged; malformed inputs and transforms rejected | NOT_RUN for M6 |
+| M6 canonical input | Existing V1 fixtures unchanged; malformed inputs and transforms rejected | PASSED locally for bounded M6 input |
 | Native build profile | Exact executable/dependency/IO profile; success, cancellation, timeout and isolation denial | BLOCKED: no qualified profile |
-| Native materialisation | Real Unity creation, readback, inventory and repeatability/loss measurement | PASSED for fixed synthetic fixture; canonical handoff NOT_RUN |
-| Framework reachability | Real bindings for build/package/deploy/launch/verify/rollback and a reachable Editor command | BLOCKED: native bindings absent |
+| Native materialisation | Real Unity creation, readback, inventory and repeatability/loss measurement | PASSED for fixed synthetic fixture and Core handoff |
+| Framework reachability | Real bindings for build/package/deploy/launch/verify/rollback and a reachable Editor command | PARTIAL: BUILD preview bound; execution and Editor reachability absent |
 | Deployment/recovery | Exact owned-target mutation, failure injection, drift refusal and fresh recovery | NOT_RUN for terrain |
 | Runtime | Exact installation and adapter; actual fixture load, observations and unload | BLOCKED: adapter and launch profile absent |
 | End-to-end rollback | Original deployment inventory restored and runtime instance removed | NOT_RUN for terrain |

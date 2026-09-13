@@ -16,6 +16,7 @@ using Debug = UnityEngine.Debug;
 
 public static class FoaHeightmapNativeProbe
 {
+    static FoaTerrainBuildInput coreInput;
     const int Resolution = 33;
     const float HeightRange = 8f;
     const float MinimumHeight = -2f;
@@ -45,11 +46,12 @@ public static class FoaHeightmapNativeProbe
         public string schema = "foa.m6.native-heightmap-qualification";
         public int schemaVersion = 1;
         public string status = "FAILED", unityVersion, error, sourceSha256, terrainGuid, prefabGuid;
+        public string sourceKind = "sdk-fixed", inputFingerprint, sourceDocumentFingerprint;
         public string sourceCoordinates = "right-handed; +X east; +Y north; +Z up; row zero north; grid-vertex";
         public string nativeTransform = "Unity (x,y,z) = canonical (x,z,y); reverse source rows";
         public string losses = "U16 normalization and native height quantization; no resampling";
         public double normalizedTolerance = NormalizedTolerance, elapsedMilliseconds;
-        public int width = Resolution, height = Resolution, rejectionChecks;
+        public int width = Resolution, height = Resolution, rejectionChecks, coreInputRejectionChecks;
         public float sampleSpacingMetres = 1f, minimumHeightMetres = MinimumHeight, maximumHeightMetres = MinimumHeight + HeightRange;
         public bool repeatedBundleBytesEqual;
         // Candidate observations never authorize another operation.
@@ -61,6 +63,11 @@ public static class FoaHeightmapNativeProbe
     // Not an import API: the only input is this SDK-owned asymmetric fixture.
     static ushort SourceSample(int column, int row)
     {
+        if (coreInput != null)
+        {
+            int offset = 2 * (row * Resolution + column);
+            return (ushort)(coreInput.Samples[offset] | coreInput.Samples[offset + 1] << 8);
+        }
         if (column == 0 && row == 0) return 0;
         if (column == 32 && row == 0) return 16384;
         if (column == 0 && row == 32) return 49151;
@@ -120,8 +127,11 @@ public static class FoaHeightmapNativeProbe
         string output = PrivateDirectory(Environment.GetEnvironmentVariable("FOA_HEIGHTMAP_OUTPUT"));
         Require(!output.StartsWith(project + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && output != project,
             "Use a separate private output directory.");
-        Require(Directory.GetFiles(Application.dataPath, "*.cs", SearchOption.AllDirectories).Length == 1,
-            "The disposable project must contain only this probe script.");
+        var scripts = Directory.GetFiles(Application.dataPath, "*.cs", SearchOption.AllDirectories);
+        Require(scripts.Length == 2, "The disposable project must contain only the probe and neutral input reader.");
+        Array.Sort(scripts, StringComparer.Ordinal);
+        Require(Path.GetFileName(scripts[0]) == "FoaHeightmapNativeProbe.cs" && Path.GetFileName(scripts[1]) == "FoaTerrainBuildInput.cs",
+            "Unexpected qualification script inventory.");
         return output;
     }
     static void WriteNew(string path, byte[] bytes)
@@ -195,6 +205,32 @@ public static class FoaHeightmapNativeProbe
             ++report.rejectionChecks;
         }
     }
+    static void CoreInputRejections(Report report)
+    {
+        byte[] original = coreInput.GetEncodedBytes();
+        Action<byte[], string, string> reject = (data, inputFingerprint, documentFingerprint) =>
+        {
+            bool rejected = false;
+            try { FoaTerrainBuildInput.Decode(data, inputFingerprint, documentFingerprint); }
+            catch (InvalidDataException) { rejected = true; }
+            Require(rejected, "Malformed or stale native handoff was accepted.");
+            ++report.coreInputRejectionChecks;
+        };
+        reject(new byte[0], coreInput.InputFingerprint, coreInput.DocumentFingerprint);
+        reject(new byte[FoaTerrainBuildInput.MaximumBytes + 1], coreInput.InputFingerprint, coreInput.DocumentFingerprint);
+        reject(original, "sha256:" + new string('0', 64), coreInput.DocumentFingerprint);
+        reject(original, coreInput.InputFingerprint, "sha256:" + new string('0', 64));
+        // Recompute the outer checksum to test the inner framing and digest guards themselves.
+        foreach (int offset in new[] { 7, 8, 12, 16, 80, 144, original.Length - 1 })
+        {
+            byte[] changed = (byte[])original.Clone();
+            changed[offset] ^= 1;
+            reject(changed, FoaTerrainBuildInput.Fingerprint(changed), coreInput.DocumentFingerprint);
+        }
+        byte[] trailing = new byte[original.Length + 1];
+        Array.Copy(original, trailing, original.Length);
+        reject(trailing, FoaTerrainBuildInput.Fingerprint(trailing), coreInput.DocumentFingerprint);
+    }
     static string Build(string output, string name, Report report)
     {
         string folder = Path.Combine(output, name);
@@ -233,7 +269,9 @@ public static class FoaHeightmapNativeProbe
     }
     public static void Run() { Execute(false); }
     public static void Reopen() { Execute(true); }
-    static void Execute(bool reopen)
+    public static void RunCore() { Execute(false, true); }
+    public static void ReopenCore() { Execute(true, true); }
+    static void Execute(bool reopen, bool fromCore = false)
     {
         string output = null;
         bool mayWriteReport = false;
@@ -246,6 +284,17 @@ public static class FoaHeightmapNativeProbe
             Require(!File.Exists(Path.Combine(output, reportName)), "This attempt already has a report; use a fresh output root.");
             if (!reopen) Require(Directory.GetFileSystemEntries(output).Length == 0, "Initial output must be empty.");
             mayWriteReport = true;
+            coreInput = fromCore ? FoaTerrainBuildInput.Read(
+                Environment.GetEnvironmentVariable("FOA_HEIGHTMAP_INPUT"),
+                Environment.GetEnvironmentVariable("FOA_HEIGHTMAP_INPUT_FINGERPRINT"),
+                Environment.GetEnvironmentVariable("FOA_HEIGHTMAP_DOCUMENT_FINGERPRINT")) : null;
+            if (coreInput != null)
+            {
+                report.sourceKind = "core-terrain-handoff";
+                report.inputFingerprint = coreInput.InputFingerprint;
+                report.sourceDocumentFingerprint = coreInput.DocumentFingerprint;
+                CoreInputRejections(report);
+            }
             Rejections(report);
             report.sourceSha256 = Hash(SourceBytes());
             if (reopen)

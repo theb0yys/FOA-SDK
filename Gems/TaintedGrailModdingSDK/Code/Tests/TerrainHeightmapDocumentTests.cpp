@@ -6,6 +6,8 @@
  */
 
 #include "TerrainHeightmapDocument.h"
+#include "CanonicalFingerprint.h"
+#include "ExecutionPlanning/FrameworkPlannerService.h"
 #include "TerrainImportHost.h"
 #include "TerrainNativeHandoff.h"
 #include "TerrainCampaignExportHost.h"
@@ -1560,6 +1562,303 @@ namespace TaintedGrailModdingSDK
         ASSERT_TRUE(WriteFile(temporary.filePath(".git"), "gitdir: synthetic"));
         EXPECT_EQ(PrepareNativeTerrain(temporary.path(), locator, request.m_profileBinding, nullptr).value("status").toString(), "failed");
         EXPECT_FALSE(QDir(temporary.path()).exists("EditorAssets"));
+    }
+
+    class TerrainNativeInputTests : public ::testing::Test
+    {
+    protected:
+        QTemporaryDir m_temporary;
+        TerrainHeightmap::RawHeightmapImportRequest m_request;
+        TerrainHeightmap::RawHeightmapImportResult m_imported;
+        AZStd::string m_locator;
+        AZStd::string m_expected;
+        QByteArray m_source;
+
+        void SetUp() override
+        {
+            ASSERT_TRUE(m_temporary.isValid());
+            for (int row = 0; row < 33; ++row)
+            {
+                for (int x = 0; x < 33; ++x)
+                {
+                    unsigned value = (977 * x + 331 * row + 17 * x * row + 123) % 65536;
+                    if (x == 0 && row == 0) { value = 0; }
+                    if (x == 32 && row == 0) { value = 16384; }
+                    if (x == 0 && row == 32) { value = 49151; }
+                    if (x == 32 && row == 32) { value = 65535; }
+                    m_source.append(static_cast<char>(value & 255));
+                    m_source.append(static_cast<char>(value >> 8));
+                }
+            }
+            const QString raw = m_temporary.filePath("source.u16");
+            auto metadata = QJsonDocument::fromJson(SidecarJson(33, 33, "little-endian")).object();
+            metadata["sample_spacing_y_metres"] = 1;
+            metadata["min_height_metres"] = -2;
+            metadata["max_height_metres"] = 6;
+            metadata["sample_position"] = "grid-vertex";
+            ASSERT_TRUE(WriteFile(raw, m_source));
+            ASSERT_TRUE(WriteFile(raw + ".json", QJsonDocument(metadata).toJson(QJsonDocument::Compact)));
+            m_request = MakeImportRequest(m_temporary, raw, raw + ".json", "terrain-import.m6-native");
+            m_request.m_mapIdentity.m_mapId = "terrain-map.m6-native";
+            m_request.m_mapIdentity.m_publicAliases.clear();
+            m_request.m_mapIdentity.m_displayName = "M6 SDK-owned terrain";
+            const auto result = TerrainHeightmap::ImportRawHeightmapToWorkspace(m_request);
+            ASSERT_TRUE(result.IsSuccess()) << result.GetError().c_str();
+            m_imported = result.GetValue();
+            m_locator = ToAzString(QDir(m_temporary.path()).relativeFilePath(QString::fromUtf8(m_imported.m_publishedManifestPath.c_str())));
+            m_expected = TerrainHeightmap::CalculateDocumentFingerprint(m_imported.m_document);
+        }
+
+        auto Prepare(const TerrainHeightmap::ImportControl* control = nullptr)
+        {
+            return TerrainHeightmap::PrepareNativeTerrainBuildInput(
+                m_request.m_workspaceRoot, m_locator, m_request.m_profileBinding, m_expected, control);
+        }
+        CapabilityExecution::CapabilityExecutionRequestV1 FrameworkRequest()
+        {
+            CapabilityExecution::CapabilityExecutionRequestV1 request;
+            request.m_id = "request.terrain";
+            request.m_workspaceId = "workspace.terrain";
+            request.m_packId = "pack.terrain";
+            request.m_profileFingerprint = m_request.m_profileBinding.m_profileFingerprint;
+            request.m_capabilityId = ExecutionFramework::FrameworkPlannerService::TerrainBuildCapabilityId;
+            request.m_terminalPhase = CapabilityExecution::Phase::BUILD;
+            SealRequest(request);
+            return request;
+        }
+        static void SealRequest(CapabilityExecution::CapabilityExecutionRequestV1& request)
+        {
+            const auto canonical = CapabilityExecution::Canonicalize(request);
+            ASSERT_TRUE(canonical.IsSuccess());
+            request.m_fingerprint = canonical.GetValue().m_fingerprint;
+            ASSERT_TRUE(CapabilityExecution::Validate(request).IsSuccess());
+        }
+        auto Bind(const CapabilityExecution::CapabilityExecutionRequestV1& request,
+            const TerrainHeightmap::ImportControl* control = nullptr)
+        {
+            return ExecutionFramework::FrameworkPlannerService{}.BindTerrainBuild(
+                request, m_request.m_workspaceRoot, m_locator, m_request.m_profileBinding, m_expected, control);
+        }
+        void Rewrite()
+        {
+            const auto json = TerrainHeightmap::BuildCanonicalDocumentJson(m_imported.m_document);
+            ASSERT_TRUE(WriteFile(QString::fromUtf8(m_imported.m_publishedManifestPath.c_str()), QByteArray(json.data(), static_cast<int>(json.size()))));
+            m_expected = TerrainHeightmap::CalculateDocumentFingerprint(m_imported.m_document);
+        }
+    };
+
+    TEST_F(TerrainNativeInputTests, ProducesDeterministicBoundedInputFromCanonicalWorkspace)
+    {
+        const auto first = Prepare();
+        ASSERT_TRUE(first.IsSuccess()) << first.GetError().c_str();
+        const auto second = Prepare();
+        ASSERT_TRUE(second.IsSuccess());
+        const auto& value = first.GetValue();
+        EXPECT_EQ(value.m_bytes, second.GetValue().m_bytes);
+        EXPECT_EQ(value.m_inputFingerprint, CalculateCanonicalSha256(value.m_bytes));
+        EXPECT_EQ(value.m_documentFingerprint, m_expected);
+        const auto canonical = TerrainHeightmap::BuildCanonicalDocumentJson(m_imported.m_document);
+        ASSERT_EQ(value.m_bytes.size(), 144 + canonical.size() + 2178);
+        EXPECT_LT(value.m_bytes.size(), TerrainHeightmap::NativeTerrainMaximumInputBytes);
+        EXPECT_EQ(value.m_bytes.substr(0, 8), "FOAHM001");
+        EXPECT_EQ(value.m_bytes.substr(16, 64), m_expected.substr(7));
+        EXPECT_EQ(value.m_bytes.substr(144, canonical.size()), canonical);
+        EXPECT_EQ(value.m_bytes.substr(144 + canonical.size()), AZStd::string(m_source.constData(), static_cast<size_t>(m_source.size())));
+        EXPECT_EQ(CalculateCanonicalSha256(AZStd::string(m_source.constData(), static_cast<size_t>(m_source.size()))),
+            "sha256:65c80672d5236056df92ae134fe3374e25f5e491d27dd81258ab32dcf1946a18");
+
+    }
+
+    TEST_F(TerrainNativeInputTests, RejectsStalePreviewAndProfile)
+    {
+        m_expected = Sha('f'); EXPECT_FALSE(Prepare().IsSuccess());
+        m_expected = TerrainHeightmap::CalculateDocumentFingerprint(m_imported.m_document);
+        m_request.m_profileBinding.m_gameVersion = "changed";
+        EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsUnsafeLocator)
+    {
+        m_locator = "../foreign/terrain.json";
+        EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsUnsupportedGeometryBeforeReadingPayload)
+    {
+        m_imported.m_document.m_grid.m_width = 65;
+        m_imported.m_document.m_grid.m_height = 65;
+        auto& tile = m_imported.m_document.m_tiles.front();
+        tile.m_width = 65; tile.m_height = 65; tile.m_byteSize = 65 * 65 * 2;
+        Rewrite();
+        ASSERT_TRUE(QFile::remove(QString::fromUtf8(m_imported.m_publishedTilePaths.front().c_str())));
+        const auto result = Prepare();
+        ASSERT_FALSE(result.IsSuccess());
+        EXPECT_NE(result.GetError().find("outside the qualified M6"), AZStd::string::npos);
+    }
+    TEST_F(TerrainNativeInputTests, RejectsUnqualifiedOrientationAndTransform)
+    {
+        m_imported.m_document.m_coordinateSpace.m_rowZeroOrientation = "south";
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+        m_imported.m_document.m_coordinateSpace.m_rowZeroOrientation = "north";
+        m_imported.m_document.m_coordinateSpace.m_sourceToCanonicalTransform[3] = 1;
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsCellCentersAndUnqualifiedMetres)
+    {
+        m_imported.m_document.m_coordinateSpace.m_samplePosition = "cell-center";
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+        m_imported.m_document.m_coordinateSpace.m_samplePosition = "grid-vertex";
+        m_imported.m_document.m_grid.m_sampleSpacingYMetres = 2;
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+        m_imported.m_document.m_grid.m_sampleSpacingYMetres = 1;
+        m_imported.m_document.m_verticalMapping.m_maxHeightMetres = 8;
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsChangedAndTruncatedTileBytes)
+    {
+        const QString tile = QString::fromUtf8(m_imported.m_publishedTilePaths.front().c_str());
+        QByteArray changed = m_source; changed[0] = 1;
+        ASSERT_TRUE(WriteFile(tile, changed)); EXPECT_FALSE(Prepare().IsSuccess());
+        ASSERT_TRUE(WriteFile(tile, m_source.left(m_source.size() - 1))); EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsNoncanonicalAndDuplicateManifestFields)
+    {
+        const QString path = QString::fromUtf8(m_imported.m_publishedManifestPath.c_str());
+        const auto canonical = TerrainHeightmap::BuildCanonicalDocumentJson(m_imported.m_document);
+        QByteArray duplicate(canonical.data(), static_cast<int>(canonical.size()));
+        duplicate.insert(1, "\"schema_version\":2,");
+        ASSERT_TRUE(WriteFile(path, duplicate)); EXPECT_FALSE(Prepare().IsSuccess());
+        ASSERT_TRUE(WriteFile(path, QByteArray(canonical.data(), static_cast<int>(canonical.size())) + " "));
+        EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsFutureVersionAndAuthorityPromotion)
+    {
+        m_imported.m_document.m_schemaVersion = 2;
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+        m_imported.m_document.m_schemaVersion = 1;
+        m_imported.m_document.m_authority.m_runtimeUseAllowed = true;
+        Rewrite(); EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, RejectsOversizedManifestBeforeParsing)
+    {
+        ASSERT_TRUE(WriteFile(QString::fromUtf8(m_imported.m_publishedManifestPath.c_str()), QByteArray(65537, ' ')));
+        EXPECT_FALSE(Prepare().IsSuccess());
+    }
+    TEST_F(TerrainNativeInputTests, SupportsCancellationBeforeAndAfterBoundedReads)
+    {
+        TerrainHeightmap::ImportControl control;
+        control.m_cancelled = []() { return true; };
+        EXPECT_FALSE(Prepare(&control).IsSuccess());
+        int observations = 0;
+        control.m_cancelled = [&observations]() { return ++observations >= 2; };
+        EXPECT_FALSE(Prepare(&control).IsSuccess());
+        EXPECT_EQ(observations, 2);
+    }
+
+    TEST_F(TerrainNativeInputTests, FrameworkBindsExactTerrainBytesWithoutMutatingTheRequest)
+    {
+        namespace CE = CapabilityExecution;
+        namespace EF = ExecutionFramework;
+        const auto request = FrameworkRequest();
+        const auto prepared = Prepare();
+        ASSERT_TRUE(prepared.IsSuccess());
+        const auto bound = Bind(request);
+        ASSERT_TRUE(bound.IsSuccess()) << bound.GetError().c_str();
+        const auto& snapshot = bound.GetValue();
+        EXPECT_TRUE(request.m_options.empty());
+        EXPECT_NE(snapshot.GetRequest().m_fingerprint, request.m_fingerprint);
+        ASSERT_EQ(snapshot.GetRequest().m_options.size(), 1);
+        EXPECT_TRUE(CE::Validate(snapshot.GetRequest()).IsSuccess());
+        const auto source = snapshot.ReadSource(EF::PlannerSourceKind::TerrainBuild, CE::Phase::BUILD, snapshot.GetRequest());
+        ASSERT_TRUE(source.IsSuccess());
+        EXPECT_EQ(source.GetValue()->m_terrainInput.m_bytes, prepared.GetValue().m_bytes);
+        EXPECT_EQ(source.GetValue()->m_terrainInput.m_inputFingerprint, prepared.GetValue().m_inputFingerprint);
+        const auto owner = QJsonDocument::fromJson(QByteArray(source.GetValue()->m_canonicalJson.c_str())).object();
+        EXPECT_EQ(owner.value("inputFingerprint").toString(), QString::fromUtf8(prepared.GetValue().m_inputFingerprint.c_str()));
+        EXPECT_EQ(owner.value("documentFingerprint").toString(), QString::fromUtf8(m_expected.c_str()));
+        EXPECT_EQ(owner.value("inputBytes").toInt(), prepared.GetValue().m_bytes.size());
+        EXPECT_FALSE(owner.value("executionAllowed").toBool(true));
+        EXPECT_EQ(snapshot.GetRequest().m_options.front().m_value, source.GetValue()->m_reference.m_fingerprint);
+        EXPECT_TRUE(CE::Validate(source.GetValue()->m_reference).IsSuccess());
+        EXPECT_TRUE(source.GetValue()->m_reference.m_canonicalJson.find(CalculateCanonicalSha256(source.GetValue()->m_canonicalJson)) != AZStd::string::npos);
+        EXPECT_FALSE(Bind(snapshot.GetRequest()).IsSuccess());
+        // Optional native export captures the Framework-bound SDK-owned fixture.
+        const auto& value = source.GetValue()->m_terrainInput;
+        const QString output = qEnvironmentVariable("FOA_M6_CORE_OUTPUT");
+        if (!output.isEmpty())
+        {
+            ASSERT_TRUE(QFileInfo(output).isAbsolute() && QDir(output).exists());
+            for (QDir current(output);;)
+            {
+                ASSERT_FALSE(QFileInfo(current.absolutePath()).isSymLink());
+                ASSERT_FALSE(current.exists(".git"));
+                if (!current.cdUp()) { break; }
+            }
+            QFile file(QDir(output).filePath("terrain-input.bin"));
+            ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::NewOnly));
+            ASSERT_EQ(file.write(value.m_bytes.data(), static_cast<qint64>(value.m_bytes.size())), value.m_bytes.size());
+            QFile report(QDir(output).filePath("binding.json"));
+            ASSERT_TRUE(report.open(QIODevice::WriteOnly | QIODevice::NewOnly));
+            QJsonObject binding;
+            binding["document_fingerprint"] = QString::fromUtf8(value.m_documentFingerprint.c_str());
+            binding["input_fingerprint"] = QString::fromUtf8(value.m_inputFingerprint.c_str());
+            binding["runtime_use_allowed"] = false;
+            const auto bytes = QJsonDocument(binding).toJson(QJsonDocument::Compact);
+            ASSERT_EQ(report.write(bytes), bytes.size());
+
+            QFile requestFile(QDir(output).filePath("framework-request.json"));
+            ASSERT_TRUE(requestFile.open(QIODevice::WriteOnly | QIODevice::NewOnly));
+            const auto requestBytes = CE::Canonicalize(snapshot.GetRequest()).GetValue().m_json;
+            ASSERT_EQ(requestFile.write(requestBytes.data(), static_cast<qint64>(requestBytes.size())), requestBytes.size());
+            QFile sourceFile(QDir(output).filePath("framework-source.json"));
+            ASSERT_TRUE(sourceFile.open(QIODevice::WriteOnly | QIODevice::NewOnly));
+            const auto& sourceBytes = source.GetValue()->m_canonicalJson;
+            ASSERT_EQ(sourceFile.write(sourceBytes.data(), static_cast<qint64>(sourceBytes.size())), sourceBytes.size());
+        }
+    }
+
+    TEST_F(TerrainNativeInputTests, FrameworkRejectsWrongProfileCapabilityPhaseAndInvalidRequests)
+    {
+        for (int mode = 0; mode < 4; ++mode)
+        {
+            auto request = FrameworkRequest();
+            if (mode == 0) { request.m_profileFingerprint = Sha('b'); }
+            if (mode == 1) { request.m_capabilityId = "capability.other"; }
+            if (mode == 2) { request.m_terminalPhase = CapabilityExecution::Phase::PACKAGE; }
+            if (mode != 3) { SealRequest(request); }
+            else { request.m_packId = "pack.changed-without-seal"; }
+            EXPECT_FALSE(Bind(request).IsSuccess()) << mode;
+        }
+        m_expected = Sha('c');
+        EXPECT_FALSE(Bind(FrameworkRequest()).IsSuccess());
+    }
+
+    TEST_F(TerrainNativeInputTests, FrameworkSnapshotRejectsRequestDriftAndRetainsCapturedRevision)
+    {
+        namespace CE = CapabilityExecution;
+        namespace EF = ExecutionFramework;
+        const auto bound = Bind(FrameworkRequest());
+        ASSERT_TRUE(bound.IsSuccess());
+        const auto& snapshot = bound.GetValue();
+        auto changed = snapshot.GetRequest();
+        changed.m_packId = "pack.changed";
+        SealRequest(changed);
+        EXPECT_FALSE(snapshot.ReadSource(EF::PlannerSourceKind::TerrainBuild, CE::Phase::BUILD, changed).IsSuccess());
+        EXPECT_FALSE(snapshot.ReadSource(EF::PlannerSourceKind::TerrainBuild, CE::Phase::PACKAGE, snapshot.GetRequest()).IsSuccess());
+        EXPECT_FALSE(snapshot.ReadSource(EF::PlannerSourceKind::Build, CE::Phase::BUILD, snapshot.GetRequest()).IsSuccess());
+        const auto before = snapshot.ReadSource(EF::PlannerSourceKind::TerrainBuild, CE::Phase::BUILD, snapshot.GetRequest());
+        ASSERT_TRUE(before.IsSuccess());
+        const auto captured = before.GetValue()->m_terrainInput.m_bytes;
+        ASSERT_TRUE(WriteFile(QString::fromUtf8(m_imported.m_publishedTilePaths.front().c_str()), QByteArray(2178, 'x')));
+        EXPECT_FALSE(Bind(FrameworkRequest()).IsSuccess());
+        const auto after = snapshot.ReadSource(EF::PlannerSourceKind::TerrainBuild, CE::Phase::BUILD, snapshot.GetRequest());
+        ASSERT_TRUE(after.IsSuccess());
+        EXPECT_EQ(after.GetValue()->m_terrainInput.m_bytes, captured);
+    }
+
+    TEST_F(TerrainNativeInputTests, FrameworkPropagatesCancellationWithoutCreatingASnapshot)
+    {
+        TerrainHeightmap::ImportControl control;
+        control.m_cancelled = [] { return true; };
+        EXPECT_FALSE(Bind(FrameworkRequest(), &control).IsSuccess());
     }
 
 } // namespace TaintedGrailModdingSDK

@@ -17,6 +17,10 @@ namespace TaintedGrailModdingSDK
         QString m_script;
     };
     TerrainCampaignProvider ResolveTerrainCampaignProvider();
+    TerrainCampaignProvider ResolveOriginalTerrainCampaignProvider();
+    QJsonObject PrepareOriginalTerrainCampaign(const TerrainCampaignProvider& provider, const QString& workspace,
+        const QString& gameRoot, const QString& unityVersion, const QString& campaign, const QString& operation,
+        const TerrainHeightmap::ImportControl* control, int timeoutMs = 900000);
     QJsonArray AvailableTerrainCampaigns(const TerrainCampaignProvider& provider, const QString& gameRoot, const QString& unityVersion);
     QJsonObject ExportTerrainCampaign(const TerrainCampaignProvider& provider, const QString& workspace,
         const QString& gameRoot, const QString& unityVersion, const TerrainHeightmap::ProfileBinding& profile,

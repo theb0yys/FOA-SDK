@@ -138,7 +138,7 @@ namespace TaintedGrailModdingSDK
     struct SourceShaderRenderComponent::Draw
     {
         struct Stream { AZ::RHI::ShaderSemantic semantic; AZ::u32 components{},type{}; Bytes bytes; AZStd::shared_ptr<SharedGeometryBuffer> shared; };
-        struct Constant { AZ::u32 slot{}; Bytes bytes; AZ::Data::Instance<AZ::RPI::Buffer> buffer; };
+        struct Constant { AZ::u32 slot{}; Bytes bytes; AZ::Data::Instance<AZ::RPI::Buffer> buffer; bool sharedCamera = false; };
         struct DataBuffer { AZ::u32 slot{},type{},stride{}; Bytes bytes; AZ::Data::Instance<AZ::RPI::Buffer> buffer; };
         struct Matrix { AZ::u32 stage{}, slot{}, offset{}, value{}, size{64}; };
         struct Image { AZ::u32 slot{}; AZStd::string path; AZ::Data::Asset<AZ::RPI::StreamingImageAsset> asset; };
@@ -158,7 +158,7 @@ namespace TaintedGrailModdingSDK
         AZStd::string status = "LOADING";
         AZStd::vector<Matrix> matrices, bufferMatrices;
         size_t residentBytes = 0, dataBufferBytes = 0;
-        bool dirty = false, visible = true, camera = false;
+        bool dirty = false, visible = true, camera = false, sharedCameraOnly = false;
         Clock::time_point started = Clock::now();
         AZStd::vector<AZ::Data::Instance<AZ::RPI::Buffer>> buffers;
         AZStd::vector<AZ::Data::Instance<AZ::RPI::StreamingImage>> images;
@@ -364,7 +364,7 @@ namespace TaintedGrailModdingSDK
         AZ::RPI::ViewportContextNotificationBus::Handler::BusDisconnect(); AZ::TickBus::Handler::BusDisconnect();
         SourceShaderRenderBus::Handler::BusDisconnect(); ClearDraw();
         for (auto& [id,draws] : m_entities) for (auto& draw : draws) { Retire(AZStd::move(draw)); }
-        m_entities.clear(); m_entityOrder.clear(); m_nextEntity=0; CollectRetired(); m_cameraView.reset(); m_cameraValid=false;
+        m_entities.clear(); m_entityOrder.clear(); m_nextEntity=0; CollectRetired(); m_cameraView.reset(); m_cameraValid=false; m_viewProjectionBuffer.reset();
     }
     bool SourceShaderRenderComponent::Queue(Draw& draw)
     {
@@ -451,9 +451,9 @@ namespace TaintedGrailModdingSDK
         return AZStd::string::format(
             "{\"entity_draws\":%zu,\"retired_draws\":%zu,\"resident_payload_bytes\":%zu,\"last_tick_work\":%zu,\"peak_tick_work\":%zu,"
             "\"geometry_payload_bytes\":%zu,\"constant_payload_bytes\":%zu,\"read_only_buffer_payload_bytes\":%zu,\"unique_geometry_buffers\":%zu,\"geometry_buffer_builds\":%zu,"
-            "\"geometry_buffer_reuses\":%zu,\"last_tick_visits\":%zu,\"peak_tick_visits\":%zu,\"dirty_entity_draws\":%zu,\"loading_entity_draws\":%zu,\"failed_entity_draws\":%zu,\"shared_stages\":%zu,\"shared_stage_reuses\":%zu,\"sampler_reservations\":%zu,\"registered_entities\":%zu,\"submitted_entities\":%zu,\"submitted_entity_draws\":%zu}",
+            "\"geometry_buffer_reuses\":%zu,\"last_tick_visits\":%zu,\"peak_tick_visits\":%zu,\"dirty_entity_draws\":%zu,\"loading_entity_draws\":%zu,\"failed_entity_draws\":%zu,\"shared_stages\":%zu,\"shared_stage_reuses\":%zu,\"sampler_reservations\":%zu,\"registered_entities\":%zu,\"submitted_entities\":%zu,\"submitted_entity_draws\":%zu,\"shared_camera_buffer_updates\":%zu}",
             m_entityOrder.size(),m_retired.size(),m_residentBytes,m_lastTickWork,m_peakTickWork,m_geometryBytes,m_residentBytes-m_geometryBytes-m_dataBufferBytes,m_dataBufferBytes,
-            m_geometryBuffers.size(),m_geometryBuilds,m_geometryReuses,m_lastTickVisits,m_peakTickVisits,dirty,loading,failed,m_sharedStages.size(),m_stageReuses,m_samplerReservations,m_entities.size(),m_submittedEntities,m_submittedEntityDraws);
+            m_geometryBuffers.size(),m_geometryBuilds,m_geometryReuses,m_lastTickVisits,m_peakTickVisits,dirty,loading,failed,m_sharedStages.size(),m_stageReuses,m_samplerReservations,m_entities.size(),m_submittedEntities,m_submittedEntityDraws,m_cameraBufferUpdates);
     }
     void SourceShaderRenderComponent::CollectRetired()
     {
@@ -576,7 +576,22 @@ namespace TaintedGrailModdingSDK
         const bool valid=view && projection.IsFinite() && position.IsFinite();
         if (view==m_cameraView && valid==m_cameraValid && projection==m_worldToClip && position==m_cameraPosition) { return; }
         m_cameraView=view; m_cameraValid=valid; m_worldToClip=projection; m_cameraPosition=position;
-        for (auto& [id,draws] : m_entities) for (auto& draw : draws) { if (draw->camera) { draw->dirty=true; } }
+        // A dedicated 64-byte absolute camera constant is common to all terrain
+        // groups. Update it once per view change, without delaying camera movement
+        // behind the bounded per-object placement/resource work queue.
+        bool uploaded = true;
+        if (m_viewProjectionBuffer && valid)
+        {
+            constexpr AZ::u32 axis[]{0,2,1,3}; float packed[16];
+            for (AZ::u32 col=0; col<4; ++col) for (AZ::u32 row=0; row<4; ++row)
+            { packed[col*4+row]=m_worldToClip.GetElement(row,axis[col]); }
+            uploaded=m_viewProjectionBuffer->UpdateData(packed,sizeof(packed)); ++m_cameraBufferUpdates;
+        }
+        for (auto& [id,draws] : m_entities) for (auto& draw : draws)
+        {
+            if (draw->camera && !draw->sharedCameraOnly) { draw->dirty=true; }
+            if (draw->sharedCameraOnly && !uploaded) { draw->status="FAILED: shared camera upload"; }
+        }
     }
     bool SourceShaderRenderComponent::UpdateMatrices(Draw& draw, bool upload)
     {
@@ -604,6 +619,7 @@ namespace TaintedGrailModdingSDK
         packed[3][0]=m_cameraPosition.GetX(); packed[3][1]=m_cameraPosition.GetZ(); packed[3][2]=m_cameraPosition.GetY();
         for (AZ::u32 stage=0;stage<2;++stage) for (auto& constant : draw.stages[stage].constants)
         {
+            if (constant.sharedCamera) { continue; }
             bool changed=false;
             for (const auto& matrix : draw.matrices)
             {
@@ -750,7 +766,23 @@ namespace TaintedGrailModdingSDK
             {
                 const auto index=srg->FindShaderInputBufferIndex(AZ::Name(AZStd::string::format("cb%u",constant.slot)));
                 if (!index.IsValid() || srgLayout->GetShaderInput(index).m_strideSize!=constant.bytes.size()) { return false; }
-                auto buffer=Buffer(constant.bytes,AZ::RPI::CommonBufferPoolType::Constant,16);
+                size_t destinations=0; bool absoluteCamera=false;
+                for (const auto& destination : draw.matrices)
+                {
+                    if (destination.stage==stage && destination.slot==constant.slot)
+                    {
+                        ++destinations;
+                        absoluteCamera=destination.value==1 && destination.offset==0 && destination.size==64;
+                    }
+                }
+                constant.sharedCamera=constant.bytes.size()==64 && destinations==1 && absoluteCamera;
+                AZ::Data::Instance<AZ::RPI::Buffer> buffer;
+                if (constant.sharedCamera)
+                {
+                    if (!m_viewProjectionBuffer) { m_viewProjectionBuffer=Buffer(constant.bytes,AZ::RPI::CommonBufferPoolType::Constant,16); }
+                    buffer=m_viewProjectionBuffer;
+                }
+                else { buffer=Buffer(constant.bytes,AZ::RPI::CommonBufferPoolType::Constant,16); }
                 if (!buffer || !srg->SetBuffer(index,buffer)) { return false; } constant.buffer=buffer; draw.buffers.push_back(buffer);
             }
             for (auto& data : source.dataBuffers)
@@ -782,6 +814,15 @@ namespace TaintedGrailModdingSDK
                 shared->srg=srg; shared->samplers=source.samplers.size(); draw.ownedSamplers-=shared->samplers;
                 m_sharedStages.emplace(key,shared); draw.sharedStages[stage]=AZStd::move(shared);
             }
+        }
+        draw.sharedCameraOnly=draw.camera;
+        for (const auto& destination : draw.matrices)
+        {
+            if (destination.value==0) { continue; }
+            bool shared=false;
+            for (const auto& constant : draw.stages[destination.stage].constants)
+            { shared |= constant.slot==destination.slot && constant.sharedCamera; }
+            draw.sharedCameraOnly &= shared;
         }
         if (!draw.scene->ConfigurePipelineState(draw.shader->GetDrawListTag(),pipeline)) { return false; }
         const auto* state=draw.shader->AcquirePipelineState(pipeline);

@@ -117,6 +117,28 @@ ly_add_source_properties(
 )
 ly_install_files(
     FILES ../Tools/foa_campaign_heightmap_export.py ../Tools/foa_heightmap_importer.py
+        ../Tools/foa_campaign_terrain.py
+        ../Tools/foa_campaign_terrain_editor.py
+        ../Tools/foa_campaign_terrain_prepare.py
+        ../Tools/foa_native_shader_compiler.py
+        ../Tools/foa_scene_assembly.py
+        ../Tools/foa_scene_asset_binding.py
+        ../Tools/foa_scene_asset_catalog.py
+        ../Tools/foa_scene_cohort.py
+        ../Tools/foa_scene_component_audit.py
+        ../Tools/foa_scene_dots_buffers.py
+        ../Tools/foa_scene_material.py
+        ../Tools/foa_scene_medusa.py
+        ../Tools/foa_scene_merged_assembly.py
+        ../Tools/foa_scene_merged_renderers.py
+        ../Tools/foa_scene_mesh.py
+        ../Tools/foa_scene_native_shader.py
+        ../Tools/foa_scene_ownership.py
+        ../Tools/foa_scene_shader.py
+        ../Tools/foa_scene_shader_buffers.py
+        ../Tools/foa_scene_shader_constants.py
+        ../Tools/foa_scene_transform_capture.py
+        ../Tools/foa_scene_transforms.py
     DESTINATION scripts/foa-sdk
 )
 

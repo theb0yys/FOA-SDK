@@ -103,7 +103,7 @@ namespace TaintedGrailModdingSDK
             doc.Parse<rapidjson::kParseIterativeFlag | rapidjson::kParseValidateEncodingFlag>(descriptor.data(), descriptor.size());
             if (doc.HasParseError() || !doc.IsObject() || !doc.HasMember("schema_version") || !doc["schema_version"].IsUint()) { return false; }
             const auto version = doc["schema_version"].GetUint();
-            if (version == 1 || version == 3)
+            if (version == 1 || version == 3 || version == 4)
             {
                 if (!Keys(doc, {"schema_version", "profile", "identity", "source_parent", "source_local_bits", "source_world_bits", "local_bounds"})) { return false; }
             }
@@ -122,6 +122,25 @@ namespace TaintedGrailModdingSDK
                     !Digest(id["record_sha256"]) || !id["instance_ordinal"].IsUint() || id["instance_ordinal"].GetUint() >= 1000000 ||
                     !parent.IsNull()) { return false; }
             }
+            else if (version == 4)
+            {
+                // Medusa authoring groups retain archive renderer/instance ownership.
+                // They are not invented source GameObjects or reconstructed heightfields.
+                if (!Keys(id, {"archive_sha256", "scene_name", "manager_record_sha256", "renderer_ordinal",
+                              "draw_ordinal", "first_instance", "instance_count", "instances_sha256"}) ||
+                    !Digest(id["archive_sha256"]) || !Digest(id["manager_record_sha256"]) || !Digest(id["instances_sha256"]) ||
+                    !Text(id["scene_name"], 200) || !id["renderer_ordinal"].IsUint() || id["renderer_ordinal"].GetUint() >= 16384 ||
+                    !id["draw_ordinal"].IsUint() || id["draw_ordinal"].GetUint() >= 4096 ||
+                    !id["first_instance"].IsUint() || id["first_instance"].GetUint() >= 100000 ||
+                    !id["instance_count"].IsUint() || id["instance_count"].GetUint() == 0 || id["instance_count"].GetUint() > 4096 ||
+                    !parent.IsNull() || doc["local_bounds"].IsNull()) { return false; }
+                for (AZ::u32 n = 0; n < id["scene_name"].GetStringLength(); ++n)
+                {
+                    const char c = id["scene_name"].GetString()[n];
+                    if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z') && !(c >= '0' && c <= '9') &&
+                        c != '_' && c != '-' && c != ' ') { return false; }
+                }
+            }
             else
             {
                 if (!Keys(id, {"bundle_sha256", "serialized_file", "path_id", "gameobject_id", "record_sha256"}) ||
@@ -139,6 +158,16 @@ namespace TaintedGrailModdingSDK
                 for (AZ::u32 i = 0; i < 16; ++i)
                 {
                     if (doc["source_local_bits"][i].GetUint() != doc["source_world_bits"][i].GetUint()) { return false; }
+                }
+            }
+            if (version == 4)
+            {
+                // Original instance matrices live in the bound render packet. This component
+                // stores only an identity authoring delta, so no placement is applied twice.
+                for (AZ::u32 i = 0; i < 16; ++i)
+                {
+                    const AZ::u32 expected = i % 5 == 0 ? 0x3f800000u : 0u;
+                    if (doc["source_local_bits"][i].GetUint() != expected || doc["source_world_bits"][i].GetUint() != expected) { return false; }
                 }
             }
             // Exact coordinate permutation preserves all captured coefficients, including signed zero.

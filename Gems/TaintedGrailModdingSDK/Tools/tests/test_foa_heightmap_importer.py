@@ -29,9 +29,14 @@ TOOLS_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = TOOLS_ROOT / "foa_heightmap_importer.py"
 SPEC = importlib.util.spec_from_file_location("foa_heightmap_importer", MODULE_PATH)
 assert SPEC and SPEC.loader
-heightmaps = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = heightmaps
-SPEC.loader.exec_module(heightmaps)
+# Share the same module/type identities with the campaign importer tests.
+# Replacing an already imported module makes assertRaises compare different classes.
+heightmaps = sys.modules.get(SPEC.name)
+if heightmaps is None:
+    heightmaps = importlib.util.module_from_spec(SPEC)
+    sys.modules[SPEC.name] = heightmaps
+    SPEC.loader.exec_module(heightmaps)
+assert Path(heightmaps.__file__).resolve() == MODULE_PATH
 
 
 def key_table(*keys: str) -> str:

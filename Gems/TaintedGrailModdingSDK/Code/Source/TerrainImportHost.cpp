@@ -246,7 +246,7 @@ namespace TaintedGrailModdingSDK
         if (!nativeRequest.isEmpty())
         {
             m_nativeResult = nativeRequest + ".result.json";
-            if (!LaunchNativeTerrain(nativeRequest))
+            if (!LaunchNativeTerrain(nativeRequest, m_snapshot.take("native_campaign").toBool()))
             {
                 m_nativeResult.clear();
                 m_snapshot = Failure("The native Editor terrain handoff is unavailable. Check the installed Editor scripts.");
@@ -262,7 +262,8 @@ namespace TaintedGrailModdingSDK
         const QString& unityVersion)
     {
         const QString action = request.value("action").toString();
-        const bool refreshProvider = action == "refresh" || action == "import-campaign";
+        const bool refreshProvider = action == "refresh" || action == "import-campaign-terrain";
+        const auto campaignProvider = refreshProvider ? ResolveOriginalTerrainCampaignProvider() : TerrainCampaignProvider{};
         if (action == "import-campaign")
         {
             return Failure(
@@ -329,7 +330,7 @@ namespace TaintedGrailModdingSDK
                 response["progress"] = m_operation ? m_operation->m_progress.load() : 0;
                 return response;
             }
-            if (action != "import" && action != "refresh" && action != "open" && action != "open-editor")
+            if (action != "import" && action != "refresh" && action != "open" && action != "open-editor" && action != "import-campaign-terrain")
             {
                 return Failure("This terrain operation is unavailable.");
             }
@@ -355,6 +356,11 @@ namespace TaintedGrailModdingSDK
                     {
                         operation->m_progress = total ? static_cast<int>(done * 90 / total) : 0;
                     };
+                    if (action == "import-campaign-terrain")
+                    {
+                        return PrepareOriginalTerrainCampaign(campaignProvider, workspace, gameInstall, unityVersion,
+                            request.value("campaign").toString(), "terrain-import." + QUuid::createUuid().toString(QUuid::WithoutBraces), &control);
+                    }
                     if (action == "refresh")
                     {
                         return Inventory(workspace, profile, &control);
@@ -469,7 +475,7 @@ namespace TaintedGrailModdingSDK
         auto response = m_snapshot;
         if (refreshProvider)
         {
-            response["campaigns"] = QJsonArray{};
+            response["campaigns"] = AvailableTerrainCampaigns(campaignProvider, gameInstall, unityVersion);
         }
         response["busy"] = m_future.valid() || !m_nativeResult.isEmpty();
         response["progress"] = m_operation ? m_operation->m_progress.load() : 100;

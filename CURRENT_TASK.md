@@ -1,6 +1,7 @@
 # Current Task
 
-Status: IN_PROGRESS.
+Status: implementation combined. Final validation and merge results are recorded
+in the integration pull request.
 Goal: integrate the owner's pending FOA-SDK commits, resolve merge conflicts and
 validate the combined Editor and Framework result.
 Classification: Critical/Runtime, because the requested integration includes
@@ -25,4 +26,8 @@ Known hosted failures under investigation: M3 maximum-metadata reopen performanc
 and Item Viewer Editor startup. Pending or failed jobs are not reported as passes.
 
 Current branch: codex/integrate-pending-sdk-work.
-Next action: finish combining the independent branches and validate their result.
+Integration details: task-status conflicts were resolved to this scope; both
+Framework planner and terrain CMake registrations were retained. The Item Viewer
+validation launcher now binds the explicit external engine, and its close check
+uses the Qt event loop for deferred deletion. The inventory rejection fixture
+uses an equivalent Unicode escape required by source policy.

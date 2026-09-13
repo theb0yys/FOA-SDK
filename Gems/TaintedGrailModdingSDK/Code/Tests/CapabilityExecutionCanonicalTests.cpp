@@ -93,3 +93,45 @@ TEST(CapabilityExecutionCanonical, AggregateCanonicalBytesAtLimitAndOneOver)
     auto exact = Canonicalize(r); ASSERT_TRUE(exact.IsSuccess()); EXPECT_EQ(exact.GetValue().m_json.size(), MaximumCanonicalBytes);
     bytes.insert(9, 1, 'a'); EXPECT_FALSE(Canonicalize(r).IsSuccess());
 }
+
+TEST(CapabilityExecutionCanonical, GoldenEscapesPreserveEmptyLeadingAdjacentAndTrailingBytes)
+{
+    struct Golden { const char* m_value; const char* m_json; const char* m_fingerprint; };
+    const Golden cases[] = {
+        { "", R"golden({"contract_id":"foa-capability-execution-v1","canonical_profile":"foa-capability-execution-canonical-json-v1","version":1,"kind":"OPTION","id":"option.escape","value":""})golden",
+          "sha256:d8629547a8f21d2289fb698cb25f18b11b6d4b49008243d1644779eddea256fe" },
+        { "\"", R"golden({"contract_id":"foa-capability-execution-v1","canonical_profile":"foa-capability-execution-canonical-json-v1","version":1,"kind":"OPTION","id":"option.escape","value":"\""})golden",
+          "sha256:d6a2b2a5dcd439bea6bd2b18fb6387e9cde1cb0034ba6557eb7d73864fed3b3d" },
+        { "\\", R"golden({"contract_id":"foa-capability-execution-v1","canonical_profile":"foa-capability-execution-canonical-json-v1","version":1,"kind":"OPTION","id":"option.escape","value":"\\"})golden",
+          "sha256:4a259b82ef13c2869157d18f8f828029373eec9e6d825e8ea310b6ab99b1dc08" },
+        { "\"a\\\"b\\", R"golden({"contract_id":"foa-capability-execution-v1","canonical_profile":"foa-capability-execution-canonical-json-v1","version":1,"kind":"OPTION","id":"option.escape","value":"\"a\\\"b\\"})golden",
+          "sha256:ff6e048d579c1a12296a63472d3af1c0bdc93cad65c32f2484ff374363ece7b3" },
+        { "prefix\"middle\"suffix", R"golden({"contract_id":"foa-capability-execution-v1","canonical_profile":"foa-capability-execution-canonical-json-v1","version":1,"kind":"OPTION","id":"option.escape","value":"prefix\"middle\"suffix"})golden",
+          "sha256:d4ea43055bcbe78609489bcf1bf8a7cae7e40c6d387f211d60954244e91c2589" },
+        { "a\\b\"c\\", R"golden({"contract_id":"foa-capability-execution-v1","canonical_profile":"foa-capability-execution-canonical-json-v1","version":1,"kind":"OPTION","id":"option.escape","value":"a\\b\"c\\"})golden",
+          "sha256:7ffffd79c42e76eb528382da2f699a71e8e11341e1e304da72c463c948634fae" }
+    };
+    for (const auto& golden : cases)
+    {
+        OptionV1 option; option.m_id = "option.escape"; option.m_value = golden.m_value;
+        const auto result = Canonicalize(option);
+        ASSERT_TRUE(result.IsSuccess()) << result.GetError().c_str();
+        EXPECT_EQ(result.GetValue().m_json, golden.m_json);
+        EXPECT_EQ(result.GetValue().m_fingerprint, golden.m_fingerprint);
+    }
+}
+TEST(CapabilityExecutionCanonical, OpaqueScreenRetainsUnsafeContentAndHandlesLongEscapeRuns)
+{
+    PhaseExtensionReferenceV1 extension; extension.m_id = "extension.escape";
+    extension.m_extensionContractId = "manifest.test";
+    extension.m_extensionFingerprint = "sha256:" + AZStd::string(64, '0');
+    extension.m_canonicalJson = "{\"text\":\"" + AZStd::string(4096, '\\') + "\"}";
+    EXPECT_TRUE(Canonicalize(extension).IsSuccess());
+    // Only backslashes immediately before quotes are structural screening escapes.
+    extension.m_canonicalJson = "{\"text\":\"" + AZStd::string(4096, '\\') + "ordinary\"}";
+    EXPECT_FALSE(Canonicalize(extension).IsSuccess());
+    extension.m_canonicalJson = R"({"text":"ordinary\"secret=value"})";
+    EXPECT_FALSE(Canonicalize(extension).IsSuccess());
+    extension.m_canonicalJson = R"({"text":"ordinary\"middle\"tail"})";
+    EXPECT_TRUE(Canonicalize(extension).IsSuccess());
+}

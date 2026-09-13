@@ -51,13 +51,21 @@ namespace TaintedGrailModdingSDK::CapabilityExecution
             // Nested upstream JSON is carried as exact escaped bytes. Quote escaping
             // is structural; remove only those escape runs for the conservative text audit.
             AZStd::string screened; screened.reserve(value.size());
-            for (size_t i = 0; i < value.size();)
+            const char* data = value.data();
+            const size_t size = value.size();
+            size_t start = 0;
+            for (size_t i = 0; i < size;)
             {
-                size_t end = i;
-                while (end < value.size() && value[end] == '\\') { ++end; }
-                if (end > i && end < value.size() && value[end] == '"') { i = end; }
-                screened.push_back(value[i++]);
+                if (data[i] != '\\') { ++i; continue; }
+                const size_t escapeStart = i;
+                do { ++i; } while (i < size && data[i] == '\\');
+                if (i < size && data[i] == '"')
+                {
+                    screened.append(data + start, escapeStart - start);
+                    start = i;
+                }
             }
+            screened.append(data + start, size - start);
             if (!IsSafeText(screened)) { return false; }
             char stack[MaximumNesting] = {}; size_t depth = 0; bool quoted = false, escaped = false;
             for (char c : value)
@@ -95,12 +103,21 @@ namespace TaintedGrailModdingSDK::CapabilityExecution
             void Quote(const AZStd::string& value)
             {
                 Bytes("\"");
-                for (char c : value)
+                if (!Good()) { return; }
+                // Copy ordinary UTF-8 bytes in runs; only quotes and backslashes need escaping.
+                // The audit and writer still charge every emitted byte to the same budget.
+                const char* data = value.data();
+                const size_t size = value.size();
+                size_t start = 0;
+                for (size_t index = 0; index < size; ++index)
                 {
+                    if (data[index] != '"' && data[index] != '\\') { continue; }
+                    Bytes(AZStd::string_view(data + start, index - start));
+                    Bytes("\\");
                     if (!Good()) { return; }
-                    if (c == '"' || c == '\\') { Bytes("\\"); }
-                    Bytes(AZStd::string_view(&c, 1));
+                    start = index;
                 }
+                Bytes(AZStd::string_view(data + start, size - start));
                 Bytes("\"");
             }
             void Begin()

@@ -129,7 +129,7 @@ alone cannot satisfy runtime verification.
 | --- | --- | --- |
 | M5 prerequisite | Six actual processes, failures, shutdown and fresh crash recovery | PASSED locally on M5; separate exact-commit handoff |
 | M6 canonical input | Existing V1 fixtures unchanged; malformed inputs and transforms rejected | PASSED locally for bounded M6 input |
-| Native build profile | Exact executable/dependency/IO profile; success, cancellation, timeout and isolation denial | BLOCKED: no qualified profile |
+| Native build profile | Exact executable/dependency/IO profile; success, cancellation, timeout and isolation denial | BLOCKED: tested container routes fail licensing IPC; see [process qualification](HEIGHTMAP_NATIVE_PROCESS_QUALIFICATION.md) |
 | Native materialisation | Real Unity creation, readback, inventory and repeatability/loss measurement | PASSED for fixed synthetic fixture and Core handoff |
 | Framework reachability | Real bindings for build/package/deploy/launch/verify/rollback and a reachable Editor command | PARTIAL: BUILD preview bound; execution and Editor reachability absent |
 | Deployment/recovery | Exact owned-target mutation, failure injection, drift refusal and fresh recovery | NOT_RUN for terrain |

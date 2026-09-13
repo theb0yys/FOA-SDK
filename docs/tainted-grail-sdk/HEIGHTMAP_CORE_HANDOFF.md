@@ -168,3 +168,9 @@ Terrain packaging, deployment, game loading, runtime observations, unload and
 rollback are NOT_RUN. The game adapter and qualified launch path are still absent.
 No game installation, save, campaign or licensing file was modified by this work.
 Runtime sign-off not performed. See CURRENT_TASK for the current validated state.
+
+
+The subsequent [native process isolation experiment](HEIGHTMAP_NATIVE_PROCESS_QUALIFICATION.md)
+found a concrete licensing IPC failure in both tested container routes. An
+ordinary-token control passed; production isolation remains BLOCKED. The report
+records the exact negative observations and remaining environment decision.

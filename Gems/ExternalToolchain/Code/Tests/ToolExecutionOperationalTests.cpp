@@ -347,6 +347,18 @@ namespace ExternalToolchain
             EXPECT_EQ(Artifact(second), "network-denied\n");
         }
     }
+    TEST_F(ToolExecutionOperational, LocalNamedPipeRoundTripWorksWhileGlobalPipeCreationIsDenied)
+    {
+        auto request = Request("pipe-namespace");
+        ASSERT_TRUE(Submit(request));
+        const auto record = Wait(request);
+        ASSERT_TRUE(ToolSucceeded(record)) << ToolErrorName(record.m_status.m_error) << ":" << record.m_exitCode << ":"
+            << m_service->ReadLog(request.m_attemptId, true, 0).m_text.c_str();
+        EXPECT_EQ(record.m_profileFingerprint, ToolDigest(ToolExecutionProfile));
+        EXPECT_EQ(record.m_status.m_cleanup, ToolCleanup::Complete);
+        EXPECT_EQ(Artifact(record), "global-pipe-denied\nlocal-pipe-roundtrip-ok\n");
+    }
+
     TEST_F(ToolExecutionOperational, SurvivingDescendantAndFloodAreContained)
     {
         auto child = Request("child");

@@ -162,3 +162,9 @@ the exact process/dependency boundary, including negative isolation,
 cancellation and timeout proof. Do not replace that work with a direct Unity or
 game subprocess fallback. Final game execution requires the reviewed package,
 exact destination/side effects and rollback plan. Runtime sign-off not performed.
+
+
+The subsequent [native process isolation experiment](HEIGHTMAP_NATIVE_PROCESS_QUALIFICATION.md)
+found a concrete licensing IPC failure in both tested container routes. An
+ordinary-token control passed; production isolation remains BLOCKED. The report
+records the exact negative observations and remaining environment decision.

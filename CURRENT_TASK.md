@@ -41,3 +41,17 @@ creation, repeated bundle builds, all five 1089-sample readbacks, twenty collide
 probes and fresh-process reopen. The fixed-source regression control also passed.
 Maximum height error was 0.122 mm. All 27 independent auditor tests and both final
 native evidence audits passed. No product UI or game-runtime pass is claimed.
+
+
+Production execution qualification follow-up: local LPAC and standard AppContainer
+bootstrap attempts failed during Unity licensing initialization; the matched
+ordinary-token control succeeded. Exact diagnostics identify denied named-pipe
+servers and blocked socket access. Final attempts confirmed the owned job was
+empty after cleanup. The complete private tool inventory was unchanged. Details,
+limits, failed controls and the pending execution-environment decision are in
+[the process qualification report](docs/tainted-grail-sdk/HEIGHTMAP_NATIVE_PROCESS_QUALIFICATION.md).
+The permanent M2 global-pipe denial / LOCAL pipe round-trip regression passed;
+all 22 M2 operational tests passed with no skips. Production process and game runtime qualification remain BLOCKED.
+
+The qualification follow-up static lane passed: 1446 tests with 34 explicit skips,
+ten tooling tests and four sets of ten pinned source-policy checks.

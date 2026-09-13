@@ -183,23 +183,37 @@ namespace TaintedGrailModdingSDK
     SpawnEncounterEditorWidget::~SpawnEncounterEditorWidget() { FoundationNotificationBus::Handler::BusDisconnect(); }
     void SpawnEncounterEditorWidget::closeEvent(QCloseEvent* event)
     {
-        if (m_unsavedPromptOpen) { event->ignore(); return; }
-        if (m_dirty)
-        {
-            const QScopedValueRollback<bool> prompting(m_unsavedPromptOpen, true);
-            QMessageBox prompt(QMessageBox::Warning, tr("Unsaved encounter"),
-                tr("Save your encounter changes before closing the pane?"),
-                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
-            prompt.setObjectName("encounterUnsavedChangesDialog");
-            prompt.setDefaultButton(QMessageBox::Cancel);
-            prompt.setEscapeButton(QMessageBox::Cancel);
-            const int choice = prompt.exec();
-            if (choice != QMessageBox::Discard && (choice != QMessageBox::Save || !Save()))
-            {
-                event->ignore(); return;
-            }
-        }
-        QWidget::closeEvent(event);
+        if (ConfirmDraftReplacement(tr("closing the pane"))) { QWidget::closeEvent(event); }
+        else { event->ignore(); }
+    }
+    bool SpawnEncounterEditorWidget::ConfirmDraftReplacement(const QString& action)
+    {
+        if (m_unsavedPromptOpen) { return false; }
+        if (!m_dirty) { return true; }
+        const QScopedValueRollback<bool> prompting(m_unsavedPromptOpen, true);
+        QMessageBox prompt(QMessageBox::Warning, tr("Unsaved encounter"),
+            tr("Save your encounter changes before %1?").arg(action),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+        prompt.setObjectName("encounterUnsavedChangesDialog");
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.setEscapeButton(QMessageBox::Cancel);
+        const int choice = prompt.exec();
+        // Discard grants admission only. Keep the draft until replacement commits;
+        // another handler can veto, or a same-root candidate rebuild can fail.
+        return choice == QMessageBox::Discard || (choice == QMessageBox::Save && Save());
+    }
+    bool SpawnEncounterEditorWidget::CanChangeWorkspace(const FoundationService& service)
+    {
+        return &service != &FoundationService::Get()
+            || ConfirmDraftReplacement(tr("switching workspaces"));
+    }
+    void SpawnEncounterEditorWidget::OnWorkspaceChanged(const FoundationService& service)
+    {
+        if (&service != &FoundationService::Get()) { return; }
+        m_dirty = false;
+        RefreshChoices();
+        Load({});
+        Status(tr("Workspace changed. Select an encounter to edit."));
     }
     void SpawnEncounterEditorWidget::Status(const QString& text, bool error)
     {
@@ -207,8 +221,10 @@ namespace TaintedGrailModdingSDK
     }
     bool SpawnEncounterEditorWidget::SameWorkspace() const
     {
-        const auto& workspace = FoundationService::Get().GetWorkspace();
-        return workspace.m_workspaceId == m_workspaceId && workspace.m_activeGameProfileId == m_profileId;
+        const auto& service = FoundationService::Get();
+        const auto& workspace = service.GetWorkspace();
+        return workspace.m_workspaceId == m_workspaceId && workspace.m_activeGameProfileId == m_profileId
+            && service.GetWorkspaceFilePath() == m_workspaceFile && service.GetWorkspaceRootPath() == m_workspaceRoot;
     }
     void SpawnEncounterEditorWidget::OnFoundationChanged()
     {
@@ -263,6 +279,8 @@ namespace TaintedGrailModdingSDK
         m_draft = definition ? *definition : EncounterDefinition{};
         m_workspaceId = foundation.GetWorkspace().m_workspaceId;
         m_profileId = foundation.GetWorkspace().m_activeGameProfileId;
+        m_workspaceFile = foundation.GetWorkspaceFilePath();
+        m_workspaceRoot = foundation.GetWorkspaceRootPath();
         m_records->setCurrentIndex(qMax(0, m_records->findData(Q(m_draft.m_recordId))));
         m_name->setText(record ? Q(record->m_displayName) : QString{});
         m_placement->setCurrentIndex(qMax(0, m_placement->findData(Q(m_draft.m_placementRecordId))));

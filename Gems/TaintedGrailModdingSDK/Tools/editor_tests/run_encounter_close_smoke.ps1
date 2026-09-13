@@ -15,7 +15,8 @@ param(
     [Parameter(Mandatory)][string]$EngineRoot,
     [Parameter(Mandatory)][string]$CacheRoot,
     [Parameter(Mandatory)][string]$OutputRoot,
-    [ValidateRange(30, 600)][int]$TimeoutSeconds = 240
+    [ValidateRange(30, 600)][int]$TimeoutSeconds = 240,
+    [ValidateSet('close','workspace-status','workspace-catalog')][string]$Suite = 'close'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'Windows is required for the native file-lock cases.' }
@@ -38,8 +39,8 @@ $lock = Get-Content (Join-Path $productRoot 'o3de.lock.json') -Raw | ConvertFrom
 $engineCommit = (git -C $EngineRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $engineCommit -ne $lock.commit) { throw 'Engine pin mismatch.' }
 $expectedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path (Split-Path $EditorExecutable) 'TaintedGrailModdingSDK.Editor.dll')).Hash
-$testScript = Join-Path $PSScriptRoot 'encounter_close_live_smoke.py'
-$names = @('LOCALAPPDATA','TEMP','TMP','QT_QPA_PLATFORM','FOA_SDK_ENCOUNTER_WORKSPACE','FOA_SDK_ENCOUNTER_RESULT')
+$testScript = Join-Path $PSScriptRoot $(if ($Suite -eq 'close') { 'encounter_close_live_smoke.py' } else { 'encounter_workspace_live_smoke.py' })
+$names = @('LOCALAPPDATA','TEMP','TMP','QT_QPA_PLATFORM','FOA_SDK_ENCOUNTER_WORKSPACE','FOA_SDK_ENCOUNTER_RESULT','FOA_SDK_ENCOUNTER_WORKSPACE_ROUTE')
 $savedEnvironment = @{}
 foreach ($name in $names) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 $workspaceRoot = (Join-Path $OutputRoot 'a/FOA-SDK/Workspace').Replace('\', '/')
@@ -109,6 +110,7 @@ try {
     $env:TMP = $env:TEMP
     $env:FOA_SDK_ENCOUNTER_WORKSPACE = "$workspaceRoot/foa-sdk.tgworkspace.json"
     $env:FOA_SDK_ENCOUNTER_RESULT = "$OutputRoot/result.json"
+    $env:FOA_SDK_ENCOUNTER_WORKSPACE_ROUTE = $Suite.Replace("workspace-", "")
     Remove-Item Env:QT_QPA_PLATFORM -ErrorAction SilentlyContinue
     $arguments = @(
         '--project-path', (Join-Path $productRoot 'TaintedGrailModdingEditor'),
@@ -145,11 +147,11 @@ try {
     }
     $editor.WaitForExit()
     $test = Get-Content "$OutputRoot/result.json" -Raw | ConvertFrom-Json
-    $minimumChecks = 28
+    $minimumChecks = $(if ($Suite -eq 'close') { 28 } else { 47 })
     if ($forcedStop -or [EncounterCloseTestDesktop]::ExitCode() -ne 0 -or
         $test.status -ne 'PASSED' -or -not $test.about_to_quit -or -not $test.editor_initialized -or
         $test.sdk_module_sha256 -ne $expectedHash -or $test.checks.Count -lt $minimumChecks) {
-        throw "Pane close acceptance failed; see $OutputRoot."
+        throw "Encounter draft acceptance failed; see $OutputRoot."
     }
     $status = 'PASSED'
 } finally {
@@ -160,11 +162,11 @@ try {
         $forcedStop = $true
     }
     $exitCode = $(if ($editor) {[EncounterCloseTestDesktop]::ExitCode()} else {$null})
-    [ordered]@{status=$status;suite='close';engine_commit=$engineCommit;isolated_desktop=$true;
+    [ordered]@{status=$status;suite=$Suite;engine_commit=$engineCommit;isolated_desktop=$true;
         sdk_module_sha256=$expectedHash;forced_stop=$forcedStop;exit_code=$exitCode;
         elapsed_seconds=[Math]::Round($clock.Elapsed.TotalSeconds, 3);result="$OutputRoot/result.json"} |
         ConvertTo-Json -Depth 5 | Set-Content "$OutputRoot/process-result.json"
     [EncounterCloseTestDesktop]::Close()
     foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process') }
 }
-Write-Host "PASSED: $($test.checks.Count) encounter close checks and clean Editor exit."
+Write-Host "PASSED: $($test.checks.Count) encounter $Suite checks and clean Editor exit."

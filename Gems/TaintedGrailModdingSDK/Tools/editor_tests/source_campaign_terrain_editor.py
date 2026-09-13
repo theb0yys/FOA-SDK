@@ -218,6 +218,7 @@ def run():
             record('waiting-importer-provider'); pane.grab().save(str(root/(output.stem+'-waiting.png')))
             pane.findChild(QtWidgets.QPushButton,'TerrainRefresh').click(); yield 2
         assert button.isEnabled(), report.get('ui_status')
+        general.close_pane('FOA Development Hub'); yield .5
         report['four_map_ui']='OPEN'
         if controls: yield from cancel_worker(pane)
     for entry in fixture:
@@ -262,13 +263,25 @@ def run():
 
 
 job=run()
+next_step=0.; stepping=False; complete=False
+tick=components.TickBusHandler()
 
-def step():
+
+def step(_args):
+    global next_step, stepping, complete
+    if complete or stepping or time.monotonic()<next_step: return
+    stepping=True
     try:
         assert time.monotonic()-started<1800, 'Native campaign acceptance deadline exceeded'
-        delay=next(job); QtCore.QTimer.singleShot(round(delay*1000),step)
+        next_step=time.monotonic()+next(job)
     except StopIteration:
+        complete=True; tick.disconnect()
         if os.environ.get('FOA_CAMPAIGN_TERRAIN_KEEP_OPEN')!='1': general.exit_no_prompt()
     except Exception as error:
+        complete=True; tick.disconnect()
         report.update(error=str(error),traceback=traceback.format_exc()); record('failed'); general.exit_no_prompt()
-QtCore.QTimer.singleShot(0,step)
+    finally: stepping=False
+
+general.idle_enable(True)
+record('awaiting-first-editor-tick')
+tick.connect(); tick.add_callback('OnTick',step)

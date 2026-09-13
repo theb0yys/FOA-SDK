@@ -64,7 +64,11 @@ is insufficient while asynchronous loading is still in progress.
 The source worker is cancellable and has a 900-second deadline, a bounded
 process log and a 1536 MiB process memory limit in the Editor host. The packet
 limit is 128 MiB, with at most 1024 groups, at most 4096 instances per group and
-a bounded per-draw indexed workload. Creation and rollback advance in batches.
+a bounded per-draw indexed workload. Creation and rollback advance in batches of
+four on the main Editor tick. A reentry guard covers level-loading event pumps;
+progress controls do not pump nested Qt events during a batch. Initial framing
+uses the complete source bounds, current viewport aspect ratio and camera field
+of view so docked panes do not crop away terrain sections.
 Source files and game saves are never written by this route.
 
 ## Required proof

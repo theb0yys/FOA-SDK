@@ -61,17 +61,47 @@ def frame(document):
     lo = [min(b['min'][i] for b in bounds) for i in range(3)]
     hi = [max(b['max'][i] for b in bounds) for i in range(3)]
     center = [(x+y)*.5 for x,y in zip(lo,hi)]
-    extent = max(hi[0]-lo[0], hi[2]-lo[2], 1.)
-    distance = extent*.8; height = hi[1]+extent*.6
-    far = max(1024., extent*4+hi[1]-lo[1])
     registry = settingsregistry.g_SettingsRegistry
+    size = general.get_viewport_size()
+    aspect = max(1., size.x)/max(1., size.y)
+    fov = registry.GetFloat('/Amazon/Preferences/Editor/Camera/FovDegrees')
+    vertical = math.radians(fov.value() if fov else 75.)*.5
+    if not 0 < vertical < math.pi*.5: raise RuntimeError('The viewport field of view is invalid.')
+    half_angle = min(vertical, math.atan(math.tan(vertical)*aspect))
+    radius = max(1., math.sqrt(sum((y-x)**2 for x,y in zip(lo,hi)))*.5)
+    distance = radius/math.sin(half_angle)*1.1
+    horizontal = distance*.8; height = center[1]+distance*.6
+    far = max(1024., distance+radius*2)
     setting = '/Amazon/Preferences/Editor/Camera/FarPlaneDistance'
     existing = registry.GetFloat(setting)
     if existing: far = max(far, existing.value())
     if not registry.SetFloat(setting, far): raise RuntimeError('The campaign camera clipping range could not be set.')
-    general.set_current_view_position(center[0], center[2]-distance, height)
-    general.set_current_view_rotation(-math.degrees(math.atan2(height-center[1], distance)), 0., 0.)
-    return dict(far_clip=far, host_position=[center[0], center[2]-distance, height])
+    general.set_current_view_position(center[0], center[2]-horizontal, height)
+    general.set_current_view_rotation(-math.degrees(math.atan2(height-center[1], horizontal)), 0., 0.)
+    return dict(far_clip=far, host_position=[center[0], center[2]-horizontal, height])
+
+
+class TerrainProgress(QtWidgets.QDialog):
+    """Modal controls without QProgressDialog.setValue's nested event pump."""
+    canceled = QtCore.Signal()
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('Campaign terrain')
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+        layout = QtWidgets.QVBoxLayout(self)
+        self.label = QtWidgets.QLabel('Checking original terrain...'); layout.addWidget(self.label)
+        self.progress = QtWidgets.QProgressBar(); layout.addWidget(self.progress)
+        self.button = QtWidgets.QPushButton('Cancel'); layout.addWidget(self.button)
+        self.button.clicked.connect(self.reject)
+
+    def reject(self):
+        self.button.setEnabled(False); self.label.setText('Cancelling terrain assembly...')
+        self.canceled.emit()
+
+    def setLabelText(self, value): self.label.setText(value)
+    def setMaximum(self, value): self.progress.setMaximum(value)
+    def setValue(self, value): self.progress.setValue(value)
 
 
 class TerrainLoad(QtCore.QObject):
@@ -80,16 +110,14 @@ class TerrainLoad(QtCore.QObject):
         self.path = Path(request_path); self.created = []; self.cursor = 0; self.stage = 'prepare'
         self.output_allowed = False
         self.undo = False; self.finished = False; self.cancelled = False
-        self.timer = QtCore.QTimer(self); self.timer.setInterval(20); self.timer.timeout.connect(self.step)
-        self.dialog = QtWidgets.QProgressDialog('Checking original terrain...', 'Cancel', 0, 100)
-        self.dialog.setWindowTitle('Campaign terrain'); self.dialog.setWindowModality(QtCore.Qt.ApplicationModal)
-        self.dialog.setAutoClose(False); self.dialog.setAutoReset(False); self.dialog.canceled.connect(self.cancel)
+        self.tick = components.TickBusHandler(); self.stepping = False
+        self.dialog = TerrainProgress(); self.dialog.canceled.connect(self.cancel)
 
     def cancel(self): self.cancelled = True
 
     def finish(self, status, message):
         global _active
-        self.timer.stop()
+        self.tick.disconnect()
         if self.undo: editor.ToolsApplicationRequestBus(bus.Broadcast, 'EndUndoBatch'); self.undo = False
         self.finished = True
         result = dict(status=status, busy=False, message=message, map=self.request['map'])
@@ -103,7 +131,7 @@ class TerrainLoad(QtCore.QObject):
             with pending.open('x', encoding='utf-8') as file: json.dump(result, file)
             os.replace(pending, output)
         else: print('Campaign terrain:', message)
-        self.dialog.close(); self.dialog.deleteLater(); _active = None; self.deleteLater()
+        self.dialog.hide(); self.dialog.deleteLater(); _active = None; self.deleteLater()
 
     def start(self):
         try:
@@ -145,10 +173,19 @@ class TerrainLoad(QtCore.QObject):
             if self.new_scan:
                 require_direct_path(config)
                 pending = config.with_suffix('.pending'); pending.write_text(encoded); os.replace(pending, config)
-            self.deadline = time.monotonic()+90; self.stage = 'asset'; self.timer.start()
+            self.deadline = time.monotonic()+90; self.stage = 'asset'
+            self.tick.connect(); self.tick.add_callback('OnTick', self.on_tick)
         except Exception as error:
             self.request = getattr(self, 'request', {'map': 'unknown'})
             self.finish('failed', str(error)[:1000])
+
+    def on_tick(self, _args):
+        # Level loading can itself pump Editor events. Never enter a second batch
+        # until the original batch has returned, and keep mutations off Qt timers.
+        if self.finished or self.stepping: return
+        self.stepping = True
+        try: self.step()
+        finally: self.stepping = False
 
     def step(self):
         try:
@@ -254,4 +291,8 @@ def start(request_path):
     return controller
 
 
-if __name__ == '__main__': start(sys.argv[1])
+if __name__ == '__main__':
+    # ExecuteByFilename uses a shared script namespace. Keep the live controller
+    # in its own module so a later script cannot replace its globals or callbacks.
+    import foa_campaign_terrain_editor as terrain_editor
+    terrain_editor.start(sys.argv[1])

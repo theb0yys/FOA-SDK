@@ -1,33 +1,57 @@
 # Current Task
 
-Status: implementation combined. Final validation and merge results are recorded
-in the integration pull request.
-Goal: integrate the owner's pending FOA-SDK commits, resolve merge conflicts and
-validate the combined Editor and Framework result.
-Classification: Critical/Runtime, because the requested integration includes
-previously implemented external process execution and synthetic rollback.
-Primary coordination owner: integration; existing subsystem ownership is retained.
+Status: Core terrain input and Framework BUILD preview implemented and locally
+validated. M6 remains PARTIAL. The owner requested continuation
+through Core/Framework integration, production qualification and game deployment.
+Branch: codex/heightmap-core-m6, based on the native qualification PR #284 head
+0f06e3be8a78c851282f71a170f2f8782dc4741e. PR #284 has not been assumed merged.
 
-In scope: pending PR histories #266, #269, #270, #271, #273, #274, #275, #276,
-#277, #278, #279, #280 and #281; necessary conflict resolution and validation.
-The owner explicitly requested merging the commits. Use normal merge commits and
-a reviewable integration PR; preserve existing feature commits and evidence.
+This Critical/Runtime increment follows the accepted
+[M6 design](docs/tainted-grail-sdk/HEIGHTMAP_VERTICAL_SLICE_M6_DESIGN.md) and the
+[Core handoff contract](docs/tainted-grail-sdk/HEIGHTMAP_CORE_HANDOFF.md).
+World Authoring validates the exact workspace revision and bounded source samples;
+Framework binds captured input to an immutable BUILD request; Unity owns native
+terrain, metadata and bundles. Canonical V1, M1 contracts and M2 isolation limits
+remain unchanged. The ordinary dirty SDK-client checkout is not modified.
 
-Out of scope: completing M6 native terrain qualification, unfinished campaign
-rendering/export, paused SDK preview acceptance, game/save writes and releases.
-M6 remains PARTIAL/BLOCKED as documented in its design and qualification brief.
-Earlier evidence stays bound to its source/artifacts and is not promoted to new
-runtime signoff. The original dirty SDK-client checkout is not modified.
+Acceptance for this increment: compiled import/preparation/Framework tests,
+actual Unity consumption of the Framework-exported SDK fixture, full height and
+collision readbacks, fresh-process reopen, negative packet/request cases,
+independent audit and the required static/source-policy lanes. Test outputs and
+private execution evidence stay outside the repository. All authority flags stay
+false. No game or save writes are part of this increment.
 
-Acceptance criteria: all requested PR heads are ancestors of the integrated
-result; conflicts are reviewed; applicable static, compiled and Editor checks
-are reported accurately; remote main and remaining PR states are verified.
-Known hosted failures under investigation: M3 maximum-metadata reopen performance
-and Item Viewer Editor startup. Pending or failed jobs are not reported as passes.
+Remaining M6: a qualified production process/dependency/IPC boundary, terrain
+execution providers and Editor reachability, packaging and exact owned-target
+deployment, game loading/observations/unload, and verified rollback. The existing
+M2 profile cannot represent the observed Unity dependency set; ordinary bounded
+native test execution is not LPAC qualification. There is no production process
+fallback. Final game execution requires the concrete reviewed artifact, target,
+side effects and recovery plan. Runtime sign-off not performed.
 
-Current branch: codex/integrate-pending-sdk-work.
-Integration details: task-status conflicts were resolved to this scope; both
-Framework planner and terrain CMake registrations were retained. The Item Viewer
-validation launcher now binds the explicit external engine, and its close check
-uses the Qt event loop for deferred deletion. The inventory rejection fixture
-uses an equivalent Unicode escape required by source policy.
+Validation on 13 September 2026: pinned O3DE configure and affected targets PASSED.
+The full compiled Catalog suite ran 592 tests: 590 PASSED and two existing Windows
+symlink tests SKIPPED. All 15 new terrain/Framework tests and the campaign-worker
+failure/cancellation test passed. The static lane ran 1446 tests with 34 explicit
+skips, ten tooling tests, and four sets of ten source-policy checks. Its initial
+wrong runner path was corrected; that invocation is retained as NOT_RUN.
+
+Actual Unity 6000.0.64f1 consumed the Framework-exported packet and passed native
+creation, repeated bundle builds, all five 1089-sample readbacks, twenty collider
+probes and fresh-process reopen. The fixed-source regression control also passed.
+Maximum height error was 0.122 mm. All 27 independent auditor tests and both final
+native evidence audits passed. No product UI or game-runtime pass is claimed.
+
+
+Production execution qualification follow-up: local LPAC and standard AppContainer
+bootstrap attempts failed during Unity licensing initialization; the matched
+ordinary-token control succeeded. Exact diagnostics identify denied named-pipe
+servers and blocked socket access. Final attempts confirmed the owned job was
+empty after cleanup. The complete private tool inventory was unchanged. Details,
+limits, failed controls and the pending execution-environment decision are in
+[the process qualification report](docs/tainted-grail-sdk/HEIGHTMAP_NATIVE_PROCESS_QUALIFICATION.md).
+The permanent M2 global-pipe denial / LOCAL pipe round-trip regression passed;
+all 22 M2 operational tests passed with no skips. Production process and game runtime qualification remain BLOCKED.
+
+The qualification follow-up static lane passed: 1446 tests with 34 explicit skips,
+ten tooling tests and four sets of ten pinned source-policy checks.

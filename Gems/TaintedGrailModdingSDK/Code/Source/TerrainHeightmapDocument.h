@@ -265,6 +265,24 @@ namespace TaintedGrailModdingSDK::TerrainHeightmap
         const AZStd::string& workspaceRoot, const AZStd::string& manifestRelativePath,
         const ProfileBinding& profile, const ImportControl* control = nullptr, bool includeSamples = false);
 
+    // Additive neutral input for the bounded M6 conversion profile; not native Unity data.
+    // This value and its hashes grant no execution, packaging or runtime authority.
+    struct NativeTerrainBuildInputV1
+    {
+        AZStd::string m_bytes;
+        AZStd::string m_documentFingerprint;
+        AZStd::string m_inputFingerprint;
+    };
+
+    constexpr size_t NativeTerrainMaximumDocumentBytes = 64 * 1024;
+    constexpr size_t NativeTerrainSampleBytes = 33 * 33 * 2;
+    constexpr size_t NativeTerrainMaximumInputBytes = 144 + NativeTerrainMaximumDocumentBytes + NativeTerrainSampleBytes;
+
+    AZ::Outcome<NativeTerrainBuildInputV1, AZStd::string> PrepareNativeTerrainBuildInput(
+        const AZStd::string& workspaceRoot, const AZStd::string& manifestRelativePath,
+        const ProfileBinding& profile, const AZStd::string& expectedDocumentFingerprint,
+        const ImportControl* control = nullptr);
+
     ValidationResult ValidateDocument(const TerrainHeightmapDocumentV1& document);
     AZStd::string BuildCanonicalDocumentJson(const TerrainHeightmapDocumentV1& document);
     AZStd::string CalculateDocumentFingerprint(const TerrainHeightmapDocumentV1& document);

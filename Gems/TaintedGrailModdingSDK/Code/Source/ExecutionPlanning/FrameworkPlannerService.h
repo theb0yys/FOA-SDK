@@ -7,6 +7,7 @@
 #include "../AdapterDeploymentWorkOrderService.h"
 #include "../AdapterPostDeploymentVerificationService.h"
 #include "../CapabilityExecutionValidation.h"
+#include "../TerrainHeightmapDocument.h"
 
 namespace TaintedGrailModdingSDK::ExecutionFramework
 {
@@ -16,7 +17,8 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         Build,
         Package,
         Deployment,
-        WorkOrder
+        WorkOrder,
+        TerrainBuild
     };
 
     // Original owner bytes stay in memory. Only the digest reference is an M1 value.
@@ -24,6 +26,8 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
     {
         AZStd::string m_canonicalJson;
         CE::PhaseExtensionReferenceV1 m_reference;
+        // Populated only for TerrainBuild. The owner JSON binds these exact bytes by digest.
+        TerrainHeightmap::NativeTerrainBuildInputV1 m_terrainInput;
     };
 
     // Immutable, in-memory preview input. It is neither an execution plan nor an authorization.
@@ -67,6 +71,13 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
             const AdapterDeploymentWorkOrder&,
             const AdapterDeploymentExecutionResultEnvelope&,
             const AdapterDeploymentExecutionEvidenceReturn&) const;
+
+        static constexpr const char* TerrainBuildCapabilityId = "capability.world.heightmap";
+        // Captures a Core-validated revision for BUILD preview only. No provider or permission is created.
+        AZ::Outcome<PlannerSnapshot, AZStd::string> BindTerrainBuild(
+            const CE::CapabilityExecutionRequestV1&, const AZStd::string& workspaceRoot,
+            const AZStd::string& manifestRelativePath, const TerrainHeightmap::ProfileBinding&,
+            const AZStd::string& expectedDocumentFingerprint, const TerrainHeightmap::ImportControl* = nullptr) const;
 
         // Explicit worker-side operations. They never replan at execution time or authorize a provider.
         AZ::Outcome<PlannerSnapshot, AZStd::string> BindBuild(

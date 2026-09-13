@@ -242,6 +242,54 @@ int wmain(int argc, wchar_t** argv)
         Print(GetStdHandle(STD_OUTPUT_HANDLE), "working=" + Utf8(cwd) + "\n");
         payload = "environment-isolated\n";
     }
+    if (mode == L"pipe-namespace")
+    {
+        const auto invocation = Env(L"FOA_INVOCATION_ID");
+        if (invocation.empty() || invocation.size() > 128 || invocation.find_first_not_of(L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::wstring::npos)
+        {
+            return 70;
+        }
+        const auto name = L"foa-m2-qualification-" + invocation;
+        const auto global = L"\\\\.\\pipe\\" + name;
+        HANDLE denied = CreateNamedPipeW(global.c_str(), PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, 256, 256, 1000, nullptr);
+        const DWORD globalError = GetLastError();
+        if (denied != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(denied);
+            return 71;
+        }
+        if (globalError != ERROR_ACCESS_DENIED)
+        {
+            Print(GetStdHandle(STD_ERROR_HANDLE), "global-pipe-error=" + std::to_string(globalError) + "\n");
+            return 72;
+        }
+        const auto local = L"\\\\.\\pipe\\LOCAL\\" + name;
+        HANDLE server = CreateNamedPipeW(local.c_str(), PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, 256, 256, 1000, nullptr);
+        if (server == INVALID_HANDLE_VALUE)
+        {
+            Print(GetStdHandle(STD_ERROR_HANDLE), "local-pipe-error=" + std::to_string(GetLastError()) + "\n");
+            return 73;
+        }
+        HANDLE client = CreateFileW(local.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+        bool valid = client != INVALID_HANDLE_VALUE;
+        if (valid)
+        {
+            valid = ConnectNamedPipe(server, nullptr) != FALSE || GetLastError() == ERROR_PIPE_CONNECTED;
+            const char message[] = "sdk-owned-local-pipe";
+            DWORD written = 0, read = 0;
+            char received[sizeof(message)]{};
+            valid = valid && WriteFile(client, message, sizeof(message), &written, nullptr) && written == sizeof(message)
+                && ReadFile(server, received, sizeof(received), &read, nullptr) && read == sizeof(message)
+                && std::string(received, read) == std::string(message, sizeof(message));
+            CloseHandle(client);
+        }
+        DisconnectNamedPipe(server);
+        CloseHandle(server);
+        if (!valid) { return 74; }
+        payload = "global-pipe-denied\nlocal-pipe-roundtrip-ok\n";
+    }
     if (mode == L"network")
     {
         WSADATA data{};

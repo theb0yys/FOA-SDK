@@ -5,6 +5,7 @@
  */
 #include "FrameworkPlannerService.h"
 #include "../CanonicalFingerprint.h"
+#include "../DeterministicContractJson.h"
 #include "../ExecutionFramework/FrameworkExecutionEvidenceProjection.h"
 #include <AzCore/std/algorithm.h>
 
@@ -35,6 +36,8 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
                 return "foa.planner.deployment";
             case PlannerSourceKind::WorkOrder:
                 return "foa.planner.workorder";
+            case PlannerSourceKind::TerrainBuild:
+                return "foa.planner.terrain-build";
             }
             return "";
         }
@@ -177,6 +180,43 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         }
         snapshot.m_sources.push_back(AZStd::move(source));
         return AZ::Success();
+    }
+
+    AZ::Outcome<PlannerSnapshot, AZStd::string> FrameworkPlannerService::BindTerrainBuild(
+        const CE::CapabilityExecutionRequestV1& request, const AZStd::string& workspaceRoot,
+        const AZStd::string& manifestRelativePath, const TerrainHeightmap::ProfileBinding& profile,
+        const AZStd::string& expectedDocumentFingerprint, const TerrainHeightmap::ImportControl* control) const
+    {
+        if (!CE::Validate(request).IsSuccess() || request.m_terminalPhase != CE::Phase::BUILD
+            || request.m_capabilityId != TerrainBuildCapabilityId || request.m_profileFingerprint != profile.m_profileFingerprint
+            || !request.m_inputs.empty() || !request.m_preferredBindings.empty())
+        {
+            return AZ::Failure(AZStd::string("Terrain preview requires an exact profile and unbound heightmap BUILD request."));
+        }
+        if (AZStd::any_of(request.m_options.begin(), request.m_options.end(), [](const auto& option)
+            { return option.m_id.starts_with("foa.planner."); }))
+        {
+            return AZ::Failure(AZStd::string("Create a new request instead of replacing a planner source."));
+        }
+        auto input = TerrainHeightmap::PrepareNativeTerrainBuildInput(
+            workspaceRoot, manifestRelativePath, profile, expectedDocumentFingerprint, control);
+        if (!input.IsSuccess()) { return AZ::Failure(input.GetError()); }
+        namespace Json = DeterministicContractJson;
+        AZStd::string json = "{";
+        Json::AppendString(json, "schema", "foa.planner.terrain-build.v1");
+        Json::AppendUnsigned(json, "schemaVersion", 1);
+        Json::AppendString(json, "conversionProfile", "foa.heightmap.u16le-33.v1");
+        Json::AppendString(json, "documentFingerprint", input.GetValue().m_documentFingerprint);
+        Json::AppendString(json, "inputFingerprint", input.GetValue().m_inputFingerprint);
+        Json::AppendUnsigned(json, "inputBytes", input.GetValue().m_bytes.size());
+        Json::AppendBool(json, "executionAllowed", false, false);
+        json += "}";
+        PlannerSnapshot snapshot;
+        snapshot.m_request = request;
+        const auto bound = Append(snapshot, PlannerSourceKind::TerrainBuild, CE::Phase::BUILD, json);
+        if (!bound.IsSuccess()) { return AZ::Failure(bound.GetError()); }
+        snapshot.m_sources.back().m_value.m_terrainInput = input.TakeValue();
+        return AZ::Success(AZStd::move(snapshot));
     }
 
     AZ::Outcome<PlannerSnapshot, AZStd::string> FrameworkPlannerService::BindBuild(

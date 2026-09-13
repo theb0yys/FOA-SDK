@@ -135,7 +135,7 @@ class InventoryTests(unittest.TestCase):
                             "\U0001F600"*(maximum//2+1), None, 1, True):
                     with self.subTest(field=field, bad=repr(bad)), self.assertRaises(ProtocolError):
                         reader(self.client(good | {"0."+field: bad}, code))
-            for bad in ("0", "-1", "+1", "01", "1 ", " 1", "１", "1.0", "2147483648", "9"*100, None, True):
+            for bad in ("0", "-1", "+1", "01", "1 ", " 1", "\uff11", "1.0", "2147483648", "9"*100, None, True):
                 with self.subTest(bad=bad), self.assertRaises(ProtocolError):
                     reader(self.client(good | {"0.quantity": bad}, code))
 

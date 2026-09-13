@@ -6,6 +6,7 @@
  */
 
 #include "AdapterPackageAssemblyPreviewWidget.h"
+#include "FoundationService.h"
 
 #include <QAbstractItemView>
 #include <QFont>
@@ -179,7 +180,7 @@ namespace TaintedGrailModdingSDK
         AZ::u64 collisionCount = 0;
         for (const AdapterPackageAssemblyPreviewRequest& request : requests)
         {
-            previews.push_back(m_previewService.BuildPreview(request));
+            previews.push_back(FoundationService::Get().GetFrameworkPlanners().BuildPreview(request));
             const AdapterPackageAssemblyPreview& preview = previews.back();
             if (preview.m_status == AdapterPackageAssemblyPreviewStatus::Ready)
             {

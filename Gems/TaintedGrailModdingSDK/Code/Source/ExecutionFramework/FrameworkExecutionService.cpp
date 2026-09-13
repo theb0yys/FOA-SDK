@@ -5,6 +5,7 @@
  */
 
 #include "FrameworkExecutionService.h"
+#include "ExecutionSynthetic/FrameworkSyntheticTarget.h"
 #include "FrameworkArtifactRepository.h"
 #include "FrameworkTargetOwnershipLedger.h"
 #include "FrameworkToolExecutionAdapter.h"
@@ -45,6 +46,7 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
     {
         Context m_context;
         AZStd::string m_root;
+        std::shared_ptr<FrameworkSyntheticTarget> m_synthetic;
         FrameworkProviderService m_providers;
         FrameworkExecutionPolicyService m_policy;
         FrameworkExecutionRepository m_repository;
@@ -66,9 +68,11 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         std::deque<std::shared_ptr<Work>> m_queue;
         std::thread m_worker;
         bool m_stopping = false, m_open = false;
-        Impl(Context context, AZStd::string root)
+        Impl(Context context, AZStd::string root, std::shared_ptr<FrameworkSyntheticTarget> synthetic)
             : m_context(AZStd::move(context))
             , m_root(AZStd::move(root))
+            , m_synthetic(AZStd::move(synthetic))
+            , m_providers(static_cast<bool>(m_synthetic))
             , m_artifacts(m_root)
         {
         }
@@ -115,6 +119,11 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
             }
             if (work->m_reuse && work->m_completed)
             {
+                if (m_synthetic && !m_synthetic->Check(false))
+                {
+                    Status(work, CE::ExecutionState::ENVIRONMENT_DRIFTED, Error::Drifted);
+                    return;
+                }
                 for (const auto& phase : work->m_completed->m_receipt->m_phaseReceipts)
                 {
                     for (const auto& artifact : phase.m_outputs)
@@ -128,6 +137,15 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
                 }
                 Status(work, CE::ExecutionState::SUCCEEDED);
                 return;
+            }
+            if (m_synthetic)
+            {
+                auto begin = m_synthetic->Begin(prepared.m_plan);
+                if (!begin)
+                {
+                    Status(work, CE::ExecutionState::REJECTED, begin.m_error);
+                    return;
+                }
             }
             StoredAttempt stored;
             stored.m_executionId = work->m_status.m_executionId;
@@ -184,6 +202,15 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
                 }
                 if (error != Error::None)
                 {
+                    phaseReceipt.m_outcome = CE::Outcome::BLOCKED;
+                    phaseReceipt.m_phaseState = CE::PhaseState::BLOCKED;
+                    Seal(phaseReceipt);
+                    receipt.m_phaseReceipts.push_back(AZStd::move(phaseReceipt));
+                    continue;
+                }
+                if (m_synthetic && !m_synthetic->Check(phase.m_phase >= CE::Phase::LAUNCH))
+                {
+                    error = Error::Drifted;
                     phaseReceipt.m_outcome = CE::Outcome::BLOCKED;
                     phaseReceipt.m_phaseState = CE::PhaseState::BLOCKED;
                     Seal(phaseReceipt);
@@ -288,6 +315,37 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
                             cleanup = false;
                         }
                     }
+                    if (error == Error::None && m_synthetic)
+                    {
+                        Result observed;
+                        if (phase.m_phase == CE::Phase::DEPLOY)
+                        {
+                            // Provider completion does not preserve an expired or revoked write grant.
+                            observed = work->m_cancelled ? Result{ Error::Cancelled } : Current(prepared);
+                            if (observed)
+                            {
+                                const auto& desired = *phase.m_mutations[0].m_desiredArtifact;
+                                observed = m_synthetic->Apply(stored.m_plan, m_artifacts.Path(desired), phaseReceipt.m_observations);
+                            }
+                        }
+                        else if (phase.m_phase == CE::Phase::VERIFY)
+                        {
+                            observed = m_synthetic->Check(true);
+                            receipt.m_verification = observed ? CE::VerificationState::PASSED : CE::VerificationState::FAILED;
+                        }
+                        else if (phase.m_phase == CE::Phase::ROLLBACK)
+                        {
+                            CE::RollbackReceiptV1 rollback;
+                            observed = m_synthetic->Rollback(stored.m_plan, rollback);
+                            if (!rollback.m_fingerprint.empty())
+                                receipt.m_rollbackReceipts.push_back(rollback);
+                            cleanup = cleanup && static_cast<bool>(observed);
+                        }
+                        if (!observed)
+                            error = observed.m_error;
+                    }
+                    if (m_synthetic && phase.m_phase == CE::Phase::VERIFY && error != Error::None)
+                        receipt.m_verification = CE::VerificationState::FAILED;
                     phaseReceipt.m_outcome = error == Error::None ? CE::Outcome::SUCCEEDED
                         : error == Error::Cancelled               ? CE::Outcome::CANCELLED
                                                                   : CE::Outcome::FAILED;
@@ -307,6 +365,17 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
                 }
                 receipt.m_phaseReceipts.push_back(AZStd::move(phaseReceipt));
             }
+            // The confirmed inverse remains bounded cleanup when forward work fails or is cancelled.
+            if (m_synthetic && m_synthetic->Pending() && receipt.m_rollbackReceipts.empty())
+            {
+                CE::RollbackReceiptV1 rollback;
+                auto restored = m_synthetic->Rollback(stored.m_plan, rollback);
+                if (!rollback.m_fingerprint.empty())
+                    receipt.m_rollbackReceipts.push_back(rollback);
+                cleanup = cleanup && static_cast<bool>(restored);
+                if (!restored && error == Error::None)
+                    error = restored.m_error;
+            }
             receipt.m_finishedAt = UtcNow();
             receipt.m_outcome = error == Error::None ? CE::Outcome::SUCCEEDED
                 : error == Error::Cancelled          ? CE::Outcome::CANCELLED
@@ -314,6 +383,12 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
             receipt.m_state = error == Error::None ? CE::ExecutionState::SUCCEEDED
                 : error == Error::Cancelled        ? CE::ExecutionState::CANCELLED
                                                    : CE::ExecutionState::FAILED;
+            if (error != Error::None && !receipt.m_rollbackReceipts.empty())
+            {
+                receipt.m_state = receipt.m_rollbackReceipts.back().m_state == CE::RollbackState::SUCCEEDED
+                    ? CE::ExecutionState::ROLLED_BACK
+                    : CE::ExecutionState::ROLLBACK_FAILED;
+            }
             if (error != Error::None)
             {
                 receipt.m_failures.push_back(Failure(stored.m_executionId, error));
@@ -421,7 +496,12 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         }
     };
     FrameworkExecutionService::FrameworkExecutionService(Context context, AZStd::string root)
-        : m_impl(std::make_unique<Impl>(AZStd::move(context), AZStd::move(root)))
+        : FrameworkExecutionService(AZStd::move(context), AZStd::move(root), {})
+    {
+    }
+    FrameworkExecutionService::FrameworkExecutionService(
+        Context context, AZStd::string root, std::shared_ptr<FrameworkSyntheticTarget> synthetic)
+        : m_impl(std::make_unique<Impl>(AZStd::move(context), AZStd::move(root), AZStd::move(synthetic)))
     {
     }
     FrameworkExecutionService::~FrameworkExecutionService()
@@ -501,7 +581,7 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         const AZStd::vector<AZStd::string>& defaults,
         CE::CapabilityExecutionPlanV1& output)
     {
-        if (!m_impl->m_context.Matches(request) || !FrameworkProviderService::Supported(descriptor) ||
+        if (!m_impl->m_context.Matches(request) || !m_impl->m_providers.Supports(descriptor) ||
             !CE::Validate(request, descriptor).IsSuccess() || defaults.size() > CE::MaximumPhases)
         {
             return { Error::Unsupported };
@@ -536,6 +616,8 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
             {
                 return ready;
             }
+            if (m_impl->m_synthetic && !m_impl->m_synthetic->Accepts(prepared.m_preview.m_phase))
+                return { Error::Invalid };
             p.m_phases.push_back(AZStd::move(prepared));
         }
         auto& plan = p.m_plan;
@@ -550,6 +632,8 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         Decision(plan.m_environment, plan.m_request, p.m_phases, "decision.environment");
         Decision(plan.m_policy, plan.m_request, p.m_phases, "decision.policy");
         m_impl->m_policy.Evaluate(p, plan.m_policy.m_state, p.m_policyRevision);
+        if (m_impl->m_synthetic && plan.m_policy.m_state != CE::PolicyState::CONFIRMATION_REQUIRED)
+            return { Error::PolicyDenied };
         plan.m_policy.m_evidenceIds.push_back(
             "evidence.policy." + AZStd::string::format("%llu", static_cast<unsigned long long>(p.m_policyRevision)));
         for (const auto& phase : p.m_phases)
@@ -645,6 +729,25 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         }
         CE::CapabilityAuthorizationReceiptV1 receipt;
         return m_impl->m_policy.Confirm(*p, actor, lifetime, receipt);
+    }
+    Result FrameworkExecutionService::RecoverSynthetic(const AZStd::string& fingerprint, CE::RollbackReceiptV1& receipt)
+    {
+        std::lock_guard lock(m_impl->m_mutex);
+        if (!m_impl->m_synthetic || !m_impl->m_open || m_impl->m_stopping)
+            return { Error::Unsupported };
+        for (const auto& work : m_impl->m_work)
+            if (work->m_status.m_canCancel)
+                return { Error::Busy };
+        for (const auto& p : m_impl->m_previews)
+        {
+            if (p->m_plan.m_fingerprint != fingerprint)
+                continue;
+            auto current = m_impl->Current(*p);
+            if (!current)
+                return current;
+            return m_impl->m_synthetic->Rollback(p->m_plan, receipt);
+        }
+        return { Error::NotFound };
     }
     Result FrameworkExecutionService::Submit(const AZStd::string& fingerprint, Snapshot& output, bool retry)
     {

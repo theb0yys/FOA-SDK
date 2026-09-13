@@ -527,13 +527,24 @@ The owner requested this batch on 12 September 2026. Its [exact M3 design and ac
 
 Wrap existing build, package, deployment, work-order, and assessment services as pure phase previews/assessment. Do not add side effects to them.
 
+The owner requested this batch on 12 September 2026. The [M4 implementation scope](FRAMEWORK_PLANNER_M4_DESIGN.md) adds the Foundation planner route and immutable source snapshots. M3 execution restrictions and all inert V1 contracts remain unchanged.
+
 ### M5 — Isolated Synthetic Spine
 
 Prove Build -> Package -> Deploy -> Launch -> Verify -> Rollback against a harmless sandbox provider and target before touching the game installation.
 
+The owner requested this batch on 12 September 2026. The [M5 scope and threat
+boundary](FRAMEWORK_SYNTHETIC_M5_DESIGN.md) use a new private target and an exact
+synthetic profile. Default staging restrictions and frozen M1/M2 contracts remain
+unchanged. Acceptance status is recorded in the M5 design; fixture observations
+are not Fall of Avalon runtime evidence.
+
+
 ### M6 — Heightmap Vertical Slice
 
 Connect terrain canonical documents through native materialisation and the shared production spine. Require exact profile, deployment, runtime observation, and rollback proof.
+
+The owner requested M6 on 13 September 2026. The [bounded M6 intake](HEIGHTMAP_VERTICAL_SLICE_M6_DESIGN.md) records the initial SDK-owned terrain fixture and missing native execution qualification. M6 is PARTIAL; no terrain runtime or rollback pass is claimed.
 
 ### M7 — Ordered Domain Migration
 

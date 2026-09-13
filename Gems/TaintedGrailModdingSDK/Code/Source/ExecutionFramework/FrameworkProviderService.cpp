@@ -5,6 +5,7 @@
  */
 
 #include "FrameworkProviderService.h"
+#include "ExecutionSynthetic/FrameworkSyntheticTarget.h"
 #include <AzCore/std/algorithm.h>
 #include <AzCore/std/containers/set.h>
 #include <AzCore/std/sort.h>
@@ -188,6 +189,16 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
                        return p >= CE::Phase::MATERIALIZE && p <= CE::Phase::PACKAGE;
                    });
     }
+    bool FrameworkProviderService::Supports(const CE::CapabilityDescriptorV1& d) const
+    {
+        if (!m_synthetic)
+            return Supported(d);
+        return CE::Validate(d).IsSuccess() && d.m_capabilityId == FrameworkSyntheticTarget::Capability && d.m_exactProfileRequired &&
+            !d.m_runtimeRequired && d.m_saveImpact == CE::SideEffect::READ_ONLY && Effects(d.m_sideEffects) &&
+            d.m_rollbackRequired == CE::RollbackSupport::EXACT_RESTORE && d.m_terminalPhase == CE::Phase::ROLLBACK &&
+            d.m_requiredPhases == AZStd::vector<CE::Phase>{ CE::Phase::BUILD,  CE::Phase::PACKAGE, CE::Phase::DEPLOY,
+                                                            CE::Phase::LAUNCH, CE::Phase::VERIFY,  CE::Phase::ROLLBACK };
+    }
     Result FrameworkProviderService::Register(HostBinding h)
     {
         std::lock_guard lock(m_mutex);
@@ -198,7 +209,10 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         auto command = ET::CanonicalToolCommand(h.m_command);
         const auto& b = h.m_binding;
         if (!CE::Validate(b).IsSuccess() || !command || !h.m_resolve || !h.m_preview || !CE::IsStableId(h.m_previewContractId) ||
-            !Effects(b.m_sideEffects) || b.m_phase < CE::Phase::MATERIALIZE || b.m_phase > CE::Phase::PACKAGE ||
+            !Effects(b.m_sideEffects) || b.m_phase < CE::Phase::MATERIALIZE ||
+            b.m_phase > (m_synthetic ? CE::Phase::ROLLBACK : CE::Phase::PACKAGE) ||
+            (m_synthetic &&
+             (b.m_capabilityId != FrameworkSyntheticTarget::Capability || b.m_profileFingerprint != FrameworkSyntheticTarget::Profile())) ||
             b.m_providerFingerprint != DescriptorFingerprint(h.m_provider) || b.m_providerId != h.m_provider.m_providerId ||
             b.m_providerVersion != h.m_provider.m_providerVersion || b.m_providerId != h.m_command.m_providerId ||
             b.m_providerVersion != h.m_command.m_providerVersion || b.m_commandId != h.m_command.m_commandId ||
@@ -295,7 +309,7 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
         {
             return { Error::Closed };
         }
-        if (!Supported(d) || !CE::Validate(r, d).IsSuccess())
+        if (!Supports(d) || !CE::Validate(r, d).IsSuccess())
         {
             return { Error::Unsupported };
         }
@@ -379,7 +393,8 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
             return { Error::Invalid };
         }
         invocation.m_fingerprint = encoded.m_fingerprint;
-        if (!ET::ValidateToolRequest(invocation, h.m_command) || !phase.m_mutations.empty() ||
+        if (!ET::ValidateToolRequest(invocation, h.m_command) ||
+            (!phase.m_mutations.empty() && (!m_synthetic || phase.m_phase != CE::Phase::DEPLOY)) ||
             phase.m_inputs.size() != invocation.m_inputs.size() || phase.m_expectedOutputs.size() != invocation.m_outputs.size())
         {
             return { Error::Invalid };

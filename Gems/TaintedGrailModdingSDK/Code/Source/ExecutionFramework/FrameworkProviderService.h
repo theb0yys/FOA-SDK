@@ -13,6 +13,11 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
     class FrameworkProviderService
     {
     public:
+        explicit FrameworkProviderService(bool synthetic = false)
+            : m_synthetic(synthetic)
+        {
+        }
+        bool Supports(const CE::CapabilityDescriptorV1&) const;
         Result Register(HostBinding binding);
         void Finalize();
         Result ReviewQualification(Qualification observation);
@@ -33,6 +38,7 @@ namespace TaintedGrailModdingSDK::ExecutionFramework
     private:
         mutable std::mutex m_mutex;
         bool m_finalized = false;
+        bool m_synthetic = false;
         AZStd::vector<HostBinding> m_bindings;
         AZStd::vector<Qualification> m_qualifications;
         AZ::u64 m_revision = 0;

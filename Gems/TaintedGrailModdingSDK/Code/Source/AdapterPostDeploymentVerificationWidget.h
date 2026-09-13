@@ -30,9 +30,7 @@ namespace TaintedGrailModdingSDK
         void OnFoundationChanged() override;
         void Refresh();
 
-        AdapterDeploymentWorkOrderService m_workOrderService;
         AdapterDeploymentExecutionEvidenceService m_evidenceService;
-        AdapterPostDeploymentVerificationService m_reportService;
         QLabel* m_summary = nullptr;
         QTableWidget* m_table = nullptr;
     };

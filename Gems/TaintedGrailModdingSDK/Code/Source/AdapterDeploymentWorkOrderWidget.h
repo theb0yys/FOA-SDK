@@ -29,7 +29,6 @@ namespace TaintedGrailModdingSDK
         void OnFoundationChanged() override;
         void Refresh();
 
-        AdapterDeploymentWorkOrderService m_service;
         QLabel* m_summary = nullptr;
         QTableWidget* m_table = nullptr;
     };

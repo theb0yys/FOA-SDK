@@ -18,5 +18,7 @@
         "Tainted Grail"
     ],
     "requirements": "Host tools build required.",
-    "dependencies": []
+    "dependencies": [
+        "ExternalToolchain"
+    ]
 }

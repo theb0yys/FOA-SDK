@@ -91,6 +91,7 @@ namespace TaintedGrailModdingSDK
     void FoundationService::ClearWorkspaceScopedState(bool clearWorkspaceLocation)
     {
         StopFrameworkExecution();
+        m_terrainImportHost.reset();
         if (clearWorkspaceLocation)
         {
             m_workspaceFilePath.clear();

@@ -75,9 +75,20 @@ ly_add_target(
             Gem::${gem_name}.Core.Static
             Gem::${gem_name}.FrameworkExecution.Static
         PRIVATE
+            Gem::ExternalToolchain.API
             AZ::AzToolsFramework
+            AZ::SceneCore
+            AZ::SceneData
+            AZ::AssetBuilderSDK
+            Gem::Atom_RPI.Public
+            Gem::Atom_RHI.Reflect
 )
 
+# The private source-program route currently targets the qualified Windows DX12 host.
+if(PAL_PLATFORM_NAME STREQUAL "Windows")
+    ly_target_link_libraries(${gem_name}.Framework.Static PRIVATE Gem::Atom_RHI_DX12.Reflect Gem::Atom_RPI.Edit)
+    target_compile_definitions(${gem_name}.Framework.Static PRIVATE TG_SOURCE_SHADER_DX12)
+endif()
 ly_add_target(
     NAME ${gem_name}.Editor GEM_MODULE
     NAMESPACE Gem
@@ -90,6 +101,30 @@ ly_add_target(
         PRIVATE
             Gem::${gem_name}.Framework.Static
             AZ::AzToolsFramework
+            AZ::SceneCore
+            AZ::SceneData
+            AZ::AssetBuilderSDK
+            Gem::Atom_RPI.Public
+            Gem::Atom_RHI.Reflect
+)
+
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_terrain_native_editor.py" tg_native_terrain_tool_source)
+ly_add_source_properties(
+    SOURCES Source/TerrainNativeHandoff.cpp
+    PROPERTY COMPILE_DEFINITIONS
+    VALUES TG_SDK_NATIVE_TERRAIN_TOOL_SOURCE="${tg_native_terrain_tool_source}"
+)
+ly_install_files(FILES ../Tools/foa_terrain_native_editor.py DESTINATION scripts/foa-sdk)
+
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_campaign_heightmap_export.py" tg_campaign_export_tool_source)
+ly_add_source_properties(
+    SOURCES Source/TerrainCampaignExportHost.cpp
+    PROPERTY COMPILE_DEFINITIONS
+    VALUES TG_SDK_CAMPAIGN_EXPORT_TOOL_SOURCE="${tg_campaign_export_tool_source}"
+)
+ly_install_files(
+    FILES ../Tools/foa_campaign_heightmap_export.py ../Tools/foa_heightmap_importer.py
+    DESTINATION scripts/foa-sdk
 )
 
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../Tools/foa_asset_browser_pane_refresh.py" tg_asset_browser_pane_refresh_tool_source)

@@ -90,6 +90,12 @@ PANES = (
         BASE_MANIFEST,
     ),
     Pane(
+        "Heightmap Importer",
+        "Plugins/Authoring/TerrainAuthoring/Gem/Code/Source/TerrainAuthoringEditorModule.cpp",
+        "Plugins/Authoring/TerrainAuthoring/Gem/Code/Source/TerrainImportWidget.cpp",
+        "Plugins/Authoring/TerrainAuthoring/Gem/Code/terrain_authoring_files.cmake",
+    ),
+    Pane(
         "Tainted Grail Avalon AI Editor",
         "Plugins/Authoring/AvalonAI/Gem/Code/Source/AvalonAIEditorModule.cpp",
         "Plugins/Authoring/AvalonAI/Gem/Code/Source/AvalonAIEditorWidget.cpp",
@@ -191,8 +197,8 @@ def validate_control_center_contract(repo_root: Path, hub: str) -> None:
 
 
 def validate_editor_lifecycle(repo_root: Path) -> None:
-    if len(PANES) != 33 or len({pane.name for pane in PANES}) != len(PANES):
-        raise EditorLifecycleError("The canonical Editor inventory must contain 33 unique pane names")
+    if len(PANES) != 34 or len({pane.name for pane in PANES}) != len(PANES):
+        raise EditorLifecycleError("The canonical Editor inventory must contain 34 unique pane names")
 
     hub = read(repo_root, HUB_SOURCE)
     source_cache: dict[str, str] = {}
@@ -274,7 +280,7 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
         for match in re.finditer(r'saveKeyName\s*=\s*QStringLiteral\("([^"]+)"\)', registration):
             save_keys.append(match.group(1))
 
-    if len(save_keys) != 33 or len(set(save_keys)) != 33:
+    if len(save_keys) != 34 or len(set(save_keys)) != 34:
         raise EditorLifecycleError(
             f"Every pane needs one unique layout save key; found {len(save_keys)} keys and {len(set(save_keys))} unique values"
         )
@@ -282,6 +288,13 @@ def validate_editor_lifecycle(repo_root: Path) -> None:
     validate_control_center_contract(repo_root, hub)
 
     extension_host = read(repo_root, EXTENSION_HOST)
+    require(extension_host, "bool FoundationService::TerrainImportCommand(", "terrain host command")
+    terrain_command = extension_host.split("bool FoundationService::TerrainImportCommand(", 1)[1].split(
+        "bool FoundationService::SaveExtensionDocument(", 1)[0]
+    require(terrain_command, "QJsonDocument::fromJson", "terrain host JSON boundary")
+    saved_document = extension_host.split("bool FoundationService::SaveExtensionDocument(", 1)[1].split(
+        "bool FoundationService::LoadExtensionDocument(", 1)[0]
+    require(saved_document, "QJsonDocument::fromJson", "extension document JSON boundary")
     for fragment in (
         "MaximumExtensionDocumentBytes",
         "IsSafeRelativePath",
@@ -304,7 +317,7 @@ def main() -> int:
         return 1
     print(
         "TG SDK Editor lifecycle validation passed: FOA-SDK Home is the single Tools-menu "
-        "front door, all 33 panes retain build/lifecycle/layout ownership and Hub reachability, "
+        "front door, all 34 panes retain build/lifecycle/layout ownership and Hub reachability, "
         "saved mods require no manifest browsing, and setup readiness remains fail-closed."
     )
     return 0

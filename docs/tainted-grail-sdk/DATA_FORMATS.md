@@ -268,6 +268,31 @@ importer must not guess these from file size or appearance. Direct Unity bundles
 `.resS`, Addressables bundles, executables, assemblies, saves, and protected containers are not valid
 heightmap inputs.
 
+## Native Editor terrain projection
+
+Imported `foa.terrain-heightmap` version 1 documents remain immutable workspace revisions.
+Opening an imported map creates a separate editable unsigned 16-bit TIFF under
+`EditorAssets/foa_maps/<workspace-key>/<revision-key>/height_gsi.tif` and a native O3DE
+level under that directory's `Levels/Map/Map.prefab`. The image uses the pinned engine's
+GSI preset so the original U16 input and later native floating-point paint output retain
+their sample precision. The pinned Qt PNG asset loader converts PNG inputs to RGBA8,
+so PNG is not used for this editable projection.
+
+O3DE owns terrain painting, brush undo, entity transforms and prefab persistence. Object
+placements are ordinary O3DE entities. There is no additional SDK object-scene schema.
+Reopening an imported revision preserves its existing editable image and saved level.
+Original terrain tiles and source files are not replaced by native Editor saves.
+
+The private `Staging/TerrainNative` handoff carries the validated document and local paths
+between Foundation and O3DE's embedded authoring adapter. These are temporary local
+coordination files, not public interchange or deployment contracts. Asset Processor gets
+an external scan root through the project's ignored `user/Registry` configuration. A new
+scan root requires one Asset Processor restart. Extracted pixels remain outside source
+control. The complete `EditorAssets/foa_maps` and `Staging/TerrainNative` trees are excluded
+from release packages.
+
+See [Heightmap importer and native map editing](HEIGHTMAP_IMPORTER.md) for the workflow.
+
 ## Workspace document
 
 Suffix:

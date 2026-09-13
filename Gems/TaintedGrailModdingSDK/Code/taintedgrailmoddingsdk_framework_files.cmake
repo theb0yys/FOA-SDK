@@ -9,6 +9,24 @@ set(FILES
     Source/ExecutionPlanning/FrameworkPlannerService.h
     Source/ExecutionPlanning/FrameworkPlannerService.cpp
     Source/FoundationPlannerService.cpp
+    Source/SourceSceneRenderComponent.cpp
+    Source/SourceSceneRenderComponent.h
+    Source/SourceScenePlacementComponent.cpp
+    Source/SourceScenePlacementComponent.h
+    Source/SourceShaderRenderComponent.cpp
+    Source/SourceShaderRenderComponent.h
+    Source/SourceTextureBuilderComponent.h
+    Source/SourceShaderBuilderComponent.cpp
+    Source/SourceShaderBuilderComponent.h
+    Source/SourceTextureBuilderComponent.cpp
+    Source/SourceMeshPreservationComponent.cpp
+    Source/SourceMeshPreservationComponent.h
+    Source/TerrainNativeHandoff.h
+    Source/TerrainNativeHandoff.cpp
+    Source/TerrainImportHost.h
+    Source/TerrainCampaignExportHost.cpp
+    Source/TerrainCampaignExportHost.h
+    Source/TerrainImportHost.cpp
     Source/FoundationExecutionService.cpp
     Source/FoundationAssetLocalisationService.cpp
     Source/ProjectImageService.cpp

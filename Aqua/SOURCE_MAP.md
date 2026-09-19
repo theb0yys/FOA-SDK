@@ -107,6 +107,10 @@ Read it before any task that may touch those surfaces.
 
 Controls focused review and integration into `main`.
 
+### `docs/tainted-grail-modding/process/README.md`
+
+Defines the broader mod-development lifecycle from research through design, scaffold, implementation, review, validation, controlled runtime validation, packaging, release decision, and support/compatibility maintenance. Kandra feeds this lifecycle; it does not replace it.
+
 ## Concrete research-gate example
 
 `Research/o3de-to-unity-conversion-and-runtime-bridge/gates/RESEARCH_GATES.md` defines a topic-specific R0-R5 model:

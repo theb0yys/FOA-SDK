@@ -249,7 +249,41 @@ Build -> Package -> Deploy -> Launch -> Verify
 
 Do not infer deployment, launch, save, signing, publication, or release authority from research.
 
-## 10. Hard-stop conditions
+## 10. Where Kandra feeds the mod-development lifecycle
+
+The repository's mod-development process uses this broader lifecycle:
+
+```text
+research
+-> design
+-> scaffold
+-> implement
+-> self-review
+-> independent review
+-> static and compiled validation
+-> controlled runtime validation
+-> package review
+-> release decision
+-> support and compatibility maintenance
+```
+
+Kandra governs the research/evidence/authority side of that lifecycle. It does not replace design, implementation, packaging, release, or support ownership.
+
+Practical handoff:
+
+- Kandra research resolves consequential unknowns and produces reviewed promotion candidates.
+- Human promotion moves accepted conclusions into the normative owner.
+- Design converts promoted authority into an implementable contract.
+- Implementation stays small, reversible, and inside the authorised boundary.
+- Validation selects the evidence layer required by the changed surface.
+- Runtime validation is controlled and separate from static/compiled proof.
+- Packaging includes only reviewed redistributable material and binds output to exact inputs.
+- Release remains a separate human/maintainer decision.
+- Support changes compatibility records only from verified reports and reproducible profiles.
+
+Missing runtime, packaging, or release evidence remains pending; it is never backfilled by earlier research.
+
+## 11. Hard-stop conditions
 
 Stop the affected operation when:
 

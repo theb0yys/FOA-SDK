@@ -1,5 +1,8 @@
 # Campaign scene editing and game return
 
+For the narrower original-terrain workflow and its separate proof boundary, see
+[Original campaign terrain import](CAMPAIGN_TERRAIN_IMPORT.md).
+
 Status: PARTIAL. Current owner scope includes the full campaign scene and editable game
 assets, navigation, lighting and a verified return to Fall of Avalon. The implementation
 must use the existing O3DE Editor. The old estimated campaign heightmap route is disabled.

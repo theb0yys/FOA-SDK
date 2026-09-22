@@ -40,14 +40,14 @@ namespace TerrainAuthoring
         m_context->setWordWrap(true);
         layout->addWidget(m_context);
         auto* explanation =
-            new QLabel(tr("Import a local heightmap for O3DE editing. Campaign map import and return to the game are unavailable."), this);
+            new QLabel(tr("Open original campaign terrain, or import a local heightmap. Campaign terrain uses neutral shading. Game export is unavailable."), this);
         explanation->setWordWrap(true);
         layout->addWidget(explanation);
         auto* actions = new QHBoxLayout();
-        m_vanilla = new QPushButton(tr("Campaign import unavailable"), this);
+        m_vanilla = new QPushButton(tr("Open campaign terrain"), this);
         m_vanilla->setObjectName("TerrainEditVanillaMap");
         m_vanilla->setEnabled(false);
-        m_vanilla->setToolTip(tr("Faithful campaign source preservation and game round-trip support have not been verified."));
+        m_vanilla->setToolTip(tr("Campaign terrain preparation is unavailable for the current game profile."));
         connect(
             m_vanilla,
             &QPushButton::clicked,
@@ -61,7 +61,7 @@ namespace TerrainAuthoring
                 dialog->setWindowModality(Qt::WindowModal);
                 dialog->setMinimumWidth(420);
                 auto* choices = new QVBoxLayout(dialog);
-                choices->addWidget(new QLabel(tr("Create a local heightmap from a campaign."), dialog));
+                choices->addWidget(new QLabel(tr("Load the original terrain meshes and cliffs into the Editor."), dialog));
                 auto* maps = new QComboBox(dialog);
                 maps->setObjectName("TerrainCampaignSelection");
                 for (const auto& value : m_campaigns)
@@ -82,7 +82,7 @@ namespace TerrainAuthoring
                     {
                         if (!m_busy && maps->currentIndex() >= 0)
                         {
-                            Send({ { "action", "import-campaign" }, { "campaign", maps->currentData().toString() } });
+                            Send({ { "action", "import-campaign-terrain" }, { "campaign", maps->currentData().toString() } });
                         }
                     });
                 dialog->open();
@@ -125,7 +125,7 @@ namespace TerrainAuthoring
                 Send({ { "action", "cancel" } });
             });
         layout->addWidget(m_cancel);
-        layout->addWidget(new QLabel(tr("Imported maps"), this));
+        layout->addWidget(new QLabel(tr("Local heightmap revisions"), this));
         m_recent = new QListWidget(this);
         m_recent->setObjectName("TerrainSavedRevisions");
         layout->addWidget(m_recent, 1);
@@ -180,7 +180,7 @@ namespace TerrainAuthoring
             });
         connect(m_recent, &QListWidget::itemDoubleClicked, m_open, &QPushButton::click);
         auto* help = new QLabel(
-            tr("In O3DE: select Paint Terrain Heights, then Image Gradient > Paint. Use Asset Browser and entity tools for objects. Finish "
+            tr("For local heightmaps: select Paint Terrain Heights, then Image Gradient > Paint. Use Asset Browser and entity tools for objects. Finish "
                "painting, then save the level with Ctrl+S."),
             this);
         help->setWordWrap(true);
@@ -273,11 +273,11 @@ namespace TerrainAuthoring
         }
         m_vanilla->setEnabled(!m_busy && !m_campaigns.isEmpty());
         m_vanilla->setToolTip(
-            m_campaigns.isEmpty() ? tr("Faithful campaign source preservation and game round-trip support have not been verified.")
-                                  : tr("Create a local heightmap from the selected campaign ground surface."));
+            m_campaigns.isEmpty() ? tr("Campaign terrain preparation is unavailable for the current game profile.")
+                                  : tr("Inspect the original campaign terrain geometry in the Editor."));
         setAcceptDrops(!m_busy);
         m_context->setText(tr("%1 | %2").arg(snapshot.value("workspace_name").toString(), snapshot.value("profile_name").toString()));
-        if (command.value("action").toString() == "import" || command.value("action").toString() == "import-campaign" ||
+        if (command.value("action").toString() == "import" || command.value("action").toString() == "import-campaign-terrain" ||
             command.value("action").toString() == "open" || command.value("action").toString() == "open-editor")
         {
             m_preview->clear();

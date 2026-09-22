@@ -197,4 +197,110 @@ namespace TaintedGrailModdingSDK
         return {{"status", "complete"}, {"source", raw}, {"name", displayName + " Terrain"},
             {"coverage", result.value("coverage_fraction")}};
     }
+    TerrainCampaignProvider ResolveOriginalTerrainCampaignProvider()
+    {
+        auto provider = ResolveTerrainCampaignProvider();
+        if (provider.m_script.isEmpty()) { return {}; }
+        provider.m_script = QDir(QFileInfo(provider.m_script).absolutePath()).filePath("foa_campaign_terrain_prepare.py");
+        return DirectFile(provider.m_script) ? provider : TerrainCampaignProvider{};
+    }
+    QJsonObject PrepareOriginalTerrainCampaign(const TerrainCampaignProvider& provider, const QString& workspace,
+        const QString& gameRoot, const QString& unityVersion, const QString& campaign, const QString& operation,
+        const TerrainHeightmap::ImportControl* control, int timeoutMs)
+    {
+        bool available = false;
+        for (const auto& row : AvailableTerrainCampaigns(provider, gameRoot, unityVersion))
+        { available |= row.toObject().value("key").toString() == campaign; }
+        if (!available) { return Failure("This campaign or the terrain preparation tool is unavailable."); }
+        const QFileInfo workspaceInfo(workspace);
+        if (!workspaceInfo.isDir() || workspaceInfo.canonicalFilePath() != workspaceInfo.absoluteFilePath() ||
+            !operation.startsWith("terrain-import.") || operation.contains('/') || operation.contains('\\') || operation.contains(".."))
+        { return Failure("Campaign terrain requires a direct saved workspace."); }
+        QDir ancestor(workspace);
+        do { if (QFileInfo::exists(ancestor.filePath(".git"))) { return Failure("Choose a workspace outside source control for campaign terrain."); } }
+        while (ancestor.cdUp());
+        QString staging = workspace;
+        for (const auto& part : {QString("Staging"), QString("CampaignTerrain"), operation})
+        {
+            const QString next = QDir(staging).filePath(part); const QFileInfo info(next);
+            if ((info.exists() && (!info.isDir() || info.canonicalFilePath() != info.absoluteFilePath())) ||
+                (!info.exists() && !QDir(staging).mkdir(part))) { return Failure("Campaign staging is not a direct workspace directory."); }
+            staging = next;
+        }
+        QDir temporary(staging);
+        QProcess process;
+        auto environment = QProcessEnvironment::systemEnvironment();
+        environment.remove("PYTHONPATH");
+        environment.remove("PYTHONHOME");
+        process.setProcessEnvironment(environment);
+        process.setWorkingDirectory(temporary.path());
+        process.setProcessChannelMode(QProcess::MergedChannels);
+        process.start(provider.m_python, {"-I", "-B", provider.m_script, "--game-root", gameRoot,
+            "--workspace", workspace, "--map", campaign, "--operation", temporary.path()}, QIODevice::ReadOnly);
+        if (!process.waitForStarted(5000)) { return Failure("The campaign extraction tool could not start."); }
+#if AZ_TRAIT_OS_PLATFORM_WINDOWS
+        HANDLE job = CreateJobObjectW(nullptr, nullptr);
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_PROCESS_MEMORY | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        limits.ProcessMemoryLimit = static_cast<SIZE_T>(1536) * 1024 * 1024;
+        HANDLE worker = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, FALSE, static_cast<DWORD>(process.processId()));
+        const bool constrained = job && worker && SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof(limits))
+            && AssignProcessToJobObject(job, worker);
+        if (worker) { CloseHandle(worker); }
+        if (!constrained)
+        {
+            process.kill(); process.waitForFinished(5000);
+            if (job) { CloseHandle(job); }
+            return Failure("Unable to apply the campaign worker memory limit.");
+        }
+#endif
+        QElapsedTimer elapsed; elapsed.start();
+        QByteArray log;
+        QString failure;
+        while (process.state() != QProcess::NotRunning)
+        {
+            process.waitForFinished(50);
+            log += process.readAll();
+            if (control && control->IsCancelled())
+            {
+                Write(temporary.filePath("cancel.flag"), QByteArray("cancel"));
+                if (!process.waitForFinished(2000)) { process.kill(); process.waitForFinished(5000); }
+                failure = "Terrain import cancelled.";
+                break;
+            }
+            if (elapsed.elapsed() > timeoutMs || log.size() > 1024 * 1024)
+            {
+                process.kill(); process.waitForFinished(5000);
+                failure = "Campaign extraction exceeded its time or output limit.";
+                break;
+            }
+        }
+        log += process.readAll();
+#if AZ_TRAIT_OS_PLATFORM_WINDOWS
+        CloseHandle(job);
+#endif
+        // Keep a bounded diagnostic log in the workspace even when the operation fails.
+        const QString logPath = QDir(staging).filePath(operation + ".log");
+        Write(logPath, log.left(1024 * 1024));
+        if (!failure.isEmpty()) { return Failure(failure); }
+        if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+        { return Failure("Campaign extraction failed. Its workspace diagnostic log contains details."); }
+        const QString prepared = temporary.filePath("prepared.json");
+        QFile file(prepared);
+        if (!DirectFile(prepared) || !file.open(QIODevice::ReadOnly) || file.size() > 1024 * 1024)
+        { return Failure("Campaign terrain did not return a bounded preparation receipt."); }
+        const auto result = QJsonDocument::fromJson(file.read(1024 * 1024 + 1)).object();
+        const QString packet = temporary.filePath("terrain.private.json");
+        if (result.value("status").toString() != "PASSED" || result.value("map").toString() != campaign ||
+            QFileInfo(result.value("packet").toString()).absoluteFilePath() != packet ||
+            !result.value("source_unchanged").toBool() || QFileInfo(packet).size() > 128LL * 1024 * 1024 ||
+            !HashMatches(packet, "sha256:" + result.value("packet_sha256").toString()))
+        { return Failure("Campaign terrain preparation did not preserve its complete source packet."); }
+        const QString requestPath = temporary.filePath("native.request.json");
+        if (!Write(requestPath, QJsonDocument(QJsonObject{{"schema", "foa.campaign-terrain.handoff"}, {"version", 1},
+            {"workspace", workspace}, {"map", campaign}, {"prepared", prepared}}).toJson(QJsonDocument::Compact)))
+        { return Failure("Unable to write the native campaign terrain handoff."); }
+        return {{"status", "running"}, {"message", "Opening the original campaign terrain..."},
+            {"native_request", requestPath}, {"native_campaign", true}};
+    }
 }

@@ -170,7 +170,7 @@ namespace TaintedGrailModdingSDK
         }
         return { { "status", "running" }, { "message", "Preparing the O3DE level..." }, { "native_request", requestPath } };
     }
-    bool LaunchNativeTerrain(const QString& requestPath)
+    bool LaunchNativeTerrain(const QString& requestPath, bool campaign)
     {
         if (!AzToolsFramework::EditorPythonRunnerRequestBus::HasHandlers())
         {
@@ -193,6 +193,11 @@ namespace TaintedGrailModdingSDK
         if (script.isEmpty())
         {
             return false;
+        }
+        if (campaign)
+        {
+            script = QDir(QFileInfo(script).absolutePath()).filePath("foa_campaign_terrain_editor.py");
+            if (!QFileInfo(script).isFile()) { return false; }
         }
         const auto filename = Az(script);
         const auto argument = Az(requestPath);

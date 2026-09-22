@@ -14,5 +14,5 @@ namespace TaintedGrailModdingSDK
     // Foundation prepares private editable copies; O3DE owns the level, paint tools and entities.
     QJsonObject PrepareNativeTerrain(const QString& workspace, const QString& locator,
         const TerrainHeightmap::ProfileBinding& profile, const TerrainHeightmap::ImportControl* control);
-    bool LaunchNativeTerrain(const QString& requestPath);
+    bool LaunchNativeTerrain(const QString& requestPath, bool campaign = false);
 }

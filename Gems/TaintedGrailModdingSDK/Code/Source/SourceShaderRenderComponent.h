@@ -13,6 +13,7 @@
 #include <AzCore/std/containers/vector.h>
 #include <AzCore/std/containers/unordered_map.h>
 #include <Atom/RPI.Public/ViewportContextBus.h>
+#include <Atom/RPI.Public/Buffer/Buffer.h>
 namespace TaintedGrailModdingSDK
 {
     // Private native drawing boundary. It does not select game passes or invent resource values.
@@ -70,6 +71,8 @@ namespace TaintedGrailModdingSDK
         AZ::Matrix4x4 m_worldToClip = AZ::Matrix4x4::CreateIdentity();
         AZ::Vector3 m_cameraPosition = AZ::Vector3::CreateZero();
         bool m_cameraValid = false;
+        AZ::Data::Instance<AZ::RPI::Buffer> m_viewProjectionBuffer;
+        size_t m_cameraBufferUpdates = 0;
         void RefreshCamera();
         void Retire(AZStd::unique_ptr<Draw> draw);
         bool Queue(Draw& draw);

@@ -1,33 +1,27 @@
 # Current Task
 
-Status: implementation combined. Final validation and merge results are recorded
-in the integration pull request.
-Goal: integrate the owner's pending FOA-SDK commits, resolve merge conflicts and
-validate the combined Editor and Framework result.
-Classification: Critical/Runtime, because the requested integration includes
-previously implemented external process execution and synthetic rollback.
-Primary coordination owner: integration; existing subsystem ownership is retained.
+Status: canonical hot-path fix implemented; final local and hosted validation in progress.
+Goal: make the maximum-metadata reopen test pass its unchanged 10-second budget
+on the hosted Windows runner while retaining exact canonical and corruption checks.
+Branch: codex/m3-metadata-reopen-performance.
+Base: efa76f5f8523b8a30ec731a03fe2cda2e50bca2a.
+Primary owner: capability-execution; Framework consumes M1 canonical values.
+Classification: Routine contract-preserving performance fix, with the expanded
+M3 persistence, operational, Editor and exact-source receipt validation required
+by the owning design.
 
-In scope: pending PR histories #266, #269, #270, #271, #273, #274, #275, #276,
-#277, #278, #279, #280 and #281; necessary conflict resolution and validation.
-The owner explicitly requested merging the commits. Use normal merge commits and
-a reviewable integration PR; preserve existing feature commits and evidence.
+Scope: profile the repository/codec and canonical writer; change only the measured
+hotspot, relevant regression/performance tests and owning scope documentation.
+The canonical byte format, fingerprints, validation, admission, replay refusal,
+store limits and performance threshold remain unchanged. Temporary diagnostic
+instrumentation is removed before the final commit.
 
-Out of scope: completing M6 native terrain qualification, unfinished campaign
-rendering/export, paused SDK preview acceptance, game/save writes and releases.
-M6 remains PARTIAL/BLOCKED as documented in its design and qualification brief.
-Earlier evidence stays bound to its source/artifacts and is not promoted to new
-runtime signoff. The original dirty SDK-client checkout is not modified.
+Acceptance: measured before/after costs at the same metadata cardinality;
+malformed/tampered/round-trip regression tests; pinned configure/build, affected
+compiled regressions and M3/M5 lifecycle checks; final local receipt and hosted
+Windows performance proof; focused DCO-signed PR.
 
-Acceptance criteria: all requested PR heads are ancestors of the integrated
-result; conflicts are reviewed; applicable static, compiled and Editor checks
-are reported accurately; remote main and remaining PR states are verified.
-Known hosted failures under investigation: M3 maximum-metadata reopen performance
-and Item Viewer Editor startup. Pending or failed jobs are not reported as passes.
-
-Current branch: codex/integrate-pending-sdk-work.
-Integration details: task-status conflicts were resolved to this scope; both
-Framework planner and terrain CMake registrations were retained. The Item Viewer
-validation launcher now binds the explicit external engine, and its close check
-uses the Qt event loop for deferred deletion. The inventory rejection fixture
-uses an equivalent Unicode escape required by source policy.
+Out of scope: game/save writes, M6, campaign rendering/export, other Editor
+features, dependency changes, branch rewrites and unrelated SDK-client edits.
+The preceding integration merge is complete. No new merge or release transition
+is inferred for this focused task.

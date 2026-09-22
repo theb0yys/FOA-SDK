@@ -223,6 +223,19 @@ transactions with at most sixteen joined readers; final publication and lineage
 checks remain ordered. Unknown or interrupted state stays quarantined even when
 an exact M2 cleanup observation is recovered. No automatic repair/replay is provided.
 
+### Metadata-reopen performance maintenance
+
+The maximum-metadata reopen workload retains its 10-second budget and full
+canonical, fingerprint, corruption and lineage checks. Profiling identified M1
+canonical string quoting and opaque-JSON screening as repeated costs during
+reopen. These loops now scan bounded byte ranges and copy contiguous spans;
+escape screening visits each byte once, including long backslash runs. The M1
+canonical format, SHA-256 values, size limits and validation rules are unchanged.
+Golden byte/hash cases cover empty, leading, adjacent and trailing escapes;
+opaque screening tests retain unsafe-text rejection and cover long escape runs.
+The existing maximum-metadata native test remains the performance gate, with
+local and hosted timings recorded against the source revision under validation.
+
 ### Host integration workflow
 
 The embedding host first selects its active workspace, pack and exact profile, then
